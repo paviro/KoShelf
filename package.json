@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build-css": "tailwindcss -i ./assets/input.css -o ./assets/style.css --watch",
+    "build-css-prod": "tailwindcss -i ./assets/input.css -o ./assets/style.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/typography": "^0.5.10",
+    "@tailwindcss/line-clamp": "^0.4.4"
+  }
+} 
