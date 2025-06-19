@@ -41,4 +41,12 @@ quick-xml = "0.31"
 # HTML sanitization
 ammonia = "3.3"
 # URL encoding
-urlencoding = "2.1" 
+urlencoding = "2.1"
+# Web server (for live server mode)
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+# File system watching
+notify = "6.1"
+# Temporary directories
+tempfile = "3.8" 

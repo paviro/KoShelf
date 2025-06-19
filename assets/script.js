@@ -149,4 +149,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('KoInsight interface loaded successfully');
+
+    // Unified dropdown filter logic
+    const filterDropdownButton = document.getElementById('filterDropdownButton');
+    const filterDropdownMenu = document.getElementById('filterDropdownMenu');
+    const selectedFilterLabel = document.getElementById('selectedFilterLabel');
+    const selectedFilterLabelMobile = document.getElementById('selectedFilterLabelMobile');
+
+    filterDropdownButton?.addEventListener('click', () => {
+        filterDropdownMenu.classList.toggle('hidden');
+    });
+
+    filterDropdownMenu?.addEventListener('click', (e) => {
+        if (e.target.matches('button[data-filter]')) {
+            const filterText = e.target.textContent;
+            if (selectedFilterLabel) selectedFilterLabel.textContent = filterText;
+            if (selectedFilterLabelMobile) selectedFilterLabelMobile.textContent = filterText;
+            filterDropdownMenu.classList.add('hidden');
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!filterDropdownButton?.contains(e.target) && !filterDropdownMenu?.contains(e.target)) {
+            filterDropdownMenu?.classList.add('hidden');
+        }
+    });
 }); 

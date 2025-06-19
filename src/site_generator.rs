@@ -5,6 +5,7 @@ use askama::Template;
 use std::fs;
 use std::path::PathBuf;
 use log::info;
+use std::time::SystemTime;
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -39,7 +40,7 @@ impl SiteGenerator {
         // Generate individual book pages
         self.generate_book_pages(&books).await?;
         
-        info!("Site generation completed");
+        info!("Static site generation completed!");
         Ok(())
     }
     
@@ -64,24 +65,31 @@ impl SiteGenerator {
         Ok(())
     }
     
-
-    
     async fn generate_covers(&self, books: &[Book]) -> Result<()> {
-        info!("Generating book covers");
+        info!("Generating book covers...");
         
         for book in books {
             if let Some(ref cover_data) = book.epub_info.cover_data {
                 let cover_path = self.output_dir.join("assets/covers").join(format!("{}.jpg", book.id));
-                
-                // Convert to JPEG if needed and resize
-                let img = image::load_from_memory(cover_data)
-                    .context("Failed to load cover image")?;
-                
-                // Resize to consistent dimensions (300x450 max, maintaining aspect ratio)
-                let resized = img.resize(300, 450, image::imageops::FilterType::Lanczos3);
-                
-                resized.save_with_format(&cover_path, image::ImageFormat::Jpeg)
-                    .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+                let epub_path = &book.epub_path;
+
+                let should_generate = match (fs::metadata(epub_path), fs::metadata(&cover_path)) {
+                    (Ok(epub_meta), Ok(cover_meta)) => {
+                        let epub_time = epub_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        let cover_time = cover_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        epub_time > cover_time
+                    }
+                    (Ok(_), Err(_)) => true, // Cover missing
+                    _ => true, // If we can't get metadata, be safe and regenerate
+                };
+
+                if should_generate {
+                    let img = image::load_from_memory(cover_data)
+                        .context("Failed to load cover image")?;
+                    let resized = img.resize(300, 450, image::imageops::FilterType::Lanczos3);
+                    resized.save_with_format(&cover_path, image::ImageFormat::Jpeg)
+                        .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+                }
             }
         }
         
@@ -89,7 +97,7 @@ impl SiteGenerator {
     }
     
     async fn generate_index(&self, books: &[Book]) -> Result<()> {
-        info!("Generating index page");
+        info!("Generating index page...");
         
         let mut reading_books = Vec::new();
         let mut completed_books = Vec::new();
@@ -130,7 +138,7 @@ impl SiteGenerator {
     }
     
     async fn generate_book_pages(&self, books: &[Book]) -> Result<()> {
-        info!("Generating book detail pages");
+        info!("Generating book detail pages...");
         
         for book in books {
             let template = BookTemplate {
@@ -139,7 +147,9 @@ impl SiteGenerator {
             };
             
             let html = template.render()?;
-            let book_path = self.output_dir.join("books").join(format!("{}.html", book.id));
+            let book_dir = self.output_dir.join("books").join(&book.id);
+            fs::create_dir_all(&book_dir)?;
+            let book_path = book_dir.join("index.html");
             fs::write(book_path, html)?;
         }
         
