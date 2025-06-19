@@ -6,47 +6,37 @@ build = "build.rs"
 
 [dependencies]
 # CLI
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.5.40", features = ["derive"] }
 # Error handling
-anyhow = "1.0"
-thiserror = "1.0"
+anyhow = "1.0.98"
 # Async
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.45.1", features = ["full"] }
 # File system
-walkdir = "2.4"
-# EPUB parsing
-zip = "0.6"
-# Image processing
-image = "0.24"
-# Lua parsing
-mlua = { version = "0.9", features = ["lua54", "vendored"] }
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-# Templating
-askama = { version = "0.12", features = ["serde"] }
-# Date/time
-chrono = { version = "0.4", features = ["serde"] }
-# Logging
-log = "0.4"
-env_logger = "0.10"
-# Path handling
-pathdiff = "0.2"
-# Base64 encoding for images
-base64 = "0.22"
-# HTML parsing (for epub content)
-scraper = "0.18"
-# XML parsing
-quick-xml = "0.31"
-# HTML sanitization
-ammonia = "3.3"
-# URL encoding
-urlencoding = "2.1"
-# Web server (for live server mode)
-axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["fs", "cors"] }
+walkdir = "2.5.0"
 # File system watching
-notify = "6.1"
+notify = "8.0.0"
 # Temporary directories
-tempfile = "3.8" 
+tempfile = "3.20.0" 
+# EPUB parsing
+zip = "4.1.0"
+# Image processing
+image = "0.25.6"
+# Lua parsing
+mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
+# Serialization
+serde = { version = "1.0.219", features = ["derive"] }
+# Templating
+askama = "0.14.0"
+# Date/time
+chrono = { version = "0.4.41", features = ["serde"] }
+# Logging
+log = "0.4.27"
+env_logger = "0.11.8"
+# XML parsing
+quick-xml = "0.37.5"
+# HTML sanitization
+ammonia = "4.1.0"
+# Web server (for live server mode)
+axum = "0.8.4"
+tower = "0.4"
+tower-http = { version = "0.5.2", features = ["fs", "cors"] }
