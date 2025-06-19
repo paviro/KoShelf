@@ -1,5 +1,5 @@
 use crate::models::*;
-use anyhow::{Result, Context};
+use anyhow::{Result, Context, anyhow};
 use std::path::Path;
 use std::fs;
 use mlua::{Lua, Value, Table};
@@ -24,11 +24,11 @@ impl LuaParser {
         
         // Execute the Lua code which returns a table
         let value: Value = self.lua.load(&content).eval()
-            .with_context(|| format!("Failed to parse Lua file: {:?}", lua_path))?;
+            .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
         
         match value {
             Value::Table(table) => self.parse_metadata_table(table),
-            _ => anyhow::bail!("Expected Lua file to return a table"),
+            _ => Err(anyhow!("Expected Lua file to return a table")),
         }
     }
     
@@ -139,7 +139,13 @@ impl LuaParser {
     
     fn get_optional_string(&self, table: &Table, key: &str) -> Result<Option<String>> {
         match table.get(key) {
-            Ok(Value::String(s)) => Ok(Some(s.to_str()?.to_string())),
+            Ok(Value::String(s)) => match s.to_str() {
+                Ok(string_val) => Ok(Some(string_val.to_string())),
+                Err(e) => {
+                    warn!("Failed to convert string for key '{}': {}", key, e);
+                    Ok(None)
+                }
+            },
             Ok(Value::Nil) => Ok(None),
             Ok(_) => {
                 warn!("Expected string for key '{}', got different type", key);
@@ -151,10 +157,13 @@ impl LuaParser {
     
     fn get_required_string(&self, table: &Table, key: &str) -> Result<String> {
         match table.get(key) {
-            Ok(Value::String(s)) => Ok(s.to_str()?.to_string()),
-            Ok(Value::Nil) => anyhow::bail!("Required field '{}' is nil", key),
-            Ok(_) => anyhow::bail!("Expected string for key '{}', got different type", key),
-            Err(e) => anyhow::bail!("Failed to get required field '{}': {}", key, e),
+            Ok(Value::String(s)) => match s.to_str() {
+                Ok(string_val) => Ok(string_val.to_string()),
+                Err(e) => Err(anyhow!("Failed to convert string for key '{}': {}", key, e)),
+            },
+            Ok(Value::Nil) => Err(anyhow!("Required field '{}' is nil", key)),
+            Ok(_) => Err(anyhow!("Expected string for key '{}', got different type", key)),
+            Err(e) => Err(anyhow!("Failed to get required field '{}': {}", key, e)),
         }
     }
     

@@ -88,7 +88,7 @@ impl EpubParser {
         use quick_xml::Reader;
         use quick_xml::events::Event;
         let mut reader = Reader::from_str(container_xml);
-        reader.trim_text(true);
+        reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
         loop {
             match reader.read_event_into(&mut buf) {
@@ -115,7 +115,7 @@ impl EpubParser {
         use quick_xml::Reader;
         use quick_xml::events::Event;
         let mut reader = Reader::from_str(opf_xml);
-        reader.trim_text(true);
+        reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
         let mut in_metadata = false;
         let mut title = None;
@@ -252,7 +252,7 @@ impl EpubParser {
         use quick_xml::events::Event;
         
         let mut reader = Reader::from_str(opf_xml);
-        reader.trim_text(true);
+        reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
         
         loop {

@@ -21,7 +21,7 @@ impl WebServer {
         let not_found_service = ServeFile::new("templates/404.html");
         
         let app = Router::new()
-            .nest_service("/", ServeDir::new(&self.site_dir)
+            .fallback_service(ServeDir::new(&self.site_dir)
                 .not_found_service(not_found_service))
             .layer(
                 ServiceBuilder::new()
