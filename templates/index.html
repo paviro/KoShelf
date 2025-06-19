@@ -80,7 +80,7 @@
                         <div class="book-card group" data-status="reading" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.jpg" 
+                                    <img src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
                                          class="w-full h-full object-cover"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -139,7 +139,7 @@
                         <div class="book-card group" data-status="completed" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.jpg" 
+                                    <img src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
                                          class="w-full h-full object-cover"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -194,7 +194,7 @@
                         <div class="book-card group" data-status="unread" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.jpg" 
+                                    <img src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
                                          class="w-full h-full object-cover"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

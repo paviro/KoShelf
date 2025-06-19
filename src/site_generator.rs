@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use log::info;
 use std::time::SystemTime;
 use chrono::{Local};
+use webp;
+use futures::future;
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -79,12 +81,16 @@ impl SiteGenerator {
     async fn generate_covers(&self, books: &[Book]) -> Result<()> {
         info!("Generating book covers...");
         
+        // Collect all cover generation tasks
+        let mut tasks = Vec::new();
+        
         for book in books {
             if let Some(ref cover_data) = book.epub_info.cover_data {
-                let cover_path = self.output_dir.join("assets/covers").join(format!("{}.jpg", book.id));
-                let epub_path = &book.epub_path;
+                let cover_path = self.output_dir.join("assets/covers").join(format!("{}.webp", book.id));
+                let epub_path = book.epub_path.clone();
+                let cover_data = cover_data.clone();
 
-                let should_generate = match (fs::metadata(epub_path), fs::metadata(&cover_path)) {
+                let should_generate = match (fs::metadata(&epub_path), fs::metadata(&cover_path)) {
                     (Ok(epub_meta), Ok(cover_meta)) => {
                         let epub_time = epub_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
                         let cover_time = cover_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
@@ -95,12 +101,45 @@ impl SiteGenerator {
                 };
 
                 if should_generate {
-                    let img = image::load_from_memory(cover_data)
-                        .context("Failed to load cover image")?;
-                    let resized = img.resize(300, 450, image::imageops::FilterType::Lanczos3);
-                    resized.save_with_format(&cover_path, image::ImageFormat::Jpeg)
-                        .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+                    // Spawn a task for each cover generation
+                    let task = tokio::task::spawn_blocking(move || -> Result<()> {
+                        let img = image::load_from_memory(&cover_data)
+                            .context("Failed to load cover image")?;
+                        
+                        // Resize to height of 600px while maintaining aspect ratio
+                        let (original_width, original_height) = (img.width(), img.height());
+                        let target_height = 600;
+                        let target_width = (original_width * target_height) / original_height;
+                        
+                        let resized = img.resize(target_width, target_height, image::imageops::FilterType::Lanczos3);
+                        
+                        // Convert to RGB8 format for WebP encoding
+                        let rgb_img = resized.to_rgb8();
+                        
+                        // Use webp crate for better quality control
+                        let encoder = webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
+                        let webp_data = encoder.encode(50.0);
+                        
+                        fs::write(&cover_path, &*webp_data)
+                            .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+                        
+                        Ok(())
+                    });
+                    
+                    tasks.push(task);
                 }
+            }
+        }
+        
+        // Wait for all cover generation tasks to complete
+        let results = future::join_all(tasks).await;
+        
+        // Check for any errors
+        for (i, result) in results.into_iter().enumerate() {
+            match result {
+                Ok(Ok(())) => {}, // Success
+                Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
+                Err(e) => return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i))),
             }
         }
         
