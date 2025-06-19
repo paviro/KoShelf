@@ -8,6 +8,8 @@ pub struct IndexTemplate {
     pub reading_books: Vec<Book>,
     pub completed_books: Vec<Book>,
     pub unread_books: Vec<Book>,
+    pub version: String,
+    pub last_updated: String,
 }
 
 #[derive(Template)]

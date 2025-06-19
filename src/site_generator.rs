@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use log::info;
 use std::time::SystemTime;
+use chrono::{Local};
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -42,6 +43,16 @@ impl SiteGenerator {
         
         info!("Static site generation completed!");
         Ok(())
+    }
+    
+    // Get current version from Cargo.toml
+    fn get_version(&self) -> String {
+        env!("CARGO_PKG_VERSION").to_string()
+    }
+    
+    // Get current datetime as formatted string
+    fn get_last_updated(&self) -> String {
+        Local::now().format("%Y-%m-%d %H:%M").to_string()
     }
     
     async fn create_directories(&self) -> Result<()> {
@@ -129,6 +140,8 @@ impl SiteGenerator {
             reading_books,
             completed_books,
             unread_books,
+            version: self.get_version(),
+            last_updated: self.get_last_updated(),
         };
         
         let html = template.render()?;
@@ -143,7 +156,7 @@ impl SiteGenerator {
         for book in books {
             let template = BookTemplate {
                 site_title: self.site_title.clone(),
-                book: book.clone(),
+                book: book.clone()
             };
             
             let html = template.render()?;
