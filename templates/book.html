@@ -10,13 +10,13 @@
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 bg-dark-850 border-b border-dark-700 px-6 py-5 z-50">
         <div class="flex items-center max-w-6xl mx-auto">
-            <a href="/" class="flex items-center space-x-3 text-primary-400 hover:text-primary-300 transition-colors">
+            <button onclick="smartBack()" class="flex items-center space-x-3 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
                 <span class="font-semibold hidden sm:inline">Back to Library</span>
                 <span class="font-semibold sm:hidden">Back</span>
-            </a>
+            </button>
             <div class="h-8 w-px bg-dark-700 mx-6"></div>
             <div class="min-w-0">
                 <h1 class="text-xl font-bold text-white truncate">{{ book.epub_info.title }}</h1>
@@ -74,11 +74,6 @@
                             {% when BookStatus::Unknown %}
                             {% endmatch %}
                         </div>
-
-
-
-
-
                     </div>
                     
                     <!-- Right Column: Description and Details -->
@@ -392,5 +387,25 @@
             </div>
         </div>
     </main>
+    
+    <script>
+        function smartBack() {
+            // Check if there's history to go back to and if the referrer is from our site
+            const referrer = document.referrer;
+            const currentHost = window.location.host;
+            const historyLength = window.history.length;
+            
+            // If user came from our site (same host) and there's history, go back
+            if (referrer && 
+                referrer.includes(currentHost) && 
+                historyLength > 1 && 
+                !referrer.includes('/book/')) { // Avoid going back to another book page
+                window.history.back();
+            } else {
+                // Otherwise, go to the main page
+                window.location.href = '/';
+            }
+        }
+    </script>
 </body>
 </html> 
