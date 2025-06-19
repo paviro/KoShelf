@@ -80,11 +80,13 @@
                         <div class="book-card group" data-status="reading" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.webp" 
+                                    <img src="/assets/covers/{{ book.id }}.webp"
+                                         data-src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
-                                         class="w-full h-full object-cover"
+                                         class="w-full h-full object-cover lazy-image transition-opacity duration-500 ease-out"
+                                         loading="lazy"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-400 absolute inset-0" style="display: none;">📖</div>
+                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-500 absolute inset-0 book-placeholder" style="display: flex; background-color: #374151; border: none; outline: none; text-shadow: none;">📖</div>
                                     
                                     <!-- Progress Bar -->
                                     <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
@@ -139,11 +141,13 @@
                         <div class="book-card group" data-status="completed" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.webp" 
+                                    <img src="/assets/covers/{{ book.id }}.webp"
+                                         data-src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
-                                         class="w-full h-full object-cover"
+                                         class="w-full h-full object-cover lazy-image transition-opacity duration-500 ease-out"
+                                         loading="lazy"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-400 absolute inset-0" style="display: none;">📖</div>
+                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-500 absolute inset-0 book-placeholder" style="display: flex; background-color: #374151; border: none; outline: none; text-shadow: none;">📖</div>
                                     
                                     <!-- Rating Indicator -->
                                     {% match book.rating() %}
@@ -194,11 +198,13 @@
                         <div class="book-card group" data-status="unread" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
-                                    <img src="/assets/covers/{{ book.id }}.webp" 
+                                    <img src="/assets/covers/{{ book.id }}.webp"
+                                         data-src="/assets/covers/{{ book.id }}.webp" 
                                          alt="{{ book.epub_info.title }}" 
-                                         class="w-full h-full object-cover"
+                                         class="w-full h-full object-cover lazy-image transition-opacity duration-500 ease-out"
+                                         loading="lazy"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-400 absolute inset-0" style="display: none;">📖</div>
+                                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-500 absolute inset-0 book-placeholder" style="display: flex; background-color: #374151; border: none; outline: none; text-shadow: none;">📖</div>
                                     
                                     <!-- Unread Indicator -->
                                     <div class="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full shadow-lg">
@@ -228,6 +234,6 @@
     <!-- Hidden for now as we only have one page -->
     <!-- {% include "bottom_navbar.html" %} -->
 
-    <script src="/assets/js/script.js"></script>
+    <script type="module" src="/assets/js/script.js"></script>
 </body>
 </html> 
