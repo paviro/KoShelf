@@ -1,4 +1,6 @@
 // KoInsight - Reading Tracker Interface
+import { LazyImageLoader } from './lazy-loading.js';
+
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const filterButtons = document.querySelectorAll('[data-filter]');
@@ -7,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const bookCards = document.querySelectorAll('.book-card');
     
     let currentFilter = 'all';
+    
+    // Initialize lazy loading
+    const lazyLoader = new LazyImageLoader();
+    lazyLoader.init();
     
     // Search functionality
     if (searchInput) {
@@ -58,6 +64,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
                 });
+                
+                // Load images for newly visible cards that haven't loaded yet
+                lazyLoader.loadImageForCard(card);
                 
                 // Count visible books by status
                 if (status === 'reading') readingVisible++;

@@ -71,9 +71,12 @@ impl SiteGenerator {
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
         fs::write(self.output_dir.join("assets/css/style.css"), css_content)?;
         
-        // Copy JavaScript
+        // Copy JavaScript files
         let js_content = include_str!("../assets/script.js");
         fs::write(self.output_dir.join("assets/js/script.js"), js_content)?;
+        
+        let lazy_loading_content = include_str!("../assets/lazy-loading.js");
+        fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
         
         Ok(())
     }
