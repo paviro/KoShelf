@@ -11,17 +11,18 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
 - ⚡ **Performance**: Fast loading with optimized images and minified CSS
-- 🎯 **Accessibility**: Semantic HTML and proper contrast ratios
 
-## Prerequisites
-
-- Rust 1.70+ (for building)
-- Node.js and npm (for Tailwind CSS compilation)
-- KoReader with EPUB files and `.sdr` metadata directories
 
 ## Installation
 
 ### From Source
+
+#### Prerequisites
+
+- Rust 1.70+ (for building)
+- Node.js and npm (for Tailwind CSS compilation)
+
+### Building the tool
 
 ```bash
 git clone <repository-url>
@@ -54,11 +55,22 @@ npm run build-css-prod
 ./target/release/koshelf --books-path /path/to/your/books --output ./my-library-site
 ```
 
+### Operation Modes
+
+KoShelf can operate in several modes:
+
+1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
+2. **Web Server Mode**: Builds a static site in a temporary folder and serves it, automatically rebuilds on book changes (default when `--output` is not specified) 
+3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
+
 ### Command Line Options
 
 - `--books-path, -b`: Path to your folder containing EPUB files and KoReader metadata
 - `--output, -o`: Output directory for the generated site (default: "site")
-- `--title, -t`: Site title (default: "My KoShelf Library")
+- `--watch`: Enable file watching with static output (requires --output)
+- `--title, -t`: Site title (default: "KoShelf")
+- `--include-unread`: Include unread books (EPUBs without KoReader metadata) in the generated site
+- `--port, -p`: Port for web server mode (default: 3000)
 
 ### Example
 
@@ -66,9 +78,14 @@ npm run build-css-prod
 # Generate site from Books folder
 ./target/release/koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
 
-# Serve the generated site locally (optional)
-cd ~/my-reading-site
-python3 -m http.server 8000
+# Generate site with unread books included
+./target/release/koshelf -b ~/Books -o ~/my-reading-site --include-unread
+
+# Start web server with live file watching
+./target/release/koshelf -b ~/Books -p 8080
+
+# Generate static site with file watching
+./target/release/koshelf -b ~/Books -o ~/my-reading-site --watch
 ```
 
 ## KoReader Setup
@@ -87,22 +104,28 @@ Books/
 ```
 
 The `.sdr` directories are automatically created by KoReader when you read books and make highlights/annotations.
+Although KOReader supports more than just EPUBs, this tool does not, and probably never will, as I don't use them and this is a weekend project that probably won't be maintained much.
 
 ## Supported Data
 
 ### From EPUB Files
 - Book title
 - Authors
-- Description
+- Description (sanitized HTML)
 - Cover image
+- Language
+- Publisher
+- Series information (name and number)
+- Identifiers (ISBN, ASIN, Goodreads, DOI, etc.)
+- Subjects/Genres
 
 ### From KoReader Metadata
 - Reading status (reading/complete)
-- Highlights and annotations
-- Reading progress
-- Page numbers
-- Chapter information
-- Timestamps
+- Highlights and annotations with chapter information
+- Notes attached to highlights
+- Reading progress percentage
+- Rating (stars out of 5)
+- Summary note (the one you can fill out at the end of the book)
 
 ## Generated Site Structure
 
@@ -110,50 +133,16 @@ The `.sdr` directories are automatically created by KoReader when you read books
 site/
 ├── index.html              # Main library page
 ├── books/                  # Individual book pages
-│   ├── book-1.html
-│   └── book-2.html
-├── covers/                 # Optimized book covers
-│   ├── book-1.jpg
-│   └── book-2.jpg
-├── css/
-│   └── style.css           # Modern styling
-└── js/
-    └── script.js           # Interactive features
+│   ├── book-id1/           
+│   │   └── index.html      # Book detail page with annotations
+│   └── book-id2/
+│       └── index.html
+├── assets/
+│   ├── covers/             # Optimized book covers
+│   │   ├── book-id1.jpg
+│   │   └── book-id2.jpg
+│   ├── css/
+│   │   └── style.css       # Tailwind CSS styling
+│   └── js/
+│       └── script.js       # Interactive features
 ```
-
-## Development
-
-### Building
-
-```bash
-cargo build
-```
-
-### Running Tests
-
-```bash
-cargo test
-```
-
-### Development Mode
-
-```bash
-cargo run -- --books-path ./test-books --output ./test-site
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [KoReader](https://koreader.rocks/) - The amazing open-source e-reader software
-- Built with Rust for performance and reliability 
