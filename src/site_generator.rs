@@ -184,6 +184,7 @@ impl SiteGenerator {
             unread_books,
             version: self.get_version(),
             last_updated: self.get_last_updated(),
+            navbar_items: self.create_navbar_items("books"),
         };
         
         let html = template.render()?;
@@ -198,7 +199,7 @@ impl SiteGenerator {
         for book in books {
             let template = BookTemplate {
                 site_title: self.site_title.clone(),
-                book: book.clone()
+                book: book.clone(),
             };
             
             let html = template.render()?;
@@ -209,5 +210,25 @@ impl SiteGenerator {
         }
         
         Ok(())
+    }
+
+    // Create default navbar items
+    fn create_navbar_items(&self, current_page: &str) -> Vec<NavItem> {
+        vec![
+            NavItem {
+                label: "Books".to_string(),
+                href: "/".to_string(),
+                icon_svg: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253".to_string(),
+                is_active: current_page == "books",
+            },
+            // Add more navigation items here in the future
+            // Example:
+            // NavItem {
+            //     label: "Statistics".to_string(),
+            //     href: "/stats".to_string(),
+            //     icon_path: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z".to_string(),
+            //     is_active: current_page == "stats",
+            // },
+        ]
     }
 } 
