@@ -22,7 +22,7 @@
   }
   
   .nav-item-active {
-    @apply text-primary-400 bg-dark-700;
+    @apply text-primary-400 bg-dark-700/60;
   }
   
   .book-card {
