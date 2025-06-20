@@ -1,14 +1,16 @@
 {% if navbar_items.len() > 1 %}
-<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-dark-850 border-t border-dark-700 px-4 py-2 z-50">
-    <div class="flex items-center justify-around">
-        {% for nav_item in navbar_items %}
-        <a href="{{ nav_item.href }}" class="nav-item {% if nav_item.is_active %}nav-item-active{% endif %} flex flex-col items-center py-2 px-3 rounded-lg">
-            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ nav_item.icon_svg }}"></path>
-            </svg>
-            <span class="text-xs">{{ nav_item.label }}</span>
-        </a>
-        {% endfor %}
+<nav class="md:hidden fixed bottom-4 left-8 right-8 z-50">
+    <div class="bg-dark-850/75 backdrop-blur-sm border border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl">
+        <div class="flex items-center justify-around">
+            {% for nav_item in navbar_items %}
+            <a href="{{ nav_item.href }}" class="nav-item {% if nav_item.is_active %}nav-item-active{% endif %} flex flex-col items-center py-1.5 px-2 rounded-xl">
+                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ nav_item.icon_svg }}"></path>
+                </svg>
+                <span class="text-xs">{{ nav_item.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
     </div>
 </nav>
 {% endif %} 
