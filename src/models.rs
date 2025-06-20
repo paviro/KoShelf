@@ -129,6 +129,20 @@ impl Book {
             .unwrap_or(0)
     }
     
+    pub fn bookmark_count(&self) -> usize {
+        self.koreader_metadata
+            .as_ref()
+            .map(|m| m.annotations.iter().filter(|a| a.is_bookmark()).count())
+            .unwrap_or(0)
+    }
+    
+    pub fn highlight_count(&self) -> usize {
+        self.koreader_metadata
+            .as_ref()
+            .map(|m| m.annotations.iter().filter(|a| a.is_highlight()).count())
+            .unwrap_or(0)
+    }
+    
     /// Get language, preferring EPUB metadata over KoReader metadata
     pub fn language(&self) -> Option<&String> {
         self.epub_info.language.as_ref()
@@ -241,6 +255,16 @@ impl Annotation {
                 .ok()
                 .map(|ndt| ndt.format("%B %d, %Y at %I:%M %p").to_string())
         })
+    }
+    
+    /// Returns true if this annotation is a bookmark (no pos0/pos1), false if it's a highlight/quote
+    pub fn is_bookmark(&self) -> bool {
+        self.pos0.is_none() && self.pos1.is_none()
+    }
+    
+    /// Returns true if this annotation is a highlight/quote (has pos0/pos1), false if it's a bookmark
+    pub fn is_highlight(&self) -> bool {
+        !self.is_bookmark()
     }
 }
 
