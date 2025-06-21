@@ -26,4 +26,14 @@ pub struct IndexTemplate {
 pub struct BookTemplate {
     pub site_title: String,
     pub book: Book,
+}
+
+#[derive(Template)]
+#[template(path = "statistics/statistics.html")]
+pub struct StatsTemplate {
+    pub site_title: String,
+    pub reading_stats: ReadingStats,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
 } 
