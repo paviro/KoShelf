@@ -1,0 +1,101 @@
+<!-- Weekly Stats Section -->
+<section class="mb-8 px-2 sm:px-4 md:px-0">
+    <div class="flex items-center justify-between mb-4 md:mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">Weekly Statistics</h2>
+        </div>
+        
+        <!-- Week Selector (moved inline with header) -->
+        {% include "statistics/components/week_selector.html" %}
+    </div>
+    
+    <!-- Weekly Stats Container -->
+    <div id="weeklyStatsContainer" class="relative">
+        <!-- Loading Indicator (hidden by default) -->
+        <div id="statsLoadingIndicator" class="absolute inset-0 bg-dark-800/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl hidden">
+            <div class="flex flex-col items-center">
+                <div class="w-8 h-8 border-2 border-primary-400 rounded-full border-t-transparent animate-spin mb-2"></div>
+                <span class="text-primary-400 font-medium text-xs">Loading data...</span>
+            </div>
+        </div>
+        
+        <div class="week-stats grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+            <!-- Weekly Read Time Card -->
+            <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+                <div class="flex items-start justify-between mb-1 sm:mb-2">
+                    <h3 class="text-gray-400 mb-1 text-xs">Read Time</h3>
+                    <div class="p-1 bg-primary-600/20 rounded-lg">
+                        <svg class="w-3 h-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p id="weekReadTime" class="text-xl sm:text-2xl font-bold text-white">
+                    {% if reading_stats.weeks.len() > 0 %}
+                    {{ reading_stats.weeks[0].read_time / 3600 }}h {{ (reading_stats.weeks[0].read_time % 3600) / 60 }}m
+                    {% else %}
+                    0h 0m
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- Weekly Pages Read Card -->
+            <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+                <div class="flex items-start justify-between mb-1 sm:mb-2">
+                    <h3 class="text-gray-400 mb-1 text-xs">Pages Read</h3>
+                    <div class="p-1 bg-indigo-600/20 rounded-lg">
+                        <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p id="weekPagesRead" class="text-xl sm:text-2xl font-bold text-white">
+                    {% if reading_stats.weeks.len() > 0 %}
+                    {{ reading_stats.weeks[0].pages_read }}
+                    {% else %}
+                    0
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- Average Pages Per Day Card -->
+            <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+                <div class="flex items-start justify-between mb-1 sm:mb-2">
+                    <h3 class="text-gray-400 mb-1 text-xs">Avg Pages/Day</h3>
+                    <div class="p-1 bg-amber-600/20 rounded-lg">
+                        <svg class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p id="weekAvgPagesPerDay" class="text-xl sm:text-2xl font-bold text-white">
+                    {% if reading_stats.weeks.len() > 0 %}
+                    {{ (reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 / 10 }}.{{ ((reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 % 10) }}
+                    {% else %}
+                    0.0
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- Average Reading Time Card -->
+            <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+                <div class="flex items-start justify-between mb-1 sm:mb-2">
+                    <h3 class="text-gray-400 mb-1 text-xs">Avg Time/Day</h3>
+                    <div class="p-1 bg-green-600/20 rounded-lg">
+                        <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p id="weekAvgReadTimePerDay" class="text-xl sm:text-2xl font-bold text-white">
+                    {% if reading_stats.weeks.len() > 0 %}
+                    {{ (reading_stats.weeks[0].avg_read_time_per_day / 60.0) as i64 }}m
+                    {% else %}
+                    0m
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</section> 

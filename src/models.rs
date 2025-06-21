@@ -314,4 +314,26 @@ impl std::fmt::Display for BookStatus {
             BookStatus::Unknown => write!(f, "unknown"),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadingStats {
+    // Overall stats
+    pub total_read_time: i64,          // seconds
+    pub total_page_reads: i64,
+    pub longest_read_time_in_day: i64, // seconds
+    pub most_pages_in_day: i64,
+    
+    // Weekly stats
+    pub weeks: Vec<WeeklyStats>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeeklyStats {
+    pub start_date: String,            // ISO format yyyy-mm-dd
+    pub end_date: String,              // ISO format yyyy-mm-dd
+    pub read_time: i64,                // seconds
+    pub pages_read: i64,
+    pub avg_pages_per_day: f64,
+    pub avg_read_time_per_day: f64,    // seconds
 } 

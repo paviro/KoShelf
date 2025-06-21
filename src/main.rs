@@ -12,11 +12,13 @@ mod web_server;
 mod file_watcher;
 mod book_scanner;
 mod utils;
+mod statistics_parser;
 
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
 use crate::book_scanner::scan_books;
+use crate::statistics_parser::StatisticsParser;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -44,6 +46,10 @@ struct Cli {
     /// Port for web server mode (default: 3000)
     #[arg(short, long, default_value = "3000")]
     port: u16,
+    
+    /// Path to the statistics.sqlite3 file for additional reading stats
+    #[arg(long)]
+    statistics_db: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -68,6 +74,17 @@ async fn main() -> Result<()> {
         anyhow::bail!("Watch mode requires an output directory (--output)");
     }
 
+    // Parse statistics if provided
+    let stats_data = if let Some(ref stats_path) = cli.statistics_db {
+        if !stats_path.exists() {
+            anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
+        }
+        
+        Some(StatisticsParser::parse(stats_path)?)
+    } else {
+        None
+    };
+
     // Determine output directory
     let (output_dir, is_static_site) = match &cli.output {
         Some(output_dir) => (output_dir.clone(), !cli.watch),
@@ -79,7 +96,15 @@ async fn main() -> Result<()> {
 
     // Scan books and generate site
     let books = scan_books(&cli.books_path).await?;
-    let site_generator = SiteGenerator::new(output_dir.clone(), cli.title.clone(), cli.include_unread);
+    
+    // Create site generator with or without stats
+    let mut site_generator = SiteGenerator::new(output_dir.clone(), cli.title.clone(), cli.include_unread);
+    
+    // Add stats if available
+    if let Some(stats) = stats_data {
+        site_generator = site_generator.with_stats(stats);
+    }
+    
     site_generator.generate(books.clone()).await?;
 
     if is_static_site {

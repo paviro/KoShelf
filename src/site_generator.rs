@@ -1,5 +1,6 @@
 use crate::models::*;
 use crate::templates::*;
+use crate::statistics_parser::{StatisticsParser, StatisticsData};
 use anyhow::{Result, Context};
 use askama::Template;
 use std::fs;
@@ -14,6 +15,7 @@ pub struct SiteGenerator {
     output_dir: PathBuf,
     site_title: String,
     include_unread: bool,
+    stats_data: Option<StatisticsData>,
 }
 
 impl SiteGenerator {
@@ -22,7 +24,13 @@ impl SiteGenerator {
             output_dir,
             site_title,
             include_unread,
+            stats_data: None,
         }
+    }
+    
+    pub fn with_stats(mut self, stats_data: StatisticsData) -> Self {
+        self.stats_data = Some(stats_data);
+        self
     }
     
     pub async fn generate(&self, books: Vec<Book>) -> Result<()> {
@@ -42,6 +50,11 @@ impl SiteGenerator {
         
         // Generate individual book pages
         self.generate_book_pages(&books).await?;
+        
+        // Generate statistics page if we have stats data
+        if let Some(ref stats_data) = self.stats_data {
+            self.generate_statistics_page(stats_data).await?;
+        }
         
         info!("Static site generation completed!");
         Ok(())
@@ -63,6 +76,10 @@ impl SiteGenerator {
         fs::create_dir_all(self.output_dir.join("assets/covers"))?;
         fs::create_dir_all(self.output_dir.join("assets/css"))?;
         fs::create_dir_all(self.output_dir.join("assets/js"))?;
+        fs::create_dir_all(self.output_dir.join("assets/json"))?;
+        if self.stats_data.is_some() {
+            fs::create_dir_all(self.output_dir.join("statistics"))?;
+        }
         Ok(())
     }
     
@@ -77,6 +94,9 @@ impl SiteGenerator {
         
         let lazy_loading_content = include_str!("../assets/lazy-loading.js");
         fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
+        
+        let stats_js_content = include_str!("../assets/statistics.js");
+        fs::write(self.output_dir.join("assets/js/statistics.js"), stats_js_content)?;
         
         Ok(())
     }
@@ -211,24 +231,64 @@ impl SiteGenerator {
         
         Ok(())
     }
+    
+    async fn generate_statistics_page(&self, stats_data: &StatisticsData) -> Result<()> {
+        info!("Generating statistics page...");
+        
+        // Calculate reading stats from the parsed data
+        let reading_stats = StatisticsParser::calculate_stats(stats_data);
+        
+        // Create the template
+        let template = StatsTemplate {
+            site_title: self.site_title.clone(),
+            reading_stats: reading_stats.clone(),
+            version: self.get_version(),
+            last_updated: self.get_last_updated(),
+            navbar_items: self.create_navbar_items("statistics"),
+        };
+        
+        // Render and write the template
+        let html = template.render()?;
+        
+        // Create stats directory and write the index file
+        let stats_dir = self.output_dir.join("statistics");
+        fs::create_dir_all(&stats_dir)?;
+        fs::write(stats_dir.join("index.html"), html)?;
+        
+        // Export overall stats as JSON for client-side use
+        let json = serde_json::to_string_pretty(&reading_stats)?;
+        fs::write(self.output_dir.join("assets/json/statistics.json"), json)?;
+        
+        // Export individual week data as separate JSON files
+        for (index, week) in reading_stats.weeks.iter().enumerate() {
+            let week_json = serde_json::to_string_pretty(&week)?;
+            fs::write(self.output_dir.join("assets/json").join(format!("week_{}.json", index)), week_json)?;
+        }
+        
+        Ok(())
+    }
 
     // Create default navbar items
     fn create_navbar_items(&self, current_page: &str) -> Vec<NavItem> {
-        vec![
+        let mut items = vec![
             NavItem {
                 label: "Books".to_string(),
                 href: "/".to_string(),
                 icon_svg: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253".to_string(),
                 is_active: current_page == "books",
             },
-            // Add more navigation items here in the future
-            // Example:
-            // NavItem {
-            //     label: "Statistics".to_string(),
-            //     href: "/stats".to_string(),
-            //     icon_path: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z".to_string(),
-            //     is_active: current_page == "stats",
-            // },
-        ]
+        ];
+        
+        // Add stats navigation item if we have stats data
+        if self.stats_data.is_some() {
+            items.push(NavItem {
+                label: "Statistics".to_string(),
+                href: "/statistics/".to_string(),
+                icon_svg: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z".to_string(),
+                is_active: current_page == "statistics",
+            });
+        }
+        
+        items
     }
 } 

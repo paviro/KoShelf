@@ -1,0 +1,72 @@
+<!-- Overall Stats Section -->
+<section class="mb-8 px-2 sm:px-4 md:px-0">
+    <div class="flex items-center mb-4 md:mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-purple-400 to-purple-600 rounded-full"></div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">Overall Statistics</h2>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
+        <!-- Total Read Time Card -->
+        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+            <div class="flex items-start justify-between mb-1 sm:mb-2">
+                <h3 class="text-gray-400 mb-1 text-xs">Total Reading Time</h3>
+                <div class="p-1 bg-primary-600/20 rounded-lg">
+                    <svg class="w-3 h-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-white">
+                {{ reading_stats.total_read_time / 3600 }}h {{ (reading_stats.total_read_time % 3600) / 60 }}m
+            </p>
+        </div>
+        
+        <!-- Total Pages Read Card -->
+        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+            <div class="flex items-start justify-between mb-1 sm:mb-2">
+                <h3 class="text-gray-400 mb-1 text-xs">Total Pages Read</h3>
+                <div class="p-1 bg-indigo-600/20 rounded-lg">
+                    <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-white">
+                {{ reading_stats.total_page_reads }}
+            </p>
+        </div>
+        
+        <!-- Longest Reading Time Card -->
+        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+            <div class="flex items-start justify-between mb-1 sm:mb-2">
+                <h3 class="text-gray-400 mb-1 text-xs">Longest Daily Reading</h3>
+                <div class="p-1 bg-amber-600/20 rounded-lg">
+                    <svg class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-white">
+                {{ reading_stats.longest_read_time_in_day / 3600 }}h {{ (reading_stats.longest_read_time_in_day % 3600) / 60 }}m
+            </p>
+        </div>
+        
+        <!-- Most Pages in a Day Card -->
+        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
+            <div class="flex items-start justify-between mb-1 sm:mb-2">
+                <h3 class="text-gray-400 mb-1 text-xs">Most Pages in a Day</h3>
+                <div class="p-1 bg-green-600/20 rounded-lg">
+                    <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-white">
+                {{ reading_stats.most_pages_in_day }}
+            </p>
+        </div>
+    </div>
+</section> 
