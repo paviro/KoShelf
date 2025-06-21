@@ -22,8 +22,12 @@ use crate::file_watcher::FileWatcher;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Path to the folder containing epub files and KoReader metadata
-    #[arg(short, long)]
+    #[arg(long)]
     books_path: PathBuf,
+
+    /// Path to the statistics.sqlite3 file for additional reading stats (optional)
+    #[arg(long)]
+    statistics_db: Option<PathBuf>,
     
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
     #[arg(short, long)]
@@ -44,10 +48,6 @@ struct Cli {
     /// Port for web server mode (default: 3000)
     #[arg(short, long, default_value = "3000")]
     port: u16,
-    
-    /// Path to the statistics.sqlite3 file for additional reading stats
-    #[arg(long)]
-    statistics_db: Option<PathBuf>,
 }
 
 #[tokio::main]
