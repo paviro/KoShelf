@@ -2,10 +2,12 @@ use anyhow::{Result, Context};
 use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use log::{info, warn};
+use log::{info, warn, debug};
 use std::collections::HashMap;
 use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc};
 use crate::models::{ReadingStats, WeeklyStats, DailyStats};
+use std::fs;
+use tempfile::TempDir;
 
 /// Data structure representing a book entry from the statistics database
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,13 +51,20 @@ impl StatisticsParser {
     pub fn parse<P: AsRef<Path>>(path: P) -> Result<StatisticsData> {
         info!("Opening statistics database: {:?}", path.as_ref());
         
-        // Use immutable mode without file locks
-        // Using URI format to specify immutable=1 mode
-        let uri = format!("file:{}?immutable=1&mode=ro", path.as_ref().display());
+        // Create a temporary directory for the database copy
+        let temp_dir = TempDir::new().with_context(|| "Failed to create temporary directory")?;
+        let temp_db_path = temp_dir.path().join("statistics.db");
+        
+        // Copy the database to the temporary directory
+        debug!("Copying database to temporary directory: {:?}", temp_db_path);
+        fs::copy(path.as_ref(), &temp_db_path)
+            .with_context(|| format!("Failed to copy database from {:?} to {:?}", path.as_ref(), temp_db_path))?;
+        
+        // Open the temporary database copy with read-only access
         let conn = Connection::open_with_flags(
-            uri,
-            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI
-        ).with_context(|| format!("Failed to open statistics database: {:?}", path.as_ref()))?;
+            &temp_db_path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY
+        ).with_context(|| format!("Failed to open temporary statistics database: {:?}", temp_db_path))?;
         
         // Parse books
         let books = Self::parse_books(&conn)?;

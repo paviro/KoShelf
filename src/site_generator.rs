@@ -1,6 +1,7 @@
 use crate::models::*;
 use crate::templates::*;
 use crate::statistics_parser::{StatisticsParser, StatisticsData};
+use crate::book_scanner::scan_books;
 use anyhow::{Result, Context};
 use askama::Template;
 use std::fs;
@@ -15,29 +16,47 @@ pub struct SiteGenerator {
     output_dir: PathBuf,
     site_title: String,
     include_unread: bool,
-    stats_data: Option<StatisticsData>,
+    books_path: PathBuf,
+    statistics_db_path: Option<PathBuf>,
 }
 
 impl SiteGenerator {
-    pub fn new(output_dir: PathBuf, site_title: String, include_unread: bool) -> Self {
+    pub fn new(
+        output_dir: PathBuf, 
+        site_title: String, 
+        include_unread: bool, 
+        books_path: PathBuf, 
+        statistics_db_path: Option<PathBuf>
+    ) -> Self {
         Self {
             output_dir,
             site_title,
             include_unread,
-            stats_data: None,
+            books_path,
+            statistics_db_path,
         }
     }
     
-    pub fn with_stats(mut self, stats_data: StatisticsData) -> Self {
-        self.stats_data = Some(stats_data);
-        self
-    }
-    
-    pub async fn generate(&self, books: Vec<Book>) -> Result<()> {
+    pub async fn generate(&self) -> Result<()> {
         info!("Generating static site in: {:?}", self.output_dir);
         
+        // Scan books fresh on each generation
+        let books = scan_books(&self.books_path).await?;
+        
+        // Load statistics fresh on each generation if path is provided
+        let stats_data = if let Some(ref stats_path) = self.statistics_db_path {
+            if stats_path.exists() {
+                Some(StatisticsParser::parse(stats_path)?)
+            } else {
+                info!("Statistics database not found: {:?}", stats_path);
+                None
+            }
+        } else {
+            None
+        };
+        
         // Create output directories
-        self.create_directories().await?;
+        self.create_directories(&stats_data).await?;
         
         // Copy static assets
         self.copy_static_assets().await?;
@@ -52,7 +71,7 @@ impl SiteGenerator {
         self.generate_book_pages(&books).await?;
         
         // Generate statistics page if we have stats data
-        if let Some(ref stats_data) = self.stats_data {
+        if let Some(ref stats_data) = stats_data {
             self.generate_statistics_page(stats_data).await?;
         }
         
@@ -70,14 +89,14 @@ impl SiteGenerator {
         Local::now().format("%Y-%m-%d %H:%M").to_string()
     }
     
-    async fn create_directories(&self) -> Result<()> {
+    async fn create_directories(&self, stats_data: &Option<StatisticsData>) -> Result<()> {
         fs::create_dir_all(&self.output_dir)?;
         fs::create_dir_all(self.output_dir.join("books"))?;
         fs::create_dir_all(self.output_dir.join("assets/covers"))?;
         fs::create_dir_all(self.output_dir.join("assets/css"))?;
         fs::create_dir_all(self.output_dir.join("assets/js"))?;
         fs::create_dir_all(self.output_dir.join("assets/json"))?;
-        if self.stats_data.is_some() {
+        if stats_data.is_some() {
             fs::create_dir_all(self.output_dir.join("statistics"))?;
         }
         Ok(())
@@ -318,8 +337,8 @@ impl SiteGenerator {
             },
         ];
         
-        // Add stats navigation item if we have stats data
-        if self.stats_data.is_some() {
+        // Add stats navigation item if we have a stats database path configured
+        if self.statistics_db_path.is_some() {
             items.push(NavItem {
                 label: "Statistics".to_string(),
                 href: "/statistics/".to_string(),
