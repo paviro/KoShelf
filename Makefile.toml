@@ -1,0 +1,187 @@
+# Multi-target build tasks for koshelf
+
+[config]
+default_to_workspace = false
+main_project_member = "."
+
+# Default environment variables
+[env]
+CARGO_BUILD_PROFILE = "release"
+
+# Production profile environment
+[env.production]
+CARGO_BUILD_PROFILE = "release"
+
+# Release profile tasks
+[tasks.build-local]
+description = "Build for current architecture"
+command = "cargo"
+args = ["build", "--release"]
+
+# ARM64 targets
+[tasks.build-arm64-musl]
+description = "Build for ARM64 with musl"
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-unknown-linux-musl"]
+
+[tasks.build-arm64-gnu]
+description = "Build for ARM64 with glibc"
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-unknown-linux-gnu"]
+
+# x86_64 Linux targets
+[tasks.build-x86-gnu]
+description = "Build for x86_64 Linux with glibc"
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-unknown-linux-gnu"]
+
+[tasks.build-x86-musl]
+description = "Build for x86_64 Linux with musl"
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-unknown-linux-musl"]
+
+# Windows targets
+[tasks.build-windows-gnu]
+description = "Build for Windows x86_64 (MinGW)"
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-pc-windows-gnu"]
+
+# Combined build tasks
+[tasks.build-all]
+description = "Build for all supported platforms"
+dependencies = [
+    "build-local",
+    "build-arm64-musl",
+    "build-arm64-gnu",
+    "build-x86-gnu",
+    "build-x86-musl",
+    "build-windows-gnu"
+]
+
+[tasks.build-arm64-all]
+description = "Build for current architecture + both ARM64 targets"
+dependencies = [
+    "build-local",
+    "build-arm64-musl", 
+    "build-arm64-gnu"
+]
+
+[tasks.build-linux-all]
+description = "Build for all Linux targets"
+dependencies = [
+    "build-local",
+    "build-arm64-musl",
+    "build-arm64-gnu",
+    "build-x86-gnu",
+    "build-x86-musl"
+]
+
+[tasks.build-windows-all]
+description = "Build for all Windows targets"
+dependencies = [
+    "build-windows-gnu"
+]
+
+[tasks.clean-all]
+description = "Clean all build artifacts"
+command = "cargo"
+args = ["clean"]
+
+# Packaging tasks
+[tasks.create-release-dir]
+description = "Create release directory"
+script = '''
+mkdir -p release
+'''
+
+[tasks.package-local]
+description = "Package local binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+PLATFORM="$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]')"
+cp "target/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-arm64-musl]
+description = "Package ARM64 musl binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+PLATFORM="aarch64-unknown-linux-musl"
+cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-arm64-gnu]
+description = "Package ARM64 gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+PLATFORM="aarch64-unknown-linux-gnu"
+cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-x86-gnu]
+description = "Package x86_64 gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+PLATFORM="x86_64-unknown-linux-gnu"
+cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-x86-musl]
+description = "Package x86_64 musl binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+PLATFORM="x86_64-unknown-linux-musl"
+cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-windows-gnu]
+description = "Package Windows gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf.exe"
+PLATFORM="x86_64-pc-windows-gnu"
+cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+# Combined packaging tasks
+[tasks.package-all]
+description = "Package all platform binaries into zip files"
+dependencies = [
+    "package-local",
+    "package-arm64-musl",
+    "package-arm64-gnu",
+    "package-x86-gnu", 
+    "package-x86-musl",
+    "package-windows-gnu"
+]
+
+# Build and package in one go
+[tasks.release-all]
+description = "Build and package all platforms"
+dependencies = [
+    "build-all",
+    "package-all"
+] 
