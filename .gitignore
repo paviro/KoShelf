@@ -2,6 +2,7 @@
 /target/
 **/*.rs.bk
 Cargo.lock
+release/
 
 # Node.js
 node_modules/
