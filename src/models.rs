@@ -326,6 +326,9 @@ pub struct ReadingStats {
     
     // Weekly stats
     pub weeks: Vec<WeeklyStats>,
+    
+    // Daily activity data for heatmap
+    pub daily_activity: Vec<DailyStats>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -336,4 +339,12 @@ pub struct WeeklyStats {
     pub pages_read: i64,
     pub avg_pages_per_day: f64,
     pub avg_read_time_per_day: f64,    // seconds
+}
+
+/// Daily reading stats for the activity heatmap
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyStats {
+    pub date: String,              // ISO format yyyy-mm-dd
+    pub read_time: i64,            // seconds
+    pub pages_read: i64,
 } 

@@ -5,7 +5,7 @@ use std::path::Path;
 use log::{info, warn};
 use std::collections::HashMap;
 use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc};
-use crate::models::{ReadingStats, WeeklyStats};
+use crate::models::{ReadingStats, WeeklyStats, DailyStats};
 
 /// Data structure representing a book entry from the statistics database
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,12 +208,27 @@ impl StatisticsParser {
         // Sort weeks by start date (newest first)
         weeks.sort_by(|a, b| b.start_date.cmp(&a.start_date));
         
+        // Create daily activity data for heatmap
+        let mut daily_activity = Vec::new();
+        for (date, read_time) in daily_read_time.iter() {
+            let pages_read = daily_page_reads.get(date).cloned().unwrap_or(0);
+            daily_activity.push(DailyStats {
+                date: date.clone(),
+                read_time: *read_time,
+                pages_read,
+            });
+        }
+        
+        // Sort daily activity by date (oldest first for chronological display)
+        daily_activity.sort_by(|a, b| a.date.cmp(&b.date));
+        
         ReadingStats {
             total_read_time,
             total_page_reads,
             longest_read_time_in_day,
             most_pages_in_day,
             weeks,
+            daily_activity,
         }
     }
 } 
