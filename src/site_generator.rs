@@ -98,6 +98,9 @@ impl SiteGenerator {
         let stats_js_content = include_str!("../assets/statistics.js");
         fs::write(self.output_dir.join("assets/js/statistics.js"), stats_js_content)?;
         
+        let heatmap_js_content = include_str!("../assets/heatmap.js");
+        fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
+        
         Ok(())
     }
     
@@ -238,10 +241,14 @@ impl SiteGenerator {
         // Calculate reading stats from the parsed data
         let reading_stats = StatisticsParser::calculate_stats(stats_data);
         
+        // Export daily activity data grouped by year as separate JSON files and get available years
+        let available_years = self.export_daily_activity_by_year(&reading_stats.daily_activity).await?;
+        
         // Create the template
         let template = StatsTemplate {
             site_title: self.site_title.clone(),
             reading_stats: reading_stats.clone(),
+            available_years,
             version: self.get_version(),
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items("statistics"),
@@ -266,6 +273,38 @@ impl SiteGenerator {
         }
         
         Ok(())
+    }
+
+    // Export daily activity data grouped by year as separate JSON files and return available years
+    async fn export_daily_activity_by_year(&self, daily_activity: &[crate::models::DailyStats]) -> Result<Vec<i32>> {
+        use std::collections::HashMap;
+        
+        // Group daily stats by year
+        let mut activity_by_year: HashMap<i32, Vec<&crate::models::DailyStats>> = HashMap::new();
+        
+        for day_stat in daily_activity {
+            // Extract year from date (format: yyyy-mm-dd)
+            if let Some(year_str) = day_stat.date.get(0..4) {
+                if let Ok(year) = year_str.parse::<i32>() {
+                    activity_by_year.entry(year).or_default().push(day_stat);
+                }
+            }
+        }
+        
+        // Collect available years before consuming the map
+        let mut available_years: Vec<i32> = activity_by_year.keys().cloned().collect();
+        available_years.sort_by(|a, b| b.cmp(a)); // Sort descending (newest first)
+        
+        // Export each year's data to a separate file
+        for (year, year_data) in activity_by_year {
+            let filename = format!("daily_activity_{}.json", year);
+            let file_path = self.output_dir.join("assets/json").join(filename);
+            
+            let json = serde_json::to_string_pretty(&year_data)?;
+            fs::write(file_path, json)?;
+        }
+        
+        Ok(available_years)
     }
 
     // Create default navbar items

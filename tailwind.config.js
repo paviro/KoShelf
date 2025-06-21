@@ -54,6 +54,9 @@ module.exports = {
       },
       aspectRatio: {
         'book': '2 / 3',
+      },
+      gridTemplateColumns: {
+        '53': 'repeat(53, minmax(0, 1fr))'
       }
     },
   },

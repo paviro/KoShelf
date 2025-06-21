@@ -33,6 +33,7 @@ pub struct BookTemplate {
 pub struct StatsTemplate {
     pub site_title: String,
     pub reading_stats: ReadingStats,
+    pub available_years: Vec<i32>,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
