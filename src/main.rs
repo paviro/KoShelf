@@ -17,8 +17,6 @@ mod statistics_parser;
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
-use crate::book_scanner::scan_books;
-use crate::statistics_parser::StatisticsParser;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -74,16 +72,12 @@ async fn main() -> Result<()> {
         anyhow::bail!("Watch mode requires an output directory (--output)");
     }
 
-    // Parse statistics if provided
-    let stats_data = if let Some(ref stats_path) = cli.statistics_db {
+    // Validate statistics database if provided
+    if let Some(ref stats_path) = cli.statistics_db {
         if !stats_path.exists() {
             anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
         }
-        
-        Some(StatisticsParser::parse(stats_path)?)
-    } else {
-        None
-    };
+    }
 
     // Determine output directory
     let (output_dir, is_static_site) = match &cli.output {
@@ -94,18 +88,17 @@ async fn main() -> Result<()> {
         }
     };
 
-    // Scan books and generate site
-    let books = scan_books(&cli.books_path).await?;
+    // Create site generator - it will handle book scanning and stats loading internally
+    let site_generator = SiteGenerator::new(
+        output_dir.clone(), 
+        cli.title.clone(), 
+        cli.include_unread,
+        cli.books_path.clone(),
+        cli.statistics_db.clone(),
+    );
     
-    // Create site generator with or without stats
-    let mut site_generator = SiteGenerator::new(output_dir.clone(), cli.title.clone(), cli.include_unread);
-    
-    // Add stats if available
-    if let Some(stats) = stats_data {
-        site_generator = site_generator.with_stats(stats);
-    }
-    
-    site_generator.generate(books.clone()).await?;
+    // Generate initial site
+    site_generator.generate().await?;
 
     if is_static_site {
         return Ok(());
@@ -121,7 +114,7 @@ async fn main() -> Result<()> {
             output_dir,
             cli.title.clone(),
             cli.include_unread,
-            books.clone(),
+            cli.statistics_db.clone(),
         ).await?;
         
         // Run file watcher
@@ -135,7 +128,7 @@ async fn main() -> Result<()> {
             output_dir.clone(),
             cli.title.clone(),
             cli.include_unread,
-            books.clone(),
+            cli.statistics_db.clone(),
         ).await?;
 
         // Start web server
