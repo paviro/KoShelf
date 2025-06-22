@@ -5,7 +5,7 @@ use std::path::Path;
 use log::{info, warn, debug};
 use std::collections::HashMap;
 use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc};
-use crate::models::{ReadingStats, WeeklyStats, DailyStats};
+use crate::models::{ReadingStats, WeeklyStats, DailyStats, StreakInfo};
 use std::fs;
 use tempfile::TempDir;
 
@@ -344,13 +344,109 @@ impl StatisticsParser {
         // Sort daily activity by date (oldest first for chronological display)
         daily_activity.sort_by(|a, b| a.date.cmp(&b.date));
         
+        // Calculate reading streaks
+        let (longest_streak, current_streak) = Self::calculate_streaks(&daily_activity);
+        
         ReadingStats {
             total_read_time,
             total_page_reads,
             longest_read_time_in_day,
             most_pages_in_day,
+            longest_streak,
+            current_streak,
             weeks,
             daily_activity,
         }
+    }
+    
+    /// Calculate reading streaks from daily activity data
+    /// Returns (longest_streak_info, current_streak_info)
+    fn calculate_streaks(daily_activity: &[DailyStats]) -> (StreakInfo, StreakInfo) {
+        if daily_activity.is_empty() {
+            return (
+                StreakInfo::new(0, None, None),
+                StreakInfo::new(0, None, None)
+            );
+        }
+        
+        // Get all unique dates with reading activity (pages_read > 0)
+        let reading_dates: Vec<NaiveDate> = daily_activity
+            .iter()
+            .filter(|day| day.pages_read > 0)
+            .filter_map(|day| NaiveDate::parse_from_str(&day.date, "%Y-%m-%d").ok())
+            .collect();
+        
+        if reading_dates.is_empty() {
+            return (
+                StreakInfo::new(0, None, None),
+                StreakInfo::new(0, None, None)
+            );
+        }
+        
+        // Sort dates chronologically
+        let mut sorted_dates = reading_dates;
+        sorted_dates.sort();
+        
+        let today = Utc::now().naive_utc().date();
+        
+        // Find all streaks and their date ranges
+        let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new(); // (length, start_date, end_date)
+        let mut current_streak_start = sorted_dates[0];
+        let mut current_streak_length = 1i64;
+        
+        for i in 1..sorted_dates.len() {
+            let prev_date = sorted_dates[i - 1];
+            let curr_date = sorted_dates[i];
+            
+            // Check if current date is exactly one day after previous date
+            if curr_date == prev_date + Duration::days(1) {
+                current_streak_length += 1;
+            } else {
+                // End of current streak, record it
+                streaks.push((current_streak_length, current_streak_start, prev_date));
+                current_streak_start = curr_date;
+                current_streak_length = 1;
+            }
+        }
+        
+        // Don't forget the last streak
+        if let Some(&last_date) = sorted_dates.last() {
+            streaks.push((current_streak_length, current_streak_start, last_date));
+        }
+        
+        // Find longest streak
+        let longest_streak_info = if let Some(&(length, start, end)) = streaks.iter().max_by_key(|&&(len, _, _)| len) {
+            StreakInfo::new(
+                length,
+                Some(start.format("%Y-%m-%d").to_string()),
+                Some(end.format("%Y-%m-%d").to_string())
+            )
+        } else {
+            StreakInfo::new(0, None, None)
+        };
+        
+        // Find current streak (streak that includes today or recent days)
+        let current_streak_info = if let Some(&last_reading_date) = sorted_dates.last() {
+            let days_since_last_read = (today - last_reading_date).num_days();
+            
+            if days_since_last_read <= 1 {
+                // Last read was today or yesterday, find the streak that ends with last_reading_date
+                if let Some(&(length, start, _)) = streaks.iter().find(|&&(_, _, end)| end == last_reading_date) {
+                    StreakInfo::new(
+                        length,
+                        Some(start.format("%Y-%m-%d").to_string()),
+                        None // Current streak doesn't have an end date
+                    )
+                } else {
+                    StreakInfo::new(0, None, None)
+                }
+            } else {
+                StreakInfo::new(0, None, None) // No current streak if last read was more than 1 day ago
+            }
+        } else {
+            StreakInfo::new(0, None, None)
+        };
+        
+        (longest_streak_info, current_streak_info)
     }
 } 

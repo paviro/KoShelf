@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use chrono::Datelike;
 
 /// Sanitizes HTML content to only allow safe tags while removing styles and dangerous elements
 pub fn sanitize_html(html: &str) -> String {
@@ -316,6 +317,57 @@ impl std::fmt::Display for BookStatus {
     }
 }
 
+/// Streak information with date ranges
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreakInfo {
+    pub days: i64,
+    pub start_date: Option<String>,  // ISO format yyyy-mm-dd
+    pub end_date: Option<String>,    // ISO format yyyy-mm-dd
+}
+
+impl StreakInfo {
+    pub fn new(days: i64, start_date: Option<String>, end_date: Option<String>) -> Self {
+        Self {
+            days,
+            start_date,
+            end_date,
+        }
+    }
+    
+    /// Format the date range for display
+    pub fn date_range_display(&self) -> Option<String> {
+        match (&self.start_date, &self.end_date) {
+            (Some(start), Some(end)) => {
+                if start == end {
+                    Some(format!("{}", Self::format_date_display(start)))
+                } else {
+                    Some(format!("{} - {}", 
+                        Self::format_date_display(start),
+                        Self::format_date_display(end)))
+                }
+            },
+            (Some(start), None) => Some(format!("{} - now", Self::format_date_display(start))),
+            _ => None,
+        }
+    }
+    
+    /// Format a date string for display (convert from YYYY-MM-DD to more readable format)
+    fn format_date_display(date_str: &str) -> String {
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+            let current_year = chrono::Utc::now().year();
+            let date_year = date.year();
+            
+            if date_year == current_year {
+                date.format("%b %d").to_string()
+            } else {
+                date.format("%b %d %Y").to_string()
+            }
+        } else {
+            date_str.to_string()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadingStats {
     // Overall stats
@@ -323,6 +375,10 @@ pub struct ReadingStats {
     pub total_page_reads: i64,
     pub longest_read_time_in_day: i64, // seconds
     pub most_pages_in_day: i64,
+    
+    // Streak stats
+    pub longest_streak: StreakInfo,
+    pub current_streak: StreakInfo,
     
     // Weekly stats
     pub weeks: Vec<WeeklyStats>,

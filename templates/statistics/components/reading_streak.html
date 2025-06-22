@@ -1,9 +1,9 @@
-<!-- Activity Heatmap Section -->
-<section class="mb-8">
+<!-- Reading Streak Section -->
+<section class="pb-4 sm:pb-2">
     <div class="flex items-center justify-between mb-4 md:mb-6">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">Reading Activity</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-white">Reading Streak</h2>
         </div>
         
         <!-- Year Selector (moved inline with header) -->
@@ -69,6 +69,50 @@
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-500"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-300"></div>
             <span class="text-dark-400">More</span>
+        </div>
+    </div>
+    
+    <!-- Reading Streak Stats -->
+    <div class="w-full mt-3 sm:mt-3 md:mt-4">
+        <div class="flex flex-row w-full rounded-xl shadow overflow-hidden gap-0">
+            <!-- Current Streak (left - primary blue tint) -->
+            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start bg-gradient-to-br from-primary-800/40 to-primary-900/30 border border-primary-700/30 rounded-l-xl border-r-0 p-3 md:p-4 lg:p-6 xl:p-6">
+                <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
+                    <div class="flex items-baseline justify-center lg:justify-start mb-2 lg:mb-0 lg:mr-2">
+                        <span class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-white drop-shadow-lg leading-none">{{ reading_stats.current_streak.days }}</span>
+                        <span class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-100 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{% if reading_stats.current_streak.days == 1 %}day{% else %}days{% endif %}</span>
+                    </div>
+                    <div class="flex items-center lg:ml-6">
+                        <div>
+                            <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-primary-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">Current Streak</div>
+                            {% match reading_stats.current_streak.date_range_display() %}
+                            {% when Some with (date_range) %}
+                                <div class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-100/80">{{ date_range }}</div>
+                            {% when None %}
+                            {% endmatch %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Longest Streak (right - dark tint) -->
+            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-end bg-gradient-to-bl from-dark-700/60 to-dark-800/80 border border-dark-600/40 rounded-r-xl border-l-0 p-3 md:p-4 lg:p-6 xl:p-6">
+                <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
+                    <div class="flex items-baseline justify-center lg:justify-end mb-2 lg:mb-0 lg:mr-2">
+                        <span class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-white drop-shadow-lg leading-none">{{ reading_stats.longest_streak.days }}</span>
+                        <span class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-dark-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{% if reading_stats.longest_streak.days == 1 %}day{% else %}days{% endif %}</span>
+                    </div>
+                    <div class="flex items-center lg:ml-6">
+                        <div>
+                            <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-dark-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">Longest Streak</div>
+                            {% match reading_stats.longest_streak.date_range_display() %}
+                            {% when Some with (date_range) %}
+                                <div class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-dark-300">{{ date_range }}</div>
+                            {% when None %}
+                            {% endmatch %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
