@@ -8,6 +8,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations & Highlights**: Shows all your KoReader highlights and notes with elegant formatting
 - 📖 **Book Details**: Individual pages for each book with metadata and organized annotations
+- 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, activity heatmaps, and weekly breakdowns
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
 - ⚡ **Performance**: Fast loading with optimized images and minified CSS
@@ -15,17 +16,40 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 
 ## Installation
 
+### Prebuilt Binaries
+
+The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/your-username/koshelf/releases). Binaries are available for:
+
+- Windows (x64)
+- macOS (Apple Silicon)
+- Linux (x64 and ARM64)
+
+Download the appropriate binary for your system and make it executable:
+
+```bash
+# macOS/Linux
+chmod +x koshelf
+./koshelf --help
+```
+
+**Note for macOS users**: The binary is not code-signed, so macOS Gatekeeper will prevent it from running initially. You'll see a warning like "cannot be opened because the developer cannot be verified." To run the binary:
+
+1. Run `xattr -d com.apple.quarantine koshelf` to remove the quarantine attribute, or  
+2. Open it and go to System Preferences > Security & Privacy > General and click "Allow Anyway" after the first blocked attempt
+
 ### From Source
+
+If you prefer to build from source or need a custom build:
 
 #### Prerequisites
 
 - Rust 1.70+ (for building)
 - Node.js and npm (for Tailwind CSS compilation)
 
-### Building the tool
+#### Building the tool
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/paviro/KOShelf
 cd koshelf
 
 # Install Node.js dependencies for Tailwind CSS
@@ -37,22 +61,14 @@ cargo build --release
 
 The binary will be available at `target/release/koshelf`.
 
-**Note:** The application will automatically compile Tailwind CSS during site generation, but you can also manually build the CSS with:
-
-```bash
-# Development (with watch mode)
-npm run build-css
-
-# Production (minified)
-npm run build-css-prod
-```
+**Note:** The application will automatically compile Tailwind CSS during site generation.
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-./target/release/koshelf --books-path /path/to/your/books --output ./my-library-site
+./koshelf --books-path /path/to/your/books --output ./my-library-site
 ```
 
 ### Operation Modes
@@ -65,7 +81,8 @@ KoShelf can operate in several modes:
 
 ### Command Line Options
 
-- `--books-path, -b`: Path to your folder containing EPUB files and KoReader metadata
+- `--books-path`: Path to your folder containing EPUB files and KoReader metadata
+- `--statistics-db`: Path to the statistics.sqlite3 file for additional reading stats (optional)
 - `--output, -o`: Output directory for the generated site (default: "site")
 - `--watch`: Enable file watching with static output (requires --output)
 - `--title, -t`: Site title (default: "KoShelf")
@@ -76,16 +93,16 @@ KoShelf can operate in several modes:
 
 ```bash
 # Generate site from Books folder
-./target/release/koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
+./koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
 
 # Generate site with unread books included
-./target/release/koshelf -b ~/Books -o ~/my-reading-site --include-unread
+./koshelf -b ~/Books -o ~/my-reading-site --include-unread
 
 # Start web server with live file watching
-./target/release/koshelf -b ~/Books -p 8080
+./koshelf -b ~/Books -p 8080
 
 # Generate static site with file watching
-./target/release/koshelf -b ~/Books -o ~/my-reading-site --watch
+./koshelf -b ~/Books -o ~/my-reading-site --watch
 ```
 
 ## KoReader Setup
@@ -105,6 +122,25 @@ Books/
 
 The `.sdr` directories are automatically created by KoReader when you read books and make highlights/annotations.
 Although KOReader supports more than just EPUBs, this tool does not, and probably never will, as I don't use them and this is a weekend project that probably won't be maintained much.
+
+### Typical Deployment Setup
+
+Although there are many ways to use this tool here is how I use it:
+
+1. **Syncthing Sync**: I use [Syncthing](https://syncthing.net/) to sync both my books folder and KoReader settings folder from my e-reader to my server
+2. **Books and Statistics**: I point to the synced books folder with `--books-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
+3. **Web Server Mode**: I then run KoShelf in web server mode (without `--output`) - it will automatically rebuild when files change
+4. **Nginx Reverse Proxy**: I use an nginx reverse proxy for HTTPS and to restrict access
+
+My actual setup:
+```bash
+# My server command - runs continuously with file watching and statistics
+./koshelf --books-path ~/syncthing/Books \
+         --statistics-db ~/syncthing/KOReaderSettings/statistics.sqlite3 \
+         --port 3000
+```
+
+This way, every time Syncthing pulls updates from my e-reader, the website automatically updates with my latest reading progress, new highlights, and updated statistics.
 
 ## Supported Data
 
@@ -127,6 +163,11 @@ Although KOReader supports more than just EPUBs, this tool does not, and probabl
 - Rating (stars out of 5)
 - Summary note (the one you can fill out at the end of the book)
 
+### From KoReader Statistics Database (statistics.sqlite3)
+- Total reading time and pages
+- Weekly reading statistics
+- Reading activity heatmap
+
 ## Generated Site Structure
 
 ```
@@ -146,3 +187,11 @@ site/
 │   └── js/
 │       └── script.js       # Interactive features
 ```
+
+## Credits
+
+Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeSG/KoInsight) by @GeorgeSG - an excellent alternative that focuses more on statistics and also supports acting as a KOReader sync server. If you're primarily interested in reading stats rather than highlights and annotations, definitely check it out!
+
+## Disclaimer
+
+This is a weekend project and was built for personal use - it relies heavily on AI-generated code. While I've tested everything and use it daily, I take no responsibility for any issues you might encounter. Use at your own risk.
