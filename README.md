@@ -80,10 +80,10 @@ KoShelf can operate in several modes:
 
 ### Command Line Options
 
-- `--books-path`: Path to your folder containing EPUB files and KoReader metadata
-- `--statistics-db`: Path to the statistics.sqlite3 file for additional reading stats (optional)
+- `--books-path, -b`: Path to your folder containing EPUB files and KoReader metadata (optional if --statistics-db is provided)
+- `--statistics-db, -s`: Path to the statistics.sqlite3 file for additional reading stats (optional if --books-path is provided)
 - `--output, -o`: Output directory for the generated site (default: "site")
-- `--watch`: Enable file watching with static output (requires --output)
+- `--watch, -w`: Enable file watching with static output (requires --output)
 - `--title, -t`: Site title (default: "KoShelf")
 - `--include-unread`: Include unread books (EPUBs without KoReader metadata) in the generated site
 - `--port, -p`: Port for web server mode (default: 3000)
@@ -95,13 +95,13 @@ KoShelf can operate in several modes:
 ./koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
 
 # Generate site with statistics and unread books included
-./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
+./koshelf -b ~/Books -o ~/my-reading-site --s ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
 # Start web server with live file watching and statistics
-./koshelf -b ~/Books --statistics-db ~/KOReaderSettings/statistics.sqlite3 -p 8080
+./koshelf -b ~/Books --s ~/KOReaderSettings/statistics.sqlite3 -p 8080
 
 # Generate static site with file watching and statistics
-./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
+./koshelf -books-path ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
 ```
 
 ## KoReader Setup
