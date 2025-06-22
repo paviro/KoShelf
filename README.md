@@ -97,14 +97,14 @@ KoShelf can operate in several modes:
 # Generate site from Books folder
 ./koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
 
-# Generate site with unread books included
-./koshelf -b ~/Books -o ~/my-reading-site --include-unread
+# Generate site with statistics and unread books included
+./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
-# Start web server with live file watching
-./koshelf -b ~/Books -p 8080
+# Start web server with live file watching and statistics
+./koshelf -b ~/Books --statistics-db ~/KOReaderSettings/statistics.sqlite3 -p 8080
 
-# Generate static site with file watching
-./koshelf -b ~/Books -o ~/my-reading-site --watch
+# Generate static site with file watching and statistics
+./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
 ```
 
 ## KoReader Setup

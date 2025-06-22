@@ -38,7 +38,7 @@ struct Cli {
     watch: bool,
     
     /// Site title
-    #[arg(short, long, default_value = "KoShelf")]
+    #[arg(short, long, default_value = "KOShelf")]
     title: String,
     
     /// Include unread books (EPUBs without KoReader metadata) in the generated site
