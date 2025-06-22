@@ -1,4 +1,4 @@
-# KoShelf
+# KOShelf
 ![statistics](https://github.com/user-attachments/assets/39e2ebde-a448-4aa9-b2f3-ff4959d154da)
 
 
@@ -40,6 +40,12 @@ chmod +x koshelf
 
 1. Run `xattr -d com.apple.quarantine koshelf` to remove the quarantine attribute, or  
 2. Open it and go to System Preferences > Security & Privacy > General and click "Allow Anyway" after the first blocked attempt
+
+### Home Assistant
+
+Using Home Assistant? Install KOShelf as an add-on with just one click below.
+
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=c8a91b45_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2FKOShelf-home-assistant-addon)
 
 ### From Source
 
