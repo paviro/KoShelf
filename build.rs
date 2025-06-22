@@ -4,7 +4,7 @@ use std::fs;
 
 fn main() {
     println!("cargo:rerun-if-changed=assets/input.css");
-    println!("cargo:rerun-if-changed=assets/script.js");
+    println!("cargo:rerun-if-changed=assets/book_list.js");
     println!("cargo:rerun-if-changed=assets/lazy-loading.js");
     println!("cargo:rerun-if-changed=assets/statistics.js");
     println!("cargo:rerun-if-changed=assets/heatmap.js");

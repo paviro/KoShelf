@@ -8,7 +8,7 @@ use tokio::time::sleep;
 use log::{info, warn, debug};
 
 pub struct FileWatcher {
-    books_path: PathBuf,
+    books_path: Option<PathBuf>,
     site_dir: PathBuf,
     site_title: String,
     include_unread: bool,
@@ -18,7 +18,7 @@ pub struct FileWatcher {
 
 impl FileWatcher {
     pub async fn new(
-        books_path: PathBuf,
+        books_path: Option<PathBuf>,
         site_dir: PathBuf,
         site_title: String,
         include_unread: bool,
@@ -54,7 +54,11 @@ impl FileWatcher {
             Config::default().with_poll_interval(Duration::from_secs(1)),
         )?;
         
-        watcher.watch(&self.books_path, RecursiveMode::Recursive)?;
+        // Watch the books path if provided
+        if let Some(ref books_path) = self.books_path {
+            watcher.watch(books_path, RecursiveMode::Recursive)?;
+            info!("File watcher started for books directory: {:?}", books_path);
+        }
         
         // Also watch the statistics database if provided
         if let Some(ref stats_path) = self.statistics_db_path {
@@ -66,8 +70,6 @@ impl FileWatcher {
                 }
             }
         }
-        
-        info!("File watcher started for directory: {:?}", self.books_path);
         
         // Clone necessary data for the rebuild task
         let books_path_clone = self.books_path.clone();
