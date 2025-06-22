@@ -279,7 +279,7 @@ impl SiteGenerator {
             };
             
             // Calculate session statistics if we have book stats
-            let session_stats = if let (Some(stats), Some(ref book_stat)) = (stats_data, &book_stats) {
+            let session_stats = if let (Some(stats), Some(book_stat)) = (stats_data, &book_stats) {
                 Some(book_stat.calculate_session_stats(&stats.page_stats))
             } else {
                 None
