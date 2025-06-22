@@ -461,6 +461,132 @@
             {% when None %}
             {% endmatch %}
 
+            <!-- Reading Statistics -->
+            {% match session_stats %}
+            {% when Some with (stats) %}
+            <div class="md:bg-dark-850 md:rounded-xl md:border md:border-dark-700 overflow-hidden">
+                <div class="px-4 md:px-10 py-6 md:py-8 border-b border-dark-700">
+                    <h2 class="text-xl md:text-2xl font-bold text-white flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Reading Statistics
+                    </h2>
+                </div>
+                
+                <div class="p-4 md:p-10">
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4">
+                                                 <!-- Total Read Time -->
+                         <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                             <div class="text-xl md:text-2xl font-bold text-primary-400">
+                                 {% match book_stats %}
+                                 {% when Some with (book_stat) %}
+                                     {% match book_stat.total_read_time %}
+                                     {% when Some with (total_time) %}
+                                         {% let minutes = total_time / 60 %}
+                                         {% if minutes >= 60 %}
+                                             {% let hours = minutes / 60 %}
+                                             {% let remaining_mins = minutes % 60 %}
+                                             {{ hours }}h {{ remaining_mins }}m
+                                         {% else %}
+                                             {{ minutes }}m
+                                         {% endif %}
+                                     {% when None %}
+                                         --
+                                     {% endmatch %}
+                                 {% when None %}
+                                     --
+                                 {% endmatch %}
+                             </div>
+                             <div class="text-xs md:text-sm text-dark-400">Read Time</div>
+                         </div>
+                        
+                        <!-- Reading Sessions -->
+                        <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                            <div class="text-xl md:text-2xl font-bold text-primary-400">{{ stats.session_count }}</div>
+                            <div class="text-xs md:text-sm text-dark-400">Sessions</div>
+                        </div>
+                        
+                                                 <!-- Average Session Duration -->
+                         <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                             <div class="text-xl md:text-2xl font-bold text-primary-400">
+                                 {% match stats.average_session_duration %}
+                                 {% when Some with (avg_duration) %}
+                                     {% let minutes = avg_duration / 60 %}
+                                     {% if minutes >= 60 %}
+                                         {% let hours = minutes / 60 %}
+                                         {% let remaining_mins = minutes % 60 %}
+                                         {{ hours }}h {{ remaining_mins }}m
+                                     {% else %}
+                                         {{ minutes }}m
+                                     {% endif %}
+                                 {% when None %}
+                                     --
+                                 {% endmatch %}
+                             </div>
+                             <div class="text-xs md:text-sm text-dark-400">Avg Session</div>
+                         </div>
+                        
+                                                 <!-- Longest Session -->
+                         <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                             <div class="text-xl md:text-2xl font-bold text-primary-400">
+                                 {% match stats.longest_session_duration %}
+                                 {% when Some with (longest_duration) %}
+                                     {% let minutes = longest_duration / 60 %}
+                                     {% if minutes >= 60 %}
+                                         {% let hours = minutes / 60 %}
+                                         {% let remaining_mins = minutes % 60 %}
+                                         {{ hours }}h {{ remaining_mins }}m
+                                     {% else %}
+                                         {{ minutes }}m
+                                     {% endif %}
+                                 {% when None %}
+                                     --
+                                 {% endmatch %}
+                             </div>
+                             <div class="text-xs md:text-sm text-dark-400">Longest Session</div>
+                         </div>
+
+                        <!-- Reading Speed -->
+                        <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                            <div class="text-xl md:text-2xl font-bold text-primary-400">
+                                                                 {% match stats.reading_speed %}
+                                 {% when Some with (speed) %}
+                                     {{ "{:.1}"|format(speed) }}
+                                 {% when None %}
+                                     --
+                                 {% endmatch %}
+                            </div>
+                            <div class="text-xs md:text-sm text-dark-400">Pages/Hour</div>
+                        </div>
+                        
+                        <!-- Last Read Date -->
+                        <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                            <div class="text-base md:text-lg font-bold text-primary-400">
+                                {% match stats.last_read_date %}
+                                {% when Some with (date) %}
+                                    {{ date }}
+                                {% when None %}
+                                    --
+                                {% endmatch %}
+                            </div>
+                            <div class="text-xs md:text-sm text-dark-400">Last Read</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 md:mt-6 p-3 md:p-4 bg-dark-800/50 rounded-lg">
+                        <div class="flex items-center text-xs md:text-sm text-dark-400">
+                            <svg class="w-4 h-4 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Statistics from KoReader reading sessions
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% when None %}
+            {% endmatch %}
+
             <!-- Additional Information -->
             <div class="md:bg-dark-850 md:rounded-xl md:border md:border-dark-700 overflow-hidden">
                 <div class="px-4 md:px-10 py-6 md:py-8 border-b border-dark-700">

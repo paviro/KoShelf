@@ -69,7 +69,7 @@ impl SiteGenerator {
         self.generate_covers(&books).await?;
         
         // Generate individual book pages
-        self.generate_book_pages(&books).await?;
+        self.generate_book_pages(&books, &stats_data).await?;
         
         if !books.is_empty() {
             // Generate book list page at index.html
@@ -261,13 +261,34 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_book_pages(&self, books: &[Book]) -> Result<()> {
+    async fn generate_book_pages(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
         info!("Generating book detail pages...");
         
         for book in books {
+            // Try to find matching statistics by MD5
+            let book_stats = if let Some(stats) = stats_data {
+                // Try to match using the partial_md5_checksum from KoReader metadata
+                book.koreader_metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.partial_md5_checksum.as_ref())
+                    .and_then(|md5| stats.stats_by_md5.get(md5))
+                    .cloned()
+            } else {
+                None
+            };
+            
+            // Calculate session statistics if we have book stats
+            let session_stats = if let (Some(stats), Some(ref book_stat)) = (stats_data, &book_stats) {
+                Some(book_stat.calculate_session_stats(&stats.page_stats))
+            } else {
+                None
+            };
+            
             let template = BookTemplate {
                 site_title: self.site_title.clone(),
                 book: book.clone(),
+                book_stats,
+                session_stats,
             };
             
             let html = template.render()?;

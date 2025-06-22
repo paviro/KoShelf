@@ -1,5 +1,6 @@
 use askama::Template;
 use crate::models::*;
+use crate::statistics_parser::{StatBook, BookSessionStats};
 
 #[derive(Clone)]
 pub struct NavItem {
@@ -26,6 +27,8 @@ pub struct IndexTemplate {
 pub struct BookTemplate {
     pub site_title: String,
     pub book: Book,
+    pub book_stats: Option<StatBook>,
+    pub session_stats: Option<BookSessionStats>,
 }
 
 #[derive(Template)]
