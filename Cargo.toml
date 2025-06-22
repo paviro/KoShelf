@@ -49,4 +49,4 @@ tower-http = { version = "0.5.2", features = ["fs", "cors"] }
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-rusqlite = { version = "0.31.0", features = ["bundled"] }
+rusqlite = { version = "0.36.0", features = ["bundled"] }
