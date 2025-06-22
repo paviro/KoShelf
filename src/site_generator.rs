@@ -16,7 +16,7 @@ pub struct SiteGenerator {
     output_dir: PathBuf,
     site_title: String,
     include_unread: bool,
-    books_path: PathBuf,
+    books_path: Option<PathBuf>,
     statistics_db_path: Option<PathBuf>,
 }
 
@@ -25,7 +25,7 @@ impl SiteGenerator {
         output_dir: PathBuf, 
         site_title: String, 
         include_unread: bool, 
-        books_path: PathBuf, 
+        books_path: Option<PathBuf>, 
         statistics_db_path: Option<PathBuf>
     ) -> Self {
         Self {
@@ -40,10 +40,14 @@ impl SiteGenerator {
     pub async fn generate(&self) -> Result<()> {
         info!("Generating static site in: {:?}", self.output_dir);
         
-        // Scan books fresh on each generation
-        let books = scan_books(&self.books_path).await?;
+        // Scan books if books_path is provided
+        let books = if let Some(ref books_path) = self.books_path {
+            scan_books(books_path).await?
+        } else {
+            Vec::new()
+        };
         
-        // Load statistics fresh on each generation if path is provided
+        // Load statistics if path is provided
         let stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
                 Some(StatisticsParser::parse(stats_path)?)
@@ -55,27 +59,30 @@ impl SiteGenerator {
             None
         };
         
-        // Create output directories
-        self.create_directories(&stats_data).await?;
+        // Create output directories based on what we're generating
+        self.create_directories(&books, &stats_data).await?;
         
         // Copy static assets
-        self.copy_static_assets().await?;
+        self.copy_static_assets(&books, &stats_data).await?;
         
         // Generate book covers
         self.generate_covers(&books).await?;
         
-        // Generate index page
-        self.generate_index(&books).await?;
-        
         // Generate individual book pages
         self.generate_book_pages(&books).await?;
         
-        // Generate statistics page if we have stats data
-        if let Some(ref stats_data) = stats_data {
-            self.generate_statistics_page(stats_data).await?;
+        if !books.is_empty() {
+            // Generate book list page at index.html
+            self.generate_book_list(&books).await?;
         }
         
+        if let Some(ref stats_data) = stats_data {
+            // Generate statistics page (render to root if no books)
+            self.generate_statistics_page(stats_data, books.is_empty()).await?;
+        }
+
         info!("Static site generation completed!");
+
         Ok(())
     }
     
@@ -89,36 +96,55 @@ impl SiteGenerator {
         Local::now().format("%Y-%m-%d %H:%M").to_string()
     }
     
-    async fn create_directories(&self, stats_data: &Option<StatisticsData>) -> Result<()> {
+    async fn create_directories(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
         fs::create_dir_all(&self.output_dir)?;
-        fs::create_dir_all(self.output_dir.join("books"))?;
-        fs::create_dir_all(self.output_dir.join("assets/covers"))?;
+        
+        // Only create books directory if we have books
+        if !books.is_empty() {
+            fs::create_dir_all(self.output_dir.join("books"))?;
+            fs::create_dir_all(self.output_dir.join("assets/covers"))?;
+        }
+        
+        // Always create assets directories for CSS/JS as they're always needed
         fs::create_dir_all(self.output_dir.join("assets/css"))?;
         fs::create_dir_all(self.output_dir.join("assets/js"))?;
-        fs::create_dir_all(self.output_dir.join("assets/json"))?;
+        
+        // Only create JSON directory if we have statistics data
         if stats_data.is_some() {
+            fs::create_dir_all(self.output_dir.join("assets/json"))?;
+        }
+        
+        // Only create statistics directory if we have stats data AND we have books 
+        // (if no books, stats render to root)
+        if stats_data.is_some() && !books.is_empty() {
             fs::create_dir_all(self.output_dir.join("statistics"))?;
         }
+        
         Ok(())
     }
     
-    async fn copy_static_assets(&self) -> Result<()> {
-        // Write the pre-compiled CSS that was embedded at build time
+    async fn copy_static_assets(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
+        // Write the pre-compiled CSS (always needed for basic styling)
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
         fs::write(self.output_dir.join("assets/css/style.css"), css_content)?;
         
-        // Copy JavaScript files
-        let js_content = include_str!("../assets/script.js");
-        fs::write(self.output_dir.join("assets/js/script.js"), js_content)?;
+        // Copy book-related JavaScript files only if we have books
+        if !books.is_empty() {
+            let js_content = include_str!("../assets/book_list.js");
+            fs::write(self.output_dir.join("assets/js/book_list.js"), js_content)?;
+            
+            let lazy_loading_content = include_str!("../assets/lazy-loading.js");
+            fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
+        }
         
-        let lazy_loading_content = include_str!("../assets/lazy-loading.js");
-        fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
-        
-        let stats_js_content = include_str!("../assets/statistics.js");
-        fs::write(self.output_dir.join("assets/js/statistics.js"), stats_js_content)?;
-        
-        let heatmap_js_content = include_str!("../assets/heatmap.js");
-        fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
+        // Copy statistics-related JavaScript files only if we have stats data
+        if stats_data.is_some() {
+            let stats_js_content = include_str!("../assets/statistics.js");
+            fs::write(self.output_dir.join("assets/js/statistics.js"), stats_js_content)?;
+            
+            let heatmap_js_content = include_str!("../assets/heatmap.js");
+            fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
+        }
         
         Ok(())
     }
@@ -191,8 +217,8 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_index(&self, books: &[Book]) -> Result<()> {
-        info!("Generating index page...");
+    async fn generate_book_list(&self, books: &[Book]) -> Result<()> {
+        info!("Generating book list page...");
         
         let mut reading_books = Vec::new();
         let mut completed_books = Vec::new();
@@ -254,8 +280,12 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_statistics_page(&self, stats_data: &StatisticsData) -> Result<()> {
-        info!("Generating statistics page...");
+    async fn generate_statistics_page(&self, stats_data: &StatisticsData, render_to_root: bool) -> Result<()> {
+        if render_to_root {
+            info!("Generating statistics page at root index...");
+        } else {
+            info!("Generating statistics page...");
+        }
         
         // Calculate reading stats from the parsed data
         let reading_stats = StatisticsParser::calculate_stats(stats_data);
@@ -263,7 +293,7 @@ impl SiteGenerator {
         // Export daily activity data grouped by year as separate JSON files and get available years
         let available_years = self.export_daily_activity_by_year(&reading_stats.daily_activity).await?;
         
-        // Create the template
+        // Create the template with appropriate navbar
         let template = StatsTemplate {
             site_title: self.site_title.clone(),
             reading_stats: reading_stats.clone(),
@@ -276,10 +306,15 @@ impl SiteGenerator {
         // Render and write the template
         let html = template.render()?;
         
-        // Create stats directory and write the index file
-        let stats_dir = self.output_dir.join("statistics");
-        fs::create_dir_all(&stats_dir)?;
-        fs::write(stats_dir.join("index.html"), html)?;
+        if render_to_root {
+            // Write directly to index.html
+            fs::write(self.output_dir.join("index.html"), html)?;
+        } else {
+            // Create stats directory and write the index file
+            let stats_dir = self.output_dir.join("statistics");
+            fs::create_dir_all(&stats_dir)?;
+            fs::write(stats_dir.join("index.html"), html)?;
+        }
         
         // Export individual week data as separate JSON files
         for (index, week) in reading_stats.weeks.iter().enumerate() {
@@ -324,20 +359,29 @@ impl SiteGenerator {
 
     // Create default navbar items
     fn create_navbar_items(&self, current_page: &str) -> Vec<NavItem> {
-        let mut items = vec![
-            NavItem {
+        let mut items = Vec::new();
+        
+        // Add books navigation item only if we have a books path configured
+        if self.books_path.is_some() {
+            items.push(NavItem {
                 label: "Books".to_string(),
                 href: "/".to_string(),
                 icon_svg: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253".to_string(),
                 is_active: current_page == "books",
-            },
-        ];
+            });
+        }
         
         // Add stats navigation item if we have a stats database path configured
         if self.statistics_db_path.is_some() {
+            let stats_href = if self.books_path.is_some() {
+                "/statistics/".to_string()  // Books exist, stats go to subfolder
+            } else {
+                "/".to_string()  // No books, stats are at root
+            };
+            
             items.push(NavItem {
                 label: "Statistics".to_string(),
-                href: "/statistics/".to_string(),
+                href: stats_href,
                 icon_svg: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z".to_string(),
                 is_active: current_page == "statistics",
             });

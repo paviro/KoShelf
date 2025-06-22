@@ -21,11 +21,11 @@ use crate::file_watcher::FileWatcher;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Path to the folder containing epub files and KoReader metadata
+    /// Path to the folder containing epub files and KoReader metadata (optional if statistics_db is provided)
     #[arg(long)]
-    books_path: PathBuf,
+    books_path: Option<PathBuf>,
 
-    /// Path to the statistics.sqlite3 file for additional reading stats (optional)
+    /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
     #[arg(long)]
     statistics_db: Option<PathBuf>,
     
@@ -59,12 +59,19 @@ async fn main() -> Result<()> {
     
     info!("Starting KOShelf...");
     
-    // Validate input path
-    if !cli.books_path.exists() {
-        anyhow::bail!("Books path does not exist: {:?}", cli.books_path);
+    // Require at least one of books_path or statistics_db
+    if cli.books_path.is_none() && cli.statistics_db.is_none() {
+        anyhow::bail!("Either --books-path or --statistics-db (or both) must be provided");
     }
-    if !cli.books_path.is_dir() {
-        anyhow::bail!("Books path is not a directory: {:?}", cli.books_path);
+    
+    // Validate books path if provided
+    if let Some(ref books_path) = cli.books_path {
+        if !books_path.exists() {
+            anyhow::bail!("Books path does not exist: {:?}", books_path);
+        }
+        if !books_path.is_dir() {
+            anyhow::bail!("Books path is not a directory: {:?}", books_path);
+        }
     }
 
     // Validate watch option
