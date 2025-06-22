@@ -26,6 +26,111 @@ pub struct StatBook {
     pub total_read_pages: Option<i64>,
 }
 
+impl StatBook {
+    /// Calculate additional statistics for this book from page stats
+    pub fn calculate_session_stats(&self, page_stats: &[PageStat]) -> BookSessionStats {
+        let book_sessions: Vec<&PageStat> = page_stats
+            .iter()
+            .filter(|stat| stat.id_book == self.id && stat.duration > 0)
+            .collect();
+
+        // Calculate actual reading sessions by grouping consecutive page reads
+        // Pages read within 30 seconds of each other are considered the same session
+        let (session_count, average_session_duration, longest_session_duration) = if !book_sessions.is_empty() {
+            let mut sessions: Vec<i64> = Vec::new();
+            let mut current_session_duration = 0;
+            let mut last_end_time = 0;
+            let gap_threshold = 30; // seconds
+            
+            // Sort sessions by start time
+            let mut sorted_sessions = book_sessions.clone();
+            sorted_sessions.sort_by_key(|s| s.start_time);
+            
+            for session in sorted_sessions {
+                let session_start = session.start_time;
+                let session_end = session.start_time + session.duration;
+                
+                if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
+                    // Continue the current session
+                    current_session_duration += session.duration;
+                } else {
+                    // Start a new session
+                    if current_session_duration > 0 {
+                        sessions.push(current_session_duration);
+                    }
+                    current_session_duration = session.duration;
+                }
+                last_end_time = session_end;
+            }
+            
+            // Don't forget the last session
+            if current_session_duration > 0 {
+                sessions.push(current_session_duration);
+            }
+            
+            let session_count = sessions.len() as i64;
+            let longest_session = sessions.iter().max().copied();
+            let average_session = if !sessions.is_empty() {
+                let total: i64 = sessions.iter().sum();
+                Some(total / session_count)
+            } else {
+                None
+            };
+            
+            (session_count, average_session, longest_session)
+        } else {
+            (0, None, None)
+        };
+
+        let last_read_date = book_sessions
+            .iter()
+            .map(|s| s.start_time)
+            .max()
+            .and_then(|timestamp| {
+                chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
+                    .map(|dt| {
+                        let current_year = chrono::Utc::now().year();
+                        let date_year = dt.year();
+                        
+                        if date_year == current_year {
+                            dt.format("%b %d").to_string()
+                        } else {
+                            dt.format("%b %d %Y").to_string()
+                        }
+                    })
+            });
+
+        let reading_speed = if let (Some(total_time), Some(total_pages)) = 
+            (self.total_read_time, self.total_read_pages) {
+            if total_time > 0 {
+                Some((total_pages as f64 * 3600.0) / total_time as f64) // pages per hour
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        BookSessionStats {
+            session_count,
+            average_session_duration,
+            longest_session_duration,
+            last_read_date,
+            reading_speed,
+        }
+    }
+}
+
+/// Additional statistics calculated for a book from its reading sessions
+#[derive(Debug, Clone)]
+pub struct BookSessionStats {
+    pub session_count: i64,
+    pub average_session_duration: Option<i64>, // in seconds
+    pub longest_session_duration: Option<i64>, // in seconds
+    pub last_read_date: Option<String>,
+    pub reading_speed: Option<f64>, // pages per hour
+}
+
 /// Data structure representing a page stat entry from the statistics database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageStat {
@@ -41,6 +146,7 @@ pub struct PageStat {
 pub struct StatisticsData {
     pub books: Vec<StatBook>,
     pub page_stats: Vec<PageStat>,
+    pub stats_by_md5: std::collections::HashMap<String, StatBook>,
 }
 
 /// Parser for KoReader statistics database
@@ -72,9 +178,16 @@ impl StatisticsParser {
         // Parse page stats
         let page_stats = Self::parse_page_stats(&conn)?;
         
+        // Create MD5 lookup map
+        let mut stats_by_md5 = std::collections::HashMap::new();
+        for stat_book in &books {
+            stats_by_md5.insert(stat_book.md5.clone(), stat_book.clone());
+        }
+        
         let stats_data = StatisticsData {
             books,
             page_stats,
+            stats_by_md5,
         };
         
         info!("Found {} books and {} page stats in the statistics database!", 
