@@ -20,7 +20,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 
 ### Prebuilt Binaries
 
-The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/your-username/koshelf/releases). Binaries are available for:
+The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
 
 - Windows (x64)
 - macOS (Apple Silicon)
