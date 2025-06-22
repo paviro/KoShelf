@@ -22,11 +22,11 @@ use crate::file_watcher::FileWatcher;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Path to the folder containing epub files and KoReader metadata (optional if statistics_db is provided)
-    #[arg(long)]
+    #[arg(short, long)]
     books_path: Option<PathBuf>,
 
     /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
-    #[arg(long)]
+    #[arg(short, long)]
     statistics_db: Option<PathBuf>,
     
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
@@ -34,7 +34,7 @@ struct Cli {
     output: Option<PathBuf>,
     
     /// Enable file watching with static output (requires --output)
-    #[arg(long, default_value = "false")]
+    #[arg(short, long, default_value = "false")]
     watch: bool,
     
     /// Site title
@@ -48,6 +48,10 @@ struct Cli {
     /// Port for web server mode (default: 3000)
     #[arg(short, long, default_value = "3000")]
     port: u16,
+    
+    /// Print GitHub repository URL
+    #[arg(long)]
+    github: bool,
 }
 
 #[tokio::main]
@@ -56,6 +60,12 @@ async fn main() -> Result<()> {
         .filter_level(log::LevelFilter::Info)
         .init();
     let cli = Cli::parse();
+    
+    // Handle --github flag
+    if cli.github {
+        println!("https://github.com/paviro/KOShelf");
+        return Ok(());
+    }
     
     info!("Starting KOShelf...");
     
@@ -74,9 +84,19 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Validate include-unread option
+    if cli.include_unread && cli.books_path.is_none() {
+        anyhow::bail!("--include-unread can only be used when --books-path is provided");
+    }
+
     // Validate watch option
     if cli.watch && cli.output.is_none() {
-        anyhow::bail!("Watch mode requires an output directory (--output)");
+        info!("--watch specified without --output. Note that file watching is enabled by default when no output directory is specified (web server mode)");
+    }
+
+    // Validate port option
+    if cli.output.is_some() && cli.port != 3000 {
+        anyhow::bail!("--port can only be used in web server mode (without --output)");
     }
 
     // Validate statistics database if provided
