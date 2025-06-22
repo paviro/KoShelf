@@ -281,10 +281,6 @@ impl SiteGenerator {
         fs::create_dir_all(&stats_dir)?;
         fs::write(stats_dir.join("index.html"), html)?;
         
-        // Export overall stats as JSON for client-side use
-        let json = serde_json::to_string_pretty(&reading_stats)?;
-        fs::write(self.output_dir.join("assets/json/statistics.json"), json)?;
-        
         // Export individual week data as separate JSON files
         for (index, week) in reading_stats.weeks.iter().enumerate() {
             let week_json = serde_json::to_string_pretty(&week)?;

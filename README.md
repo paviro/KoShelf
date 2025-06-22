@@ -173,24 +173,36 @@ This way, every time Syncthing pulls updates from my e-reader, the website autom
 ```
 site/
 ├── index.html              # Main library page
+├── statistics/
+│   └── index.html          # Reading statistics dashboard
 ├── books/                  # Individual book pages
 │   ├── book-id1/           
 │   │   └── index.html      # Book detail page with annotations
 │   └── book-id2/
 │       └── index.html
-├── assets/
-│   ├── covers/             # Optimized book covers
-│   │   ├── book-id1.jpg
-│   │   └── book-id2.jpg
-│   ├── css/
-│   │   └── style.css       # Tailwind CSS styling
-│   └── js/
-│       └── script.js       # Interactive features
+└── assets/
+    ├── covers/             # Optimized book covers
+    │   ├── book-id1.jpg
+    │   └── book-id2.jpg
+    ├── css/
+    │   └── style.css       # Compiled Tailwind CSS
+    ├── js/
+    │   ├── script.js       # Main interactive features
+    │   ├── lazy-loading.js # Image lazy loading
+    │   ├── statistics.js   # Statistics page functionality
+    │   └── heatmap.js      # Activity heatmap visualization
+    └── json/               # Statistics data (when available)
+        ├── week_0.json     # Weekly statistics data
+        ├── week_1.json
+        ├── ...
+        ├── daily_activity_2023.json # Daily activity data for heatmap
+        ├── daily_activity_2024.json
+        └── ...
 ```
 
 ## Credits
 
-Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeSG/KoInsight) by @GeorgeSG - an excellent alternative that focuses more on statistics and also supports acting as a KOReader sync server. If you're primarily interested in reading stats rather than highlights and annotations, definitely check it out!
+Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeSG/KoInsight) - an excellent alternative that focuses more on statistics and also supports acting as a KOReader sync server. If you're primarily interested in reading stats rather than highlights and annotations, definitely check it out!
 
 ## Disclaimer
 
