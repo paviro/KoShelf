@@ -32,7 +32,7 @@
                             <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
-                            <input type="text" placeholder="Search..." class="search-input pl-10 w-40 sm:w-48 md:w-64 py-2 text-sm md:text-base" id="searchInput">
+                            <input type="text" placeholder="Search book, author, series" class="search-input pl-10 w-40 sm:w-48 md:w-64 py-2 text-sm md:text-base" id="searchInput">
                         </div>
                         
                         <!-- Filter Controls -->
@@ -79,7 +79,7 @@
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="readingBooksGrid">
                         {% for book in reading_books %}
-                        <div class="book-card group" data-status="reading" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
+                        <div class="book-card group" data-status="reading" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
                                     <img src="/assets/covers/{{ book.id }}.webp"
@@ -140,7 +140,7 @@
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="completedBooksGrid">
                         {% for book in completed_books %}
-                        <div class="book-card group" data-status="completed" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
+                        <div class="book-card group" data-status="completed" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
                                     <img src="/assets/covers/{{ book.id }}.webp"
@@ -197,7 +197,7 @@
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="unreadBooksGrid">
                         {% for book in unread_books %}
-                        <div class="book-card group" data-status="unread" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}">
+                        <div class="book-card group" data-status="unread" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
                                 <div class="aspect-book bg-dark-700 relative overflow-hidden">
                                     <img src="/assets/covers/{{ book.id }}.webp"
