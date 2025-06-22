@@ -12,12 +12,6 @@ CARGO_BUILD_PROFILE = "release"
 [env.production]
 CARGO_BUILD_PROFILE = "release"
 
-# Release profile tasks
-[tasks.build-local]
-description = "Build for current architecture"
-command = "cargo"
-args = ["build", "--release"]
-
 # ARM64 targets
 [tasks.build-arm64-musl]
 description = "Build for ARM64 with musl"
@@ -46,22 +40,45 @@ description = "Build for Windows x86_64 (MinGW)"
 command = "cargo"
 args = ["build", "--release", "--target", "x86_64-pc-windows-gnu"]
 
+# macOS targets
+[tasks.build-macos-intel]
+description = "Build for Intel macOS"
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-apple-darwin"]
+
+[tasks.build-macos-silicon]
+description = "Build for Apple Silicon macOS"
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-apple-darwin"]
+
+[tasks.build-macos-universal]
+description = "Build universal macOS binary (Intel + Apple Silicon)"
+dependencies = ["build-macos-intel", "build-macos-silicon"]
+script = '''
+mkdir -p target/universal-apple-darwin/release
+lipo -create \
+    target/x86_64-apple-darwin/release/koshelf \
+    target/aarch64-apple-darwin/release/koshelf \
+    -output target/universal-apple-darwin/release/koshelf
+'''
+
 # Combined build tasks
 [tasks.build-all]
 description = "Build for all supported platforms"
 dependencies = [
-    "build-local",
     "build-arm64-musl",
     "build-arm64-gnu",
     "build-x86-gnu",
     "build-x86-musl",
-    "build-windows-gnu"
+    "build-windows-gnu",
+    "build-macos-intel",
+    "build-macos-silicon",
+    "build-macos-universal"
 ]
 
 [tasks.build-arm64-all]
-description = "Build for current architecture + both ARM64 targets"
+description = "Build for both ARM64 targets"
 dependencies = [
-    "build-local",
     "build-arm64-musl", 
     "build-arm64-gnu"
 ]
@@ -69,7 +86,6 @@ dependencies = [
 [tasks.build-linux-all]
 description = "Build for all Linux targets"
 dependencies = [
-    "build-local",
     "build-arm64-musl",
     "build-arm64-gnu",
     "build-x86-gnu",
@@ -80,6 +96,14 @@ dependencies = [
 description = "Build for all Windows targets"
 dependencies = [
     "build-windows-gnu"
+]
+
+[tasks.build-macos-all]
+description = "Build for all macOS targets"
+dependencies = [
+    "build-macos-intel",
+    "build-macos-silicon", 
+    "build-macos-universal"
 ]
 
 [tasks.clean-all]
@@ -94,25 +118,15 @@ script = '''
 mkdir -p release
 '''
 
-[tasks.package-local]
-description = "Package local binary"
-dependencies = ["create-release-dir"]
-script = '''
-BINARY_NAME="koshelf"
-PLATFORM="$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]')"
-cp "target/release/${BINARY_NAME}" "release/"
-cd release
-zip "${PLATFORM}.zip" "${BINARY_NAME}"
-rm "${BINARY_NAME}"
-'''
 
 [tasks.package-arm64-musl]
 description = "Package ARM64 musl binary"
 dependencies = ["create-release-dir"]
 script = '''
 BINARY_NAME="koshelf"
-PLATFORM="aarch64-unknown-linux-musl"
-cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+TARGET="aarch64-unknown-linux-musl"
+PLATFORM="linux-musl-aarch64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
 cd release
 zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
@@ -123,8 +137,9 @@ description = "Package ARM64 gnu binary"
 dependencies = ["create-release-dir"]
 script = '''
 BINARY_NAME="koshelf"
-PLATFORM="aarch64-unknown-linux-gnu"
-cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+TARGET="aarch64-unknown-linux-gnu"
+PLATFORM="linux-gnu-aarch64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
 cd release
 zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
@@ -135,8 +150,9 @@ description = "Package x86_64 gnu binary"
 dependencies = ["create-release-dir"]
 script = '''
 BINARY_NAME="koshelf"
-PLATFORM="x86_64-unknown-linux-gnu"
-cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+TARGET="x86_64-unknown-linux-gnu"
+PLATFORM="linux-gnu-x86_64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
 cd release
 zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
@@ -147,8 +163,9 @@ description = "Package x86_64 musl binary"
 dependencies = ["create-release-dir"]
 script = '''
 BINARY_NAME="koshelf"
-PLATFORM="x86_64-unknown-linux-musl"
-cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+TARGET="x86_64-unknown-linux-musl"
+PLATFORM="linux-musl-x86_64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
 cd release
 zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
@@ -159,8 +176,48 @@ description = "Package Windows gnu binary"
 dependencies = ["create-release-dir"]
 script = '''
 BINARY_NAME="koshelf.exe"
-PLATFORM="x86_64-pc-windows-gnu"
-cp "target/${PLATFORM}/release/${BINARY_NAME}" "release/"
+TARGET="x86_64-pc-windows-gnu"
+PLATFORM="windows-gnu-x86_64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-macos-intel]
+description = "Package Intel macOS binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="x86_64-apple-darwin"
+PLATFORM="apple-darwin-x86_64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-macos-silicon]
+description = "Package Apple Silicon macOS binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="aarch64-apple-darwin"
+PLATFORM="apple-darwin-aarch64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-macos-universal]
+description = "Package Universal macOS binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="universal-apple-darwin"
+PLATFORM="apple-darwin-universal"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
 cd release
 zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
@@ -170,12 +227,14 @@ rm "${BINARY_NAME}"
 [tasks.package-all]
 description = "Package all platform binaries into zip files"
 dependencies = [
-    "package-local",
     "package-arm64-musl",
     "package-arm64-gnu",
     "package-x86-gnu", 
     "package-x86-musl",
-    "package-windows-gnu"
+    "package-windows-gnu",
+    "package-macos-intel",
+    "package-macos-silicon",
+    "package-macos-universal"
 ]
 
 # Build and package in one go
