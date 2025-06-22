@@ -6,14 +6,16 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 
 ## Features
 
-- 📚 **Book Library Overview**: Displays your currently reading and completed books
+- 📚 **Book Library Overview**: Displays your currently reading, completed and unread books (EPUBs only!)
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations & Highlights**: Shows all your KoReader highlights and notes with elegant formatting
 - 📖 **Book Details**: Individual pages for each book with metadata and organized annotations
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, activity heatmaps, and weekly breakdowns
+- 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
+- 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
+- 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
-- ⚡ **Performance**: Fast loading with optimized images and minified CSS
 
 
 ## Installation
@@ -23,7 +25,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
 
 - Windows (x64)
-- macOS (Apple Silicon)
+- macOS (Apple Silicon, Intel & Universal)
 - Linux (x64 and ARM64)
 
 Download the appropriate binary for your system and make it executable:
@@ -166,6 +168,9 @@ This way, every time Syncthing pulls updates from my e-reader, the website autom
 - Total reading time and pages
 - Weekly reading statistics
 - Reading activity heatmap
+- Per-book reading sessions and statistics
+- Reading speed calculations
+- Session duration tracking
 
 ## Generated Site Structure
 
@@ -181,12 +186,12 @@ site/
 │       └── index.html
 └── assets/
     ├── covers/             # Optimized book covers
-    │   ├── book-id1.jpg
-    │   └── book-id2.jpg
+    │   ├── book-id1.webp
+    │   └── book-id2.webp
     ├── css/
     │   └── style.css       # Compiled Tailwind CSS
     ├── js/
-    │   ├── script.js       # Main interactive features
+    │   ├── book_list.js    # Search and filtering functionality
     │   ├── lazy-loading.js # Image lazy loading
     │   ├── statistics.js   # Statistics page functionality
     │   └── heatmap.js      # Activity heatmap visualization
