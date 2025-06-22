@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc};
+use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc, Local};
 use std::collections::HashMap;
 
 use crate::models::{
@@ -73,14 +73,16 @@ impl BookStatistics for StatBook {
             .max()
             .and_then(|timestamp| {
                 chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
-                    .map(|dt| {
-                        let current_year = chrono::Utc::now().year();
-                        let date_year = dt.year();
+                    .map(|utc_dt| {
+                        // Convert UTC to local timezone
+                        let local_dt = utc_dt.with_timezone(&Local);
+                        let current_year = Local::now().year();
+                        let date_year = local_dt.year();
                         
                         if date_year == current_year {
-                            dt.format("%b %d").to_string()
+                            local_dt.format("%b %d").to_string()
                         } else {
-                            dt.format("%b %d %Y").to_string()
+                            local_dt.format("%b %d %Y").to_string()
                         }
                     })
             });
@@ -134,12 +136,15 @@ impl StatisticsCalculator {
             total_read_time += stat.duration;
             total_page_reads += 1;
             
-            // Convert unix timestamp to date
+            // Convert unix timestamp to local date
             // Using the approach that handles timestamps safely
             let date_time = DateTime::<Utc>::from_timestamp(stat.start_time, 0)
-                .map(|dt| dt.naive_utc())
+                .map(|utc_dt| {
+                    // Convert UTC to local timezone, then get naive local time
+                    utc_dt.with_timezone(&Local).naive_local()
+                })
                 .unwrap_or_else(|| {
-                    DateTime::<Utc>::from_timestamp(0, 0).unwrap().naive_utc()
+                    DateTime::<Utc>::from_timestamp(0, 0).unwrap().with_timezone(&Local).naive_local()
                 });
             
             let date_str = date_time.date().format("%Y-%m-%d").to_string();
@@ -331,7 +336,7 @@ impl StatisticsCalculator {
         let mut sorted_dates = reading_dates;
         sorted_dates.sort();
         
-        let today = Utc::now().naive_utc().date();
+        let today = Local::now().naive_local().date();
         
         // Find all streaks and their date ranges
         let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new(); // (length, start_date, end_date)
