@@ -161,6 +161,9 @@ impl StatisticsCalculator {
         let longest_read_time_in_day = daily_read_time.values().cloned().max().unwrap_or(0);
         let most_pages_in_day = daily_page_reads.values().cloned().max().unwrap_or(0);
         
+        // Calculate overall session statistics
+        let (average_session_duration, longest_session_duration) = Self::calculate_overall_sessions(&stats_data.page_stats);
+        
         // Convert weekly stats to WeeklyStats structs
         let weeks = Self::build_weekly_stats(weekly_stats);
         
@@ -175,6 +178,8 @@ impl StatisticsCalculator {
             total_page_reads,
             longest_read_time_in_day,
             most_pages_in_day,
+            average_session_duration,
+            longest_session_duration,
             longest_streak,
             current_streak,
             weeks,
@@ -211,6 +216,73 @@ impl StatisticsCalculator {
         weeks
     }
     
+    /// Calculate overall session statistics across all books and page stats
+    fn calculate_overall_sessions(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
+        let valid_sessions: Vec<&PageStat> = page_stats
+            .iter()
+            .filter(|stat| stat.duration > 0)
+            .collect();
+
+        if valid_sessions.is_empty() {
+            return (None, None);
+        }
+
+        // Group page reads into sessions across all books
+        // Sessions are grouped by book and time proximity (30 seconds gap)
+        let mut all_sessions: Vec<i64> = Vec::new();
+        
+        // Group by book first
+        let mut sessions_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
+        for stat in valid_sessions {
+            sessions_by_book.entry(stat.id_book).or_default().push(stat);
+        }
+        
+        // For each book, calculate sessions and add them to the overall list
+        for (_, book_sessions) in sessions_by_book {
+            let mut sorted_sessions = book_sessions;
+            sorted_sessions.sort_by_key(|s| s.start_time);
+            
+            let mut current_session_duration = 0;
+            let mut last_end_time = 0;
+            let gap_threshold = 30; // seconds
+            
+            for session in sorted_sessions {
+                let session_start = session.start_time;
+                let session_end = session.start_time + session.duration;
+                
+                if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
+                    // Continue the current session
+                    current_session_duration += session.duration;
+                } else {
+                    // Start a new session
+                    if current_session_duration > 0 {
+                        all_sessions.push(current_session_duration);
+                    }
+                    current_session_duration = session.duration;
+                }
+                last_end_time = session_end;
+            }
+            
+            // Don't forget the last session
+            if current_session_duration > 0 {
+                all_sessions.push(current_session_duration);
+            }
+        }
+        
+        if all_sessions.is_empty() {
+            return (None, None);
+        }
+        
+        // Calculate average session duration
+        let total_session_time: i64 = all_sessions.iter().sum();
+        let average_session = Some(total_session_time / all_sessions.len() as i64);
+        
+        // Find longest session
+        let longest_session = all_sessions.iter().max().copied();
+        
+        (average_session, longest_session)
+    }
+
     /// Build daily activity data from daily stats maps
     fn build_daily_activity(
         daily_read_time: HashMap<String, i64>, 

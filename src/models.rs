@@ -422,6 +422,10 @@ pub struct ReadingStats {
     pub longest_read_time_in_day: i64, // seconds
     pub most_pages_in_day: i64,
     
+    // Session stats (across all books)
+    pub average_session_duration: Option<i64>, // seconds
+    pub longest_session_duration: Option<i64>, // seconds
+    
     // Streak stats
     pub longest_streak: StreakInfo,
     pub current_streak: StreakInfo,
