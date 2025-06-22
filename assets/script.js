@@ -14,6 +14,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const lazyLoader = new LazyImageLoader();
     lazyLoader.init();
     
+    // Check for search query in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('search');
+    
+    if (searchQuery && searchInput) {
+        // Set the search input value
+        searchInput.value = searchQuery;
+        
+        // Remove the search parameter from URL without refreshing the page
+        const url = new URL(window.location);
+        url.searchParams.delete('search');
+        window.history.replaceState({}, document.title, url.toString());
+        
+        // Trigger the search
+        setTimeout(() => {
+            filterBooks(searchQuery.toLowerCase().trim(), currentFilter);
+        }, 100);
+    }
+    
     // Search functionality
     if (searchInput) {
         searchInput.addEventListener('input', function() {
@@ -42,12 +61,14 @@ document.addEventListener('DOMContentLoaded', function() {
         bookCards.forEach(card => {
             const title = (card.dataset.title || '').toLowerCase();
             const author = (card.dataset.author || '').toLowerCase();
+            const series = (card.dataset.series || '').toLowerCase();
             const status = card.dataset.status || '';
             
             // Check search match
             const matchesSearch = !searchTerm || 
                 title.includes(searchTerm) || 
-                author.includes(searchTerm);
+                author.includes(searchTerm) ||
+                series.includes(searchTerm);
             
             // Check filter match
             const matchesFilter = filter === 'all' || 
