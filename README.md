@@ -54,16 +54,13 @@ If you prefer to build from source or need a custom build:
 git clone https://github.com/paviro/KOShelf
 cd koshelf
 
-# Install Node.js dependencies for Tailwind CSS
-npm install
-
 # Build the Rust binary
 cargo build --release
 ```
 
 The binary will be available at `target/release/koshelf`.
 
-**Note:** The application will automatically compile Tailwind CSS during site generation.
+**Note:** Tailwind CSS will be compiled during build and added to the binary.
 
 ## Usage
 
