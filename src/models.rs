@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use chrono::Datelike;
+use std::collections::HashMap;
 
 /// Sanitizes HTML content to only allow safe tags while removing styles and dangerous elements
 pub fn sanitize_html(html: &str) -> String {
@@ -315,6 +316,51 @@ impl std::fmt::Display for BookStatus {
             BookStatus::Unknown => write!(f, "unknown"),
         }
     }
+}
+
+/// Data structure representing a book entry from the statistics database
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatBook {
+    pub id: i64,
+    pub title: String,
+    pub authors: String,
+    pub notes: Option<i64>,
+    pub last_open: Option<i64>,
+    pub highlights: Option<i64>,
+    pub pages: Option<i64>,
+    pub series: String,
+    pub language: String,
+    pub md5: String,
+    pub total_read_time: Option<i64>,
+    pub total_read_pages: Option<i64>,
+}
+
+/// Additional statistics calculated for a book from its reading sessions
+#[derive(Debug, Clone)]
+pub struct BookSessionStats {
+    pub session_count: i64,
+    pub average_session_duration: Option<i64>, // in seconds
+    pub longest_session_duration: Option<i64>, // in seconds
+    pub last_read_date: Option<String>,
+    pub reading_speed: Option<f64>, // pages per hour
+}
+
+/// Data structure representing a page stat entry from the statistics database
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageStat {
+    pub id_book: i64,
+    pub page: i64,
+    pub start_time: i64,
+    pub duration: i64,
+    pub total_pages: i64,
+}
+
+/// Main container for KoReader statistics data
+#[derive(Debug, Clone)]
+pub struct StatisticsData {
+    pub books: Vec<StatBook>,
+    pub page_stats: Vec<PageStat>,
+    pub stats_by_md5: HashMap<String, StatBook>,
 }
 
 /// Streak information with date ranges

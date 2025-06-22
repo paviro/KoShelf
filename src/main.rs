@@ -13,6 +13,7 @@ mod file_watcher;
 mod book_scanner;
 mod utils;
 mod statistics_parser;
+mod statistics;
 
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
