@@ -1,6 +1,7 @@
 use crate::models::*;
 use crate::templates::*;
-use crate::statistics_parser::{StatisticsParser, StatisticsData};
+use crate::statistics_parser::StatisticsParser;
+use crate::statistics::BookStatistics;
 use crate::book_scanner::scan_books;
 use anyhow::{Result, Context};
 use askama::Template;
