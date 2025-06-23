@@ -10,6 +10,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 - 📝 **Annotations & Highlights**: Shows all your KoReader highlights and notes with elegant formatting
 - 📖 **Book Details**: Individual pages for each book with metadata and organized annotations
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, activity heatmaps, and weekly breakdowns
+- 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
 - 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
@@ -184,6 +185,8 @@ site/
 ├── index.html              # Main library page
 ├── statistics/
 │   └── index.html          # Reading statistics dashboard
+├── calendar/
+│   └── index.html          # Reading calendar view
 ├── books/                  # Individual book pages
 │   ├── book-id1/           
 │   │   └── index.html      # Book detail page with annotations
@@ -194,16 +197,20 @@ site/
     │   ├── book-id1.webp
     │   └── book-id2.webp
     ├── css/
-    │   └── style.css       # Compiled Tailwind CSS
+    │   ├── style.css       # Compiled Tailwind CSS
+    │   └── event-calendar.min.css # Event calendar library styles
     ├── js/
     │   ├── book_list.js    # Search and filtering functionality
     │   ├── lazy-loading.js # Image lazy loading
     │   ├── statistics.js   # Statistics page functionality
-    │   └── heatmap.js      # Activity heatmap visualization
+    │   ├── calendar.js     # Calendar functionality
+    │   ├── heatmap.js      # Activity heatmap visualization
+    │   └── event-calendar.min.js # Event calendar library
     └── json/               # Statistics data (when available)
         ├── week_0.json     # Weekly statistics data
         ├── week_1.json
         ├── ...
+        ├── calendar_data.json # Calendar events and book data
         ├── daily_activity_2023.json # Daily activity data for heatmap
         ├── daily_activity_2024.json
         └── ...
@@ -212,6 +219,10 @@ site/
 ## Credits
 
 Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeSG/KoInsight) - an excellent alternative that focuses more on statistics and also supports acting as a KOReader sync server. If you're primarily interested in reading stats rather than highlights and annotations, definitely check it out!
+
+The calendar feature is powered by [EventCalendar](https://github.com/vkurko/calendar) - a lightweight, full-featured JavaScript event calendar library.
+
+Styled with [Tailwind CSS](https://tailwindcss.com/) for modern, responsive design.
 
 ## Disclaimer
 
