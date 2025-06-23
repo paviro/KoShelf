@@ -314,6 +314,12 @@ impl SiteGenerator {
         
         // Export daily activity data grouped by year as separate JSON files and get available years
         let available_years = self.export_daily_activity_by_year(&reading_stats.daily_activity).await?;
+
+        // Export individual week data as separate JSON files
+        for (index, week) in reading_stats.weeks.iter().enumerate() {
+            let week_json = serde_json::to_string_pretty(&week)?;
+            fs::write(self.output_dir.join("assets/json").join(format!("week_{}.json", index)), week_json)?;
+        }
         
         // Create the template with appropriate navbar
         let template = StatsTemplate {
@@ -336,12 +342,6 @@ impl SiteGenerator {
             let stats_dir = self.output_dir.join("statistics");
             fs::create_dir_all(&stats_dir)?;
             fs::write(stats_dir.join("index.html"), html)?;
-        }
-        
-        // Export individual week data as separate JSON files
-        for (index, week) in reading_stats.weeks.iter().enumerate() {
-            let week_json = serde_json::to_string_pretty(&week)?;
-            fs::write(self.output_dir.join("assets/json").join(format!("week_{}.json", index)), week_json)?;
         }
         
         Ok(())
