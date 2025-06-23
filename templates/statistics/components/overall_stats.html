@@ -7,132 +7,143 @@
         </div>
     </div>
     
-    <div class="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <!-- Total Reading Time Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Total Reading Time</h3>
-                <div class="p-1 bg-primary-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {% let hours = reading_stats.total_read_time / 3600 %}
+                        {% let minutes = (reading_stats.total_read_time % 3600) / 60 %}
+                        {% if hours > 0 %}
+                            {{ hours }}h {{ minutes }}m
+                        {% else %}
+                            {{ minutes }}m
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-dark-400">Total Reading Time</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {% let hours = reading_stats.total_read_time / 3600 %}
-                {% let minutes = (reading_stats.total_read_time % 3600) / 60 %}
-                {% if hours > 0 %}
-                    {{ hours }}h {{ minutes }}m
-                {% else %}
-                    {{ minutes }}m
-                {% endif %}
-            </p>
         </div>
         
         <!-- Total Pages Read Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Total Pages Read</h3>
-                <div class="p-1 bg-indigo-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {{ reading_stats.total_page_reads }}
+                    </div>
+                    <div class="text-sm text-dark-400">Total Pages Read</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {{ reading_stats.total_page_reads }}
-            </p>
         </div>
         
         <!-- Most Pages in a Day Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Most Pages in a Day</h3>
-                <div class="p-1 bg-green-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {{ reading_stats.most_pages_in_day }}
+                    </div>
+                    <div class="text-sm text-dark-400">Most Pages in a Day</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {{ reading_stats.most_pages_in_day }}
-            </p>
         </div>
         
         <!-- Longest Daily Reading Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Longest Daily Reading</h3>
-                <div class="p-1 bg-amber-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {% let hours = reading_stats.longest_read_time_in_day / 3600 %}
+                        {% let minutes = (reading_stats.longest_read_time_in_day % 3600) / 60 %}
+                        {% if hours > 0 %}
+                            {{ hours }}h {{ minutes }}m
+                        {% else %}
+                            {{ minutes }}m
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-dark-400">Longest Daily Reading</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {% let hours = reading_stats.longest_read_time_in_day / 3600 %}
-                {% let minutes = (reading_stats.longest_read_time_in_day % 3600) / 60 %}
-                {% if hours > 0 %}
-                    {{ hours }}h {{ minutes }}m
-                {% else %}
-                    {{ minutes }}m
-                {% endif %}
-            </p>
         </div>
         
         <!-- Longest Session Duration Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Longest Session</h3>
-                <div class="p-1 bg-pink-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {% match reading_stats.longest_session_duration %}
+                        {% when Some with (longest_duration) %}
+                            {% let minutes = longest_duration / 60 %}
+                            {% if minutes >= 60 %}
+                                {% let hours = minutes / 60 %}
+                                {% let remaining_mins = minutes % 60 %}
+                                {{ hours }}h {{ remaining_mins }}m
+                            {% else %}
+                                {{ minutes }}m
+                            {% endif %}
+                        {% when None %}
+                            --
+                        {% endmatch %}
+                    </div>
+                    <div class="text-sm text-dark-400">Longest Session</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {% match reading_stats.longest_session_duration %}
-                {% when Some with (longest_duration) %}
-                    {% let minutes = longest_duration / 60 %}
-                    {% if minutes >= 60 %}
-                        {% let hours = minutes / 60 %}
-                        {% let remaining_mins = minutes % 60 %}
-                        {{ hours }}h {{ remaining_mins }}m
-                    {% else %}
-                        {{ minutes }}m
-                    {% endif %}
-                {% when None %}
-                    --
-                {% endmatch %}
-            </p>
         </div>
         
         <!-- Average Session Duration Card -->
-        <div class="bg-dark-800 rounded-lg p-3 sm:p-4 shadow border border-dark-700/30">
-            <div class="flex items-start justify-between mb-1 sm:mb-2">
-                <h3 class="text-gray-400 mb-1 text-xs">Average Session</h3>
-                <div class="p-1 bg-purple-600/20 rounded-lg">
-                    <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-width="2" d="M4 6C8 0 16 24 20 18"></path>
-                        <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-dasharray="1,2" stroke-linecap="round"></line>
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
+                <div>
+                    <div class="text-xl md:text-2xl font-bold text-white">
+                        {% match reading_stats.average_session_duration %}
+                        {% when Some with (avg_duration) %}
+                            {% let minutes = avg_duration / 60 %}
+                            {% if minutes >= 60 %}
+                                {% let hours = minutes / 60 %}
+                                {% let remaining_mins = minutes % 60 %}
+                                {{ hours }}h {{ remaining_mins }}m
+                            {% else %}
+                                {{ minutes }}m
+                            {% endif %}
+                        {% when None %}
+                            --
+                        {% endmatch %}
+                    </div>
+                    <div class="text-sm text-dark-400">Average Session</div>
+                </div>
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
-                {% match reading_stats.average_session_duration %}
-                {% when Some with (avg_duration) %}
-                    {% let minutes = avg_duration / 60 %}
-                    {% if minutes >= 60 %}
-                        {% let hours = minutes / 60 %}
-                        {% let remaining_mins = minutes % 60 %}
-                        {{ hours }}h {{ remaining_mins }}m
-                    {% else %}
-                        {{ minutes }}m
-                    {% endif %}
-                {% when None %}
-                    --
-                {% endmatch %}
-            </p>
         </div>
     </div>
 </section> 
