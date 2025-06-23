@@ -1,5 +1,7 @@
 # KOShelf
-![Statistics](https://github.com/user-attachments/assets/f92aebf0-6f60-4083-bf5e-fe4029a9d062)
+![Statistics](https://github.com/user-attachments/assets/da178885-cef9-44bc-b841-7cdcaf6a2437)
+![Calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
+
 
 A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
