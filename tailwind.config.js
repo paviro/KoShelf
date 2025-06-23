@@ -24,6 +24,9 @@ module.exports = {
           '"Noto Color Emoji"'
         ],
       },
+      fontSize: {
+        '2xs': ['0.65rem', { lineHeight: '1rem' }],
+      },
       colors: {
         'primary': {
           50: '#f0f9ff',
@@ -57,6 +60,18 @@ module.exports = {
       },
       gridTemplateColumns: {
         '53': 'repeat(53, minmax(0, 1fr))'
+      },
+      // Calendar specific variables
+      calendar: {
+        darkBg: '#0f172a',          // dark.900
+        darkBorder: '#334155',      // dark.700
+        darkAccent: '#475569',      // dark.600
+        darkButtonBg: '#1e293b',    // dark.800
+        buttonActive: '#0284c7',    // primary.600
+        buttonActiveBorder: '#0369a1', // primary.700
+        primaryLighter: 'rgba(14, 165, 233, 0.1)', // primary.500 with opacity
+        primaryLight: '#38bdf8',    // primary.400
+        primary: '#0284c7',         // primary.600
       }
     },
   },

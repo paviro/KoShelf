@@ -24,46 +24,7 @@ class StatisticsManager {
         // Initialize week selector
         this.initializeWeekSelector();
         
-        // Add transition styles
-        this.addTransitionStyles();
-        
-        // Ensure initial data is fully visible
-        this.showInitialWeekStats();
-        
         this.isInitialized = true;
-    }
-
-    // Add CSS transitions for smooth animations
-    addTransitionStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .week-stats {
-                transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            }
-            .week-stats.transition-out {
-                opacity: 0.3;
-            }
-            .week-stats.transition-in {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            #statsLoadingIndicator {
-                transition: opacity 0.25s ease-in-out;
-                opacity: 0;
-            }
-            #statsLoadingIndicator.active {
-                opacity: 1;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Show initial week stats without graying out
-    showInitialWeekStats() {
-        if (this.weekStats) {
-            this.weekStats.classList.remove('transition-out');
-            this.weekStats.classList.add('transition-in');
-        }
     }
 
     // Format all week date displays in the dropdown
@@ -229,12 +190,16 @@ class StatisticsManager {
         const weekPagesRead = document.getElementById('weekPagesRead');
         const weekAvgPagesPerDay = document.getElementById('weekAvgPagesPerDay');
         const weekAvgReadTimePerDay = document.getElementById('weekAvgReadTimePerDay');
+        const weekLongestSession = document.getElementById('weekLongestSession');
+        const weekAverageSession = document.getElementById('weekAverageSession');
         
         // Update the values
         if (weekReadTime) weekReadTime.textContent = DataFormatter.formatReadTime(weekData.read_time);
         if (weekPagesRead) weekPagesRead.textContent = weekData.pages_read;
         if (weekAvgPagesPerDay) weekAvgPagesPerDay.textContent = DataFormatter.formatAvgPages(weekData.avg_pages_per_day);
         if (weekAvgReadTimePerDay) weekAvgReadTimePerDay.textContent = `${Math.floor(weekData.avg_read_time_per_day / 60)}m`;
+        if (weekLongestSession) weekLongestSession.textContent = DataFormatter.formatReadTime(weekData.longest_session_duration);
+        if (weekAverageSession) weekAverageSession.textContent = DataFormatter.formatReadTime(weekData.average_session_duration);
         
         // Use requestAnimationFrame to ensure DOM updates before animation
         requestAnimationFrame(() => {
@@ -303,9 +268,17 @@ class DateFormatter {
 class DataFormatter {
     // Format read time from seconds to hours and minutes
     static formatReadTime(seconds) {
+        if (seconds === null || seconds === undefined) {
+            return '--';
+        }
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
-        return `${hours}h ${minutes}m`;
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
+        }
     }
 
     // Format average pages with one decimal place

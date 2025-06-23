@@ -1,7 +1,7 @@
 use crate::models::*;
 use crate::templates::*;
 use crate::statistics_parser::StatisticsParser;
-use crate::statistics::BookStatistics;
+use crate::statistics::{BookStatistics, StatisticsCalculator};
 use crate::book_scanner::scan_books;
 use anyhow::{Result, Context};
 use askama::Template;
@@ -80,6 +80,9 @@ impl SiteGenerator {
         if let Some(ref stats_data) = stats_data {
             // Generate statistics page (render to root if no books)
             self.generate_statistics_page(stats_data, books.is_empty()).await?;
+            
+            // Generate calendar page if we have statistics data
+            self.generate_calendar_page(stats_data, &books).await?;
         }
 
         info!("Static site generation completed!");
@@ -115,10 +118,15 @@ impl SiteGenerator {
             fs::create_dir_all(self.output_dir.join("assets/json"))?;
         }
         
-        // Only create statistics directory if we have stats data AND we have books 
-        // (if no books, stats render to root)
-        if stats_data.is_some() && !books.is_empty() {
-            fs::create_dir_all(self.output_dir.join("statistics"))?;
+        // Create directories based on what we have
+        if stats_data.is_some() {
+            // Always create calendar directory when we have stats
+            fs::create_dir_all(self.output_dir.join("calendar"))?;
+            
+            // Only create statistics directory if we have books (if no books, stats render to root)
+            if !books.is_empty() {
+                fs::create_dir_all(self.output_dir.join("statistics"))?;
+            }
         }
         
         Ok(())
@@ -145,6 +153,24 @@ impl SiteGenerator {
             
             let heatmap_js_content = include_str!("../assets/heatmap.js");
             fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
+
+            // Copy calendar library files (if available)
+            if let Ok(calendar_css) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.css")) {
+                fs::write(self.output_dir.join("assets/css/event-calendar.min.css"), calendar_css)?;
+            }
+
+            if let Ok(calendar_js) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.js")) {
+                fs::write(self.output_dir.join("assets/js/event-calendar.min.js"), calendar_js)?;
+            }
+            
+            // Copy calendar map file if available
+            if let Ok(calendar_map) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map")) {
+                fs::write(self.output_dir.join("assets/js/event-calendar.min.js.map"), calendar_map)?;
+            }
+            
+            // Copy calendar initialization JavaScript file
+            let calendar_init_js_content = include_str!("../assets/calendar.js");
+            fs::write(self.output_dir.join("assets/js/calendar.js"), calendar_init_js_content)?;
         }
         
         Ok(())
@@ -412,6 +438,45 @@ impl SiteGenerator {
             });
         }
         
+        // Add calendar navigation item if we have statistics data
+        if self.statistics_db_path.is_some() {
+            items.push(NavItem {
+                label: "Calendar".to_string(),
+                href: "/calendar/".to_string(),  // Calendar always goes to /calendar/
+                icon_svg: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z".to_string(),
+                is_active: current_page == "calendar",
+            });
+        }
+        
         items
+    }
+    
+    async fn generate_calendar_page(&self, stats_data: &StatisticsData, books: &[Book]) -> Result<()> {
+        info!("Generating calendar page...");
+        
+        // Generate calendar data from statistics data only
+        let calendar_data = StatisticsCalculator::generate_calendar_events(stats_data, books);
+        
+        // Export calendar data as JSON
+        let data_json = serde_json::to_string_pretty(&calendar_data)?;
+        fs::write(self.output_dir.join("assets/json/calendar_data.json"), data_json)?;
+        
+        // Create the template
+        let template = CalendarTemplate {
+            site_title: self.site_title.clone(),
+            version: self.get_version(),
+            last_updated: self.get_last_updated(),
+            navbar_items: self.create_navbar_items("calendar"),
+        };
+        
+        // Render and write the template
+        let html = template.render()?;
+        
+        // Calendar always goes to its own directory
+        let calendar_dir = self.output_dir.join("calendar");
+        fs::create_dir_all(&calendar_dir)?;
+        fs::write(calendar_dir.join("index.html"), html)?;
+        
+        Ok(())
     }
 } 
