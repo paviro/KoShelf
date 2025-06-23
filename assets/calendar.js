@@ -100,6 +100,9 @@ function initializeEventCalendar(events) {
             
             updateCalendarTitleDirect(viewTitle);
             updateMonthlyStats(currentMonthDate);
+            
+            // Scroll current day into view if needed
+            setTimeout(() => scrollCurrentDayIntoView(), 100);
         }
     });
 }
@@ -321,6 +324,36 @@ function updateMonthlyStats(currentDate) {
     if (pagesEl) pagesEl.textContent = totalPages.toLocaleString();
     if (timeEl) timeEl.textContent = formatDuration(totalTime);
     if (daysPercentageEl) daysPercentageEl.textContent = `${daysReadPercentage}%`;
+}
+
+// Scroll the current day into view within the calendar container
+function scrollCurrentDayIntoView() {
+    const calendarContainer = document.querySelector('.calendar-container');
+    const todayCell = document.querySelector('.ec-today');
+    
+    if (!calendarContainer || !todayCell) return;
+    
+    // Get the container's scroll width and visible width
+    const containerRect = calendarContainer.getBoundingClientRect();
+    const todayRect = todayCell.getBoundingClientRect();
+    
+    // Calculate if today is outside the visible area
+    const containerLeft = containerRect.left;
+    const containerRight = containerRect.right;
+    const todayLeft = todayRect.left;
+    const todayRight = todayRect.right;
+    
+    // If today is outside the visible area, scroll to center it
+    if (todayLeft < containerLeft || todayRight > containerRight) {
+        const todayCenter = todayLeft + (todayRect.width / 2);
+        const containerCenter = containerLeft + (containerRect.width / 2);
+        const scrollOffset = todayCenter - containerCenter;
+        
+        calendarContainer.scrollBy({
+            left: scrollOffset,
+            behavior: 'smooth'
+        });
+    }
 }
 
 // Convert seconds to a short human-readable string
