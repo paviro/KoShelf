@@ -1,0 +1,174 @@
+<!-- Book Header -->
+<div class="md:bg-dark-850 md:rounded-xl md:border md:border-dark-700 overflow-hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-8 p-4 md:p-10">
+        <!-- Left Column: Cover and Stats -->
+        <div class="lg:col-span-1 space-y-4 md:space-y-6 mb-4 md:mb-0">
+            <!-- Book Cover -->
+            <div class="space-y-2 md:space-y-4">
+                <div class="bg-dark-700 rounded-lg overflow-hidden shadow-2xl mx-auto max-w-[280px] md:max-w-xs mb-4 relative">
+                    <img src="/assets/covers/{{ book.id }}.webp" 
+                         alt="{{ book.epub_info.title }}" 
+                         class="w-full h-auto"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="aspect-[2/3] w-full flex items-center justify-center text-5xl md:text-6xl text-dark-400" style="display: none;">📖</div>
+                    
+                    <!-- Progress Bar for Reading Books -->
+                    {% match book.status() %}
+                    {% when BookStatus::Reading %}
+                    <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
+                    {% when BookStatus::Complete %}
+                    {% when BookStatus::Unknown %}
+                    {% endmatch %}
+                </div>
+                
+                <!-- Status Indicator -->
+                {% match book.status() %}
+                {% when BookStatus::Reading %}
+                <div class="bg-dark-800/50 rounded-lg p-3 md:p-4 mx-auto max-w-[280px] md:max-w-xs">
+                    <div class="flex items-center justify-center text-primary-400 space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        <span class="text-sm md:text-base font-medium">Reading - {{ book.progress_percentage_display() }}%</span>
+                    </div>
+                </div>
+                {% when BookStatus::Complete %}
+                <div class="bg-dark-800/50 rounded-lg p-3 md:p-4 mx-auto max-w-[280px] md:max-w-xs">
+                    <div class="flex items-center justify-center text-green-400 space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="text-sm md:text-base font-medium">Completed</span>
+                    </div>
+                </div>
+                {% when BookStatus::Unknown %}
+                {% endmatch %}
+            </div>
+        </div>
+        
+        <!-- Right Column: Description and Details -->
+        <div class="lg:col-span-3 space-y-4 md:space-y-6">
+            <!-- Book Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                    <div class="text-xl md:text-2xl font-bold text-primary-400">
+                        {% match book.koreader_metadata %}
+                        {% when Some with (metadata) %}
+                            {% match metadata.doc_pages %}
+                            {% when Some with (pages) %}
+                                {{ pages }}
+                            {% when None %}
+                                ?
+                            {% endmatch %}
+                        {% when None %}
+                            ?
+                        {% endmatch %}
+                    </div>
+                    <div class="text-xs md:text-sm text-dark-400">Pages</div>
+                </div>
+                
+                <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                    <div class="text-xl md:text-2xl font-bold text-primary-400">{{ book.highlight_count() }}</div>
+                    <div class="text-xs md:text-sm text-dark-400">Highlights</div>
+                </div>
+                
+                <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                    <div class="text-xl md:text-2xl font-bold text-primary-400">
+                        {% match book.koreader_metadata %}
+                        {% when Some with (metadata) %}
+                            {% match metadata.stats %}
+                            {% when Some with (stats) %}
+                                {% match stats.notes %}
+                                {% when Some with (notes) %}
+                                    {{ notes }}
+                                {% when None %}
+                                    0
+                                {% endmatch %}
+                            {% when None %}
+                                0
+                            {% endmatch %}
+                        {% when None %}
+                            0
+                        {% endmatch %}
+                    </div>
+                    <div class="text-xs md:text-sm text-dark-400">Notes</div>
+                </div>
+                
+                <div class="bg-dark-800 rounded-lg p-3 md:p-4 text-center">
+                    <div class="text-base md:text-lg font-bold text-primary-400 uppercase">
+                        {% match book.language() %}
+                        {% when Some with (lang) %}
+                            {{ lang }}
+                        {% when None %}
+                            --
+                        {% endmatch %}
+                    </div>
+                    <div class="text-xs md:text-sm text-dark-400">Language</div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% match book.epub_info.sanitized_description() %}
+            {% when Some with (description) %}
+            <div class="bg-dark-800 rounded-lg p-4 md:p-6">
+                <h3 class="text-base md:text-lg font-semibold text-white mb-2 md:mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Description
+                </h3>
+                <div class="text-dark-300 leading-relaxed prose prose-invert max-w-none book-description text-base md:text-lg">{{ description|safe }}</div>
+            </div>
+            {% when None %}
+            {% endmatch %}
+
+            <!-- Series if available -->
+            {% match book.series_display() %}
+            {% when Some with (series) %}
+            <div class="bg-dark-800 rounded-lg p-4 md:p-6">
+                <h4 class="text-base md:text-lg font-semibold text-white mb-2 md:mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 4h-7a2 2 0 00-2 2v12a2 2 0 002 2h7m2-16a2 2 0 012 2v12a2 2 0 01-2 2m-2-16H9a2 2 0 00-2 2v12a2 2 0 002 2"></path>
+                    </svg>
+                    Series
+                </h4>
+                {% match book.series() %}
+                {% when Some with (series_name) %}
+                <a href="/?search={{ series_name|urlencode }}" class="inline-flex items-center px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium bg-dark-700 text-primary-300 border border-dark-600 hover:bg-dark-650 hover:border-primary-500 hover:text-primary-200 transition-colors">
+                    {{ series }}
+                    <svg class="w-3 h-3 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                </a>
+                {% when None %}
+                <div class="inline-flex items-center px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium bg-dark-700 text-dark-300 border border-dark-600">
+                    {{ series }}
+                </div>
+                {% endmatch %}
+            </div>
+            {% when None %}
+            {% endmatch %}
+
+            <!-- Genres row -->
+            {% match book.subjects_display() %}
+            {% when Some with (subjects) %}
+            <div class="bg-dark-800 rounded-lg p-4 md:p-6">
+                <h4 class="text-base md:text-lg font-semibold text-white mb-2 md:mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    Genres
+                </h4>
+                <div class="flex flex-wrap gap-2 md:gap-3">
+                    {% for subject in book.subjects() %}
+                    <span class="inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium bg-primary-600 bg-opacity-20 text-primary-300 border border-primary-600 border-opacity-30 hover:bg-opacity-30 transition-colors">
+                        {{ subject }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% when None %}
+            {% endmatch %}
+        </div>
+    </div>
+</div> 

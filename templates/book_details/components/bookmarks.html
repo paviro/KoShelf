@@ -1,0 +1,116 @@
+<!-- Bookmarks Section -->
+{% match book.koreader_metadata %}
+{% when Some with (metadata) %}
+{% if book.bookmark_count() > 0 %}
+<div class="md:bg-dark-850 md:rounded-xl md:border md:border-dark-700 overflow-hidden">
+    <div class="px-4 md:px-10 py-6 md:py-8 border-b border-dark-700">
+        <h2 class="text-xl md:text-2xl font-bold text-white flex items-center">
+            <svg class="w-6 h-6 mr-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+            </svg>
+            Bookmarks
+            <span class="ml-3 text-xs md:text-sm font-normal text-dark-400">({{ book.bookmark_count() }})</span>
+        </h2>
+    </div>
+    
+    <div class="p-4 md:p-10 space-y-4 md:space-y-6">
+        {% for annotation in metadata.annotations %}
+        {% if annotation.is_bookmark() %}
+        <div class="bg-dark-800 rounded-lg overflow-hidden border border-dark-700/50 shadow-md">
+            <!-- Bookmark Header -->
+            <div class="flex items-center justify-between text-sm md:text-base text-dark-400 px-4 md:px-6 py-2 md:py-3 bg-dark-750 border-b border-dark-700">
+                <div class="flex items-center gap-2 md:gap-3">
+                    <span class="inline-flex items-center text-yellow-400">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
+                        </svg>
+                        Page Bookmark
+                    </span>
+                    
+                    {% match annotation.chapter %}
+                    {% when Some with (chapter) %}
+                    <span class="inline-flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        {{ chapter }}
+                    </span>
+                    {% when None %}
+                    {% endmatch %}
+
+                    {% match annotation.pageno %}
+                    {% when Some with (page) %}
+                    <span class="hidden sm:inline-flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                        </svg>
+                        Page {{ page }}
+                    </span>
+                    {% when None %}
+                    {% endmatch %}
+                </div>
+
+                <div class="flex items-center gap-2 md:gap-3">
+                    {% match annotation.pageno %}
+                    {% when Some with (page) %}
+                    <span class="sm:hidden inline-flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                        </svg>
+                        Page {{ page }}
+                    </span>
+                    {% when None %}
+                    {% endmatch %}
+                    
+                    {% match annotation.formatted_datetime() %}
+                    {% when Some with (datetime) %}
+                    <span class="hidden sm:inline-flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        {{ datetime }}
+                    </span>
+                    {% when None %}
+                    {% endmatch %}
+                </div>
+            </div>
+            
+            <!-- Bookmark Content -->
+            <div class="p-4 md:p-6">
+                <!-- Text if available -->
+                {% if annotation.text != "" %}
+                <div class="relative">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-yellow-400/30 rounded-full"></div>
+                    <div class="pl-4 md:pl-6 mb-1">
+                        <span class="text-xs md:text-sm text-yellow-300 uppercase tracking-wider font-semibold">Bookmark anchor:</span>
+                    </div>
+                    <div class="text-white text-base md:text-lg leading-relaxed pl-4 md:pl-6 font-light">
+                        {{ annotation.text }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Personal Notes -->
+                {% match annotation.note %}
+                {% when Some with (note) %}
+                <div class="mt-4 md:mt-6">
+                    <div class="flex items-center mb-2 md:mb-3">
+                        <div class="h-px bg-dark-700 flex-grow mr-2 md:mr-3"></div>
+                        <div class="text-xs font-medium text-primary-400 uppercase tracking-wider">My Note</div>
+                        <div class="h-px bg-dark-700 flex-grow ml-2 md:ml-3"></div>
+                    </div>
+                    <div class="bg-dark-850 p-3 md:p-4 rounded-md border border-dark-700/50 shadow-sm">
+                        <p class="text-dark-200 leading-relaxed text-base md:text-lg">{{ note }}</p>
+                    </div>
+                </div>
+                {% when None %}
+                {% endmatch %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% when None %}
+{% endmatch %} 
