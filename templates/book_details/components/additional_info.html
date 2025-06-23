@@ -1,42 +1,48 @@
 <!-- Additional Information -->
-<div class="md:bg-dark-850/20 md:border md:border-dark-800 md:rounded-lg overflow-hidden">
-    <div class="px-4 md:px-10 py-6 md:py-8 border-b border-dark-700">
-        <h2 class="text-xl md:text-2xl font-bold text-white flex items-center">
-            <svg class="w-6 h-6 mr-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Additional Information
-        </h2>
+<section class="mb-8">
+    <div class="flex items-center mb-4 md:mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-cyan-400 to-cyan-600 rounded-full"></div>
+            <h2 class="text-xl md:text-2xl font-bold text-white">Additional Information</h2>
+        </div>
     </div>
     
-    <div class="p-4 md:p-10 space-y-4 md:space-y-6">
+    <div class="space-y-6">
         {% match book.publisher() %}
         {% when Some with (publisher) %}
-        <div class="flex items-center text-xs md:text-sm bg-dark-800/50 border border-dark-700/70 rounded-lg px-3 md:px-4 py-2 md:py-3">
-            <svg class="w-4 h-4 text-primary-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-            <span class="font-semibold text-primary-400 mr-2">Publisher:</span>
-            <span class="text-dark-200">{{ publisher }}</span>
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-lg font-bold text-white">{{ publisher }}</div>
+                    <div class="text-sm text-dark-400">Publisher</div>
+                </div>
+            </div>
         </div>
         {% when None %}
         {% endmatch %}
 
         {% if !book.identifiers().is_empty() %}
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4 md:p-6">
-            <h4 class="text-base md:text-lg font-semibold text-primary-400 mb-2 md:mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                </svg>
-                Identifiers
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
+            <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                    </svg>
+                </div>
+                Book Identifiers
             </h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% for identifier in book.identifiers() %}
                 {% if identifier.is_linkable() %}
                 <a href="{{ identifier.url().unwrap() }}" target="_blank" rel="noopener noreferrer" 
-                   class="group relative bg-dark-700 rounded-lg p-3 md:p-4 border border-dark-600 hover:border-primary-500 hover:bg-dark-650 transition-all duration-200 shadow-sm hover:shadow-md">
-                    <div class="flex items-center justify-between mb-1 md:mb-2">
-                        <div class="text-xs md:text-sm font-medium text-primary-300 uppercase tracking-wide group-hover:text-primary-200">
+                   class="group relative bg-dark-700/50 border border-dark-600/70 rounded-lg p-4 hover:border-primary-500 hover:bg-dark-650/50 transition-all duration-200 shadow-sm hover:shadow-md">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm font-medium text-primary-300 uppercase tracking-wide group-hover:text-primary-200">
                             {{ identifier.display_scheme() }}
                         </div>
                         <div class="text-dark-400 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200">
@@ -45,16 +51,16 @@
                             </svg>
                         </div>
                     </div>
-                    <div class="text-xs md:text-sm text-dark-300 font-mono break-all group-hover:text-white transition-colors duration-200">
+                    <div class="text-sm text-dark-300 font-mono break-all group-hover:text-white transition-colors duration-200">
                         {{ identifier.value }}
                     </div>
                 </a>
                 {% else %}
-                <div class="bg-dark-700 rounded-lg p-3 md:p-4 border border-dark-600 shadow-sm">
-                    <div class="text-xs md:text-sm font-medium text-primary-300 uppercase tracking-wide mb-1 md:mb-2">
+                <div class="bg-dark-700/50 border border-dark-600/70 rounded-lg p-4 shadow-sm">
+                    <div class="text-sm font-medium text-primary-300 uppercase tracking-wide mb-2">
                         {{ identifier.display_scheme() }}
                     </div>
-                    <div class="text-xs md:text-sm text-dark-300 font-mono break-all">
+                    <div class="text-sm text-dark-300 font-mono break-all">
                         {{ identifier.value }}
                     </div>
                 </div>
@@ -64,4 +70,4 @@
         </div>
         {% endif %}
     </div>
-</div> 
+</section> 
