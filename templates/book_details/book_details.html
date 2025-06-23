@@ -15,11 +15,12 @@
         <div class="flex items-center h-full min-w-0 flex-1">
             <!-- Mobile Title & Back Button -->
             <div class="md:hidden flex items-center space-x-3 min-w-0 flex-1">
-                <button onclick="smartBack()" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0">
+                <button onclick="if (typeof smartBack === 'function') { smartBack(document.referrer); }" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
                 </button>
+                <div class="h-8 w-px bg-dark-700 mx-3 md:mx-6"></div>
                 <div class="min-w-0 flex-1">
                     <h1 class="text-lg font-bold text-white truncate">{{ book.epub_info.title }}</h1>
                     {% if !book.epub_info.authors.is_empty() %}
@@ -66,22 +67,28 @@
     
     <script>
         function smartBack(href) {
-            // Check if there's history to go back to and if the referrer is from our site
-            const referrer = document.referrer;
-            const currentHost = window.location.host;
-            const historyLength = window.history.length;
-            
-            // If user came from our site (same host) and there's history, go back
-            if (referrer && 
-                referrer.includes(currentHost) && 
-                historyLength > 1 && 
-                !referrer.includes('/book/')) { // Avoid going back to another book page
+            event.preventDefault();
+            var referrer = document.referrer;
+            console.log(href);
+        
+            // Seems the user directly navigated to the book details page, so we need to go back to root
+            if (href == '' || href == window.location.href) {
+                href = '/';
+            }
+            console.log(href);
+    
+            var historyLength = window.history.length;
+    
+            // Parse referrer and href into URL objects to extract the pathname
+            var referrerPath = referrer ? new URL(referrer).pathname : null;
+            var targetPath = new URL(href, window.location.origin).pathname;
+    
+            if (referrerPath === targetPath && historyLength > 1) {
                 window.history.back();
             } else {
-                // Otherwise, go to the main page
                 window.location.href = href;
             }
         }
-    </script>
+        </script>
 </body>
 </html> 
