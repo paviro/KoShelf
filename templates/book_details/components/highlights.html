@@ -2,7 +2,7 @@
 {% match book.koreader_metadata %}
 {% when Some with (metadata) %}
 {% if book.highlight_count() > 0 %}
-<div class="md:bg-dark-850 md:rounded-xl md:border md:border-dark-700 overflow-hidden">
+<div class="md:bg-dark-850/20 md:border md:border-dark-800 md:rounded-lg overflow-hidden">
     <div class="px-4 md:px-10 py-6 md:py-8 border-b border-dark-700">
         <h2 class="text-xl md:text-2xl font-bold text-white flex items-center">
             <svg class="w-6 h-6 mr-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,7 +16,7 @@
     <div class="p-4 md:p-10 space-y-6 md:space-y-8">
         {% for annotation in metadata.annotations %}
         {% if annotation.is_highlight() %}
-        <div class="bg-dark-800 rounded-lg overflow-hidden border border-dark-700/50 shadow-md">
+        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg overflow-hidden shadow-md">
             <!-- Annotation Header -->
             <div class="flex items-center justify-between text-sm md:text-base text-dark-400 px-4 md:px-6 py-2 md:py-3 bg-dark-750 border-b border-dark-700">
                 <div class="flex items-center gap-2 md:gap-3">
