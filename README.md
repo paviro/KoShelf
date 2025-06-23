@@ -44,7 +44,7 @@ chmod +x koshelf
 
 Using Home Assistant? Install KOShelf as an add-on with just one click below.
 
-[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=c8a91b45_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2FKOShelf-home-assistant-addon)
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
 
 ### From Source
 
