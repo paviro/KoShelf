@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Calendar - {{ site_title }}</title>
+    <link rel="stylesheet" href="/assets/css/event-calendar.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="min-h-full bg-dark-900 text-white font-sans ec-dark">
+    <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
+    {% include "sidebar.html" %}
+    
+    <!-- Header - Fixed at top -->
+    <header class="fixed top-0 left-0 right-0 md:left-64 bg-dark-850/75 backdrop-blur-sm border-b border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+        <div class="flex items-center justify-between h-full">
+            <!-- Mobile Logo/Title -->
+            <div class="md:hidden flex items-center space-x-3">
+                <div class="w-6 h-6 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <!-- Filled by JavaScript -->
+                <h1 class="text-lg font-bold text-white truncate"></h1>
+            </div>
+            
+            <!-- Desktop Page Title -->
+            <!-- Filled by JavaScript -->
+            <h2 class="hidden md:block text-2xl font-bold text-white"></h2>
+            
+            <!-- Calendar Controls -->
+            <div class="flex items-center space-x-2 md:space-x-4">
+                <!-- Navigation Buttons -->
+                <div class="flex items-center space-x-1">
+                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Today Button -->
+                <button id="todayBtn" class="px-3 md:px-4 py-2 h-10 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm md:text-base transition-colors duration-200 flex items-center justify-center">
+                    Today
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="min-h-full md:ml-64">
+        <!-- Main Content -->
+        <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-3">
+
+            <!-- Monthly Statistics -->
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-[15px]">
+                <!-- Books Count -->
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div id="monthlyBooks" class="text-xl md:text-2xl font-bold text-white">0</div>
+                            <div class="text-sm text-dark-400">Books</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pages Read -->
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div id="monthlyPages" class="text-xl md:text-2xl font-bold text-white">0</div>
+                            <div class="text-sm text-dark-400">Pages Read</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading Time -->
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div id="monthlyTime" class="text-xl md:text-2xl font-bold text-white">0h</div>
+                            <div class="text-sm text-dark-400">Reading Time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading Days Percentage -->
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div id="monthlyDaysPercentage" class="text-xl md:text-2xl font-bold text-white">0%</div>
+                            <div class="text-sm text-dark-400">Days Read</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calendar Container -->
+            <div id="calendar" class="calendar-container bg-dark-800/50 border border-dark-700/70 rounded-lg"></div>
+            
+        </main>
+    </div>
+
+    <!-- Bottom Navigation Bar - Mobile Only -->
+    {% include "bottom_navbar.html" %}
+    
+    <!-- Event Details Modal (hidden by default) -->
+    {% include "calendar/components/event_modal.html" %}
+
+    <script src="/assets/js/event-calendar.min.js"></script>
+    <script type="module">
+        import { initializeCalendar } from '/assets/js/calendar.js';
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeCalendar();
+        });
+    </script>
+</body>
+</html> 

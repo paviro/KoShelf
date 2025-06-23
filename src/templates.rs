@@ -42,4 +42,13 @@ pub struct StatsTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
+}
+
+#[derive(Template)]
+#[template(path = "calendar/calendar.html")]
+pub struct CalendarTemplate {
+    pub site_title: String,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
 } 
