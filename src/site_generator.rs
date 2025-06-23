@@ -154,21 +154,15 @@ impl SiteGenerator {
             let heatmap_js_content = include_str!("../assets/heatmap.js");
             fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
 
-            // Copy calendar library files (if available)
-            if let Ok(calendar_css) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.css")) {
-                fs::write(self.output_dir.join("assets/css/event-calendar.min.css"), calendar_css)?;
-            }
+            let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.css"));
+            fs::write(self.output_dir.join("assets/css/event-calendar.min.css"), calendar_css)?;
 
-            if let Ok(calendar_js) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.js")) {
-                fs::write(self.output_dir.join("assets/js/event-calendar.min.js"), calendar_js)?;
-            }
+            let calendar_js = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js"));
+            fs::write(self.output_dir.join("assets/js/event-calendar.min.js"), calendar_js)?;
             
-            // Copy calendar map file if available
-            if let Ok(calendar_map) = std::fs::read_to_string(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map")) {
-                fs::write(self.output_dir.join("assets/js/event-calendar.min.js.map"), calendar_map)?;
-            }
+            let calendar_map = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map"));
+            fs::write(self.output_dir.join("assets/js/event-calendar.min.js.map"), calendar_map)?;
             
-            // Copy calendar initialization JavaScript file
             let calendar_init_js_content = include_str!("../assets/calendar.js");
             fs::write(self.output_dir.join("assets/js/calendar.js"), calendar_init_js_content)?;
         }
