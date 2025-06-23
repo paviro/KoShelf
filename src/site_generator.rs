@@ -290,6 +290,9 @@ impl SiteGenerator {
                 book: book.clone(),
                 book_stats,
                 session_stats,
+                version: self.get_version(),
+                last_updated: self.get_last_updated(),
+                navbar_items: self.create_navbar_items("books"),
             };
             
             let html = template.render()?;

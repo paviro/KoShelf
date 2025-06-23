@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.epub_info.title }} - {{ site_title }}</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="min-h-full bg-dark-900 text-white font-sans">
+    <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
+    {% include "sidebar.html" %}
+    
+    <!-- Header - Fixed at top -->
+    <header class="fixed top-0 left-0 right-0 md:left-64 bg-dark-850/75 backdrop-blur-sm border-b border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+        <div class="flex items-center h-full min-w-0 flex-1">
+            <!-- Mobile Title & Back Button -->
+            <div class="md:hidden flex items-center space-x-3 min-w-0 flex-1">
+                <button onclick="smartBack()" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </button>
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-lg font-bold text-white truncate">{{ book.epub_info.title }}</h1>
+                    {% if !book.epub_info.authors.is_empty() %}
+                    <p class="text-xs text-dark-300 truncate">by {{ book.epub_info.authors[0] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Desktop Title -->
+            <div class="hidden md:block min-w-0 flex-1">
+                <h1 class="text-2xl font-bold text-white truncate">{{ book.epub_info.title }}</h1>
+                {% if !book.epub_info.authors.is_empty() %}
+                <p class="text-sm text-dark-300 truncate">by {{ book.epub_info.authors[0] }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    
+    <div class="min-h-full md:ml-64">
+    <!-- Main Content -->
+        <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
+            <!-- Book Header -->
+            {% include "book_details/components/book_header.html" %}
+            
+            <!-- Review Note -->
+            {% include "book_details/components/review_note.html" %}
+
+            <!-- Highlights & Quotes Section -->
+            {% include "book_details/components/highlights.html" %}
+            
+            <!-- Bookmarks Section -->
+            {% include "book_details/components/bookmarks.html" %}
+
+            <!-- Reading Statistics -->
+            {% include "book_details/components/reading_statistics.html" %}
+
+            <!-- Additional Information -->
+            {% include "book_details/components/additional_info.html" %}
+        </main>
+                </div>
+                
+    <!-- Bottom Navigation Bar - Mobile Only -->
+    {% include "bottom_navbar.html" %}
+    
+    <script>
+        function smartBack(href) {
+            // Check if there's history to go back to and if the referrer is from our site
+            const referrer = document.referrer;
+            const currentHost = window.location.host;
+            const historyLength = window.history.length;
+            
+            // If user came from our site (same host) and there's history, go back
+            if (referrer && 
+                referrer.includes(currentHost) && 
+                historyLength > 1 && 
+                !referrer.includes('/book/')) { // Avoid going back to another book page
+                window.history.back();
+            } else {
+                // Otherwise, go to the main page
+                window.location.href = href;
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -22,12 +22,15 @@ pub struct IndexTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "book_details.html")]
+#[template(path = "book_details/book_details.html")]
 pub struct BookTemplate {
     pub site_title: String,
     pub book: Book,
     pub book_stats: Option<StatBook>,
     pub session_stats: Option<BookSessionStats>,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
 }
 
 #[derive(Template)]
