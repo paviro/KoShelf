@@ -93,10 +93,10 @@ KoShelf can operate in several modes:
 
 - `--books-path, -b`: Path to your folder containing EPUB files and KoReader metadata (optional if --statistics-db is provided)
 - `--statistics-db, -s`: Path to the statistics.sqlite3 file for additional reading stats (optional if --books-path is provided)
-- `--output, -o`: Output directory for the generated site (default: "site")
+- `--output, -o`: Output directory for the generated site
 - `--watch, -w`: Enable file watching with static output (requires --output)
 - `--title, -t`: Site title (default: "KoShelf")
-- `--include-unread`: Include unread books (EPUBs without KoReader metadata) in the generated site
+- `--include-unread`: Include unread books (EPUBs without KoReader metadata)
 - `--port, -p`: Port for web server mode (default: 3000)
 
 ### Example
