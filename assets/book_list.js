@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterButtons = document.querySelectorAll('[data-filter]');
     const readingSection = document.querySelector('section:has(#readingBooksGrid)');
     const completedSection = document.querySelector('section:has(#completedBooksGrid)');
+    const unreadSection = document.querySelector('section:has(#unreadBooksGrid)');
     const bookCards = document.querySelectorAll('.book-card');
     
     let currentFilter = 'all';
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function filterBooks(searchTerm, filter) {
         let readingVisible = 0;
         let completedVisible = 0;
+        let unreadVisible = 0;
         
         bookCards.forEach(card => {
             const title = (card.dataset.title || '').toLowerCase();
@@ -73,7 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check filter match
             const matchesFilter = filter === 'all' || 
                 (filter === 'reading' && status === 'reading') ||
-                (filter === 'completed' && status === 'completed');
+                (filter === 'completed' && status === 'completed') ||
+                (filter === 'unread' && status === 'unread');
             
             // Show/hide card with animation
             if (matchesSearch && matchesFilter) {
@@ -92,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Count visible books by status
                 if (status === 'reading') readingVisible++;
                 if (status === 'completed') completedVisible++;
+                if (status === 'unread') unreadVisible++;
             } else {
                 card.style.display = 'none';
             }
@@ -108,26 +112,27 @@ document.addEventListener('DOMContentLoaded', function() {
             completedSection.style.display = shouldShowCompleted ? 'block' : 'none';
         }
         
-        updateEmptyState(readingVisible + completedVisible);
+        if (unreadSection) {
+            const shouldShowUnread = unreadVisible > 0 && (filter === 'all' || filter === 'unread');
+            unreadSection.style.display = shouldShowUnread ? 'block' : 'none';
+        }
+        
+        updateEmptyState(readingVisible + completedVisible + unreadVisible);
     }
     
     function updateEmptyState(visibleCount) {
-        let emptyState = document.querySelector('.empty-state');
-        const mainElement = document.querySelector('main');
+        const dynamicEmptyState = document.getElementById('dynamicEmptyState');
         
         if (visibleCount === 0) {
-            if (!emptyState) {
-                emptyState = document.createElement('div');
-                emptyState.className = 'empty-state flex flex-col items-center justify-center h-64 text-center';
-                emptyState.innerHTML = `
-                    <div class="text-6xl mb-4 text-dark-600">🔍</div>
-                    <h3 class="text-xl font-semibold text-dark-300 mb-2">No books found</h3>
-                    <p class="text-dark-500 max-w-md">Try adjusting your search or filter criteria.</p>
-                `;
-                mainElement.appendChild(emptyState);
+            // Show the dynamic empty state (for search/filter results)
+            if (dynamicEmptyState) {
+                dynamicEmptyState.classList.remove('hidden');
             }
-        } else if (emptyState) {
-            emptyState.remove();
+        } else {
+            // Hide the dynamic empty state
+            if (dynamicEmptyState) {
+                dynamicEmptyState.classList.add('hidden');
+            }
         }
     }
     
@@ -177,8 +182,6 @@ document.addEventListener('DOMContentLoaded', function() {
             bar.style.width = width;
         }, 100);
     });
-    
-    console.log('KoInsight interface loaded successfully');
 
     // Unified dropdown filter logic
     const filterDropdownButton = document.getElementById('filterDropdownButton');
@@ -205,4 +208,49 @@ document.addEventListener('DOMContentLoaded', function() {
             filterDropdownMenu?.classList.add('hidden');
         }
     });
+
+    // Section toggle functionality
+    const sectionToggles = [
+        {
+            buttonId: 'toggleReading',
+            contentId: 'readingBooksGrid',
+            chevronId: 'readingChevron'
+        },
+        {
+            buttonId: 'toggleCompleted',
+            contentId: 'completedBooksGrid',
+            chevronId: 'completedChevron'
+        },
+        {
+            buttonId: 'toggleUnread',
+            contentId: 'unreadBooksGrid',
+            chevronId: 'unreadChevron'
+        }
+    ];
+
+    sectionToggles.forEach(config => {
+        const button = document.getElementById(config.buttonId);
+        const content = document.getElementById(config.contentId);
+        const chevron = document.getElementById(config.chevronId);
+        
+        if (button && content && chevron) {
+            button.addEventListener('click', () => {
+                const isHidden = content.classList.contains('hidden');
+                const buttonText = button.querySelector('span');
+                
+                if (isHidden) {
+                    // Show content
+                    content.classList.remove('hidden');
+                    buttonText.textContent = 'Hide';
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    // Hide content
+                    content.classList.add('hidden');
+                    buttonText.textContent = 'Show';
+                    chevron.style.transform = 'rotate(-90deg)';
+                }
+            });
+        }
+    });
+
 }); 
