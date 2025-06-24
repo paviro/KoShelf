@@ -1,15 +1,15 @@
 <!-- Overall Stats Section -->
 <section class="mb-8">
-    <div class="flex items-center mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-purple-400 to-purple-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">Overall Statistics</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Overall Statistics</h2>
         </div>
     </div>
     
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <!-- Total Reading Time Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17,7 +17,7 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {% let hours = reading_stats.total_read_time / 3600 %}
                         {% let minutes = (reading_stats.total_read_time % 3600) / 60 %}
                         {% if hours > 0 %}
@@ -26,13 +26,13 @@
                             {{ minutes }}m
                         {% endif %}
                     </div>
-                    <div class="text-sm text-dark-400">Total Reading Time</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Total Reading Time</div>
                 </div>
             </div>
         </div>
         
         <!-- Total Pages Read Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,16 +40,16 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {{ reading_stats.total_page_reads }}
                     </div>
-                    <div class="text-sm text-dark-400">Total Pages Read</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Total Pages Read</div>
                 </div>
             </div>
         </div>
         
         <!-- Most Pages in a Day Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,16 +57,16 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {{ reading_stats.most_pages_in_day }}
                     </div>
-                    <div class="text-sm text-dark-400">Most Pages in a Day</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Most Pages in a Day</div>
                 </div>
             </div>
         </div>
         
         <!-- Longest Daily Reading Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +74,7 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {% let hours = reading_stats.longest_read_time_in_day / 3600 %}
                         {% let minutes = (reading_stats.longest_read_time_in_day % 3600) / 60 %}
                         {% if hours > 0 %}
@@ -83,13 +83,13 @@
                             {{ minutes }}m
                         {% endif %}
                     </div>
-                    <div class="text-sm text-dark-400">Longest Daily Reading</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Longest Daily Reading</div>
                 </div>
             </div>
         </div>
         
         <!-- Longest Session Duration Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +97,7 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {% match reading_stats.longest_session_duration %}
                         {% when Some with (longest_duration) %}
                             {% let minutes = longest_duration / 60 %}
@@ -112,13 +112,13 @@
                             --
                         {% endmatch %}
                     </div>
-                    <div class="text-sm text-dark-400">Longest Session</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Longest Session</div>
                 </div>
             </div>
         </div>
         
         <!-- Average Session Duration Card -->
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+        <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,7 +126,7 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xl md:text-2xl font-bold text-white">
+                    <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {% match reading_stats.average_session_duration %}
                         {% when Some with (avg_duration) %}
                             {% let minutes = avg_duration / 60 %}
@@ -141,7 +141,7 @@
                             --
                         {% endmatch %}
                     </div>
-                    <div class="text-sm text-dark-400">Average Session</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">Average Session</div>
                 </div>
             </div>
         </div>

@@ -109,20 +109,28 @@ class StatisticsManager {
         });
         
         // Mark first option as active if none is selected
-        if (weekOptionElements.length > 0 && !weekOptionElements[0].classList.contains('bg-dark-750')) {
-            weekOptionElements[0].classList.add('bg-dark-750', 'text-white');
-            weekOptionElements[0].classList.remove('text-dark-200');
+        if (weekOptionElements.length > 0 && !weekOptionElements[0].classList.contains('bg-primary-50')) {
+            weekOptionElements[0].classList.add('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white');
+            weekOptionElements[0].classList.remove('text-gray-600', 'dark:text-dark-200');
         }
     }
 
     // Update active state for dropdown options
     updateActiveOption(allOptions, selectedOption) {
         allOptions.forEach(el => {
-            el.classList.remove('bg-dark-750', 'text-white');
-            el.classList.add('text-dark-200');
+            // Remove both light and dark mode active classes
+            el.classList.remove('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white', 'bg-green-50', 'text-green-900');
+            // Reset to default text color
+            el.classList.add('text-gray-600', 'dark:text-dark-200');
         });
-        selectedOption.classList.add('bg-dark-750', 'text-white');
-        selectedOption.classList.remove('text-dark-200');
+
+        // Add appropriate active classes based on the context (week or year selector)
+        if (selectedOption.closest('#weekOptions')) {
+            selectedOption.classList.add('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white');
+        } else {
+            selectedOption.classList.add('bg-green-50', 'dark:bg-dark-700', 'text-green-900', 'dark:text-white');
+        }
+        selectedOption.classList.remove('text-gray-600', 'dark:text-dark-200');
     }
 
     // Show loading indicator
