@@ -148,9 +148,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     card.style.transform = 'translateY(0)';
                 });
                 
-                // Load images for newly visible cards that haven't loaded yet
-                lazyLoader.loadImageForCard(card);
-                
                 // Count visible books by status
                 if (status === 'reading') readingVisible++;
                 if (status === 'completed') completedVisible++;
@@ -214,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 searchInput.dispatchEvent(new Event('input'));
                 searchInput.blur();
             }
-            if (!mobileSearchOverlay?.classList.contains('hidden')) {
+            if (!mobileSearchContainer?.classList.contains('hidden')) {
                 mobileSearchClose?.click();
             }
         }
@@ -277,17 +274,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Mobile search UI elements
     const mobileSearchButton = document.getElementById('mobileSearchButton');
-    const mobileSearchOverlay = document.getElementById('mobileSearchOverlay');
+    const mobileSearchContainer = document.getElementById('mobileSearchContainer');
     const mobileSearchClose = document.getElementById('mobileSearchClose');
+    const mobileTitle = document.getElementById('mobileTitle');
+    const mobileFilterControls = document.getElementById('mobileFilterControls');
 
-    // Mobile search overlay toggle logic
+    // Mobile search inline toggle logic
     mobileSearchButton?.addEventListener('click', () => {
-        mobileSearchOverlay?.classList.remove('hidden');
+        // Hide title, search button, and filter controls
+        mobileTitle?.classList.add('hidden');
+        mobileSearchButton?.classList.add('hidden');
+        mobileFilterControls?.classList.add('hidden');
+        
+        // Show search container and close button
+        mobileSearchContainer?.classList.remove('hidden');
+        mobileSearchClose?.classList.remove('hidden');
+        
+        // Focus the search input
         setTimeout(() => mobileSearchInput?.focus(), 50);
     });
 
     mobileSearchClose?.addEventListener('click', () => {
-        mobileSearchOverlay?.classList.add('hidden');
+        // Show title, search button, and filter controls
+        mobileTitle?.classList.remove('hidden');
+        mobileSearchButton?.classList.remove('hidden');
+        mobileFilterControls?.classList.remove('hidden');
+        
+        // Hide search container and close button
+        mobileSearchContainer?.classList.add('hidden');
+        mobileSearchClose?.classList.add('hidden');
+        
+        // Clear search inputs
         if (mobileSearchInput) {
             mobileSearchInput.value = '';
         }
