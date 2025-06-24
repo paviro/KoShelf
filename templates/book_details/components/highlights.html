@@ -3,107 +3,120 @@
 {% when Some with (metadata) %}
 {% if book.highlight_count() > 0 %}
 <section class="mb-8">
-    <div class="flex items-center mb-4 md:mb-6">
+    <div class="flex items-center justify-between mb-4 md:mb-6">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
             <h2 class="text-xl md:text-2xl font-bold text-white">Highlights & Quotes</h2>
             <span class="ml-3 text-sm font-normal text-dark-400">({{ book.highlight_count() }})</span>
         </div>
+        
+        <!-- Hide/Show Button -->
+        <button id="toggleHighlights" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+            <span class="text-sm text-dark-300">Loading...</span>
+            <svg id="highlightsChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
     </div>
     
-    <div class="space-y-6">
-        {% for annotation in metadata.annotations %}
-        {% if annotation.is_highlight() %}
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
-            <!-- Annotation Header -->
-            <div class="flex items-center justify-between text-sm text-dark-400 px-6 py-3 bg-dark-750/50 border-b border-dark-700/50">
-                <div class="flex items-center gap-3">
-                    {% match annotation.chapter %}
-                    {% when Some with (chapter) %}
-                    <span class="inline-flex items-center">
-                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        {{ chapter }}
-                    </span>
-                    {% when None %}
-                    {% endmatch %}
+    <!-- Collapsible Highlights Content -->
+    <div id="highlightsContainer">
+        <div class="space-y-6">
+            {% for annotation in metadata.annotations %}
+            {% if annotation.is_highlight() %}
+            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
+                <!-- Annotation Header -->
+                <div class="flex items-center justify-between text-sm text-dark-400 px-6 py-3 bg-dark-750/50 border-b border-dark-700/50">
+                    <div class="flex items-center gap-3">
+                        {% match annotation.chapter %}
+                        {% when Some with (chapter) %}
+                        <span class="inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            {{ chapter }}
+                        </span>
+                        {% when None %}
+                        {% endmatch %}
 
-                    {% match annotation.pageno %}
-                    {% when Some with (page) %}
-                    <span class="hidden sm:inline-flex items-center">
-                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                        </svg>
-                        Page {{ page }}
-                    </span>
-                    {% when None %}
-                    {% endmatch %}
-                </div>
+                        {% match annotation.pageno %}
+                        {% when Some with (page) %}
+                        <span class="hidden sm:inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                            </svg>
+                            Page {{ page }}
+                        </span>
+                        {% when None %}
+                        {% endmatch %}
+                    </div>
 
-                <div class="flex items-center gap-3">
-                    {% match annotation.pageno %}
-                    {% when Some with (page) %}
-                    <span class="sm:hidden inline-flex items-center">
-                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                        </svg>
-                        Page {{ page }}
-                    </span>
-                    {% when None %}
-                    {% endmatch %}
-                    
-                    {% match annotation.formatted_datetime() %}
-                    {% when Some with (datetime) %}
-                    <span class="hidden sm:inline-flex items-center">
-                        <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        {{ datetime }}
-                    </span>
-                    {% when None %}
-                    {% endmatch %}
-                </div>
-            </div>
-            
-            <!-- Annotation Content -->
-            <div class="p-6">
-                <!-- Quote -->
-                <div class="relative">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
-                    <blockquote class="text-white text-lg leading-relaxed pl-6 font-light">
-                        {{ annotation.text }}
-                    </blockquote>
+                    <div class="flex items-center gap-3">
+                        {% match annotation.pageno %}
+                        {% when Some with (page) %}
+                        <span class="sm:hidden inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                            </svg>
+                            Page {{ page }}
+                        </span>
+                        {% when None %}
+                        {% endmatch %}
+                        
+                        {% match annotation.formatted_datetime() %}
+                        {% when Some with (datetime) %}
+                        <span class="hidden sm:inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            {{ datetime }}
+                        </span>
+                        {% when None %}
+                        {% endmatch %}
+                    </div>
                 </div>
                 
-                <!-- Personal Notes -->
-                {% match annotation.note %}
-                {% when Some with (note) %}
-                <div class="mt-6">
-                    <div class="flex items-center mb-3">
-                        <div class="h-px bg-dark-700 flex-grow mr-3"></div>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
-                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
+                <!-- Annotation Content -->
+                <div class="p-6">
+                    <!-- Quote -->
+                    <div class="relative">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
+                        <blockquote class="text-white text-lg leading-relaxed pl-6 font-light">
+                            {{ annotation.text }}
+                        </blockquote>
+                    </div>
+                    
+                    <!-- Personal Notes -->
+                    {% match annotation.note %}
+                    {% when Some with (note) %}
+                    <div class="mt-6">
+                        <div class="flex items-center mb-3">
+                            <div class="h-px bg-dark-700 flex-grow mr-3"></div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </div>
+                                <div class="text-sm font-medium text-primary-400 uppercase tracking-wider">My Note</div>
                             </div>
-                            <div class="text-sm font-medium text-primary-400 uppercase tracking-wider">My Note</div>
+                            <div class="h-px bg-dark-700 flex-grow ml-3"></div>
                         </div>
-                        <div class="h-px bg-dark-700 flex-grow ml-3"></div>
+                        <div class="bg-dark-850/50 p-4 rounded-lg border border-dark-700/30">
+                            <p class="text-dark-200 leading-relaxed">{{ note }}</p>
+                        </div>
                     </div>
-                    <div class="bg-dark-850/50 p-4 rounded-lg border border-dark-700/30">
-                        <p class="text-dark-200 leading-relaxed">{{ note }}</p>
-                    </div>
+                    {% when None %}
+                    {% endmatch %}
                 </div>
-                {% when None %}
-                {% endmatch %}
             </div>
+            {% endif %}
+            {% endfor %}
         </div>
-        {% endif %}
-        {% endfor %}
     </div>
 </section>
+
+
 {% endif %}
 {% when None %}
 {% endmatch %} 

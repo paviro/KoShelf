@@ -44,6 +44,9 @@
         <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
             <!-- Book Header -->
             {% include "book_details/components/book_header.html" %}
+
+            <!-- Reading Statistics -->
+            {% include "book_details/components/reading_statistics.html" %}
             
             <!-- Review Note -->
             {% include "book_details/components/review_note.html" %}
@@ -54,9 +57,6 @@
             <!-- Bookmarks Section -->
             {% include "book_details/components/bookmarks.html" %}
 
-            <!-- Reading Statistics -->
-            {% include "book_details/components/reading_statistics.html" %}
-
             <!-- Additional Information -->
             {% include "book_details/components/additional_info.html" %}
         </main>
@@ -64,6 +64,9 @@
                 
     <!-- Bottom Navigation Bar - Mobile Only -->
     {% include "bottom_navbar.html" %}
+    
+    <!-- Include JavaScript -->
+    <script type="module" src="/assets/js/book_detail.js"></script>
     
     <script>
         function smartBack(href) {

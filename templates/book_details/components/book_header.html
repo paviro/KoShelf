@@ -1,233 +1,244 @@
 <!-- Book Header -->
 <section class="mb-8">
-    <div class="flex items-center mb-4 md:mb-6">
+    <div class="flex items-center justify-between mb-4 md:mb-6">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-primary-400 to-primary-600 rounded-full"></div>
             <h2 class="text-xl md:text-2xl font-bold text-white">Book Overview</h2>
         </div>
+        
+        <!-- Hide/Show Button -->
+        <button id="toggleBookOverview" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+            <span class="text-sm text-dark-300">Loading...</span>
+            <svg id="bookOverviewChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
-        <!-- Left Column: Cover and Status -->
-        <div class="lg:col-span-1 space-y-4 md:space-y-6 mb-4 md:mb-0">
-            <!-- Book Cover -->
-            <div class="space-y-4">
-                <div class="bg-dark-800 border border-dark-700/70 rounded-xl overflow-hidden shadow-lg mx-auto max-w-[280px] md:max-w-xs mb-4 relative">
-                    <img src="/assets/covers/{{ book.id }}.webp" 
-                         alt="{{ book.epub_info.title }}" 
-                         class="w-full h-auto"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="aspect-[2/3] w-full flex items-center justify-center text-5xl md:text-6xl text-dark-400" style="display: none;">📖</div>
+    <!-- Collapsible Book Overview Content -->
+    <div id="bookOverviewContainer">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+            <!-- Left Column: Cover and Status -->
+            <div class="lg:col-span-1 space-y-4 md:space-y-6 mb-4 md:mb-0">
+                <!-- Book Cover -->
+                <div class="space-y-4">
+                    <div class="bg-dark-800 border border-dark-700/70 rounded-xl overflow-hidden shadow-lg mx-auto max-w-[280px] md:max-w-xs mb-4 relative">
+                        <img src="/assets/covers/{{ book.id }}.webp" 
+                             alt="{{ book.epub_info.title }}" 
+                             class="w-full h-auto"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="aspect-[2/3] w-full flex items-center justify-center text-5xl md:text-6xl text-dark-400" style="display: none;">📖</div>
+                        
+                        <!-- Progress Bar for Reading Books -->
+                        {% match book.status() %}
+                        {% when BookStatus::Reading %}
+                        <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
+                        {% when BookStatus::Complete %}
+                        {% when BookStatus::Unknown %}
+                        {% endmatch %}
+                    </div>
                     
-                    <!-- Progress Bar for Reading Books -->
+                    <!-- Status Indicator -->
                     {% match book.status() %}
                     {% when BookStatus::Reading %}
-                    <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
+                        <div class="flex items-center justify-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-white">{{ book.progress_percentage_display() }}%</div>
+                                <div class="text-sm text-dark-400">Reading Progress</div>
+                            </div>
+                        </div>
+                    </div>
                     {% when BookStatus::Complete %}
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
+                        <div class="flex items-center justify-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-white">Complete</div>
+                                <div class="text-sm text-dark-400">Reading Status</div>
+                            </div>
+                        </div>
+                    </div>
                     {% when BookStatus::Unknown %}
                     {% endmatch %}
                 </div>
-                
-                <!-- Status Indicator -->
-                {% match book.status() %}
-                {% when BookStatus::Reading %}
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
-                    <div class="flex items-center justify-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-lg font-bold text-white">{{ book.progress_percentage_display() }}%</div>
-                            <div class="text-sm text-dark-400">Reading Progress</div>
-                        </div>
-                    </div>
-                </div>
-                {% when BookStatus::Complete %}
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
-                    <div class="flex items-center justify-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-lg font-bold text-white">Complete</div>
-                            <div class="text-sm text-dark-400">Reading Status</div>
-                        </div>
-                    </div>
-                </div>
-                {% when BookStatus::Unknown %}
-                {% endmatch %}
             </div>
-        </div>
-        
-        <!-- Right Column: Description and Details -->
-        <div class="lg:col-span-3 space-y-6">
-            <!-- Book Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xl md:text-2xl font-bold text-white">
-                                {% match book.koreader_metadata %}
-                                {% when Some with (metadata) %}
-                                    {% match metadata.doc_pages %}
-                                    {% when Some with (pages) %}
-                                        {{ pages }}
+            
+            <!-- Right Column: Description and Details -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Book Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold text-white">
+                                    {% match book.koreader_metadata %}
+                                    {% when Some with (metadata) %}
+                                        {% match metadata.doc_pages %}
+                                        {% when Some with (pages) %}
+                                            {{ pages }}
+                                        {% when None %}
+                                            ?
+                                        {% endmatch %}
                                     {% when None %}
                                         ?
                                     {% endmatch %}
-                                {% when None %}
-                                    ?
-                                {% endmatch %}
+                                </div>
+                                <div class="text-sm text-dark-400">Pages</div>
                             </div>
-                            <div class="text-sm text-dark-400">Pages</div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xl md:text-2xl font-bold text-white">{{ book.highlight_count() }}</div>
-                            <div class="text-sm text-dark-400">Highlights</div>
+                    
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold text-white">{{ book.highlight_count() }}</div>
+                                <div class="text-sm text-dark-400">Highlights</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xl md:text-2xl font-bold text-white">
-                                {% match book.koreader_metadata %}
-                                {% when Some with (metadata) %}
-                                    {% match metadata.stats %}
-                                    {% when Some with (stats) %}
-                                        {% match stats.notes %}
-                                        {% when Some with (notes) %}
-                                            {{ notes }}
+                    
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-xl md:text-2xl font-bold text-white">
+                                    {% match book.koreader_metadata %}
+                                    {% when Some with (metadata) %}
+                                        {% match metadata.stats %}
+                                        {% when Some with (stats) %}
+                                            {% match stats.notes %}
+                                            {% when Some with (notes) %}
+                                                {{ notes }}
+                                            {% when None %}
+                                                0
+                                            {% endmatch %}
                                         {% when None %}
                                             0
                                         {% endmatch %}
                                     {% when None %}
                                         0
                                     {% endmatch %}
-                                {% when None %}
-                                    0
-                                {% endmatch %}
+                                </div>
+                                <div class="text-sm text-dark-400">Notes</div>
                             </div>
-                            <div class="text-sm text-dark-400">Notes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="text-base md:text-lg font-bold text-white uppercase">
+                                    {% match book.language() %}
+                                    {% when Some with (lang) %}
+                                        {{ lang }}
+                                    {% when None %}
+                                        --
+                                    {% endmatch %}
+                                </div>
+                                <div class="text-sm text-dark-400">Language</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+
+                <!-- Description -->
+                {% match book.epub_info.sanitized_description() %}
+                {% when Some with (description) %}
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                         </div>
-                        <div>
-                            <div class="text-base md:text-lg font-bold text-white uppercase">
-                                {% match book.language() %}
-                                {% when Some with (lang) %}
-                                    {{ lang }}
-                                {% when None %}
-                                    --
-                                {% endmatch %}
-                            </div>
-                            <div class="text-sm text-dark-400">Language</div>
-                        </div>
-                    </div>
+                        Description
+                    </h3>
+                    <div class="text-dark-300 leading-relaxed prose prose-invert max-w-none book-description">{{ description|safe }}</div>
                 </div>
-            </div>
-
-            <!-- Description -->
-            {% match book.epub_info.sanitized_description() %}
-            {% when Some with (description) %}
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
-                    <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
-                    Description
-                </h3>
-                <div class="text-dark-300 leading-relaxed prose prose-invert max-w-none book-description">{{ description|safe }}</div>
-            </div>
-            {% when None %}
-            {% endmatch %}
-
-            <!-- Series if available -->
-            {% match book.series_display() %}
-            {% when Some with (series) %}
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
-                <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
-                    <div class="w-8 h-8 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 4h-7a2 2 0 00-2 2v12a2 2 0 002 2h7m2-16a2 2 0 012 2v12a2 2 0 01-2 2m-2-16H9a2 2 0 00-2 2v12a2 2 0 002 2"></path>
-                        </svg>
-                    </div>
-                    Series
-                </h4>
-                {% match book.series() %}
-                {% when Some with (series_name) %}
-                <a href="/?search={{ series_name|urlencode }}" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 text-primary-300 border border-dark-600 hover:bg-dark-650 hover:border-primary-500 hover:text-primary-200 transition-colors">
-                    {{ series }}
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                    </svg>
-                </a>
                 {% when None %}
-                <div class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 text-dark-300 border border-dark-600">
-                    {{ series }}
+                {% endmatch %}
+
+                <!-- Series if available -->
+                {% match book.series_display() %}
+                {% when Some with (series) %}
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 4h-7a2 2 0 00-2 2v12a2 2 0 002 2h7m2-16a2 2 0 012 2v12a2 2 0 01-2 2m-2-16H9a2 2 0 00-2 2v12a2 2 0 002 2"></path>
+                            </svg>
+                        </div>
+                        Series
+                    </h4>
+                    {% match book.series() %}
+                    {% when Some with (series_name) %}
+                    <a href="/?search={{ series_name|urlencode }}" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 text-primary-300 border border-dark-600 hover:bg-dark-650 hover:border-primary-500 hover:text-primary-200 transition-colors">
+                        {{ series }}
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                    {% when None %}
+                    <div class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 text-dark-300 border border-dark-600">
+                        {{ series }}
+                    </div>
+                    {% endmatch %}
                 </div>
+                {% when None %}
+                {% endmatch %}
+
+                <!-- Genres row -->
+                {% match book.subjects_display() %}
+                {% when Some with (subjects) %}
+                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center mr-3">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                        </div>
+                        Genres
+                    </h4>
+                    <div class="flex flex-wrap gap-3">
+                        {% for subject in book.subjects() %}
+                        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-primary-600 bg-opacity-20 text-primary-300 border border-primary-600 border-opacity-30 hover:bg-opacity-30 transition-colors">
+                            {{ subject }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% when None %}
                 {% endmatch %}
             </div>
-            {% when None %}
-            {% endmatch %}
-
-            <!-- Genres row -->
-            {% match book.subjects_display() %}
-            {% when Some with (subjects) %}
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
-                <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
-                    <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                        </svg>
-                    </div>
-                    Genres
-                </h4>
-                <div class="flex flex-wrap gap-3">
-                    {% for subject in book.subjects() %}
-                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-primary-600 bg-opacity-20 text-primary-300 border border-primary-600 border-opacity-30 hover:bg-opacity-30 transition-colors">
-                        {{ subject }}
-                    </span>
-                    {% endfor %}
-                </div>
-            </div>
-            {% when None %}
-            {% endmatch %}
         </div>
     </div>
 </section> 

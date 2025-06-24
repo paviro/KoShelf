@@ -141,6 +141,9 @@ impl SiteGenerator {
         if !books.is_empty() {
             let js_content = include_str!("../assets/book_list.js");
             fs::write(self.output_dir.join("assets/js/book_list.js"), js_content)?;
+
+            let js_content = include_str!("../assets/book_detail.js");
+            fs::write(self.output_dir.join("assets/js/book_detail.js"), js_content)?;
             
             let lazy_loading_content = include_str!("../assets/lazy-loading.js");
             fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
