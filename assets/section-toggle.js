@@ -50,12 +50,12 @@ class SectionToggle {
         if (defaultVisible) {
             // Show the section initially
             container.classList.remove('hidden');
-            chevron.style.transform = 'rotate(180deg)';
+            chevron.style.transform = 'rotate(0deg)';
             buttonText.textContent = 'Hide';
         } else {
             // Hide the section initially
             container.classList.add('hidden');
-            chevron.style.transform = 'rotate(0deg)';
+            chevron.style.transform = 'rotate(-90deg)';
             buttonText.textContent = 'Show';
         }
     }
@@ -80,7 +80,7 @@ class SectionToggle {
 
         const { container, chevron, buttonText } = sectionData;
         container.classList.remove('hidden');
-        chevron.style.transform = 'rotate(180deg)';
+        chevron.style.transform = 'rotate(0deg)';
         buttonText.textContent = 'Hide';
     }
 
@@ -90,7 +90,7 @@ class SectionToggle {
 
         const { container, chevron, buttonText } = sectionData;
         container.classList.add('hidden');
-        chevron.style.transform = 'rotate(0deg)';
+        chevron.style.transform = 'rotate(-90deg)';
         buttonText.textContent = 'Show';
     }
 
