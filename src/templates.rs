@@ -10,7 +10,7 @@ pub struct NavItem {
 }
 
 #[derive(Template)]
-#[template(path = "book_list.html")]
+#[template(path = "book_list/book_list.html")]
 pub struct IndexTemplate {
     pub site_title: String,
     pub reading_books: Vec<Book>,
