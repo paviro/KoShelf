@@ -91,6 +91,9 @@ function initializeEventCalendar(events) {
         height: 'auto',
         firstDay: 1, // Monday
         displayEventEnd: false,
+        editable: false,
+        eventStartEditable: false,
+        eventDurationEditable: false,
         events: mapEvents(events),
         eventClick: info => showEventModal(info.event.title, info.event.extendedProps),
         dateClick: info => console.debug('Date clicked:', info.dateStr),
