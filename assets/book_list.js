@@ -1,12 +1,13 @@
 // KoInsight - Reading Tracker Interface
 import { LazyImageLoader } from './lazy-loading.js';
+import { SectionToggle } from './section-toggle.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const filterButtons = document.querySelectorAll('[data-filter]');
-    const readingSection = document.querySelector('section:has(#readingBooksGrid)');
-    const completedSection = document.querySelector('section:has(#completedBooksGrid)');
-    const unreadSection = document.querySelector('section:has(#unreadBooksGrid)');
+    const readingSection = document.querySelector('section:has(#readingContainer)');
+    const completedSection = document.querySelector('section:has(#completedContainer)');
+    const unreadSection = document.querySelector('section:has(#unreadContainer)');
     const bookCards = document.querySelectorAll('.book-card');
     
     let currentFilter = 'all';
@@ -14,6 +15,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize lazy loading
     const lazyLoader = new LazyImageLoader();
     lazyLoader.init();
+    
+    // Initialize section toggles
+    const sectionToggle = new SectionToggle();
+    
+    // Make it globally available for debugging or external control
+    window.bookListSections = sectionToggle;
     
     // Check for search query in URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -34,11 +41,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     }
     
+    let preSearchSectionState = null;
+    let lastSearchTerm = '';
+    
     // Search functionality
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
+            // Save state only on first non-empty search
+            if (searchTerm && !lastSearchTerm) {
+                preSearchSectionState = {};
+                sectionToggle.getSectionNames().forEach(name => {
+                    preSearchSectionState[name] = sectionToggle.isVisible(name);
+                });
+            }
+            // Restore state when search is cleared
+            if (!searchTerm && lastSearchTerm) {
+                if (preSearchSectionState) {
+                    sectionToggle.getSectionNames().forEach(name => {
+                        if (preSearchSectionState[name]) {
+                            sectionToggle.show(name);
+                        } else {
+                            sectionToggle.hide(name);
+                        }
+                    });
+                }
+                preSearchSectionState = null;
+            }
+            lastSearchTerm = searchTerm;
             filterBooks(searchTerm, currentFilter);
+            // After filtering, expand/collapse sections based on visible books
+            if (searchTerm) {
+                // For each section, check if it has visible books
+                ['reading', 'completed', 'unread'].forEach(name => {
+                    const container = document.getElementById(name + 'Container');
+                    if (!container) return;
+                    const hasVisible = Array.from(container.children).some(child => child.style.display !== 'none');
+                    if (hasVisible) {
+                        sectionToggle.show(name);
+                    } else {
+                        sectionToggle.hide(name);
+                    }
+                });
+            }
         });
     }
     
@@ -208,49 +253,4 @@ document.addEventListener('DOMContentLoaded', function() {
             filterDropdownMenu?.classList.add('hidden');
         }
     });
-
-    // Section toggle functionality
-    const sectionToggles = [
-        {
-            buttonId: 'toggleReading',
-            contentId: 'readingBooksGrid',
-            chevronId: 'readingChevron'
-        },
-        {
-            buttonId: 'toggleCompleted',
-            contentId: 'completedBooksGrid',
-            chevronId: 'completedChevron'
-        },
-        {
-            buttonId: 'toggleUnread',
-            contentId: 'unreadBooksGrid',
-            chevronId: 'unreadChevron'
-        }
-    ];
-
-    sectionToggles.forEach(config => {
-        const button = document.getElementById(config.buttonId);
-        const content = document.getElementById(config.contentId);
-        const chevron = document.getElementById(config.chevronId);
-        
-        if (button && content && chevron) {
-            button.addEventListener('click', () => {
-                const isHidden = content.classList.contains('hidden');
-                const buttonText = button.querySelector('span');
-                
-                if (isHidden) {
-                    // Show content
-                    content.classList.remove('hidden');
-                    buttonText.textContent = 'Hide';
-                    chevron.style.transform = 'rotate(0deg)';
-                } else {
-                    // Hide content
-                    content.classList.add('hidden');
-                    buttonText.textContent = 'Show';
-                    chevron.style.transform = 'rotate(-90deg)';
-                }
-            });
-        }
-    });
-
 }); 

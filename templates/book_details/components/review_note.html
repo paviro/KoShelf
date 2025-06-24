@@ -1,8 +1,8 @@
 <!-- Review Note -->
 {% match book.review_note() %}
 {% when Some with (note) %}
-<section class="mb-8">
-    <div class="flex items-center justify-between mb-4 md:mb-6">
+<section data-name="review" data-default-visible="true">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
             <h2 class="text-xl md:text-2xl font-bold text-white">My Review</h2>
@@ -28,9 +28,9 @@
             {% endmatch %}
             
             <!-- Hide/Show Button -->
-            <button id="toggleReviewNote" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+            <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
                 <span class="text-sm text-dark-300">Loading...</span>
-                <svg id="reviewNoteChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
             </button>
@@ -38,7 +38,7 @@
     </div>
     
     <!-- Collapsible Review Content -->
-    <div id="reviewNoteContainer">
+    <div id="reviewNoteContainer" class="mb-8">
         <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
             <div class="relative">
                 <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>

@@ -8,6 +8,7 @@ fn main() {
     println!("cargo:rerun-if-changed=assets/lazy-loading.js");
     println!("cargo:rerun-if-changed=assets/statistics.js");
     println!("cargo:rerun-if-changed=assets/heatmap.js");
+    println!("cargo:rerun-if-changed=assets/section-toggle.js");
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=templates/");
     println!("cargo:rerun-if-changed=src/");
