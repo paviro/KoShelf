@@ -17,6 +17,14 @@
     @apply bg-primary-600 text-white shadow-lg;
   }
   
+  .sidebar-item-modern {
+    @apply flex items-center space-x-3 px-4 py-3 rounded-lg mx-2 transition-all duration-200 hover:bg-dark-800/50;
+  }
+  
+  .sidebar-item-modern-active {
+    @apply bg-dark-800/70 border border-dark-700/50 shadow-sm;
+  }
+  
   .nav-item {
     @apply text-dark-300 hover:text-white transition-all duration-200;
   }
