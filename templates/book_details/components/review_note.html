@@ -2,10 +2,10 @@
 {% match book.review_note() %}
 {% when Some with (note) %}
 <section data-name="review" data-default-visible="true">
-    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">My Review</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">My Review</h2>
         </div>
         
         <div class="flex items-center space-x-4">
@@ -18,7 +18,7 @@
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                 </svg>
                 {% else %}
-                <svg class="w-5 h-5 text-dark-500" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 text-gray-300 dark:text-dark-500" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                 </svg>
                 {% endif %}
@@ -28,9 +28,9 @@
             {% endmatch %}
             
             <!-- Hide/Show Button -->
-            <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
-                <span class="text-sm text-dark-300">Loading...</span>
-                <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
+                <span class="text-sm text-gray-600 dark:text-dark-300">Loading...</span>
+                <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
             </button>
@@ -39,11 +39,11 @@
     
     <!-- Collapsible Review Content -->
     <div id="reviewNoteContainer" class="mb-8">
-        <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-6">
+        <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
             <div class="relative">
                 <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
                 <div class="pl-6">
-                    <p class="text-dark-300 leading-relaxed text-lg">{{ note }}</p>
+                    <p class="text-gray-700 dark:text-dark-300 leading-relaxed text-lg">{{ note }}</p>
                 </div>
             </div>
         </div>

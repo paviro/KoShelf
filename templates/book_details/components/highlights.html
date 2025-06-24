@@ -3,17 +3,17 @@
 {% when Some with (metadata) %}
 {% if book.highlight_count() > 0 %}
 <section data-name="highlights" data-default-visible="true">
-    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">Highlights & Quotes</h2>
-            <span class="ml-3 text-sm font-normal text-dark-400">({{ book.highlight_count() }})</span>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Highlights & Quotes</h2>
+            <span class="ml-3 text-sm font-normal text-gray-500 dark:text-dark-400">({{ book.highlight_count() }})</span>
         </div>
         
         <!-- Hide/Show Button -->
-        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
-            <span class="text-sm text-dark-300">Loading...</span>
-            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
+            <span class="text-sm text-gray-600 dark:text-dark-300">Loading...</span>
+            <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
@@ -24,9 +24,9 @@
         <div class="space-y-6">
             {% for annotation in metadata.annotations %}
             {% if annotation.is_highlight() %}
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
                 <!-- Annotation Header -->
-                <div class="flex items-center justify-between text-sm text-dark-400 px-6 py-3 bg-dark-750/50 border-b border-dark-700/50">
+                <div class="flex items-center justify-between text-sm text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-800/50 border-b border-gray-200/50 dark:border-dark-700/50">
                     <div class="flex items-center gap-3">
                         {% match annotation.chapter %}
                         {% when Some with (chapter) %}
@@ -81,7 +81,7 @@
                     <!-- Quote -->
                     <div class="relative">
                         <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
-                        <blockquote class="text-white text-lg leading-relaxed pl-6 font-light">
+                        <blockquote class="text-gray-900 dark:text-white text-lg leading-relaxed pl-6 font-light">
                             {{ annotation.text }}
                         </blockquote>
                     </div>
@@ -91,7 +91,7 @@
                     {% when Some with (note) %}
                     <div class="mt-6">
                         <div class="flex items-center mb-3">
-                            <div class="h-px bg-dark-700 flex-grow mr-3"></div>
+                            <div class="h-px bg-gray-200 dark:bg-dark-700 flex-grow mr-3"></div>
                             <div class="flex items-center space-x-2">
                                 <div class="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
                                     <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,10 +100,10 @@
                                 </div>
                                 <div class="text-sm font-medium text-primary-400 uppercase tracking-wider">My Note</div>
                             </div>
-                            <div class="h-px bg-dark-700 flex-grow ml-3"></div>
+                            <div class="h-px bg-gray-200 dark:bg-dark-700 flex-grow ml-3"></div>
                         </div>
-                        <div class="bg-dark-850/50 p-4 rounded-lg border border-dark-700/30">
-                            <p class="text-dark-200 leading-relaxed">{{ note }}</p>
+                        <div class="bg-gray-100 dark:bg-dark-850/50 p-4 rounded-lg border border-gray-200 dark:border-dark-700/30">
+                            <p class="text-gray-700 dark:text-dark-200 leading-relaxed">{{ note }}</p>
                         </div>
                     </div>
                     {% when None %}

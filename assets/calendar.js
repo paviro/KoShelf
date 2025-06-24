@@ -223,6 +223,7 @@ function showEventModal(_title, event) {
     // Animate open
     modal.classList.remove('hidden');
     modal.classList.add('opacity-0');
+    modalCard.classList.add('scale-95', 'opacity-0');
     modal.offsetHeight; // Force reflow
     requestAnimationFrame(() => {
         modal.classList.replace('opacity-0', 'opacity-100');
@@ -242,8 +243,6 @@ function hideModal() {
 
     setTimeout(() => {
         modal.classList.add('hidden');
-        modal.classList.remove('opacity-0');
-        modalCard.classList.remove('scale-95', 'opacity-0');
     }, 300);
 }
 

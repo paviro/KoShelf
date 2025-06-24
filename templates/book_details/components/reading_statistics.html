@@ -2,16 +2,16 @@
 {% match session_stats %}
 {% when Some with (stats) %}
 <section data-name="reading-stats" data-default-visible="false">
-    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">Reading Statistics</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Reading Statistics</h2>
         </div>
         
         <!-- Collapse/Expand Button -->
-        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
-            <span class="text-sm text-dark-300">Loading...</span>
-            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
+            <span class="text-sm text-gray-600 dark:text-dark-300">Loading...</span>
+            <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
@@ -21,7 +21,7 @@
     <div id="readingStatsContainer" class="mb-8">
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <!-- Total Read Time -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,7 +29,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-xl md:text-2xl font-bold text-white">
+                        <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% match book_stats %}
                             {% when Some with (book_stat) %}
                                 {% match book_stat.total_read_time %}
@@ -49,13 +49,13 @@
                                 --
                             {% endmatch %}
                         </div>
-                        <div class="text-sm text-dark-400">Total Read Time</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Total Read Time</div>
                     </div>
                 </div>
             </div>
             
             <!-- Reading Sessions -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,14 +63,14 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-xl md:text-2xl font-bold text-white">{{ stats.session_count }}</div>
-                        <div class="text-sm text-dark-400">Reading Sessions</div>
+                        <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.session_count }}</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Reading Sessions</div>
                     </div>
                 </div>
             </div>
             
             <!-- Average Session Duration -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-xl md:text-2xl font-bold text-white">
+                        <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% match stats.average_session_duration %}
                             {% when Some with (avg_duration) %}
                                 {% let minutes = avg_duration / 60 %}
@@ -93,13 +93,13 @@
                                 --
                             {% endmatch %}
                         </div>
-                        <div class="text-sm text-dark-400">Average Session</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Average Session</div>
                     </div>
                 </div>
             </div>
             
             <!-- Longest Session -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,7 +107,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-xl md:text-2xl font-bold text-white">
+                        <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% match stats.longest_session_duration %}
                             {% when Some with (longest_duration) %}
                                 {% let minutes = longest_duration / 60 %}
@@ -122,13 +122,13 @@
                                 --
                             {% endmatch %}
                         </div>
-                        <div class="text-sm text-dark-400">Longest Session</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Longest Session</div>
                     </div>
                 </div>
             </div>
 
             <!-- Reading Speed -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +136,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-xl md:text-2xl font-bold text-white">
+                        <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% match stats.reading_speed %}
                             {% when Some with (speed) %}
                                 {{ "{:.1}"|format(speed) }}
@@ -144,13 +144,13 @@
                                 --
                             {% endmatch %}
                         </div>
-                        <div class="text-sm text-dark-400">Pages/Hour</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Pages/Hour</div>
                     </div>
                 </div>
             </div>
             
             <!-- Last Read Date -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +158,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-base md:text-lg font-bold text-white">
+                        <div class="text-base md:text-lg font-bold text-gray-900 dark:text-white">
                             {% match stats.last_read_date %}
                             {% when Some with (date) %}
                                 {{ date }}
@@ -166,15 +166,15 @@
                                 --
                             {% endmatch %}
                         </div>
-                        <div class="text-sm text-dark-400">Last Read</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Last Read</div>
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- Info Footer -->
-        <div class="mt-6 p-4 bg-dark-800/30 rounded-lg border border-dark-700/50">
-            <div class="flex items-center text-sm text-dark-400">
+        <div class="mt-6 p-4 bg-primary-50 dark:bg-dark-800/30 rounded-lg border border-primary-200 dark:border-dark-700/50">
+            <div class="flex items-center text-sm text-gray-500 dark:text-dark-400">
                 <svg class="w-4 h-4 mr-2 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>

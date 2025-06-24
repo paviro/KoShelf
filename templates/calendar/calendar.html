@@ -7,12 +7,12 @@
     <link rel="stylesheet" href="/assets/css/event-calendar.min.css">
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
-<body class="min-h-full bg-dark-900 text-white font-sans ec-dark">
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans dark:ec-dark">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
     
     <!-- Header - Fixed at top -->
-    <header class="fixed top-0 left-0 right-0 md:left-64 bg-dark-850/75 backdrop-blur-sm border-b border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+    <header class="fixed top-0 left-0 right-0 md:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
         <div class="flex items-center justify-between h-full">
             <!-- Mobile Logo/Title -->
             <div class="md:hidden flex items-center space-x-3">
@@ -22,23 +22,23 @@
                     </svg>
                 </div>
                 <!-- Filled by JavaScript -->
-                <h1 class="text-lg font-bold text-white truncate"></h1>
+                <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate"></h1>
             </div>
             
             <!-- Desktop Page Title -->
             <!-- Filled by JavaScript -->
-            <h2 class="hidden md:block text-2xl font-bold text-white"></h2>
+            <h2 class="hidden md:block text-2xl font-bold text-gray-900 dark:text-white"></h2>
             
             <!-- Calendar Controls -->
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Navigation Buttons -->
                 <div class="flex items-center space-x-1">
-                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </button>
-                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -60,7 +60,7 @@
             <!-- Monthly Statistics -->
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-[15px]">
                 <!-- Books Count -->
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,14 +68,14 @@
                             </svg>
                         </div>
                         <div>
-                            <div id="monthlyBooks" class="text-xl md:text-2xl font-bold text-white">0</div>
-                            <div class="text-sm text-dark-400">Books</div>
+                            <div id="monthlyBooks" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">Books</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pages Read -->
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,14 +83,14 @@
                             </svg>
                         </div>
                         <div>
-                            <div id="monthlyPages" class="text-xl md:text-2xl font-bold text-white">0</div>
-                            <div class="text-sm text-dark-400">Pages Read</div>
+                            <div id="monthlyPages" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">Pages Read</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Reading Time -->
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,14 +98,14 @@
                             </svg>
                         </div>
                         <div>
-                            <div id="monthlyTime" class="text-xl md:text-2xl font-bold text-white">0h</div>
-                            <div class="text-sm text-dark-400">Reading Time</div>
+                            <div id="monthlyTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0h</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">Reading Time</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Reading Days Percentage -->
-                <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+                <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,15 +113,15 @@
                             </svg>
                         </div>
                         <div>
-                            <div id="monthlyDaysPercentage" class="text-xl md:text-2xl font-bold text-white">0%</div>
-                            <div class="text-sm text-dark-400">Days Read</div>
+                            <div id="monthlyDaysPercentage" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0%</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">Days Read</div>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- Calendar Container -->
-            <div id="calendar" class="calendar-container bg-dark-800/50 border border-dark-700/70 rounded-lg"></div>
+            <div id="calendar" class="calendar-container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg shadow-sm"></div>
             
         </main>
     </div>

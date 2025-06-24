@@ -1,9 +1,9 @@
 <!-- Weekly Stats Section -->
 <section class="mb-8">
-    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">Weekly Statistics</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Weekly Statistics</h2>
         </div>
         
         <!-- Week Selector (moved inline with header) -->
@@ -22,7 +22,7 @@
         
         <div class="week-stats grid grid-cols-2 gap-4 lg:grid-cols-3">
             <!-- Weekly Read Time Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,20 +30,20 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekReadTime" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekReadTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ reading_stats.weeks[0].read_time / 3600 }}h {{ (reading_stats.weeks[0].read_time % 3600) / 60 }}m
                             {% else %}
                             0h 0m
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Weekly Reading Time</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Weekly Reading Time</div>
                     </div>
                 </div>
             </div>
             
             <!-- Weekly Pages Read Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,20 +51,20 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekPagesRead" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekPagesRead" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ reading_stats.weeks[0].pages_read }}
                             {% else %}
                             0
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Weekly Pages Read</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Weekly Pages Read</div>
                     </div>
                 </div>
             </div>
             
             <!-- Average Pages Per Day Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,20 +72,20 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekAvgPagesPerDay" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekAvgPagesPerDay" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ (reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 / 10 }}.{{ ((reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 % 10) }}
                             {% else %}
                             0.0
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Average Pages/Day</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Average Pages/Day</div>
                     </div>
                 </div>
             </div>
             
             <!-- Average Reading Time Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,20 +93,20 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekAvgReadTimePerDay" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekAvgReadTimePerDay" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ (reading_stats.weeks[0].avg_read_time_per_day / 60.0) as i64 }}m
                             {% else %}
                             0m
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Average Time/Day</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Average Time/Day</div>
                     </div>
                 </div>
             </div>
             
             <!-- Longest Session Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +114,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekLongestSession" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekLongestSession" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                                 {% match reading_stats.weeks[0].longest_session_duration %}
                                 {% when Some with (longest_duration) %}
@@ -133,13 +133,13 @@
                             --
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Longest Session</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Longest Session</div>
                     </div>
                 </div>
             </div>
             
             <!-- Average Session Card -->
-            <div class="bg-dark-800/50 border border-dark-700/70 rounded-lg p-4">
+            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,7 +147,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div id="weekAverageSession" class="text-xl md:text-2xl font-bold text-white">
+                        <div id="weekAverageSession" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                                 {% match reading_stats.weeks[0].average_session_duration %}
                                 {% when Some with (avg_duration) %}
@@ -166,7 +166,7 @@
                             --
                             {% endif %}
                         </div>
-                        <div class="text-sm text-dark-400">Average Session</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">Average Session</div>
                     </div>
                 </div>
             </div>

@@ -9,32 +9,32 @@
 -->
 
 <section data-name="{{ section_name }}" data-default-visible="{{ default_visible }}">
-    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b {{ gradient_classes }} rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-white">{{ section_title }}</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ section_title }}</h2>
             <span class="bg-gradient-to-r {{ badge_classes }} text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">{{ books.len() }}</span>
         </div>
         <!-- Toggle Button -->
-        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
-            <span class="text-sm text-dark-300">Hide</span>
-            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
+            <span class="text-sm text-gray-600 dark:text-dark-300">Hide</span>
+            <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6 mb-6 md:mb-8" id="{{ section_name }}Container">
         {% for book in books %}
-        <div class="book-card group" data-status="{{ section_name }}" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
+        <div class="book-card group shadow-lg dark:shadow-none" data-status="{{ section_name }}" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
             <a href="/books/{{ book.id }}/" class="block">
-                <div class="aspect-book bg-dark-700 relative overflow-hidden">
+                <div class="aspect-book bg-gray-200 dark:bg-dark-700 relative overflow-hidden">
                     <img src="/assets/covers/{{ book.id }}.webp"
                          data-src="/assets/covers/{{ book.id }}.webp" 
                          alt="{{ book.epub_info.title }}" 
                          class="w-full h-full object-cover lazy-image transition-opacity duration-500 ease-out"
                          loading="lazy"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="w-full h-full flex items-center justify-center text-4xl text-dark-500 absolute inset-0 book-placeholder" style="display: flex; background-color: #374151; border: none; outline: none; text-shadow: none;">📖</div>
+                    <div class="w-full h-full flex items-center justify-center text-4xl text-gray-400 dark:text-dark-500 absolute inset-0 book-placeholder bg-gray-300 dark:bg-gray-600" style="display: flex; border: none; outline: none; text-shadow: none;">📖</div>
                     
                     <!-- Section-specific indicators -->
                     {% if section_name == "reading" %}

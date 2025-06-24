@@ -1,8 +1,8 @@
 <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center px-4 opacity-0">
-    <div class="bg-gradient-to-br from-dark-800 to-dark-900 border border-dark-600/50 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-95 opacity-0" id="modalCard">
+    <div class="bg-white dark:bg-gradient-to-br dark:from-dark-800 dark:to-dark-900 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-95 opacity-0" id="modalCard">
         <!-- Header with close button -->
         <div class="relative p-6 pb-4">
-            <button id="closeModal" class="absolute top-4 right-4 text-dark-400 hover:text-white hover:bg-dark-700/50 rounded-full p-2 transition-all duration-200 z-20">
+            <button id="closeModal" class="absolute top-4 right-4 text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 rounded-full p-2 transition-all duration-200 z-20">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -26,12 +26,12 @@
 
                 <!-- Title and basic info -->
                 <div class="flex-1 min-w-0 pr-8">
-                    <h3 id="modalTitle" class="text-xl font-bold text-white mb-2 leading-tight"></h3>
-                    <div class="flex items-center text-sm text-dark-300 mb-1">
+                    <h3 id="modalTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-2 leading-tight"></h3>
+                    <div class="flex items-center text-sm text-gray-500 dark:text-dark-300 mb-1">
                         <svg class="w-4 h-4 mr-2 text-primary-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
-                        <span class="truncate">by <span id="modalAuthor" class="text-white font-medium"></span></span>
+                        <span class="truncate">by <span id="modalAuthor" class="text-gray-900 dark:text-white font-medium"></span></span>
                     </div>
                 </div>
             </div>
@@ -41,7 +41,7 @@
         <div class="px-6 pb-6">
             <div class="grid grid-cols-2 gap-3">
                 <!-- Reading time card -->
-                <div class="bg-dark-700/50 rounded-xl p-4 border border-dark-600/30">
+                <div class="bg-green-50 dark:bg-dark-700/50 rounded-xl p-4 border border-green-200/70 dark:border-dark-600/30">
                     <div class="flex items-center">
                         <div class="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center mr-3">
                             <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,14 +49,14 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="text-xs text-dark-400 uppercase tracking-wide font-medium">Reading Time</div>
-                            <div id="modalReadTime" class="text-white font-semibold"></div>
+                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">Reading Time</div>
+                            <div id="modalReadTime" class="text-gray-900 dark:text-white font-semibold"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pages read card -->
-                <div class="bg-dark-700/50 rounded-xl p-4 border border-dark-600/30">
+                <div class="bg-blue-50 dark:bg-dark-700/50 rounded-xl p-4 border border-blue-200/70 dark:border-dark-600/30">
                     <div class="flex items-center">
                         <div class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3">
                             <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,8 +64,8 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="text-xs text-dark-400 uppercase tracking-wide font-medium">Pages Read</div>
-                            <div id="modalPagesRead" class="text-white font-semibold"></div>
+                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">Pages Read</div>
+                            <div id="modalPagesRead" class="text-gray-900 dark:text-white font-semibold"></div>
                         </div>
                     </div>
                 </div>

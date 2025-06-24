@@ -140,11 +140,11 @@ class ActivityHeatmap {
     updateActiveYearOption(selectedOption) {
         const allOptions = document.querySelectorAll('.year-option');
         allOptions.forEach(opt => {
-            opt.classList.remove('bg-dark-750', 'text-white');
+            opt.classList.remove('bg-dark-700', 'text-white');
             opt.classList.add('text-dark-200');
         });
         
-        selectedOption.classList.add('bg-dark-750', 'text-white');
+        selectedOption.classList.add('bg-dark-700', 'text-white');
         selectedOption.classList.remove('text-dark-200');
     }
 
@@ -282,16 +282,18 @@ class ActivityHeatmap {
     // Apply styling and interactions to a heatmap cell
     applyCellStyling(cell, activityLevel, dateStr, activityObj) {
         const colorClasses = [
-            'bg-dark-700',          // 0 (no activity)
-            'bg-green-900',         // 1 (low)
-            'bg-green-700',         // 2 (medium)
-            'bg-green-500',         // 3 (high)
-            'bg-green-300'          // 4 (very high)
+            ['bg-gray-200', 'dark:bg-dark-700'],       // 0 (no activity)
+            ['bg-green-100', 'dark:bg-green-900'],     // 1 (low)
+            ['bg-green-300', 'dark:bg-green-700'],     // 2 (medium)
+            ['bg-green-500', 'dark:bg-green-500'],     // 3 (high)
+            ['bg-green-600', 'dark:bg-green-300']      // 4 (very high)
         ];
         
-        // Remove all color classes and add the appropriate one
-        colorClasses.forEach(cls => cell.classList.remove(cls));
-        cell.classList.add(colorClasses[activityLevel]);
+        // Remove all possible color classes
+        colorClasses.flat().forEach(cls => cell.classList.remove(cls));
+        
+        // Add both light and dark mode classes for the current activity level
+        colorClasses[activityLevel].forEach(cls => cell.classList.add(cls));
         
         // Set tooltip
         const readLabel = DateUtils.formatDuration(activityObj.read);
