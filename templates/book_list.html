@@ -62,22 +62,22 @@
         <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6">
                 <!-- Currently Reading Section -->
                 {% if !reading_books.is_empty() %}
-                <section class="mb-6 md:mb-8">
-                    <div class="flex items-center justify-between mb-4 md:mb-6">
+                <section data-name="reading" data-default-visible="true">
+                    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
                         <div class="flex items-center space-x-3">
                             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-primary-400 to-primary-600 rounded-full"></div>
                             <h2 class="text-xl md:text-2xl font-bold text-white">Currently Reading</h2>
                             <span class="bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">{{ reading_books.len() }}</span>
                         </div>
                         <!-- Toggle Button -->
-                        <button id="toggleReading" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+                        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
                             <span class="text-sm text-dark-300">Hide</span>
-                            <svg id="readingChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="readingBooksGrid">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6 mb-6 md:mb-8" id="readingContainer">
                         {% for book in reading_books %}
                         <div class="book-card group" data-status="reading" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
@@ -116,22 +116,22 @@
                 
                 <!-- Completed Books Section -->
                 {% if !completed_books.is_empty() %}
-                <section class="mb-6 md:mb-8">
-                    <div class="flex items-center justify-between mb-4 md:mb-6">
+                <section data-name="completed" data-default-visible="true">
+                    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
                         <div class="flex items-center space-x-3">
                             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
                             <h2 class="text-xl md:text-2xl font-bold text-white">Completed</h2>
                             <span class="bg-gradient-to-r from-green-500 to-green-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">{{ completed_books.len() }}</span>
                         </div>
                         <!-- Toggle Button -->
-                        <button id="toggleCompleted" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+                        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
                             <span class="text-sm text-dark-300">Hide</span>
-                            <svg id="completedChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="completedBooksGrid">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6 mb-6 md:mb-8" id="completedContainer">
                         {% for book in completed_books %}
                         <div class="book-card group" data-status="completed" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
@@ -179,22 +179,22 @@
                 
                 <!-- Unread Books Section -->
                 {% if !unread_books.is_empty() %}
-                <section class="mb-6 md:mb-8">
-                    <div class="flex items-center justify-between mb-4 md:mb-6">
+                <section data-name="unread" data-default-visible="false">
+                    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
                         <div class="flex items-center space-x-3">
                             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-orange-400 to-orange-600 rounded-full"></div>
                             <h2 class="text-xl md:text-2xl font-bold text-white">Unread</h2>
                             <span class="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">{{ unread_books.len() }}</span>
                         </div>
                         <!-- Toggle Button -->
-                        <button id="toggleUnread" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+                        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
                             <span class="text-sm text-dark-300">Hide</span>
-                            <svg id="unreadChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6" id="unreadBooksGrid">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6 mb-6 md:mb-8" id="unreadContainer">
                         {% for book in unread_books %}
                         <div class="book-card group" data-status="unread" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
                             <a href="/books/{{ book.id }}/" class="block">
@@ -253,6 +253,7 @@
     <!-- Bottom Navigation - Visible only on mobile -->
     {% include "bottom_navbar.html" %}
 
+    <script type="module" src="/assets/js/section-toggle.js"></script>
     <script type="module" src="/assets/js/book_list.js"></script>
 </body>
 </html> 

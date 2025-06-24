@@ -1,22 +1,22 @@
 <!-- Book Header -->
-<section class="mb-8">
-    <div class="flex items-center justify-between mb-4 md:mb-6">
+<section data-name="book-overview" data-default-visible="true">
+    <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-primary-400 to-primary-600 rounded-full"></div>
             <h2 class="text-xl md:text-2xl font-bold text-white">Book Overview</h2>
         </div>
         
         <!-- Hide/Show Button -->
-        <button id="toggleBookOverview" class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
+        <button class="flex items-center space-x-2 px-3 py-2 bg-dark-800/50 border border-dark-700/70 rounded-lg hover:bg-dark-700/50 transition-colors">
             <span class="text-sm text-dark-300">Loading...</span>
-            <svg id="bookOverviewChevron" class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
     </div>
 
     <!-- Collapsible Book Overview Content -->
-    <div id="bookOverviewContainer">
+    <div id="bookOverviewContainer" class="mb-8">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
             <!-- Left Column: Cover and Status -->
             <div class="lg:col-span-1 space-y-4 md:space-y-6 mb-4 md:mb-0">

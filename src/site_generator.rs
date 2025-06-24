@@ -147,6 +147,9 @@ impl SiteGenerator {
             
             let lazy_loading_content = include_str!("../assets/lazy-loading.js");
             fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
+
+            let section_toggle_content = include_str!("../assets/section-toggle.js");
+            fs::write(self.output_dir.join("assets/js/section-toggle.js"), section_toggle_content)?;
         }
         
         // Copy statistics-related JavaScript files only if we have stats data
