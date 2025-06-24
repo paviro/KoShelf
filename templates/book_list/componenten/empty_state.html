@@ -1,0 +1,27 @@
+<!-- Empty State Component -->
+<!-- Shows when no books match search or filter criteria -->
+
+<div id="dynamicEmptyState" class="hidden flex flex-col items-center justify-center text-center" style="min-height: calc(100vh - 88px - 7rem); padding-top: 2rem; padding-bottom: 2rem;">
+    <div class="relative mb-8">
+        <!-- Gradient Background Circle -->
+        <div class="absolute inset-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-full blur-2xl"></div>
+        <!-- Icon Container -->
+        <div class="relative w-24 h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-2xl">
+            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+        </div>
+    </div>
+    <h3 class="text-2xl md:text-3xl font-bold text-white mb-4">No Books Found</h3>
+    <p class="text-lg text-dark-300 mb-8 max-w-md leading-relaxed">
+        No books match your current search or filter criteria.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 items-center">
+        <div class="flex items-center space-x-2 text-sm text-dark-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Try adjusting your search or filter criteria</span>
+        </div>
+    </div>
+</div> 

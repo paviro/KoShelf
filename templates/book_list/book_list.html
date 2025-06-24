@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_title }}</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="min-h-full bg-dark-900 text-white font-sans">
+    <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
+    {% include "sidebar.html" %}
+    
+    <!-- Header - Fixed at top -->
+    <header class="fixed top-0 left-0 right-0 md:left-64 bg-dark-850/95 backdrop-blur-sm border-b border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+        <div class="flex items-center justify-between h-full">
+            <!-- Mobile Logo/Title (hidden when search is active) -->
+            <div id="mobileTitle" class="md:hidden flex items-center space-x-3">
+                <div class="w-6 h-6 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                </div>
+                <h1 class="text-lg font-bold text-white truncate">Books</h1>
+            </div>
+            
+            <!-- Mobile Search Input (hidden by default, shown when search is active) -->
+            <div id="mobileSearchContainer" class="md:hidden flex-1 mr-3 hidden">
+                <input type="text" placeholder="Search book, author, series..." class="w-full bg-dark-800/50 border border-dark-700/50 rounded-lg px-4 py-2 text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm" id="mobileSearchInput">
+            </div>
+            
+            <!-- Desktop Page Title -->
+            <h2 class="hidden md:block text-2xl font-bold text-white">Books</h2>
+            
+            <div class="flex items-center space-x-3 md:space-x-4">
+                <!-- Desktop search input -->
+                <div class="relative hidden sm:block">
+                    <input type="text" placeholder="Search book, author, series..." class="bg-dark-800/50 border border-dark-700/50 rounded-lg px-4 py-2 text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200 shadow-sm w-40 sm:w-48 md:w-64 text-sm md:text-base backdrop-blur-sm" id="searchInput">
+                </div>
+
+                <!-- Mobile search button (hidden when search is active) -->
+                <button id="mobileSearchButton" class="sm:hidden p-2 bg-dark-800/50 border border-dark-700/50 rounded-lg hover:bg-dark-700/50 transition-colors" type="button">
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                </button>
+
+                <!-- Mobile search close button (hidden by default, shown when search is active) -->
+                <button id="mobileSearchClose" class="sm:hidden p-2 bg-dark-800/50 border border-dark-700/50 rounded-lg hover:bg-dark-700/50 transition-colors hidden" type="button">
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Filter Controls (hidden when mobile search is active) -->
+                <div id="mobileFilterControls" class="flex items-center space-x-2">
+                    <!-- Dropdown Filter Button -->
+                    <div class="relative" id="filterDropdownWrapper">
+                        <button id="filterDropdownButton" class="flex items-center space-x-2 px-3 md:px-4 py-2 bg-dark-800/50 border border-dark-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm transition-all duration-200 hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button">
+                            <span id="selectedFilterLabel" class="hidden sm:inline font-medium">All</span>
+                            <span id="selectedFilterLabelMobile" class="sm:hidden font-medium">All</span>
+                            <svg class="w-4 h-4 text-primary-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="filterDropdownMenu" class="hidden absolute right-0 mt-2 w-36 md:w-40 bg-dark-800/90 border border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
+                            <button class="block w-full text-left px-4 py-2 hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-dark-700/30" data-filter="all">All</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-dark-700/30" data-filter="reading">Reading</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-dark-700/30" data-filter="completed">Completed</button>
+                            {% if !unread_books.is_empty() %}
+                            <button class="block w-full text-left px-4 py-2 hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200" data-filter="unread">Unread</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+    
+    <div class="min-h-full md:ml-64">
+        <!-- Main Content -->
+        <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6">
+                <!-- Book Sections using reusable component -->
+                {% if !reading_books.is_empty() %}
+                {% set section_name = "reading" %}
+                {% set section_title = "Currently Reading" %}
+                {% set books = reading_books %}
+                {% set default_visible = "true" %}
+                {% set gradient_classes = "from-primary-400 to-primary-600" %}
+                {% set badge_classes = "from-primary-500 to-primary-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
+                {% if !completed_books.is_empty() %}
+                {% set section_name = "completed" %}
+                {% set section_title = "Completed" %}
+                {% set books = completed_books %}
+                {% set default_visible = "true" %}
+                {% set gradient_classes = "from-green-400 to-green-600" %}
+                {% set badge_classes = "from-green-500 to-green-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
+                {% if !unread_books.is_empty() %}
+                {% set section_name = "unread" %}
+                {% set section_title = "Unread" %}
+                {% set books = unread_books %}
+                {% set default_visible = "false" %}
+                {% set gradient_classes = "from-orange-400 to-orange-600" %}
+                {% set badge_classes = "from-orange-500 to-orange-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
+                <!-- Empty State Component -->
+                {% include "book_list/componenten/empty_state.html" %}
+        </main>
+    </div>
+
+    <!-- Bottom Navigation - Visible only on mobile -->
+    {% include "bottom_navbar.html" %}
+
+    <script type="module" src="/assets/js/section-toggle.js"></script>
+    <script type="module" src="/assets/js/book_list.js"></script>
+</body>
+</html> 
