@@ -4,6 +4,7 @@ import { SectionToggle } from './section-toggle.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
     const filterButtons = document.querySelectorAll('[data-filter]');
     const readingSection = document.querySelector('section:has(#readingContainer)');
     const completedSection = document.querySelector('section:has(#completedContainer)');
@@ -26,9 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const searchQuery = urlParams.get('search');
     
-    if (searchQuery && searchInput) {
-        // Set the search input value
-        searchInput.value = searchQuery;
+    if (searchQuery) {
+        if (searchInput) searchInput.value = searchQuery;
+        if (mobileSearchInput) mobileSearchInput.value = searchQuery;
         
         // Remove the search parameter from URL without refreshing the page
         const url = new URL(window.location);
@@ -44,48 +45,61 @@ document.addEventListener('DOMContentLoaded', function() {
     let preSearchSectionState = null;
     let lastSearchTerm = '';
     
-    // Search functionality
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            // Save state only on first non-empty search
-            if (searchTerm && !lastSearchTerm) {
-                preSearchSectionState = {};
+    // Unified search handler
+    function handleSearchInput(value) {
+        const searchTerm = value.toLowerCase().trim();
+        // Save state only on first non-empty search
+        if (searchTerm && !lastSearchTerm) {
+            preSearchSectionState = {};
+            sectionToggle.getSectionNames().forEach(name => {
+                preSearchSectionState[name] = sectionToggle.isVisible(name);
+            });
+        }
+        // Restore state when search is cleared
+        if (!searchTerm && lastSearchTerm) {
+            if (preSearchSectionState) {
                 sectionToggle.getSectionNames().forEach(name => {
-                    preSearchSectionState[name] = sectionToggle.isVisible(name);
-                });
-            }
-            // Restore state when search is cleared
-            if (!searchTerm && lastSearchTerm) {
-                if (preSearchSectionState) {
-                    sectionToggle.getSectionNames().forEach(name => {
-                        if (preSearchSectionState[name]) {
-                            sectionToggle.show(name);
-                        } else {
-                            sectionToggle.hide(name);
-                        }
-                    });
-                }
-                preSearchSectionState = null;
-            }
-            lastSearchTerm = searchTerm;
-            filterBooks(searchTerm, currentFilter);
-            // After filtering, expand/collapse sections based on visible books
-            if (searchTerm) {
-                // For each section, check if it has visible books
-                ['reading', 'completed', 'unread'].forEach(name => {
-                    const container = document.getElementById(name + 'Container');
-                    if (!container) return;
-                    const hasVisible = Array.from(container.children).some(child => child.style.display !== 'none');
-                    if (hasVisible) {
+                    if (preSearchSectionState[name]) {
                         sectionToggle.show(name);
                     } else {
                         sectionToggle.hide(name);
                     }
                 });
             }
-        });
+            preSearchSectionState = null;
+        }
+        lastSearchTerm = searchTerm;
+        filterBooks(searchTerm, currentFilter);
+        // After filtering, expand/collapse sections based on visible books
+        if (searchTerm) {
+            // For each section, check if it has visible books
+            ['reading', 'completed', 'unread'].forEach(name => {
+                const container = document.getElementById(name + 'Container');
+                if (!container) return;
+                const hasVisible = Array.from(container.children).some(child => child.style.display !== 'none');
+                if (hasVisible) {
+                    sectionToggle.show(name);
+                } else {
+                    sectionToggle.hide(name);
+                }
+            });
+        }
     }
+    
+    // Attach input listeners to both inputs (if they exist)
+    [searchInput, mobileSearchInput].forEach(inp => {
+        if (!inp) return;
+        inp.addEventListener('input', function() {
+            // keep values in sync
+            if (inp === searchInput && mobileSearchInput) {
+                mobileSearchInput.value = inp.value;
+            }
+            if (inp === mobileSearchInput && searchInput) {
+                searchInput.value = inp.value;
+            }
+            handleSearchInput(inp.value);
+        });
+    });
     
     // Filter functionality
     filterButtons.forEach(button => {
@@ -186,16 +200,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Focus search on "/" key
         if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
             e.preventDefault();
-            if (searchInput) {
+            if (window.innerWidth < 640) {
+                mobileSearchButton?.click();
+            } else if (searchInput) {
                 searchInput.focus();
             }
         }
         
         // Clear search on Escape
-        if (e.key === 'Escape' && searchInput && document.activeElement === searchInput) {
-            searchInput.value = '';
-            searchInput.dispatchEvent(new Event('input'));
-            searchInput.blur();
+        if (e.key === 'Escape') {
+            if (document.activeElement === searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+                searchInput.blur();
+            }
+            if (!mobileSearchOverlay?.classList.contains('hidden')) {
+                mobileSearchClose?.click();
+            }
         }
         
         // Filter shortcuts (Alt + number)
@@ -251,6 +272,28 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', (e) => {
         if (!filterDropdownButton?.contains(e.target) && !filterDropdownMenu?.contains(e.target)) {
             filterDropdownMenu?.classList.add('hidden');
+        }
+    });
+
+    // Mobile search UI elements
+    const mobileSearchButton = document.getElementById('mobileSearchButton');
+    const mobileSearchOverlay = document.getElementById('mobileSearchOverlay');
+    const mobileSearchClose = document.getElementById('mobileSearchClose');
+
+    // Mobile search overlay toggle logic
+    mobileSearchButton?.addEventListener('click', () => {
+        mobileSearchOverlay?.classList.remove('hidden');
+        setTimeout(() => mobileSearchInput?.focus(), 50);
+    });
+
+    mobileSearchClose?.addEventListener('click', () => {
+        mobileSearchOverlay?.classList.add('hidden');
+        if (mobileSearchInput) {
+            mobileSearchInput.value = '';
+        }
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
         }
     });
 }); 
