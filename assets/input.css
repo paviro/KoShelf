@@ -217,7 +217,7 @@
   
   /* Event styling */
   .ec-dark .ec-event {
-    @apply shadow-lg rounded-lg py-1 px-2;
+    @apply shadow-lg rounded-lg px-1 md:py-1 md:px-2;
     @apply text-2xs md:text-xs lg:text-sm;
   }
   
