@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use chrono::Datelike;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 
 /// Sanitizes HTML content to only allow safe tags while removing styles and dangerous elements
 pub fn sanitize_html(html: &str) -> String {
@@ -485,7 +485,7 @@ pub struct CalendarBook {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarData {
     pub events: Vec<CalendarEvent>,
-    pub books: std::collections::HashMap<String, CalendarBook>,
+    pub books: BTreeMap<String, CalendarBook>,
 }
 
 impl CalendarEvent {
