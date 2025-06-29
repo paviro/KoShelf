@@ -90,7 +90,11 @@ impl StatisticsParser {
     
     /// Parse page stat entries from the database
     fn parse_page_stats(conn: &Connection) -> Result<Vec<PageStat>> {
-        let mut stmt = conn.prepare("SELECT id_book, page, start_time, duration, total_pages FROM page_stat_data")?;
+        // Query the rescaled view so that page numbers are already expressed in the current
+        // pagination of each document. The `page_stat` view has the same four columns we
+        // actually use (id_book, page, start_time, duration). See KOReader's Lua code for
+        // the precise definition.
+        let mut stmt = conn.prepare("SELECT id_book, page, start_time, duration FROM page_stat")?;
         
         let stat_iter = stmt.query_map([], |row| {
             Ok(PageStat {
@@ -98,7 +102,6 @@ impl StatisticsParser {
                 page: row.get(1)?,
                 start_time: row.get(2)?,
                 duration: row.get(3)?,
-                total_pages: row.get(4)?,
             })
         })?;
         
