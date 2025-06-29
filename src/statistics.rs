@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc, Local};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 
 use crate::models::*;
 
@@ -417,7 +417,7 @@ impl StatisticsCalculator {
         }
 
         let mut calendar_events = Vec::new();
-        let mut calendar_books: HashMap<String, CalendarBook> = HashMap::new();
+        let mut calendar_books: BTreeMap<String, CalendarBook> = BTreeMap::new();
 
         // Build a lookup map from partial MD5 checksum to the corresponding book detail path and cover path
         let md5_to_book_info: HashMap<String, (String, String)> = books
@@ -488,8 +488,24 @@ impl StatisticsCalculator {
             );
         }
 
-        // Sort events by start timestamp (lexicographically works for ISO datetime)
-        calendar_events.sort_by(|a, b| a.start.cmp(&b.start));
+        // Sort events deterministically by start date then book title to ensure consistent ordering across builds
+        calendar_events.sort_by(|a, b| {
+            use std::cmp::Ordering;
+            match a.start.cmp(&b.start) {
+                Ordering::Equal => {
+                    let title_a = calendar_books
+                        .get(&a.book_id)
+                        .map(|bk| bk.title.as_str())
+                        .unwrap_or("");
+                    let title_b = calendar_books
+                        .get(&b.book_id)
+                        .map(|bk| bk.title.as_str())
+                        .unwrap_or("");
+                    title_a.cmp(title_b)
+                }
+                other => other,
+            }
+        });
 
         CalendarData {
             events: calendar_events,
