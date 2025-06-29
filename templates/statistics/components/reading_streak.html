@@ -1,5 +1,5 @@
 <!-- Reading Streak Section -->
-<section class="pb-4 sm:pb-2" data-name="reading-streak" data-default-visible="true">
+<section data-name="reading-streak" data-default-visible="true">
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
@@ -11,16 +11,11 @@
             {% include "statistics/components/year_selector.html" %}
             
             <!-- Toggle Button -->
-            <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
-                <span class="text-sm text-gray-600 dark:text-dark-300">Hide</span>
-                <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-            </button>
+            {% include "components/toggle_button.html" %}
         </div>
     </div>
     
-    <div id="reading-streakContainer">
+    <div id="reading-streakContainer" class="mb-8">
         <div class="bg-white dark:bg-dark-800 rounded-xl p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/30">
         <!-- Fixed weekday labels and scrollable content -->
         <div class="flex">
@@ -80,6 +75,7 @@
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-500 dark:bg-green-500"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-600 dark:bg-green-300"></div>
             <span class="text-gray-500 dark:text-dark-400">More</span>
+        </div>
         </div>
         
         <!-- Reading Streak Stats -->

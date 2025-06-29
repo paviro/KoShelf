@@ -1,5 +1,5 @@
 <!-- Weekly Stats Section -->
-<section class="mb-8" data-name="weekly-stats" data-default-visible="true">
+<section data-name="weekly-stats" data-default-visible="true">
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
@@ -11,17 +11,12 @@
             {% include "statistics/components/week_selector.html" %}
             
             <!-- Toggle Button -->
-            <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
-                <span class="text-sm text-gray-600 dark:text-dark-300">Hide</span>
-                <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-            </button>
+            {% include "components/toggle_button.html" %}
         </div>
     </div>
     
     <!-- Weekly Stats Container -->
-    <div id="weekly-statsContainer" class="relative">
+    <div id="weekly-statsContainer" class="relative mb-8">
         <!-- Loading Indicator (hidden by default) -->
         <div id="statsLoadingIndicator" class="absolute inset-0 bg-dark-800/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl hidden">
             <div class="flex flex-col items-center">
