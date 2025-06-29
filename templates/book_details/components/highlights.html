@@ -11,12 +11,7 @@
         </div>
         
         <!-- Hide/Show Button -->
-        <button class="flex items-center space-x-2 px-3 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/70 dark:border-dark-700/70 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors">
-            <span class="text-sm text-gray-600 dark:text-dark-300">Loading...</span>
-            <svg class="w-4 h-4 text-gray-600 dark:text-dark-300 transform transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-        </button>
+        {% include "components/toggle_button.html" %}
     </div>
     
     <!-- Collapsible Highlights Content -->
