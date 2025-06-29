@@ -22,7 +22,7 @@ impl BookStatistics for StatBook {
             let mut sessions: Vec<i64> = Vec::new();
             let mut current_session_duration = 0;
             let mut last_end_time = 0;
-            let gap_threshold = 30; // seconds
+            let gap_threshold = 300; // seconds
             
             // Sort sessions by start time
             let mut sorted_sessions = book_sessions.clone();
@@ -165,7 +165,7 @@ impl StatisticsCalculator {
         let most_pages_in_day = daily_page_reads.values().cloned().max().unwrap_or(0);
         
         // Calculate overall session statistics
-        let (average_session_duration, longest_session_duration) = Self::calculate_overall_sessions(&stats_data.page_stats);
+        let (average_session_duration, longest_session_duration) = Self::session_metrics(&stats_data.page_stats);
         
         // Convert weekly stats to WeeklyStats structs
         let weeks = Self::build_weekly_stats(weekly_stats);
@@ -203,7 +203,7 @@ impl StatisticsCalculator {
             let end_date = start_date_approx + Duration::days(6); // Sunday
             
             // Calculate session statistics for this week
-            let (average_session_duration, longest_session_duration) = Self::calculate_weekly_sessions(&page_stats);
+            let (average_session_duration, longest_session_duration) = Self::session_metrics(&page_stats);
             
             let weekly_stat = WeeklyStats {
                 start_date: start_date_approx.format("%Y-%m-%d").to_string(),
@@ -224,138 +224,75 @@ impl StatisticsCalculator {
         weeks
     }
     
-    /// Calculate session statistics for a specific week's page stats
-    fn calculate_weekly_sessions(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
-        let valid_sessions: Vec<&PageStat> = page_stats
-            .iter()
-            .filter(|stat| stat.duration > 0)
-            .collect();
+    /// Internal helper: Given a slice of `&PageStat` that all belong to the same
+    /// book and are already sorted by `start_time`, compute the duration (in
+    /// seconds) of each reading session. A new session starts whenever the gap
+    /// between two consecutive page reads exceeds the `gap_threshold`.
+    fn compute_session_durations(sorted_stats: &[&PageStat], gap_threshold: i64) -> Vec<i64> {
+        let mut sessions: Vec<i64> = Vec::new();
+        let mut current_session_duration = 0;
+        let mut last_end_time = 0;
 
-        if valid_sessions.is_empty() {
-            return (None, None);
-        }
+        for stat in sorted_stats {
+            let session_start = stat.start_time;
+            let session_end = stat.start_time + stat.duration;
 
-        // Group page reads into sessions across all books for this week
-        // Sessions are grouped by book and time proximity (30 seconds gap)
-        let mut all_sessions: Vec<i64> = Vec::new();
-        
-        // Group by book first
-        let mut sessions_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
-        for stat in valid_sessions {
-            sessions_by_book.entry(stat.id_book).or_default().push(stat);
-        }
-        
-        // For each book, calculate sessions and add them to the overall list
-        for (_, book_sessions) in sessions_by_book {
-            let mut sorted_sessions = book_sessions;
-            sorted_sessions.sort_by_key(|s| s.start_time);
-            
-            let mut current_session_duration = 0;
-            let mut last_end_time = 0;
-            let gap_threshold = 30; // seconds
-            
-            for session in sorted_sessions {
-                let session_start = session.start_time;
-                let session_end = session.start_time + session.duration;
-                
-                if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
-                    // Continue the current session
-                    current_session_duration += session.duration;
-                } else {
-                    // Start a new session
-                    if current_session_duration > 0 {
-                        all_sessions.push(current_session_duration);
-                    }
-                    current_session_duration = session.duration;
+            if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
+                // Continue the current session
+                current_session_duration += stat.duration;
+            } else {
+                // Start a new session
+                if current_session_duration > 0 {
+                    sessions.push(current_session_duration);
                 }
-                last_end_time = session_end;
+                current_session_duration = stat.duration;
             }
-            
-            // Don't forget the last session
-            if current_session_duration > 0 {
-                all_sessions.push(current_session_duration);
-            }
+            last_end_time = session_end;
         }
-        
-        if all_sessions.is_empty() {
-            return (None, None);
+
+        // Push the final session (if any)
+        if current_session_duration > 0 {
+            sessions.push(current_session_duration);
         }
-        
-        // Calculate average session duration
-        let total_session_time: i64 = all_sessions.iter().sum();
-        let average_session = Some(total_session_time / all_sessions.len() as i64);
-        
-        // Find longest session
-        let longest_session = all_sessions.iter().max().copied();
-        
-        (average_session, longest_session)
+
+        sessions
     }
-    
-    /// Calculate overall session statistics across all books and page stats
-    fn calculate_overall_sessions(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
-        let valid_sessions: Vec<&PageStat> = page_stats
-            .iter()
-            .filter(|stat| stat.duration > 0)
-            .collect();
 
-        if valid_sessions.is_empty() {
-            return (None, None);
-        }
-
-        // Group page reads into sessions across all books
-        // Sessions are grouped by book and time proximity (30 seconds gap)
-        let mut all_sessions: Vec<i64> = Vec::new();
-        
-        // Group by book first
+    /// Internal helper: Aggregate session durations across all books contained
+    /// in `page_stats`.
+    fn aggregate_session_durations(page_stats: &[PageStat], gap_threshold: i64) -> Vec<i64> {
+        // Group stats by book ID first
         let mut sessions_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
-        for stat in valid_sessions {
+        for stat in page_stats.iter().filter(|s| s.duration > 0) {
             sessions_by_book.entry(stat.id_book).or_default().push(stat);
         }
-        
-        // For each book, calculate sessions and add them to the overall list
-        for (_, book_sessions) in sessions_by_book {
-            let mut sorted_sessions = book_sessions;
-            sorted_sessions.sort_by_key(|s| s.start_time);
-            
-            let mut current_session_duration = 0;
-            let mut last_end_time = 0;
-            let gap_threshold = 30; // seconds
-            
-            for session in sorted_sessions {
-                let session_start = session.start_time;
-                let session_end = session.start_time + session.duration;
-                
-                if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
-                    // Continue the current session
-                    current_session_duration += session.duration;
-                } else {
-                    // Start a new session
-                    if current_session_duration > 0 {
-                        all_sessions.push(current_session_duration);
-                    }
-                    current_session_duration = session.duration;
-                }
-                last_end_time = session_end;
-            }
-            
-            // Don't forget the last session
-            if current_session_duration > 0 {
-                all_sessions.push(current_session_duration);
-            }
+
+        // Collect sessions across all books
+        let mut all_sessions: Vec<i64> = Vec::new();
+        for stats in sessions_by_book.values_mut() {
+            // Sort chronologically
+            stats.sort_by_key(|s| s.start_time);
+            let mut durations = Self::compute_session_durations(stats, gap_threshold);
+            all_sessions.append(&mut durations);
         }
-        
-        if all_sessions.is_empty() {
+
+        all_sessions
+    }
+
+    /// Internal helper: Calculate `(average_session_duration, longest_session_duration)`
+    /// for the provided `page_stats` slice. Returns `(None, None)` when no valid
+    /// sessions are present.
+    fn session_metrics(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
+        let sessions = Self::aggregate_session_durations(page_stats, 60);
+        if sessions.is_empty() {
             return (None, None);
         }
-        
-        // Calculate average session duration
-        let total_session_time: i64 = all_sessions.iter().sum();
-        let average_session = Some(total_session_time / all_sessions.len() as i64);
-        
-        // Find longest session
-        let longest_session = all_sessions.iter().max().copied();
-        
-        (average_session, longest_session)
+
+        let total: i64 = sessions.iter().sum();
+        let average = Some(total / sessions.len() as i64);
+        let longest = sessions.iter().max().copied();
+
+        (average, longest)
     }
 
     /// Build daily activity data from daily stats maps
