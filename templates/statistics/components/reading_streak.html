@@ -31,7 +31,7 @@
             
             <!-- Scrollable heatmap content -->
             <div class="flex-1 min-w-0 overflow-x-auto" id="heatmapScrollContainer">
-                <div class="heatmap-container min-w-[680px] sm:min-w-[850px] md:min-w-[900px] lg:min-w-[1100px] xl:min-w-[1200px] 2xl:min-w-[1400px]" id="readingHeatmap">
+                <div class="heatmap-container min-w-[680px] sm:min-w-[850px] md:min-w-[900px] lg:min-w-[1100px] xl:min-w-[1200px]" id="readingHeatmap">
                     <div class="flex mb-3 mt-2 text-xs text-gray-500 dark:text-dark-400 font-medium">
                         <!-- Month labels -->
                         <div class="flex w-full justify-between">
@@ -53,9 +53,9 @@
                     <!-- Heatmap grid -->
                     <div class="grid grid-cols-53 gap-1 w-full" id="heatmapGrid">
                         {% for week in (0..53) %}
-                            <div class="grid grid-rows-7 gap-1 sm:gap-1 md:gap-1 xl:gap-1.5 2xl:gap-1.5">
+                            <div class="grid grid-rows-7 gap-1 sm:gap-1 md:gap-1 xl:gap-1.5">
                                 {% for day in (0..7) %}
-                                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 2xl:w-5 2xl:h-5 rounded-sm activity-cell bg-gray-200 dark:bg-dark-700" 
+                                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 rounded-sm activity-cell bg-gray-200 dark:bg-dark-700" 
                                          data-week="{{ week }}" 
                                          data-day="{{ day }}"></div>
                                 {% endfor %}
