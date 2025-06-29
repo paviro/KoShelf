@@ -353,7 +353,6 @@ pub struct PageStat {
     pub page: i64,
     pub start_time: i64,
     pub duration: i64,
-    pub total_pages: i64,
 }
 
 /// Main container for KoReader statistics data
