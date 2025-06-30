@@ -483,8 +483,16 @@ function refreshAggregatedData() {
     currentEvents = [];
     currentBooks = {};
 
+    const seenKeys = new Set();
+
     for (const [, monthData] of monthlyDataCache) {
-        currentEvents.push(...(monthData.events || []));
+        for (const ev of monthData.events || []) {
+            const key = `${ev.book_id}|${ev.start}|${ev.end || ''}`;
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                currentEvents.push(ev);
+            }
+        }
         Object.assign(currentBooks, monthData.books || {});
     }
 } 
