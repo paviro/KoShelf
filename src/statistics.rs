@@ -488,10 +488,10 @@ impl StatisticsCalculator {
             );
         }
 
-        // Sort events deterministically by start date then book title to ensure consistent ordering across builds
+        // Sort events deterministically by date then book title to ensure consistent ordering across builds
         calendar_events.sort_by(|a, b| {
             use std::cmp::Ordering;
-            match a.start.cmp(&b.start) {
+            match a.date.cmp(&b.date) {
                 Ordering::Equal => {
                     let title_a = calendar_books
                         .get(&a.book_id)
@@ -536,65 +536,37 @@ impl StatisticsCalculator {
         if days.is_empty() {
             return;
         }
-        
-        let mut span_start = days[0];
-        let mut prev_day = days[0];
-        let mut span_sessions: Vec<&PageStat> = sessions_by_day.get(&days[0]).cloned().unwrap_or_default();
 
-        for day in days.iter().skip(1) {
-            if *day == prev_day + Duration::days(1) {
-                // Same streak
-                if let Some(day_sessions) = sessions_by_day.get(day) {
-                    span_sessions.extend(day_sessions);
-                }
-                prev_day = *day;
-            } else {
-                // Close previous streak
+        // Emit one event per calendar day. This avoids attributing an entire multi-day streak's
+        // page/time totals to every month it overlaps and lets the frontend combine adjacent
+        // days if it still wants a visual multi-day block.
+
+        for day in days {
+            if let Some(day_sessions) = sessions_by_day.get(day) {
                 Self::push_all_day_event_optimized(
                     calendar_events,
                     calendar_book_id,
-                    span_start,
-                    prev_day,
-                    &span_sessions,
+                    *day,
+                    *day, // single-day event → no explicit `end`
+                    day_sessions,
                 );
-
-                // Start new streak
-                span_start = *day;
-                prev_day = *day;
-                span_sessions = sessions_by_day.get(day).cloned().unwrap_or_default();
             }
         }
-
-        // Push final streak
-        Self::push_all_day_event_optimized(
-            calendar_events,
-            calendar_book_id,
-            span_start,
-            prev_day,
-            &span_sessions,
-        );
     }
     
     /// Helper: push an all-day event for a given streak (optimized version)
     fn push_all_day_event_optimized(
         calendar_events: &mut Vec<CalendarEvent>,
         calendar_book_id: &str,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
+        date: NaiveDate,
+        _unused_end_date: NaiveDate, // kept in signature for minimal diff, ignored
         sessions: &[&PageStat],
     ) {
         let total_read_time: i64 = sessions.iter().map(|s| s.duration).sum();
         let total_pages_read = sessions.len() as i64;
 
-        let end_exclusive = if start_date == end_date {
-            None
-        } else {
-            Some((end_date + Duration::days(1)).format("%Y-%m-%d").to_string())
-        };
-
         let event = CalendarEvent::new(
-            start_date.format("%Y-%m-%d").to_string(),
-            end_exclusive,
+            date.format("%Y-%m-%d").to_string(),
             total_read_time,
             total_pages_read,
             calendar_book_id.to_string(),
