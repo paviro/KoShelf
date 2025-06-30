@@ -457,15 +457,14 @@ pub struct DailyStats {
     pub pages_read: i64,
 }
 
-/// Calendar event representing a book reading day for a specific book.
-/// Each event covers exactly one calendar day. The frontend will merge
-/// consecutive day-events for the same `book_id` to display multi-day streak
-/// bars.
+/// Calendar event representing a book reading session (optimized structure)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarEvent {
-    pub date: String,              // ISO date: yyyy-mm-dd
-    pub total_read_time: i64,      // Seconds read on this day
-    pub total_pages_read: i64,     // Pages read on this day
+    pub start: String,             // ISO date: yyyy-mm-dd
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<String>,       // ISO date: yyyy-mm-dd (optional, for single-day events)
+    pub total_read_time: i64,      // Total seconds read for this book
+    pub total_pages_read: i64,     // Total pages read for this book
     pub book_id: String,           // Reference to book metadata
 }
 
@@ -491,13 +490,15 @@ pub struct CalendarData {
 impl CalendarEvent {
     /// Create a new calendar event for a book's reading period
     pub fn new(
-        date: String,
+        start_date: String,
+        end_date: Option<String>,
         total_read_time: i64,
         total_pages_read: i64,
         book_id: String,
     ) -> Self {
         Self {
-            date,
+            start: start_date,
+            end: end_date,
             total_read_time,
             total_pages_read,
             book_id,

@@ -166,7 +166,7 @@ class StatisticsManager {
             // Wait for transition out to complete before fetching
             await new Promise(resolve => setTimeout(resolve, 200));
             
-            const response = await fetch(`/assets/json/statistics/week_${weekIndex}.json`);
+            const response = await fetch(`/assets/json/week_${weekIndex}.json`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

@@ -53,7 +53,7 @@ class ActivityHeatmap {
     // Load activity data for a specific year
     async loadYearData(year) {
         try {
-            const response = await fetch(`/assets/json/statistics/daily_activity_${year}.json`);
+            const response = await fetch(`/assets/json/daily_activity_${year}.json`);
             if (!response.ok) {
                 throw new Error(`Failed to load activity data for ${year}`);
             }
