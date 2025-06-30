@@ -482,10 +482,14 @@ pub struct CalendarBook {
 
 /// Complete calendar data structure with optimized format
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CalendarData {
+pub struct CalendarMonthData {
     pub events: Vec<CalendarEvent>,
     pub books: BTreeMap<String, CalendarBook>,
+    pub stats: MonthlyStats,
 }
+
+/// Map of "YYYY-MM" to its monthly calendar data payload
+pub type CalendarMonths = BTreeMap<String, CalendarMonthData>;
 
 impl CalendarEvent {
     /// Create a new calendar event for a book's reading period
@@ -551,4 +555,13 @@ impl CalendarBook {
         let index = (hash as usize) % colors.len();
         colors[index].to_string()
     }
+}
+
+/// Pre-calculated monthly reading statistics for the calendar view
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthlyStats {
+    pub books_read: usize,   // Number of unique books read in the month
+    pub pages_read: i64,     // Total pages read in the month
+    pub time_read: i64,      // Total time read in seconds in the month
+    pub days_read_pct: u8,   // Percentage of days in the month with any reading activity (0-100)
 } 

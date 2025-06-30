@@ -406,8 +406,9 @@ impl StatisticsCalculator {
         (longest_streak_info, current_streak_info)
     }
     
-    /// Generate calendar events from statistics data only
-    pub fn generate_calendar_events(stats_data: &StatisticsData, books: &[Book]) -> CalendarData {
+    /// Generate per-month calendar payload (events, books, stats) directly.
+    /// Returns a `CalendarMonths` map keyed by "YYYY-MM".
+    pub fn generate_calendar_months(stats_data: &StatisticsData, books: &[Book]) -> crate::models::CalendarMonths {
         // Group page stats by book ID first
         let mut book_sessions: HashMap<i64, Vec<&PageStat>> = HashMap::new();
         for stat in &stats_data.page_stats {
@@ -507,10 +508,62 @@ impl StatisticsCalculator {
             }
         });
 
-        CalendarData {
-            events: calendar_events,
-            books: calendar_books,
+        // ------------------------------------------------------------------
+        // Build per-month payloads -----------------------------------------
+        // ------------------------------------------------------------------
+        use crate::models::{CalendarMonthData, MonthlyStats};
+
+        // Pre-compute monthly statistics once.
+        let monthly_stats_map = Self::build_monthly_stats(stats_data);
+
+        let mut months_map: std::collections::BTreeMap<String, CalendarMonthData> = std::collections::BTreeMap::new();
+
+        // Prepare a helper for a zeroed MonthlyStats value
+        let zero_stats = MonthlyStats { books_read: 0, pages_read: 0, time_read: 0, days_read_pct: 0 };
+
+        for ev in &calendar_events {
+            // Parse start date
+            let start_date = chrono::NaiveDate::parse_from_str(&ev.start, "%Y-%m-%d").unwrap();
+
+            // Determine exclusive end date
+            let end_exclusive = if let Some(ref end_str) = ev.end {
+                chrono::NaiveDate::parse_from_str(end_str, "%Y-%m-%d").unwrap()
+            } else {
+                start_date + chrono::Duration::days(1)
+            };
+
+            // Iterate months overlapped by this event
+            let mut iter_date = start_date;
+            while iter_date < end_exclusive {
+                let year_month = format!("{}-{:02}", iter_date.year(), iter_date.month());
+
+                // Ensure entry exists
+                let month_entry = months_map.entry(year_month.clone()).or_insert_with(|| {
+                    CalendarMonthData {
+                        events: Vec::new(),
+                        books: std::collections::BTreeMap::new(),
+                        stats: monthly_stats_map.get(&year_month).cloned().unwrap_or(zero_stats.clone()),
+                    }
+                });
+
+                // Push event (clone so that events can live in multiple months if spanning)
+                month_entry.events.push(ev.clone());
+
+                // Add corresponding book metadata
+                if let Some(book_meta) = calendar_books.get(&ev.book_id) {
+                    month_entry.books.entry(ev.book_id.clone()).or_insert(book_meta.clone());
+                }
+
+                // Move iter_date to first day of next month
+                iter_date = if iter_date.month() == 12 {
+                    chrono::NaiveDate::from_ymd_opt(iter_date.year() + 1, 1, 1).unwrap()
+                } else {
+                    chrono::NaiveDate::from_ymd_opt(iter_date.year(), iter_date.month() + 1, 1).unwrap()
+                };
+            }
         }
+
+        months_map
     }
     
     /// Parse authors string into a vector of author names
@@ -543,10 +596,9 @@ impl StatisticsCalculator {
 
         for day in days.iter().skip(1) {
             let is_consecutive_day = *day == prev_day + Duration::days(1);
-            let is_same_month = day.month() == prev_day.month() && day.year() == prev_day.year();
             
-            if is_consecutive_day && is_same_month {
-                // Same streak within the same month
+            if is_consecutive_day {
+                // Same streak (no longer restricted to month)
                 if let Some(day_sessions) = sessions_by_day.get(day) {
                     span_sessions.extend(day_sessions);
                 }
@@ -614,5 +666,78 @@ impl StatisticsCalculator {
                 utc_dt.with_timezone(&Local).date_naive().format("%Y-%m-%d").to_string()
             })
             .unwrap_or_else(|| "1970-01-01".to_string())
+    }
+
+    /// Build per-month reading statistics from raw `StatisticsData`.
+    /// Returns a map keyed by "YYYY-MM" → `MonthlyStats`.
+    pub fn build_monthly_stats(stats_data: &StatisticsData) -> std::collections::HashMap<String, crate::models::MonthlyStats> {
+        use std::collections::{HashMap, HashSet};
+        use chrono::{Datelike, NaiveDate};
+
+        #[derive(Default)]
+        struct MonthlyStatsAccumulator {
+            unique_books: HashSet<i64>,
+            unique_dates: HashSet<NaiveDate>,
+            total_pages: i64,
+            total_time: i64,
+        }
+
+        let mut acc_by_month: HashMap<String, MonthlyStatsAccumulator> = HashMap::new();
+
+        // Aggregate raw page statistics into monthly accumulators
+        for ps in &stats_data.page_stats {
+            if ps.duration <= 0 {
+                continue;
+            }
+
+            // Convert timestamp to local date (yyyy-mm-dd)
+            let local_date = chrono::DateTime::<chrono::Utc>::from_timestamp(ps.start_time, 0)
+                .map(|utc_dt| utc_dt.with_timezone(&chrono::Local))
+                .unwrap_or_else(|| chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0).unwrap().with_timezone(&chrono::Local))
+                .naive_local()
+                .date();
+
+            let year_month = format!("{}-{:02}", local_date.year(), local_date.month());
+
+            let acc = acc_by_month.entry(year_month).or_default();
+            acc.unique_books.insert(ps.id_book);
+            acc.unique_dates.insert(local_date);
+            acc.total_pages += 1; // Each PageStat represents one page read
+            acc.total_time += ps.duration;
+        }
+
+        // Convert accumulators into final MonthlyStats map
+        let mut monthly_stats_map: HashMap<String, crate::models::MonthlyStats> = HashMap::new();
+
+        for (year_month, acc) in acc_by_month {
+            // Determine days in the month
+            let parts: Vec<&str> = year_month.split('-').collect();
+            let (y, m): (i32, u32) = (
+                parts[0].parse().unwrap_or(1970),
+                parts[1].parse().unwrap_or(1),
+            );
+
+            let first_of_month = NaiveDate::from_ymd_opt(y, m, 1).unwrap();
+            let first_next_month = if m == 12 {
+                NaiveDate::from_ymd_opt(y + 1, 1, 1).unwrap()
+            } else {
+                NaiveDate::from_ymd_opt(y, m + 1, 1).unwrap()
+            };
+            let days_in_month = (first_next_month - first_of_month).num_days() as usize;
+
+            let days_pct = ((acc.unique_dates.len() * 100) / days_in_month) as u8;
+
+            monthly_stats_map.insert(
+                year_month.clone(),
+                crate::models::MonthlyStats {
+                    books_read: acc.unique_books.len(),
+                    pages_read: acc.total_pages,
+                    time_read: acc.total_time,
+                    days_read_pct: days_pct,
+                },
+            );
+        }
+
+        monthly_stats_map
     }
 } 
