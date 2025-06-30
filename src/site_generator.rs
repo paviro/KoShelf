@@ -344,10 +344,14 @@ impl SiteGenerator {
         // Export daily activity data grouped by year as separate JSON files and get available years
         let available_years = self.export_daily_activity_by_year(&reading_stats.daily_activity).await?;
 
+        // Ensure statistics json subdir exists
+        let stats_json_dir = self.output_dir.join("assets/json/statistics");
+        fs::create_dir_all(&stats_json_dir)?;
+
         // Export individual week data as separate JSON files
         for (index, week) in reading_stats.weeks.iter().enumerate() {
             let week_json = serde_json::to_string_pretty(&week)?;
-            fs::write(self.output_dir.join("assets/json").join(format!("week_{}.json", index)), week_json)?;
+            fs::write(stats_json_dir.join(format!("week_{}.json", index)), week_json)?;
         }
         
         // Create the template with appropriate navbar
@@ -398,8 +402,10 @@ impl SiteGenerator {
         
         // Export each year's data to a separate file
         for (year, year_data) in activity_by_year {
+            let stats_json_dir = self.output_dir.join("assets/json/statistics");
+            fs::create_dir_all(&stats_json_dir)?;
             let filename = format!("daily_activity_{}.json", year);
-            let file_path = self.output_dir.join("assets/json").join(filename);
+            let file_path = stats_json_dir.join(filename);
             
             let json = serde_json::to_string_pretty(&year_data)?;
             fs::write(file_path, json)?;
@@ -454,12 +460,49 @@ impl SiteGenerator {
     async fn generate_calendar_page(&self, stats_data: &StatisticsData, books: &[Book]) -> Result<()> {
         info!("Generating calendar page...");
         
+        use std::collections::HashMap;
+
         // Generate calendar data from statistics data only
         let calendar_data = StatisticsCalculator::generate_calendar_events(stats_data, books);
+
+        // Ensure calendar output directories exist
+        let calendar_dir = self.output_dir.join("assets/json/calendar");
+        fs::create_dir_all(&calendar_dir)?;
+
+        // --- Export books metadata as individual files --------------------
+        let books_dir = calendar_dir.join("books");
+        fs::create_dir_all(&books_dir)?;
+        for (book_id, book) in &calendar_data.books {
+            let book_path = books_dir.join(format!("{}.json", book_id));
+            let json = serde_json::to_string_pretty(book)?;
+            fs::write(book_path, json)?;
+        }
+
+        // --- Split events into month files --------------------------------
+        let mut events_by_month: HashMap<String, Vec<CalendarEvent>> = HashMap::new();
+        for event in calendar_data.events {
+            // event.date format is YYYY-MM-DD; convert to YYYY_MM (pad already present)
+            let month_key = match event.date.get(0..7) {
+                Some(seg) => seg.replace('-', "_"),
+                None => "unknown".to_string(),
+            };
+            events_by_month.entry(month_key).or_default().push(event);
+        }
+
+        for (month, events) in &events_by_month {
+            let filename = format!("events_{}.json", month); // already YYYY_MM
+            let pretty = serde_json::to_string_pretty(&events)?;
+            fs::write(calendar_dir.join(filename), pretty)?;
+        }
         
-        // Export calendar data as JSON
-        let data_json = serde_json::to_string_pretty(&calendar_data)?;
-        fs::write(self.output_dir.join("assets/json/calendar_data.json"), data_json)?;
+        // Write an index file listing months that have data (e.g., ["2023_10", "2023_11"])
+        let mut months_list: Vec<String> = events_by_month.keys().cloned().collect();
+        months_list.sort();
+        let months_json = serde_json::to_string_pretty(&months_list)?;
+        fs::write(
+            calendar_dir.join("available_months.json"),
+            months_json,
+        )?;
         
         // Create the template
         let template = CalendarTemplate {

@@ -8,58 +8,76 @@ let calendar;
 let currentEvents = [];
 let currentBooks = {};
 
+// Track which year-month files we've already loaded to avoid duplicate fetches
+const loadedMonths = new Set();
+const loadedBooks = new Set();
+let availableMonths = null; // Set once we load the index
+
+// Helper: convert Date -> 'YYYY_MM'
+const monthKey = dateObj => `${dateObj.getFullYear()}_${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+
+// Fetch months index
+async function loadMonthsIndex() {
+    if (availableMonths) return;
+    
+    const resp = await fetch('/assets/json/calendar/available_months.json');
+    if (!resp.ok) throw new Error('Failed loading months index');
+    const arr = await resp.json();
+    availableMonths = new Set(arr);
+}
+
+// Fetch events for a given month (YYYY_MM) if not yet loaded
+async function loadMonthEvents(key) {
+    if (loadedMonths.has(key)) return;
+    if (availableMonths && availableMonths.size && !availableMonths.has(key)) {
+        // No data for this month, mark as loaded and skip fetch to avoid 404
+        loadedMonths.add(key);
+        return;
+    }
+    const resp = await fetch(`/assets/json/calendar/events_${key}.json`);
+    if (!resp.ok) throw new Error('Failed loading events for month ' + key);
+    const data = await resp.json(); // expect array
+    if (Array.isArray(data)) {
+        // First load any missing book metadata
+        const missingBookIds = Array.from(new Set(data.map(ev => ev.book_id).filter(id => !loadedBooks.has(id))));
+        await Promise.all(missingBookIds.map(id => ensureBookLoaded(id)));
+
+        currentEvents.push(...data);
+    }
+    loadedMonths.add(key);
+}
+
+// Load initial data (books + current month) before initializing UI
+async function loadInitialCalendarData() {
+    const today = new Date();
+    await loadMonthsIndex();
+    const key = monthKey(today);
+    await loadMonthEvents(key);
+}
+
 // Exported entry point
 export function initializeCalendar() {
-    // Load calendar data from JSON
-    loadCalendarData().then(calendarData => {
-        if (calendarData) {
-            currentEvents = calendarData.events || [];
-            currentBooks = calendarData.books || {};
-
-            initializeEventCalendar(currentEvents);
-
-            // Populate statistics widgets
-            updateCalendarStats(currentEvents);
-
-            // Wire up DOM interaction handlers (today / prev / next / modal)
-            setupEventHandlers();
-        }
+    loadInitialCalendarData().then(() => {
+        initializeEventCalendar(currentEvents, new Date());
+        updateCalendarStats(currentEvents);
+        setupEventHandlers();
     });
 }
 
-// Load calendar data from JSON file
-async function loadCalendarData() {
-    try {
-        const response = await fetch('/assets/json/calendar_data.json');
-        if (!response.ok) {
-            console.error('Failed to load calendar data:', response.status);
-            return null;
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Error loading calendar data:', error);
-        return null;
-    }
-}
-
-// ----- Internal helpers --------------------------------------------------
-
 // Build or rebuild the EventCalendar instance
-function initializeEventCalendar(events) {
+function initializeEventCalendar(events, initialDate = null) {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
 
     // Destroy existing instance when re-initialising
     if (calendar) {
-        try {
-            EventCalendar.destroy(calendar);
-        } catch (e) {
-            // Some versions expose a destroy() method on the instance instead – try that as well
-            if (typeof calendar.destroy === 'function') {
-                calendar.destroy();
-            }
-        }
+        EventCalendar.destroy(calendar);
     }
+
+    // Merge consecutive single-day events belonging to the same
+    // book so that the calendar UI gets nice streak bars while our stats,
+    // which rely on the unmerged `currentEvents`, stay exact.
+    const displayEvents = mergeSingleDayEvents(events);
 
     // Transform raw JSON events into EventCalendar compatible structure
     const mapEvents = evts => evts.map(ev => {
@@ -67,8 +85,8 @@ function initializeEventCalendar(events) {
         return {
             id: ev.book_id,
             title: book.title || 'Unknown Book',
-            start: ev.start,
-            end: ev.end || ev.start,
+            start: ev.date,
+            end: ev.end || ev.date,
             allDay: true,
             backgroundColor: book.color || getEventColor(ev),
             borderColor: book.color || getEventColor(ev),
@@ -85,7 +103,7 @@ function initializeEventCalendar(events) {
         };
     });
 
-    calendar = EventCalendar.create(calendarEl, {
+    const calendarConfig = {
         view: 'dayGridMonth',
         headerToolbar: false,
         height: 'auto',
@@ -94,7 +112,7 @@ function initializeEventCalendar(events) {
         editable: false,
         eventStartEditable: false,
         eventDurationEditable: false,
-        events: mapEvents(events),
+        events: mapEvents(displayEvents),
         eventClick: info => showEventModal(info.event.title, info.event.extendedProps),
         dateClick: info => console.debug('Date clicked:', info.dateStr),
         datesSet: info => {
@@ -104,10 +122,19 @@ function initializeEventCalendar(events) {
             updateCalendarTitleDirect(viewTitle);
             updateMonthlyStats(currentMonthDate);
             
+            // Lazy-load data for the newly visible month
+            ensureMonthLoaded(currentMonthDate);
+            
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
         }
-    });
+    };
+
+    if (initialDate) {
+        calendarConfig.date = initialDate;
+    }
+
+    calendar = EventCalendar.create(calendarEl, calendarConfig);
 }
 
 // Update the custom toolbar title (Month YYYY)
@@ -288,26 +315,49 @@ function updateMonthlyStats(currentDate) {
     
     // Filter events for the target month/year
     const monthlyEvents = currentEvents.filter(event => {
-        const eventDate = new Date(event.start);
-        return eventDate.getMonth() === targetMonth && eventDate.getFullYear() === targetYear;
+        const eventStart = new Date(event.date);
+        const eventEnd = event.end ? new Date(event.end) : null; // end is exclusive when provided
+
+        // Quick rejection when the whole event is outside the target month/year
+        if (eventEnd) {
+            // Event ends (exclusive) before the target month or starts after it – skip
+            if (eventEnd.getFullYear() < targetYear || (eventEnd.getFullYear() === targetYear && eventEnd.getMonth() < targetMonth)) {
+                return false;
+            }
+            if (eventStart.getFullYear() > targetYear || (eventStart.getFullYear() === targetYear && eventStart.getMonth() > targetMonth)) {
+                return false;
+            }
+            return true;
+        }
+
+        return eventStart.getMonth() === targetMonth && eventStart.getFullYear() === targetYear;
     });
     
-    // Calculate statistics
+    // Calculate statistics (taking multi-day events into account)
     const uniqueBooks = new Set();
     const uniqueDates = new Set();
     let totalPages = 0;
     let totalTime = 0;
-    
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
     monthlyEvents.forEach(event => {
         // Count unique books (using book_id)
         uniqueBooks.add(event.book_id);
-        
-        // Count unique dates (format as YYYY-MM-DD)
-        const eventDate = new Date(event.start);
-        const dateString = eventDate.toISOString().split('T')[0];
-        uniqueDates.add(dateString);
-        
-        // Sum pages and time
+
+        const startDate = new Date(event.date);
+        // `end` is exclusive per EventCalendar / FullCalendar conventions. If absent, treat as single-day event.
+        const endExclusive = event.end ? new Date(event.end) : new Date(startDate.getTime() + oneDayMs);
+
+        // Walk through each day the event covers (within the target month/year)
+        for (let d = new Date(startDate); d < endExclusive; d = new Date(d.getTime() + oneDayMs)) {
+            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+                const dateString = d.toISOString().split('T')[0];
+                uniqueDates.add(dateString);
+            }
+        }
+
+        // Sum pages and time (counted once per event)
         totalPages += event.total_pages_read || 0;
         totalTime += event.total_read_time || 0;
     });
@@ -373,4 +423,107 @@ function formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const remMins = Math.floor((seconds % 3600) / 60);
     return remMins ? `${hours}h ${remMins}m` : `${hours}h`;
+}
+
+// Ensure data for a month is loaded (called when user navigates)
+async function ensureMonthLoaded(dateObj) {
+    const key = monthKey(dateObj);
+    if (loadedMonths.has(key)) return;
+
+    // Disable nav buttons while loading to prevent rapid clicks causing race conditions
+    toggleNavButtons(true);
+
+    await loadMonthEvents(key);
+
+    // Re-enable buttons
+    toggleNavButtons(false);
+
+    // Rebuild calendar while preserving the currently requested month
+    initializeEventCalendar(currentEvents, dateObj);
+}
+
+function toggleNavButtons(disabled) {
+    const btnIds = ['prevBtn', 'nextBtn'];
+    btnIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (disabled) {
+            el.setAttribute('disabled', 'disabled');
+            el.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            el.removeAttribute('disabled');
+            el.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    });
+}
+
+// ----- Internal helpers --------------------------------------------------
+
+/**
+ * Merge consecutive single-day events that belong to the same book into
+ * multi-day span events. This is a visual optimisation for the calendar UI.
+ * The original `currentEvents` array (single-day events) is left untouched
+ * and continues to power statistics calculations.
+ *
+ * Each input event is expected to:
+ *   – have a `date` field (yyyy-mm-dd) and be treated as an all-day event
+ *   – carry per-day totals in `total_read_time` and `total_pages_read`
+ *
+ * The merged output events get an `end` field (exclusive) when the span is
+ * longer than one day so EventCalendar can render a bar across days.
+ */
+function mergeSingleDayEvents(events) {
+    if (!Array.isArray(events) || events.length === 0) return [];
+
+    const sorted = [...events].sort((a, b) => {
+        if (a.book_id === b.book_id) {
+            return new Date(a.date) - new Date(b.date);
+        }
+        return a.book_id.localeCompare(b.book_id);
+    });
+
+    const merged = [];
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    for (const ev of sorted) {
+        const last = merged[merged.length - 1];
+
+        if (last && last.book_id === ev.book_id) {
+            const lastEndDate = new Date(last.end ? last.end : (new Date(last.date).getTime() + oneDayMs));
+            const currentDate = new Date(ev.date);
+
+            if (currentDate.getTime() === lastEndDate.getTime()) {
+                // Extend span and totals
+                last.total_read_time = (last.total_read_time || 0) + (ev.total_read_time || 0);
+                last.total_pages_read = (last.total_pages_read || 0) + (ev.total_pages_read || 0);
+
+                const newEnd = new Date(currentDate.getTime() + oneDayMs);
+                last.end = newEnd.toISOString().split('T')[0];
+                continue;
+            }
+        }
+
+        merged.push({ ...ev });
+    }
+
+    return merged;
+}
+
+// Ensure a particular book metadata JSON is loaded
+async function ensureBookLoaded(bookId) {
+    if (loadedBooks.has(bookId)) return;
+    try {
+        const resp = await fetch(`/assets/json/calendar/books/${bookId}.json`);
+        if (!resp.ok) {
+            console.warn('No metadata for book', bookId);
+            loadedBooks.add(bookId);
+            return;
+        }
+        const bookData = await resp.json();
+        currentBooks[bookId] = bookData;
+        loadedBooks.add(bookId);
+    } catch (err) {
+        console.error('Error loading book metadata', bookId, err);
+        loadedBooks.add(bookId);
+    }
 } 
