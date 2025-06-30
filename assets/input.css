@@ -192,7 +192,7 @@
   
   /* Style the calendar body */
   .calendar-container .ec .ec-body {
-    @apply bg-gray-50 dark:bg-dark-850/50 rounded-lg mt-1 border border-gray-200 dark:border-dark-700 shadow-sm;
+    @apply bg-gray-50 dark:bg-dark-850/50 mt-1 border border-gray-200 dark:border-dark-700 shadow-sm;
     border-top: none;
   }
   
@@ -208,8 +208,8 @@
   
   /* Event styling */
   .calendar-container .ec-event {
-    @apply shadow-lg rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
-    @apply mb-1;
+    @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
+    @apply mb-1 mx-0.5;
   }
   
   /* Scrollbar styling */

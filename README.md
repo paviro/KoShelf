@@ -209,14 +209,19 @@ site/
     │   ├── calendar.js     # Calendar functionality
     │   ├── heatmap.js      # Activity heatmap visualization
     │   └── event-calendar.min.js # Event calendar library
-    └── json/               # Statistics data (when available)
-        ├── week_0.json     # Weekly statistics data
-        ├── week_1.json
-        ├── ...
-        ├── calendar_data.json # Calendar events and book data
-        ├── daily_activity_2023.json # Daily activity data for heatmap
-        ├── daily_activity_2024.json
-        └── ...
+    └── json/               # Data files (when available)
+        ├── calendar/           # Calendar data split by month
+        │   ├── available_months.json # List of months with calendar data
+        │   ├── 2024-01.json   # January 2024 events and book data
+        │   ├── 2024-02.json   # February 2024 events and book data
+        │   └── ...            # Additional monthly files
+        └── statistics/         # Statistics data
+            ├── week_0.json     # Weekly statistics data
+            ├── week_1.json
+            ├── ...
+            ├── daily_activity_2023.json # Daily activity data for heatmap
+            ├── daily_activity_2024.json
+            └── ...
 ```
 
 ## Credits

@@ -479,8 +479,8 @@ impl StatisticsCalculator {
             }
             days.sort();
 
-            // Process reading streaks and create calendar events
-            Self::process_reading_streaks_optimized(
+            // Process reading days and create calendar events
+            Self::create_calendar_events_from_reading_days(
                 &mut calendar_events,
                 &calendar_book_id,
                 &days,
@@ -526,8 +526,8 @@ impl StatisticsCalculator {
         }
     }
     
-    /// Process reading streaks and create calendar events (optimized version)
-    fn process_reading_streaks_optimized(
+    /// Create calendar events from reading days, grouping consecutive days within the same month
+    fn create_calendar_events_from_reading_days(
         calendar_events: &mut Vec<CalendarEvent>,
         calendar_book_id: &str,
         days: &[NaiveDate],
@@ -542,15 +542,18 @@ impl StatisticsCalculator {
         let mut span_sessions: Vec<&PageStat> = sessions_by_day.get(&days[0]).cloned().unwrap_or_default();
 
         for day in days.iter().skip(1) {
-            if *day == prev_day + Duration::days(1) {
-                // Same streak
+            let is_consecutive_day = *day == prev_day + Duration::days(1);
+            let is_same_month = day.month() == prev_day.month() && day.year() == prev_day.year();
+            
+            if is_consecutive_day && is_same_month {
+                // Same streak within the same month
                 if let Some(day_sessions) = sessions_by_day.get(day) {
                     span_sessions.extend(day_sessions);
                 }
                 prev_day = *day;
             } else {
-                // Close previous streak
-                Self::push_all_day_event_optimized(
+                // Close previous streak (either gap in days or month boundary)
+                Self::create_calendar_event(
                     calendar_events,
                     calendar_book_id,
                     span_start,
@@ -566,7 +569,7 @@ impl StatisticsCalculator {
         }
 
         // Push final streak
-        Self::push_all_day_event_optimized(
+        Self::create_calendar_event(
             calendar_events,
             calendar_book_id,
             span_start,
@@ -575,8 +578,8 @@ impl StatisticsCalculator {
         );
     }
     
-    /// Helper: push an all-day event for a given streak (optimized version)
-    fn push_all_day_event_optimized(
+    /// Create a calendar event from reading sessions spanning consecutive days
+    fn create_calendar_event(
         calendar_events: &mut Vec<CalendarEvent>,
         calendar_book_id: &str,
         start_date: NaiveDate,

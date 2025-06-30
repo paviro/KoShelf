@@ -7,38 +7,143 @@
 let calendar;
 let currentEvents = [];
 let currentBooks = {};
+let monthlyDataCache = new Map(); // Cache for monthly data: month -> {events, books}
+let availableMonths = []; // List of months that have data
+let currentDisplayedMonth = null;
 
 // Exported entry point
 export function initializeCalendar() {
-    // Load calendar data from JSON
-    loadCalendarData().then(calendarData => {
-        if (calendarData) {
-            currentEvents = calendarData.events || [];
-            currentBooks = calendarData.books || {};
+    // First, load the list of available months
+    loadAvailableMonths().then(() => {
+        // Load calendar data for current month
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        loadCalendarData(currentMonth).then(calendarData => {
+            if (calendarData) {
+                currentEvents = calendarData.events || [];
+                currentBooks = calendarData.books || {};
+                currentDisplayedMonth = currentMonth;
 
-            initializeEventCalendar(currentEvents);
+                initializeEventCalendar(currentEvents);
 
-            // Populate statistics widgets
-            updateCalendarStats(currentEvents);
+                // Populate statistics widgets
+                updateCalendarStats(currentEvents);
 
-            // Wire up DOM interaction handlers (today / prev / next / modal)
-            setupEventHandlers();
-        }
+                // Wire up DOM interaction handlers (today / prev / next / modal)
+                setupEventHandlers();
+            }
+        });
     });
 }
 
-// Load calendar data from JSON file
-async function loadCalendarData() {
+// Load the list of available months
+async function loadAvailableMonths() {
     try {
-        const response = await fetch('/assets/json/calendar_data.json');
-        if (!response.ok) {
-            console.error('Failed to load calendar data:', response.status);
-            return null;
+        const response = await fetch('/assets/json/calendar/available_months.json');
+        if (response.ok) {
+            availableMonths = await response.json();
+        } else {
+            console.warn('Could not load available months list');
+            availableMonths = [];
         }
-        return await response.json();
     } catch (error) {
-        console.error('Error loading calendar data:', error);
-        return null;
+        console.warn('Error loading available months:', error);
+        availableMonths = [];
+    }
+}
+
+// Load and update calendar for a specific month
+async function loadAndUpdateCalendarForMonth(targetMonth) {
+    // Skip if this month is already displayed
+    if (currentDisplayedMonth === targetMonth) {
+        return;
+    }
+    
+    try {
+        // Load the target month's data (will use cache if available)
+        await loadCalendarData(targetMonth);
+        currentDisplayedMonth = targetMonth;
+        
+        // Combine all cached events and books to show events from adjacent months
+        currentEvents = [];
+        currentBooks = {};
+        
+        for (const [month, monthData] of monthlyDataCache) {
+            // Add all events from all cached months
+            currentEvents.push(...(monthData.events || []));
+            
+            // Merge all books from all cached months
+            Object.assign(currentBooks, monthData.books || {});
+        }
+        
+        // Update calendar events with all cached data
+        if (calendar) {
+            const mapEvents = evts => evts.map(ev => {
+                const book = currentBooks[ev.book_id] || {};
+                return {
+                    id: ev.book_id,
+                    title: book.title || 'Unknown Book',
+                    start: ev.start,
+                    end: ev.end || ev.start,
+                    allDay: true,
+                    backgroundColor: book.color || getEventColor(ev),
+                    borderColor: book.color || getEventColor(ev),
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        ...ev,
+                        book_title: book.title || 'Unknown Book',
+                        authors: book.authors || [],
+                        book_path: book.book_path,
+                        book_cover: book.book_cover,
+                        color: book.color,
+                        md5: ev.book_id
+                    }
+                };
+            });
+            
+            calendar.setOption('events', mapEvents(currentEvents));
+        }
+    } catch (error) {
+        console.error(`Failed to load calendar data for ${targetMonth}:`, error);
+    }
+}
+
+// Load calendar data from monthly JSON files
+async function loadCalendarData(targetMonth = null) {
+    try {
+        // If no target month specified, use current month
+        if (!targetMonth) {
+            const now = new Date();
+            targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        // Check if month data is already cached
+        if (monthlyDataCache.has(targetMonth)) {
+            return monthlyDataCache.get(targetMonth);
+        }
+        
+        // Check if this month has data available
+        if (availableMonths.length > 0 && !availableMonths.includes(targetMonth)) {
+            console.info(`No calendar data available for ${targetMonth}`);
+            return { events: [], books: {} }; // Return empty data instead of null
+        }
+        
+        const response = await fetch(`/assets/json/calendar/${targetMonth}.json`);
+        if (!response.ok) {
+            console.error(`Failed to load calendar data for ${targetMonth}:`, response.status);
+            return { events: [], books: {} };
+        }
+        
+        const calendarData = await response.json();
+        
+        // Cache the loaded data
+        monthlyDataCache.set(targetMonth, calendarData);
+        
+        return calendarData;
+    } catch (error) {
+        console.error(`Error loading calendar data for ${targetMonth}:`, error);
+        return { events: [], books: {} };
     }
 }
 
@@ -103,6 +208,10 @@ function initializeEventCalendar(events) {
             
             updateCalendarTitleDirect(viewTitle);
             updateMonthlyStats(currentMonthDate);
+            
+            // Load data for the new month if it's different from current data
+            const newMonth = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
+            loadAndUpdateCalendarForMonth(newMonth);
             
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
@@ -302,10 +411,25 @@ function updateMonthlyStats(currentDate) {
         // Count unique books (using book_id)
         uniqueBooks.add(event.book_id);
         
-        // Count unique dates (format as YYYY-MM-DD)
-        const eventDate = new Date(event.start);
-        const dateString = eventDate.toISOString().split('T')[0];
-        uniqueDates.add(dateString);
+        // Count all dates within the event's date range
+        const startDate = new Date(event.start);
+        const endDate = event.end ? new Date(event.end) : new Date(event.start);
+        
+        // If end date exists, it's exclusive, so we subtract 1 day
+        if (event.end) {
+            endDate.setDate(endDate.getDate() - 1);
+        }
+        
+        // Iterate through all dates from start to end (inclusive)
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            // Check if this date is in the target month/year
+            if (currentDate.getMonth() === targetMonth && currentDate.getFullYear() === targetYear) {
+                const dateString = currentDate.toISOString().split('T')[0];
+                uniqueDates.add(dateString);
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
         
         // Sum pages and time
         totalPages += event.total_pages_read || 0;

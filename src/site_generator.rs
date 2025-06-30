@@ -37,6 +37,18 @@ impl SiteGenerator {
             statistics_db_path,
         }
     }
+
+    // Path constants to avoid duplication
+    fn books_dir(&self) -> PathBuf { self.output_dir.join("books") }
+    fn calendar_dir(&self) -> PathBuf { self.output_dir.join("calendar") }
+    fn statistics_dir(&self) -> PathBuf { self.output_dir.join("statistics") }
+    fn assets_dir(&self) -> PathBuf { self.output_dir.join("assets") }
+    fn covers_dir(&self) -> PathBuf { self.assets_dir().join("covers") }
+    fn css_dir(&self) -> PathBuf { self.assets_dir().join("css") }
+    fn js_dir(&self) -> PathBuf { self.assets_dir().join("js") }
+    fn json_dir(&self) -> PathBuf { self.assets_dir().join("json") }
+    fn statistics_json_dir(&self) -> PathBuf { self.json_dir().join("statistics") }
+    fn calendar_json_dir(&self) -> PathBuf { self.json_dir().join("calendar") }
     
     pub async fn generate(&self) -> Result<()> {
         info!("Generating static site in: {:?}", self.output_dir);
@@ -105,27 +117,27 @@ impl SiteGenerator {
         
         // Only create books directory if we have books
         if !books.is_empty() {
-            fs::create_dir_all(self.output_dir.join("books"))?;
-            fs::create_dir_all(self.output_dir.join("assets/covers"))?;
+            fs::create_dir_all(self.books_dir())?;
+            fs::create_dir_all(self.covers_dir())?;
         }
         
         // Always create assets directories for CSS/JS as they're always needed
-        fs::create_dir_all(self.output_dir.join("assets/css"))?;
-        fs::create_dir_all(self.output_dir.join("assets/js"))?;
-        
-        // Only create JSON directory if we have statistics data
-        if stats_data.is_some() {
-            fs::create_dir_all(self.output_dir.join("assets/json"))?;
-        }
+        fs::create_dir_all(self.css_dir())?;
+        fs::create_dir_all(self.js_dir())?;
         
         // Create directories based on what we have
         if stats_data.is_some() {
-            // Always create calendar directory when we have stats
-            fs::create_dir_all(self.output_dir.join("calendar"))?;
+            // Create JSON directories for statistics data
+            fs::create_dir_all(self.json_dir())?;
+            fs::create_dir_all(self.statistics_json_dir())?;
+            fs::create_dir_all(self.calendar_json_dir())?;
+            
+            // Create calendar directory
+            fs::create_dir_all(self.calendar_dir())?;
             
             // Only create statistics directory if we have books (if no books, stats render to root)
             if !books.is_empty() {
-                fs::create_dir_all(self.output_dir.join("statistics"))?;
+                fs::create_dir_all(self.statistics_dir())?;
             }
         }
         
@@ -135,42 +147,42 @@ impl SiteGenerator {
     async fn copy_static_assets(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
         // Write the pre-compiled CSS (always needed for basic styling)
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
-        fs::write(self.output_dir.join("assets/css/style.css"), css_content)?;
+        fs::write(self.css_dir().join("style.css"), css_content)?;
         
         // Copy book-related JavaScript files only if we have books
         if !books.is_empty() {
             let js_content = include_str!("../assets/book_list.js");
-            fs::write(self.output_dir.join("assets/js/book_list.js"), js_content)?;
+            fs::write(self.js_dir().join("book_list.js"), js_content)?;
 
             let js_content = include_str!("../assets/book_detail.js");
-            fs::write(self.output_dir.join("assets/js/book_detail.js"), js_content)?;
+            fs::write(self.js_dir().join("book_detail.js"), js_content)?;
             
             let lazy_loading_content = include_str!("../assets/lazy-loading.js");
-            fs::write(self.output_dir.join("assets/js/lazy-loading.js"), lazy_loading_content)?;
+            fs::write(self.js_dir().join("lazy-loading.js"), lazy_loading_content)?;
 
             let section_toggle_content = include_str!("../assets/section-toggle.js");
-            fs::write(self.output_dir.join("assets/js/section-toggle.js"), section_toggle_content)?;
+            fs::write(self.js_dir().join("section-toggle.js"), section_toggle_content)?;
         }
         
         // Copy statistics-related JavaScript files only if we have stats data
         if stats_data.is_some() {
             let stats_js_content = include_str!("../assets/statistics.js");
-            fs::write(self.output_dir.join("assets/js/statistics.js"), stats_js_content)?;
+            fs::write(self.js_dir().join("statistics.js"), stats_js_content)?;
             
             let heatmap_js_content = include_str!("../assets/heatmap.js");
-            fs::write(self.output_dir.join("assets/js/heatmap.js"), heatmap_js_content)?;
+            fs::write(self.js_dir().join("heatmap.js"), heatmap_js_content)?;
 
             let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.css"));
-            fs::write(self.output_dir.join("assets/css/event-calendar.min.css"), calendar_css)?;
+            fs::write(self.css_dir().join("event-calendar.min.css"), calendar_css)?;
 
             let calendar_js = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js"));
-            fs::write(self.output_dir.join("assets/js/event-calendar.min.js"), calendar_js)?;
+            fs::write(self.js_dir().join("event-calendar.min.js"), calendar_js)?;
             
             let calendar_map = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map"));
-            fs::write(self.output_dir.join("assets/js/event-calendar.min.js.map"), calendar_map)?;
+            fs::write(self.js_dir().join("event-calendar.min.js.map"), calendar_map)?;
             
             let calendar_init_js_content = include_str!("../assets/calendar.js");
-            fs::write(self.output_dir.join("assets/js/calendar.js"), calendar_init_js_content)?;
+            fs::write(self.js_dir().join("calendar.js"), calendar_init_js_content)?;
         }
         
         Ok(())
@@ -184,7 +196,7 @@ impl SiteGenerator {
         
         for book in books {
             if let Some(ref cover_data) = book.epub_info.cover_data {
-                let cover_path = self.output_dir.join("assets/covers").join(format!("{}.webp", book.id));
+                let cover_path = self.covers_dir().join(format!("{}.webp", book.id));
                 let epub_path = book.epub_path.clone();
                 let cover_data = cover_data.clone();
 
@@ -322,7 +334,7 @@ impl SiteGenerator {
             };
             
             let html = template.render()?;
-            let book_dir = self.output_dir.join("books").join(&book.id);
+            let book_dir = self.books_dir().join(&book.id);
             fs::create_dir_all(&book_dir)?;
             let book_path = book_dir.join("index.html");
             fs::write(book_path, html)?;
@@ -347,7 +359,7 @@ impl SiteGenerator {
         // Export individual week data as separate JSON files
         for (index, week) in reading_stats.weeks.iter().enumerate() {
             let week_json = serde_json::to_string_pretty(&week)?;
-            fs::write(self.output_dir.join("assets/json").join(format!("week_{}.json", index)), week_json)?;
+            fs::write(self.statistics_json_dir().join(format!("week_{}.json", index)), week_json)?;
         }
         
         // Create the template with appropriate navbar
@@ -399,7 +411,7 @@ impl SiteGenerator {
         // Export each year's data to a separate file
         for (year, year_data) in activity_by_year {
             let filename = format!("daily_activity_{}.json", year);
-            let file_path = self.output_dir.join("assets/json").join(filename);
+            let file_path = self.statistics_json_dir().join(filename);
             
             let json = serde_json::to_string_pretty(&year_data)?;
             fs::write(file_path, json)?;
@@ -457,9 +469,8 @@ impl SiteGenerator {
         // Generate calendar data from statistics data only
         let calendar_data = StatisticsCalculator::generate_calendar_events(stats_data, books);
         
-        // Export calendar data as JSON
-        let data_json = serde_json::to_string_pretty(&calendar_data)?;
-        fs::write(self.output_dir.join("assets/json/calendar_data.json"), data_json)?;
+        // Export calendar data split by month
+        self.export_calendar_data_by_month(&calendar_data).await?;
         
         // Create the template
         let template = CalendarTemplate {
@@ -472,11 +483,64 @@ impl SiteGenerator {
         // Render and write the template
         let html = template.render()?;
         
-        // Calendar always goes to its own directory
-        let calendar_dir = self.output_dir.join("calendar");
-        fs::create_dir_all(&calendar_dir)?;
-        fs::write(calendar_dir.join("index.html"), html)?;
+        // Write to the calendar directory (already created in create_directories)
+        fs::write(self.calendar_dir().join("index.html"), html)?;
         
+        Ok(())
+    }
+
+    // Export calendar data split by month as separate JSON files
+    async fn export_calendar_data_by_month(&self, calendar_data: &crate::models::CalendarData) -> Result<()> {
+        use std::collections::HashMap;
+        
+        // Calendar subdirectory already created in create_directories
+        let calendar_json_dir = self.calendar_json_dir();
+        
+        // Group events by month (YYYY-MM)
+        let mut events_by_month: HashMap<String, Vec<&crate::models::CalendarEvent>> = HashMap::new();
+        
+        for event in &calendar_data.events {
+            // Extract year-month from start date (format: yyyy-mm-dd)
+            if let Some(year_month) = event.start.get(0..7) {
+                events_by_month.entry(year_month.to_string()).or_default().push(event);
+            }
+        }
+        
+        // Collect available months and sort them
+        let mut available_months: Vec<String> = events_by_month.keys().cloned().collect();
+        available_months.sort_by(|a, b| b.cmp(a)); // Sort descending (newest first)
+        
+        // Export available months list
+        let available_months_json = serde_json::to_string_pretty(&available_months)?;
+        fs::write(calendar_json_dir.join("available_months.json"), available_months_json)?;
+        
+        // Get the count before consuming the HashMap
+        let month_count = events_by_month.len();
+        
+        // Export each month's data to a separate file
+        for (year_month, month_events) in events_by_month {
+            // Create month-specific calendar data
+            let mut month_calendar_data = crate::models::CalendarData {
+                events: month_events.into_iter().cloned().collect(),
+                books: std::collections::BTreeMap::new(),
+            };
+            
+            // Include only books that are referenced in this month's events
+            for event in &month_calendar_data.events {
+                if let Some(book) = calendar_data.books.get(&event.book_id) {
+                    month_calendar_data.books.insert(event.book_id.clone(), book.clone());
+                }
+            }
+            
+            // Write month-specific JSON file
+            let filename = format!("{}.json", year_month);
+            let file_path = calendar_json_dir.join(filename);
+            
+            let json = serde_json::to_string_pretty(&month_calendar_data)?;
+            fs::write(file_path, json)?;
+        }
+        
+        info!("Exported calendar data for {} months", month_count);
         Ok(())
     }
 } 
