@@ -14,6 +14,7 @@ mod book_scanner;
 mod utils;
 mod statistics_parser;
 mod statistics;
+mod calendar;
 
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;

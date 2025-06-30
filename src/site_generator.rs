@@ -1,7 +1,7 @@
 use crate::models::*;
 use crate::templates::*;
 use crate::statistics_parser::StatisticsParser;
-use crate::statistics::{BookStatistics, StatisticsCalculator};
+use crate::statistics::{BookStatistics};
 use crate::book_scanner::scan_books;
 use anyhow::{Result, Context};
 use askama::Template;
@@ -12,6 +12,7 @@ use std::time::SystemTime;
 use chrono::{Local};
 use webp;
 use futures::future;
+use crate::calendar::CalendarGenerator;
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -467,7 +468,7 @@ impl SiteGenerator {
         info!("Generating calendar page...");
         
         // Generate per-month calendar payloads (events + books + stats)
-        let calendar_months = StatisticsCalculator::generate_calendar_months(stats_data, books);
+        let calendar_months = CalendarGenerator::generate_calendar_months(stats_data, books);
 
         // ------------------------------------------------------------------
         // Write JSON files --------------------------------------------------
