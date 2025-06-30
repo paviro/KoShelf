@@ -466,12 +466,31 @@ impl SiteGenerator {
     async fn generate_calendar_page(&self, stats_data: &StatisticsData, books: &[Book]) -> Result<()> {
         info!("Generating calendar page...");
         
-        // Generate calendar data from statistics data only
-        let calendar_data = StatisticsCalculator::generate_calendar_events(stats_data, books);
-        
-        // Export calendar data split by month
-        self.export_calendar_data_by_month(&calendar_data).await?;
-        
+        // Generate per-month calendar payloads (events + books + stats)
+        let calendar_months = StatisticsCalculator::generate_calendar_months(stats_data, books);
+
+        // ------------------------------------------------------------------
+        // Write JSON files --------------------------------------------------
+        // ------------------------------------------------------------------
+        fs::create_dir_all(&self.calendar_json_dir())?;
+
+        // Available months (newest first)
+        let mut available_months: Vec<String> = calendar_months.keys().cloned().collect();
+        available_months.sort_by(|a, b| b.cmp(a));
+        fs::write(
+            self.calendar_json_dir().join("available_months.json"),
+            serde_json::to_string_pretty(&available_months)?,
+        )?;
+
+        // Individual month files
+        for (ym, month_data) in &calendar_months {
+            let filename = format!("{}.json", ym);
+            fs::write(
+                self.calendar_json_dir().join(filename),
+                serde_json::to_string_pretty(&month_data)?,
+            )?;
+        }
+
         // Create the template
         let template = CalendarTemplate {
             site_title: self.site_title.clone(),
@@ -486,61 +505,6 @@ impl SiteGenerator {
         // Write to the calendar directory (already created in create_directories)
         fs::write(self.calendar_dir().join("index.html"), html)?;
         
-        Ok(())
-    }
-
-    // Export calendar data split by month as separate JSON files
-    async fn export_calendar_data_by_month(&self, calendar_data: &crate::models::CalendarData) -> Result<()> {
-        use std::collections::HashMap;
-        
-        // Calendar subdirectory already created in create_directories
-        let calendar_json_dir = self.calendar_json_dir();
-        
-        // Group events by month (YYYY-MM)
-        let mut events_by_month: HashMap<String, Vec<&crate::models::CalendarEvent>> = HashMap::new();
-        
-        for event in &calendar_data.events {
-            // Extract year-month from start date (format: yyyy-mm-dd)
-            if let Some(year_month) = event.start.get(0..7) {
-                events_by_month.entry(year_month.to_string()).or_default().push(event);
-            }
-        }
-        
-        // Collect available months and sort them
-        let mut available_months: Vec<String> = events_by_month.keys().cloned().collect();
-        available_months.sort_by(|a, b| b.cmp(a)); // Sort descending (newest first)
-        
-        // Export available months list
-        let available_months_json = serde_json::to_string_pretty(&available_months)?;
-        fs::write(calendar_json_dir.join("available_months.json"), available_months_json)?;
-        
-        // Get the count before consuming the HashMap
-        let month_count = events_by_month.len();
-        
-        // Export each month's data to a separate file
-        for (year_month, month_events) in events_by_month {
-            // Create month-specific calendar data
-            let mut month_calendar_data = crate::models::CalendarData {
-                events: month_events.into_iter().cloned().collect(),
-                books: std::collections::BTreeMap::new(),
-            };
-            
-            // Include only books that are referenced in this month's events
-            for event in &month_calendar_data.events {
-                if let Some(book) = calendar_data.books.get(&event.book_id) {
-                    month_calendar_data.books.insert(event.book_id.clone(), book.clone());
-                }
-            }
-            
-            // Write month-specific JSON file
-            let filename = format!("{}.json", year_month);
-            let file_path = calendar_json_dir.join(filename);
-            
-            let json = serde_json::to_string_pretty(&month_calendar_data)?;
-            fs::write(file_path, json)?;
-        }
-        
-        info!("Exported calendar data for {} months", month_count);
         Ok(())
     }
 } 

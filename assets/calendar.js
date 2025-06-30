@@ -15,25 +15,30 @@ let currentDisplayedMonth = null;
 export function initializeCalendar() {
     // First, load the list of available months
     loadAvailableMonths().then(() => {
-        // Load calendar data for current month
+        // Load calendar data for current month and its neighbours
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        
-        loadCalendarData(currentMonth).then(calendarData => {
-            if (calendarData) {
-                currentEvents = calendarData.events || [];
-                currentBooks = calendarData.books || {};
-                currentDisplayedMonth = currentMonth;
+        const [prevMonth, nextMonth] = getAdjacentMonths(currentMonth);
 
-                initializeEventCalendar(currentEvents);
+        (async () => {
+            // Load current, previous and next month (if they exist)
+            await Promise.all([
+                fetchMonthData(prevMonth),
+                fetchMonthData(currentMonth),
+                fetchMonthData(nextMonth)
+            ]);
 
-                // Populate statistics widgets
-                updateCalendarStats(currentEvents);
+            currentDisplayedMonth = currentMonth;
+            refreshAggregatedData();
 
-                // Wire up DOM interaction handlers (today / prev / next / modal)
-                setupEventHandlers();
-            }
-        });
+            initializeEventCalendar(currentEvents);
+
+            // Populate statistics widgets for the initial month
+            updateMonthlyStats(now);
+
+            // Wire up DOM interaction handlers (today / prev / next / modal)
+            setupEventHandlers();
+        })();
     });
 }
 
@@ -54,29 +59,27 @@ async function loadAvailableMonths() {
 }
 
 // Load and update calendar for a specific month
-async function loadAndUpdateCalendarForMonth(targetMonth) {
+async function updateDisplayedMonth(targetMonth) {
     // Skip if this month is already displayed
     if (currentDisplayedMonth === targetMonth) {
         return;
     }
-    
+
     try {
-        // Load the target month's data (will use cache if available)
-        await loadCalendarData(targetMonth);
+        const [prevMonth, nextMonth] = getAdjacentMonths(targetMonth);
+
+        // Load target, previous and next months in parallel (will use cache when possible)
+        await Promise.all([
+            fetchMonthData(prevMonth),
+            fetchMonthData(targetMonth),
+            fetchMonthData(nextMonth)
+        ]);
+
         currentDisplayedMonth = targetMonth;
-        
-        // Combine all cached events and books to show events from adjacent months
-        currentEvents = [];
-        currentBooks = {};
-        
-        for (const [month, monthData] of monthlyDataCache) {
-            // Add all events from all cached months
-            currentEvents.push(...(monthData.events || []));
-            
-            // Merge all books from all cached months
-            Object.assign(currentBooks, monthData.books || {});
-        }
-        
+
+        // Re-aggregate events/books from everything we have cached
+        refreshAggregatedData();
+
         // Update calendar events with all cached data
         if (calendar) {
             const mapEvents = evts => evts.map(ev => {
@@ -101,8 +104,13 @@ async function loadAndUpdateCalendarForMonth(targetMonth) {
                     }
                 };
             });
-            
+
             calendar.setOption('events', mapEvents(currentEvents));
+
+            // Update monthly statistics now that we have fresh data
+            const [yr, mo] = targetMonth.split('-');
+            const statsDate = new Date(Number(yr), Number(mo) - 1, 1);
+            updateMonthlyStats(statsDate);
         }
     } catch (error) {
         console.error(`Failed to load calendar data for ${targetMonth}:`, error);
@@ -110,7 +118,7 @@ async function loadAndUpdateCalendarForMonth(targetMonth) {
 }
 
 // Load calendar data from monthly JSON files
-async function loadCalendarData(targetMonth = null) {
+async function fetchMonthData(targetMonth = null) {
     try {
         // If no target month specified, use current month
         if (!targetMonth) {
@@ -211,7 +219,7 @@ function initializeEventCalendar(events) {
             
             // Load data for the new month if it's different from current data
             const newMonth = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
-            loadAndUpdateCalendarForMonth(newMonth);
+            updateDisplayedMonth(newMonth);
             
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
@@ -382,74 +390,31 @@ function setupEventHandlers() {
     });
 }
 
-// Populate quick statistics boxes (legacy function - kept for compatibility)
-function updateCalendarStats(events) {
-    const now = new Date();
-    updateMonthlyStats(now);
-}
-
-// Update monthly statistics for the given month/year
+// Update monthly statistics for the given month/year (preferring pre-calculated stats when available)
 function updateMonthlyStats(currentDate) {
-    if (!currentDate || !currentEvents) return;
-    
-    const targetMonth = currentDate.getMonth();
-    const targetYear = currentDate.getFullYear();
-    
-    // Filter events for the target month/year
-    const monthlyEvents = currentEvents.filter(event => {
-        const eventDate = new Date(event.start);
-        return eventDate.getMonth() === targetMonth && eventDate.getFullYear() === targetYear;
-    });
-    
-    // Calculate statistics
-    const uniqueBooks = new Set();
-    const uniqueDates = new Set();
-    let totalPages = 0;
-    let totalTime = 0;
-    
-    monthlyEvents.forEach(event => {
-        // Count unique books (using book_id)
-        uniqueBooks.add(event.book_id);
-        
-        // Count all dates within the event's date range
-        const startDate = new Date(event.start);
-        const endDate = event.end ? new Date(event.end) : new Date(event.start);
-        
-        // If end date exists, it's exclusive, so we subtract 1 day
-        if (event.end) {
-            endDate.setDate(endDate.getDate() - 1);
-        }
-        
-        // Iterate through all dates from start to end (inclusive)
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            // Check if this date is in the target month/year
-            if (currentDate.getMonth() === targetMonth && currentDate.getFullYear() === targetYear) {
-                const dateString = currentDate.toISOString().split('T')[0];
-                uniqueDates.add(dateString);
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        // Sum pages and time
-        totalPages += event.total_pages_read || 0;
-        totalTime += event.total_read_time || 0;
-    });
-    
-    // Calculate days read percentage
-    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-    const daysReadPercentage = Math.round((uniqueDates.size / daysInMonth) * 100);
-    
-    // Update DOM elements
+    if (!currentDate) return;
+
+    const targetMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const monthData = monthlyDataCache.get(targetMonthKey);
+
+    let booksRead = 0;
+    let pagesRead = 0;
+    let timeRead = 0;
+    let daysPct = 0;
+
+    if (monthData && monthData.stats) {
+        ({ books_read: booksRead, pages_read: pagesRead, time_read: timeRead, days_read_pct: daysPct } = monthData.stats);
+    }
+
     const booksEl = document.getElementById('monthlyBooks');
     const pagesEl = document.getElementById('monthlyPages');
     const timeEl = document.getElementById('monthlyTime');
     const daysPercentageEl = document.getElementById('monthlyDaysPercentage');
-    
-    if (booksEl) booksEl.textContent = uniqueBooks.size;
-    if (pagesEl) pagesEl.textContent = totalPages.toLocaleString();
-    if (timeEl) timeEl.textContent = formatDuration(totalTime);
-    if (daysPercentageEl) daysPercentageEl.textContent = `${daysReadPercentage}%`;
+
+    if (booksEl) booksEl.textContent = booksRead;
+    if (pagesEl) pagesEl.textContent = Number(pagesRead).toLocaleString();
+    if (timeEl) timeEl.textContent = formatDuration(timeRead);
+    if (daysPercentageEl) daysPercentageEl.textContent = `${daysPct}%`;
 }
 
 // Scroll the current day into view within the calendar container
@@ -497,4 +462,29 @@ function formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const remMins = Math.floor((seconds % 3600) / 60);
     return remMins ? `${hours}h ${remMins}m` : `${hours}h`;
+}
+
+// Helper to compute previous and next month keys (format: YYYY-MM) for a given month key
+function getAdjacentMonths(monthKey) {
+    if (!monthKey) return [null, null];
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = Number(yearStr);
+    const monthIndex = Number(monthStr) - 1; // 0-based index
+
+    const prevDate = new Date(year, monthIndex - 1, 1);
+    const nextDate = new Date(year, monthIndex + 1, 1);
+
+    const format = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return [format(prevDate), format(nextDate)];
+}
+
+// Recalculate currentEvents and currentBooks from everything in monthlyDataCache
+function refreshAggregatedData() {
+    currentEvents = [];
+    currentBooks = {};
+
+    for (const [, monthData] of monthlyDataCache) {
+        currentEvents.push(...(monthData.events || []));
+        Object.assign(currentBooks, monthData.books || {});
+    }
 } 
