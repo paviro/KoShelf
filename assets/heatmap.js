@@ -212,10 +212,10 @@ class ActivityHeatmap {
         const activityMap = new Map();
         let maxActivity = 0;
         
-        // Find max pages and fill map
+        // Find max reading time and fill map
         activityData.forEach(day => {
-            if (day.pages_read > maxActivity) {
-                maxActivity = day.pages_read;
+            if (day.read_time > maxActivity) {
+                maxActivity = day.read_time;
             }
             activityMap.set(day.date, { 
                 pages: day.pages_read, 
@@ -235,9 +235,9 @@ class ActivityHeatmap {
             const cellDate = this.calculateCellDate(cell, this.currentYear);
             const dateStr = DateUtils.formatDateAsISO(cellDate);
             
-            // Get activity level for this date
+            // Get activity level for this date (use reading time)
             const activityObj = activityMap.get(dateStr) || { pages: 0, read: 0 };
-            const activity = activityObj.pages;
+            const activity = activityObj.read;
             
             // Normalize and apply activity level
             const activityLevel = this.normalizeActivityLevel(activity, maxActivity);
@@ -295,9 +295,9 @@ class ActivityHeatmap {
         // Add both light and dark mode classes for the current activity level
         colorClasses[activityLevel].forEach(cls => cell.classList.add(cls));
         
-        // Set tooltip
+        // Set tooltip (reading time focused)
         const readLabel = DateUtils.formatDuration(activityObj.read);
-        cell.setAttribute('title', `${dateStr}: ${activityObj.pages} pages, ${readLabel}`);
+        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} pages`);
         
         // Add hover functionality
         this.addCellHoverEffects(cell);
