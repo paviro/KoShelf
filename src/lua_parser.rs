@@ -75,10 +75,7 @@ impl LuaParser {
     fn parse_annotation(&self, table: Table) -> Result<Annotation> {
         Ok(Annotation {
             chapter: self.get_optional_string(&table, "chapter")?,
-            color: self.get_optional_string(&table, "color")?,
             datetime: self.get_optional_string(&table, "datetime")?,
-            drawer: self.get_optional_string(&table, "drawer")?,
-            page: self.get_optional_string(&table, "page")?,
             pageno: self.get_optional_u32(&table, "pageno")?,
             pos0: self.get_optional_string(&table, "pos0")?,
             pos1: self.get_optional_string(&table, "pos1")?,

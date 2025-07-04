@@ -191,10 +191,15 @@ site/
 ├── calendar/
 │   └── index.html          # Reading calendar view
 ├── books/                  # Individual book pages
+│   ├── list.json           # Manifest of all books (convenience only; not used by frontend)
 │   ├── book-id1/           
-│   │   └── index.html      # Book detail page with annotations
+│   │   ├── index.html      # Book detail page with annotations
+│   │   ├── details.md      # Markdown export (human-readable)
+│   │   └── details.json    # JSON export (machine-readable)
 │   └── book-id2/
-│       └── index.html
+│       ├── index.html
+│       ├── details.md
+│       └── details.json
 └── assets/
     ├── covers/             # Optimized book covers
     │   ├── book-id1.webp
@@ -209,7 +214,7 @@ site/
     │   ├── calendar.js     # Calendar functionality
     │   ├── heatmap.js      # Activity heatmap visualization
     │   └── event-calendar.min.js # Event calendar library
-    └── json/               # Data files (when available)
+    └── json/               # Data files used by the frontend (when available)
         ├── calendar/           # Calendar data split by month
         │   ├── available_months.json # List of months with calendar data
         │   ├── 2024-01.json   # January 2024 events and book data
