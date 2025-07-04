@@ -34,6 +34,16 @@ pub struct BookTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "book_details/book_details.md", escape = "none")]
+pub struct BookMarkdownTemplate {
+    pub book: Book,
+    pub book_stats: Option<StatBook>,
+    pub session_stats: Option<BookSessionStats>,
+    pub version: String,
+    pub last_updated: String,
+}
+
+#[derive(Template)]
 #[template(path = "statistics/statistics.html")]
 pub struct StatsTemplate {
     pub site_title: String,

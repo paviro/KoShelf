@@ -285,6 +285,45 @@ impl SiteGenerator {
         completed_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
         unread_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
         
+        // ------------------------------------------------------------------
+        // Generate books manifest JSON categorized by reading status.
+        // NOTE: This manifest is not consumed by the frontend code – it is
+        // generated purely for the convenience of users who may want a
+        // machine-readable list of all books and their export paths.
+        // ------------------------------------------------------------------
+
+        use serde_json::json;
+
+        let to_manifest_entry = |b: &Book| {
+            json!({
+                "id": b.id.clone(),
+                "title": b.epub_info.title.clone(),
+                "authors": b.epub_info.authors.clone(),
+                "json_path": format!("/books/{}/details.json", b.id),
+                "html_path":  format!("/books/{}/index.html",  b.id),
+            })
+        };
+
+        let reading_json: Vec<_> = reading_books.iter().map(to_manifest_entry).collect();
+        let completed_json: Vec<_> = completed_books.iter().map(to_manifest_entry).collect();
+        let new_json: Vec<_> = unread_books.iter().map(to_manifest_entry).collect();
+
+        let manifest = json!({
+            "reading": reading_json,
+            "completed": completed_json,
+            "new": new_json,
+            "generated_at": self.get_last_updated(),
+        });
+
+        fs::write(
+            self.books_dir().join("list.json"),
+            serde_json::to_string_pretty(&manifest)?,
+        )?;
+
+        // ------------------------------------------------------------------
+        // Render book list HTML
+        // ------------------------------------------------------------------
+
         let template = IndexTemplate {
             site_title: self.site_title.clone(),
             reading_books,
@@ -294,7 +333,7 @@ impl SiteGenerator {
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items("books"),
         };
-        
+
         let html = template.render()?;
         fs::write(self.output_dir.join("index.html"), html)?;
         
@@ -327,8 +366,8 @@ impl SiteGenerator {
             let template = BookTemplate {
                 site_title: self.site_title.clone(),
                 book: book.clone(),
-                book_stats,
-                session_stats,
+                book_stats: book_stats.clone(),
+                session_stats: session_stats.clone(),
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items("books"),
@@ -339,6 +378,54 @@ impl SiteGenerator {
             fs::create_dir_all(&book_dir)?;
             let book_path = book_dir.join("index.html");
             fs::write(book_path, html)?;
+
+            // Generate Markdown export
+            let md_template = BookMarkdownTemplate {
+                book: book.clone(),
+                book_stats: book_stats.clone(),
+                session_stats: session_stats.clone(),
+                version: self.get_version(),
+                last_updated: self.get_last_updated(),
+            };
+            let markdown = md_template.render()?;
+            fs::write(book_dir.join("details.md"), markdown)?;
+
+            // Generate JSON export / not used by the frontend code - only for the user's convenience
+            let json_data = serde_json::json!({
+                "book": {
+                    "title": book.epub_info.title,
+                    "authors": book.epub_info.authors,
+                    "series": book.series_display(),
+                    "language": book.language(),
+                    "publisher": book.publisher(),
+                    "description": book.epub_info.sanitized_description(),
+                    "rating": book.rating(),
+                    "review_note": book.review_note(),
+                    "status": book.status().to_string(),
+                    "progress_percentage": book.progress_percentage(),
+                    "subjects": book.subjects(),
+                    "identifiers": book.identifiers().iter().map(|id| {
+                        serde_json::json!({
+                            "scheme": id.scheme,
+                            "value": id.value,
+                            "display_scheme": id.display_scheme(),
+                            "url": id.url()
+                        })
+                    }).collect::<Vec<_>>()
+                },
+                "annotations": book.koreader_metadata.as_ref().map(|m| &m.annotations).unwrap_or(&vec![]),
+                "statistics": {
+                    "book_stats": book_stats,
+                    "session_stats": session_stats
+                },
+                "export_info": {
+                    "generated_by": "KoShelf",
+                    "version": self.get_version(),
+                    "generated_at": self.get_last_updated()
+                }
+            });
+            let json_str = serde_json::to_string_pretty(&json_data)?;
+            fs::write(book_dir.join("details.json"), json_str)?;
         }
         
         Ok(())

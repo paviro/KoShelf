@@ -238,12 +238,11 @@ pub struct KoReaderMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Annotation {
     pub chapter: Option<String>,
-    pub color: Option<String>,
     pub datetime: Option<String>,
-    pub drawer: Option<String>,
-    pub page: Option<String>,
     pub pageno: Option<u32>,
+    #[serde(skip_serializing)]
     pub pos0: Option<String>,
+    #[serde(skip_serializing)]
     pub pos1: Option<String>,
     pub text: String,
     pub note: Option<String>,
@@ -321,23 +320,25 @@ impl std::fmt::Display for BookStatus {
 /// Data structure representing a book entry from the statistics database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatBook {
+    #[serde(skip_serializing)]
     pub id: i64,
+    #[serde(skip_serializing)]
     pub title: String,
+    #[serde(skip_serializing)]
     pub authors: String,
     pub notes: Option<i64>,
     pub last_open: Option<i64>,
     pub highlights: Option<i64>,
     pub pages: Option<i64>,
-    pub series: String,
-    pub language: String,
     #[serde(skip_serializing)]
     pub md5: String,
     pub total_read_time: Option<i64>,
+    #[serde(skip_serializing)]
     pub total_read_pages: Option<i64>,
 }
 
 /// Additional statistics calculated for a book from its reading sessions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BookSessionStats {
     pub session_count: i64,
     pub average_session_duration: Option<i64>, // in seconds

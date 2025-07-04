@@ -58,7 +58,7 @@ impl StatisticsParser {
     
     /// Parse book entries from the database
     fn parse_books(conn: &Connection) -> Result<Vec<StatBook>> {
-        let mut stmt = conn.prepare("SELECT id, title, authors, notes, last_open, highlights, pages, series, language, md5, total_read_time, total_read_pages FROM book")?;
+        let mut stmt = conn.prepare("SELECT id, title, authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages FROM book")?;
         
         let book_iter = stmt.query_map([], |row| {
             Ok(StatBook {
@@ -69,11 +69,9 @@ impl StatisticsParser {
                 last_open: row.get(4)?,
                 highlights: row.get(5)?,
                 pages: row.get(6)?,
-                series: row.get(7)?,
-                language: row.get(8)?,
-                md5: row.get(9)?,
-                total_read_time: row.get(10)?,
-                total_read_pages: row.get(11)?,
+                md5: row.get(7)?,
+                total_read_time: row.get(8)?,
+                total_read_pages: row.get(9)?,
             })
         })?;
         

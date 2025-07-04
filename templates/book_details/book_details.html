@@ -11,7 +11,7 @@
     {% include "sidebar.html" %}
     
     <!-- Header - Fixed at top -->
-    <header class="fixed top-0 left-0 right-0 md:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+    <header class="fixed top-0 left-0 right-0 md:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40 flex items-center justify-between">
         <div class="flex items-center h-full min-w-0 flex-1">
             <!-- Mobile Title & Back Button -->
             <div class="md:hidden flex items-center space-x-3 min-w-0 flex-1">
@@ -35,6 +35,25 @@
                 {% if !book.epub_info.authors.is_empty() %}
                 <p class="text-sm text-gray-500 dark:text-dark-300 truncate">by {{ book.epub_info.authors[0] }}</p>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center space-x-2">
+            <!-- Share Dropdown -->
+            <div class="relative" id="shareDropdownWrapper">
+                <button id="shareDropdownButton" class="p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors" type="button" aria-label="Share">
+                    <!-- Download Icon (Heroicons) -->
+                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 10l5 5 5-5"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12"/>
+                    </svg>
+                </button>
+                <div id="shareDropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
+                    <a href="/books/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
+                    <a href="/books/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>
+                </div>
             </div>
         </div>
     </header>

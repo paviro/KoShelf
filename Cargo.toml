@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.0.16"
+version = "1.0.17"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
