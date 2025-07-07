@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::path::PathBuf;
-use anyhow::Result;
+use anyhow::{Result, Context};
 use log::info;
 
 mod models;
@@ -54,6 +54,61 @@ struct Cli {
     /// Print GitHub repository URL
     #[arg(long)]
     github: bool,
+    
+    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling.
+    #[arg(long, default_value = "auto")]
+    heatmap_scale_max: String,
+}
+
+// Parse time format strings like "1h", "1h30m", "45min" into seconds
+fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
+    if time_str == "auto" {
+        return Ok(None);
+    }
+    
+    let time_str = time_str.to_lowercase();
+    let mut total_seconds = 0u32;
+    
+    // Handle hours
+    if let Some(h_pos) = time_str.find('h') {
+        let hours_str = &time_str[..h_pos];
+        if let Ok(hours) = hours_str.parse::<u32>() {
+            total_seconds += hours * 3600;
+        } else {
+            anyhow::bail!("Invalid hour format in: {}", time_str);
+        }
+        
+        // Check for minutes after hours
+        let remaining = &time_str[h_pos + 1..];
+        if !remaining.is_empty() {
+            // Remove common minute suffixes and parse
+            let remaining = remaining.replace("min", "").replace('m', "");
+            if !remaining.is_empty() {
+                if let Ok(minutes) = remaining.parse::<u32>() {
+                    if minutes >= 60 {
+                        anyhow::bail!("Minutes cannot be 60 or more: {}", time_str);
+                    }
+                    total_seconds += minutes * 60;
+                } else {
+                    anyhow::bail!("Invalid minute format in: {}", time_str);
+                }
+            }
+        }
+    } else {
+        // Only minutes specified
+        let minutes_str = time_str.replace("min", "").replace('m', "");
+        if let Ok(minutes) = minutes_str.parse::<u32>() {
+            total_seconds = minutes * 60;
+        } else {
+            anyhow::bail!("Invalid time format: {}", time_str);
+        }
+    }
+    
+    if total_seconds == 0 {
+        anyhow::bail!("Time cannot be zero: {}", time_str);
+    }
+    
+    Ok(Some(total_seconds))
 }
 
 #[tokio::main]
@@ -108,6 +163,10 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Parse heatmap scale max
+    let heatmap_scale_max = parse_time_to_seconds(&cli.heatmap_scale_max)
+        .with_context(|| format!("Invalid heatmap-scale-max format: {}", cli.heatmap_scale_max))?;
+
     // Determine output directory
     let (output_dir, is_static_site) = match &cli.output {
         Some(output_dir) => (output_dir.clone(), !cli.watch),
@@ -124,6 +183,7 @@ async fn main() -> Result<()> {
         cli.include_unread,
         cli.books_path.clone(),
         cli.statistics_db.clone(),
+        heatmap_scale_max,
     );
     
     // Generate initial site
@@ -144,6 +204,7 @@ async fn main() -> Result<()> {
             cli.title.clone(),
             cli.include_unread,
             cli.statistics_db.clone(),
+            heatmap_scale_max,
         ).await?;
         
         // Run file watcher
@@ -158,6 +219,7 @@ async fn main() -> Result<()> {
             cli.title.clone(),
             cli.include_unread,
             cli.statistics_db.clone(),
+            heatmap_scale_max,
         ).await?;
 
         // Start web server

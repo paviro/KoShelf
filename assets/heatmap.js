@@ -6,6 +6,7 @@
 class ActivityHeatmap {
     constructor() {
         this.activityData = null;
+        this.activityConfig = null;
         this.availableYears = [];
         this.currentYear = null;
         this.isInitialized = false;
@@ -58,12 +59,17 @@ class ActivityHeatmap {
                 throw new Error(`Failed to load activity data for ${year}`);
             }
             
-            this.activityData = await response.json();
+            const jsonResponse = await response.json();
+            
+            this.activityData = jsonResponse.data;
+            this.activityConfig = jsonResponse.config;
+            
             this.currentYear = year;
             
         } catch (error) {
             console.error(`Error loading activity data for ${year}:`, error);
             this.activityData = [];
+            this.activityConfig = { max_scale_seconds: null };
         }
     }
 
@@ -223,6 +229,11 @@ class ActivityHeatmap {
             });
         });
         
+        // Use custom max scale if provided
+        if (this.activityConfig && this.activityConfig.max_scale_seconds !== null) {
+            maxActivity = this.activityConfig.max_scale_seconds;
+        }
+        
         return { activityMap, maxActivity };
     }
 
@@ -273,7 +284,7 @@ class ActivityHeatmap {
             if (maxActivity <= 4) {
                 activityLevel = activity;
             } else {
-                activityLevel = Math.ceil((activity / maxActivity) * 4);
+                activityLevel = Math.min(4, Math.ceil((activity / maxActivity) * 4));
             }
         }
         return activityLevel;
