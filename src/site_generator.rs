@@ -20,6 +20,7 @@ pub struct SiteGenerator {
     include_unread: bool,
     books_path: Option<PathBuf>,
     statistics_db_path: Option<PathBuf>,
+    heatmap_scale_max: Option<u32>,
 }
 
 impl SiteGenerator {
@@ -28,7 +29,8 @@ impl SiteGenerator {
         site_title: String, 
         include_unread: bool, 
         books_path: Option<PathBuf>, 
-        statistics_db_path: Option<PathBuf>
+        statistics_db_path: Option<PathBuf>,
+        heatmap_scale_max: Option<u32>
     ) -> Self {
         Self {
             output_dir,
@@ -36,6 +38,7 @@ impl SiteGenerator {
             include_unread,
             books_path,
             statistics_db_path,
+            heatmap_scale_max,
         }
     }
 
@@ -501,7 +504,15 @@ impl SiteGenerator {
             let filename = format!("daily_activity_{}.json", year);
             let file_path = self.statistics_json_dir().join(filename);
             
-            let json = serde_json::to_string_pretty(&year_data)?;
+            // Wrap the data with configuration information
+            let json_data = serde_json::json!({
+                "data": year_data,
+                "config": {
+                    "max_scale_seconds": self.heatmap_scale_max
+                }
+            });
+            
+            let json = serde_json::to_string_pretty(&json_data)?;
             fs::write(file_path, json)?;
         }
         

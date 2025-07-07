@@ -13,6 +13,7 @@ pub struct FileWatcher {
     site_title: String,
     include_unread: bool,
     statistics_db_path: Option<PathBuf>,
+    heatmap_scale_max: Option<u32>,
     rebuild_tx: Option<mpsc::UnboundedSender<()>>,
 }
 
@@ -23,6 +24,7 @@ impl FileWatcher {
         site_title: String,
         include_unread: bool,
         statistics_db_path: Option<PathBuf>,
+        heatmap_scale_max: Option<u32>,
     ) -> Result<Self> {
         Ok(Self {
             books_path,
@@ -30,6 +32,7 @@ impl FileWatcher {
             site_title,
             include_unread,
             statistics_db_path,
+            heatmap_scale_max,
             rebuild_tx: None,
         })
     }
@@ -77,6 +80,7 @@ impl FileWatcher {
         let site_title_clone = self.site_title.clone();
         let include_unread_clone = self.include_unread;
         let statistics_db_path_clone = self.statistics_db_path.clone();
+        let heatmap_scale_max_clone = self.heatmap_scale_max;
         
         // Spawn delayed rebuild task
         let rebuild_task = tokio::task::spawn_blocking(move || {
@@ -100,6 +104,7 @@ impl FileWatcher {
                         include_unread_clone,
                         books_path_clone.clone(),
                         statistics_db_path_clone.clone(),
+                        heatmap_scale_max_clone,
                     );
                     
                     match site_generator.generate().await {

@@ -12,7 +12,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations & Highlights**: Shows all your KoReader highlights and notes with elegant formatting
 - 📖 **Book Details**: Individual pages for each book with metadata and organized annotations
-- 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, activity heatmaps, and weekly breakdowns
+- 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
 - 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
 - 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
@@ -98,6 +98,7 @@ KoShelf can operate in several modes:
 - `--title, -t`: Site title (default: "KoShelf")
 - `--include-unread`: Include unread books (EPUBs without KoReader metadata)
 - `--port, -p`: Port for web server mode (default: 3000)
+- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
 
 ### Example
 
@@ -113,6 +114,12 @@ KoShelf can operate in several modes:
 
 # Generate static site with file watching and statistics
 ./koshelf -books-path ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
+
+# Generate site with custom heatmap color scaling (2 hours = highest intensity)
+./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 2h
+
+# Generate site with custom heatmap color scaling (1.5 hours = highest intensity)
+./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
 ```
 
 ## KoReader Setup
@@ -176,7 +183,7 @@ This way, every time Syncthing pulls updates from my e-reader, the website autom
 ### From KoReader Statistics Database (statistics.sqlite3)
 - Total reading time and pages
 - Weekly reading statistics
-- Reading activity heatmap
+- Reading activity heatmap with customizable scaling (automatic or fixed maximum)
 - Per-book reading sessions and statistics
 - Reading speed calculations
 - Session duration tracking
