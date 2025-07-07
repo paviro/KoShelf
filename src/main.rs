@@ -34,6 +34,10 @@ struct Cli {
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
     #[arg(short, long)]
     output: Option<PathBuf>,
+
+    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
+    #[arg(long, default_value = "auto")]
+    heatmap_scale_max: String,
     
     /// Enable file watching with static output (requires --output)
     #[arg(short, long, default_value = "false")]
@@ -54,10 +58,6 @@ struct Cli {
     /// Print GitHub repository URL
     #[arg(long)]
     github: bool,
-    
-    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling.
-    #[arg(long, default_value = "auto")]
-    heatmap_scale_max: String,
 }
 
 // Parse time format strings like "1h", "1h30m", "45min" into seconds
