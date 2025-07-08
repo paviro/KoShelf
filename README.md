@@ -6,6 +6,28 @@
 
 A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+  - [Home Assistant](#home-assistant)
+  - [Prebuilt Binaries](#prebuilt-binaries)
+  - [From Source](#from-source)
+- [Usage](#usage)
+  - [Basic Usage](#basic-usage)
+  - [Operation Modes](#operation-modes)
+  - [Command Line Options](#command-line-options)
+  - [Example](#example)
+- [KoReader Setup](#koreader-setup)
+  - [Typical Deployment Setup](#typical-deployment-setup)
+- [Supported Data](#supported-data)
+  - [From EPUB Files](#from-epub-files)
+  - [From KoReader Metadata](#from-koreader-metadata)
+  - [From KoReader Statistics Database](#from-koreader-statistics-database-statisticssqlite3)
+- [Generated Site Structure](#generated-site-structure)
+- [Credits](#credits)
+- [Disclaimer](#disclaimer)
+
 ## Features
 
 - 📚 **Book Library Overview**: Displays your currently reading, completed and unread books (EPUBs only!)
