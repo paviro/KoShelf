@@ -23,6 +23,12 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 
 ## Installation
 
+### Home Assistant
+
+Using Home Assistant? Install KOShelf as an add-on with just one click below.
+
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
+
 ### Prebuilt Binaries
 
 The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
@@ -31,31 +37,49 @@ The easiest way to get started is to download a prebuilt binary from the [releas
 - macOS (Apple Silicon, Intel & Universal)
 - Linux (x64 and ARM64)
 
-Download the appropriate binary for your system and make it executable:
+Please note that KoShelf is a command line tool, so you will need to execute it from within a terminal (macOS/Linux) or PowerShell/Command Prompt on Windows. Simply double-clicking the executable won't work since it requires command line arguments to function properly.
 
-```bash
-# macOS/Linux
-chmod +x koshelf
-./koshelf --help
-```
-
-**Note for macOS users**: The binary is not code-signed, so macOS Gatekeeper will prevent it from running initially. You'll see a warning like "cannot be opened because the developer cannot be verified." To run the binary:
-
-1. Run `xattr -d com.apple.quarantine koshelf` to remove the quarantine attribute, or  
-2. Open it and go to System Preferences > Security & Privacy > General and click "Allow Anyway" after the first blocked attempt
-
-**Note for Windows users**: Windows Defender will likely flag and delete the Windows binary as a virus since it's not code-signed and from an unknown publisher. This is a false positive if you downloaded the binary directly from this repo. To use the binary:
+**Note for Windows users**: Windows Defender will likely flag and delete the Windows binary as a virus (more information [here](https://medium.com/opsops/is-windows-broken-7f8de8b8f3ad)). This is a false positive if you downloaded the binary directly from this repo. To use the binary:
 
 1. Restore it from Windows Defender's protection history (Windows Security > Virus & threat protection > Protection history > Restore)
 2. Launch the binary from PowerShell or Windows Terminal with arguments - double-clicking will cause it to close immediately since no arguments are provided
 
-*Note: I haven't found a simple way to code-sign Windows binaries from macOS yet, so this issue persists for now.*
+#### First Time Using Command Line?
 
-### Home Assistant
+If you've never used a command line before, here's how to get started:
 
-Using Home Assistant? Install KOShelf as an add-on with just one click below.
+**Windows:**
+1. Press `Win + R`, type `powershell`, and press Enter
+2. Navigate to where you downloaded the KoShelf binary (e.g., `cd C:\Users\YourName\Downloads`)
+3. Run the tool with your desired arguments (see examples below)
 
-[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
+**macOS and Linux:**
+1. Press `Cmd + Space`, type `terminal`, and press Enter
+2. Navigate to where you downloaded the KoShelf binary (e.g., `cd ~/Downloads`)
+3. Make the file executable: `chmod +x koshelf` (should not be needed on macOS as the binary is signed)
+4. Run the tool with your desired arguments (see examples below)
+
+**Example:**
+```bash
+# Navigate to your downloads folder
+cd ~/Downloads  # macOS/Linux
+cd C:\Users\YourName\Downloads  # Windows
+
+# Run KoShelf with your books folder
+./koshelf --books-path /path/to/your/books --output ./my-library-site
+```
+
+**Pro tip:** On most terminals, you can drag and drop the downloaded binary file directly into the terminal window. This will automatically insert the full file path, allowing you to immediately add your arguments and run the command.
+
+If you plan to use KoShelf frequently and use Linux or macOS, you can move the binary to `/usr/local/bin/` to make it available system-wide. This allows you to run `koshelf` from anywhere without specifying the full path:
+
+```bash
+# Move the binary to system PATH (requires sudo)
+sudo mv koshelf /usr/local/bin/
+
+# Now you can run it from anywhere
+koshelf --books-path ~/Books --output ~/my-library-site
+```
 
 ### From Source
 
