@@ -44,6 +44,13 @@ chmod +x koshelf
 1. Run `xattr -d com.apple.quarantine koshelf` to remove the quarantine attribute, or  
 2. Open it and go to System Preferences > Security & Privacy > General and click "Allow Anyway" after the first blocked attempt
 
+**Note for Windows users**: Windows Defender will likely flag and delete the Windows binary as a virus since it's not code-signed and from an unknown publisher. This is a false positive if you downloaded the binary directly from this repo. To use the binary:
+
+1. Restore it from Windows Defender's protection history (Windows Security > Virus & threat protection > Protection history > Restore)
+2. Launch the binary from PowerShell or Windows Terminal with arguments - double-clicking will cause it to close immediately since no arguments are provided
+
+*Note: I haven't found a simple way to code-sign Windows binaries from macOS yet, so this issue persists for now.*
+
 ### Home Assistant
 
 Using Home Assistant? Install KOShelf as an add-on with just one click below.
