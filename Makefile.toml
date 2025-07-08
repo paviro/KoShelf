@@ -186,7 +186,7 @@ rm "${BINARY_NAME}"
 
 [tasks.package-macos-intel]
 description = "Package Intel macOS binary"
-dependencies = ["create-release-dir"]
+dependencies = ["create-release-dir", "sign-macos-intel"]
 script = '''
 BINARY_NAME="koshelf"
 TARGET="x86_64-apple-darwin"
@@ -199,7 +199,7 @@ rm "${BINARY_NAME}"
 
 [tasks.package-macos-silicon]
 description = "Package Apple Silicon macOS binary"
-dependencies = ["create-release-dir"]
+dependencies = ["create-release-dir", "sign-macos-silicon"]
 script = '''
 BINARY_NAME="koshelf"
 TARGET="aarch64-apple-darwin"
@@ -212,7 +212,7 @@ rm "${BINARY_NAME}"
 
 [tasks.package-macos-universal]
 description = "Package Universal macOS binary"
-dependencies = ["create-release-dir"]
+dependencies = ["create-release-dir", "sign-macos-universal"]
 script = '''
 BINARY_NAME="koshelf"
 TARGET="universal-apple-darwin"
@@ -244,3 +244,57 @@ dependencies = [
     "build-all",
     "package-all"
 ] 
+
+[tasks.sign-macos-intel]
+description = "Sign Intel macOS binary if APPLE_DEVELOPER_ID is set"
+dependencies = ["build-macos-intel"]
+env_files = ["./.env"]
+condition = { files_exist = ["./.env"] }
+script = '''
+BINARY_PATH="target/x86_64-apple-darwin/release/koshelf"
+if [ -n "$APPLE_DEVELOPER_ID" ]; then
+    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
+        echo "✅ Successfully signed Intel macOS binary."
+    else
+        echo "❌ Failed to sign Intel macOS binary."
+    fi
+else
+    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Intel macOS binary."
+fi
+'''
+
+[tasks.sign-macos-silicon]
+description = "Sign Apple Silicon macOS binary if APPLE_DEVELOPER_ID is set"
+dependencies = ["build-macos-silicon"]
+env_files = ["./.env"]
+condition = { files_exist = ["./.env"] }
+script = '''
+BINARY_PATH="target/aarch64-apple-darwin/release/koshelf"
+if [ -n "$APPLE_DEVELOPER_ID" ]; then
+    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
+        echo "✅ Successfully signed Apple Silicon macOS binary."
+    else
+        echo "❌ Failed to sign Apple Silicon macOS binary."
+    fi
+else
+    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Apple Silicon macOS binary."
+fi
+'''
+
+[tasks.sign-macos-universal]
+description = "Sign Universal macOS binary if APPLE_DEVELOPER_ID is set"
+dependencies = ["build-macos-universal"]
+env_files = ["./.env"]
+condition = { files_exist = ["./.env"] }
+script = '''
+BINARY_PATH="target/universal-apple-darwin/release/koshelf"
+if [ -n "$APPLE_DEVELOPER_ID" ]; then
+    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
+        echo "✅ Successfully signed Universal macOS binary."
+    else
+        echo "❌ Failed to sign Universal macOS binary."
+    fi
+else
+    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Universal macOS binary."
+fi
+''' 
