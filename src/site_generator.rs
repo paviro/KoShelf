@@ -6,8 +6,9 @@ use crate::book_scanner::scan_books;
 use anyhow::{Result, Context};
 use askama::Template;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use log::info;
+use minify_html::{Cfg, minify};
 use std::time::SystemTime;
 use chrono::{Local};
 use webp;
@@ -114,6 +115,20 @@ impl SiteGenerator {
     // Get current datetime as formatted string
     fn get_last_updated(&self) -> String {
         Local::now().format("%Y-%m-%d %H:%M").to_string()
+    }
+
+    // Minifies and writes HTML to disk.
+    fn write_minify_html<P: AsRef<Path>>(&self, path: P, html: &str) -> Result<()> {
+        let cfg = Cfg {
+            minify_js: true,
+            minify_css: true,
+            ..Default::default()
+        };
+
+        // Attempt minification; on failure fall back to original HTML
+        let minified = String::from_utf8(minify(html.as_bytes(), &cfg)).unwrap_or_else(|_| html.to_string());
+        fs::write(path, minified)?;
+        Ok(())
     }
     
     async fn create_directories(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
@@ -338,7 +353,7 @@ impl SiteGenerator {
         };
 
         let html = template.render()?;
-        fs::write(self.output_dir.join("index.html"), html)?;
+        self.write_minify_html(self.output_dir.join("index.html"), &html)?;
         
         Ok(())
     }
@@ -380,7 +395,7 @@ impl SiteGenerator {
             let book_dir = self.books_dir().join(&book.id);
             fs::create_dir_all(&book_dir)?;
             let book_path = book_dir.join("index.html");
-            fs::write(book_path, html)?;
+            self.write_minify_html(book_path, &html)?;
 
             // Generate Markdown export
             let md_template = BookMarkdownTemplate {
@@ -465,15 +480,15 @@ impl SiteGenerator {
         
         // Render and write the template
         let html = template.render()?;
-        
+
         if render_to_root {
             // Write directly to index.html
-            fs::write(self.output_dir.join("index.html"), html)?;
+            self.write_minify_html(self.output_dir.join("index.html"), &html)?;
         } else {
             // Create stats directory and write the index file
             let stats_dir = self.output_dir.join("statistics");
             fs::create_dir_all(&stats_dir)?;
-            fs::write(stats_dir.join("index.html"), html)?;
+            self.write_minify_html(stats_dir.join("index.html"), &html)?;
         }
         
         Ok(())
@@ -600,9 +615,9 @@ impl SiteGenerator {
         
         // Render and write the template
         let html = template.render()?;
-        
+
         // Write to the calendar directory (already created in create_directories)
-        fs::write(self.calendar_dir().join("index.html"), html)?;
+        self.write_minify_html(self.calendar_dir().join("index.html"), &html)?;
         
         Ok(())
     }

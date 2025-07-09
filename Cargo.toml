@@ -50,3 +50,4 @@ tower-http = { version = "0.5.2", features = ["fs", "cors"] }
 futures = "0.3"
 # SQLite database access
 rusqlite = { version = "0.36.0", features = ["bundled"] }
+minify-html = "0.15" # 0.16 has an issue with inline js
