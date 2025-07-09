@@ -24,6 +24,9 @@ class StatisticsManager {
         // Initialize week selector
         this.initializeWeekSelector();
         
+        // Validate and reset current streak if needed
+        this.validateCurrentStreak();
+        
         this.isInitialized = true;
     }
 
@@ -219,6 +222,39 @@ class StatisticsManager {
                 }
             }, 50);
         });
+    }
+
+    // Validate current streak and reset to 0 if the last streak date is not today
+    validateCurrentStreak() {
+        const streakElement = document.getElementById('currentStreakDays');
+        const dateRangeElement = document.getElementById('currentStreakDateRange');
+        const daysTextElement = document.getElementById('currentStreakDaysText');
+        
+        if (!streakElement) return;
+        
+        const lastStreakDate = streakElement.getAttribute('data-last-streak-date');
+        if (!lastStreakDate) return;
+        
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' + 
+                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(today.getDate()).padStart(2, '0');
+        
+        // If the last streak date is not today, reset the streak to 0
+        if (lastStreakDate !== todayStr) {
+            streakElement.textContent = '0';
+            
+            // Update the day/days text
+            if (daysTextElement) {
+                daysTextElement.textContent = 'days';
+            }
+            
+            // Clear the date range
+            if (dateRangeElement) {
+                dateRangeElement.textContent = '';
+            }
+        }
     }
 }
 
