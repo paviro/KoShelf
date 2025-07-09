@@ -10,7 +10,7 @@ pub struct NavItem {
 }
 
 #[derive(Template)]
-#[template(path = "book_list/book_list.html")]
+#[template(path = "book_list/book_list.html", whitespace = "minimize")]
 pub struct IndexTemplate {
     pub site_title: String,
     pub reading_books: Vec<Book>,
@@ -22,7 +22,7 @@ pub struct IndexTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "book_details/book_details.html")]
+#[template(path = "book_details/book_details.html", whitespace = "minimize")]
 pub struct BookTemplate {
     pub site_title: String,
     pub book: Book,
@@ -44,7 +44,7 @@ pub struct BookMarkdownTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "statistics/statistics.html")]
+#[template(path = "statistics/statistics.html", whitespace = "minimize")]
 pub struct StatsTemplate {
     pub site_title: String,
     pub reading_stats: ReadingStats,
@@ -55,7 +55,7 @@ pub struct StatsTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "calendar/calendar.html")]
+#[template(path = "calendar/calendar.html", whitespace = "minimize")]
 pub struct CalendarTemplate {
     pub site_title: String,
     pub version: String,
