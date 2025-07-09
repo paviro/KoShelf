@@ -14,24 +14,17 @@
   </a>
 </p>
 
-######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
 
+######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
 </div>
 
-## Screenshots
-
-![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
-![Library overview](https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26)
-![Book details](https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d)
-![Reading calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
-
-Your reading companion with a responsive and modern UI.
 
 ## Table of Contents
 
-- [Screenshots](#screenshots)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Installation](#installation)
   - [Home Assistant](#home-assistant)
   - [Prebuilt Binaries](#prebuilt-binaries)
@@ -64,6 +57,11 @@ Your reading companion with a responsive and modern UI.
 - 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
 
+## Screenshots
+
+![Library overview](https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26)
+![Book details](https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d)
+![Reading calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
 
 ## Installation
 
