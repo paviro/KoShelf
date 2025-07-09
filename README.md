@@ -1,6 +1,9 @@
-# KOShelf
+<div align="center">
 
-<p align="center">
+# KOShelf
+######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+
+<p>
   <a href="https://github.com/paviro/koshelf/stargazers">
     <img src="https://img.shields.io/github/stars/paviro/koshelf?style=social" alt="Stars" />
   </a>
@@ -12,28 +15,16 @@
   </a>
 </p>
 
-<p align="center">
-  <strong>
-    A Rust CLI tool that generates a beautiful static website from your KoReader library,<br>
-    showcasing your ebook collection with highlights, annotations, and reading progress.
-  </strong>
-</p>
+</div>
 
 ## Screenshots
 
-<div align="center" style="border: 1px solid #e1e4e8; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 16px; background: #f9f9f9; margin-bottom: 2em;">
+![Library overview](https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26)
+![Book details](https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d)
+![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
+![Reading calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
 
-  <img src="https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26" alt="Library overview" width="45%" />
-  <img src="https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d" alt="Book details" width="45%" />
-  <br/>
-  <img src="https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de" alt="Statistics dashboard" width="45%" />
-  <img src="https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323" alt="Reading calendar" width="45%" />
-
-  <p style="color: #555; font-size: 1.1em; margin-top: 1em;">
-    Your reading companion with a responsive and modern UI.
-  </p>
-</div>
-
+Your reading companion with a responsive and modern UI.
 
 ## Table of Contents
 
