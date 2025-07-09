@@ -1,7 +1,6 @@
 <div align="center">
 
 # KOShelf
-######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
 <p>
   <a href="https://github.com/paviro/koshelf/stargazers">
@@ -14,6 +13,9 @@
     <img src="https://img.shields.io/github/license/paviro/koshelf" alt="License" />
   </a>
 </p>
+
+######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+
 
 </div>
 
