@@ -1,14 +1,43 @@
 # KOShelf
-![Books](https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26)
-![Book Details](https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d)
-![Statistics](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
-![Calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
 
+<p align="center">
+  <a href="https://github.com/paviro/koshelf/stargazers">
+    <img src="https://img.shields.io/github/stars/paviro/koshelf?style=social" alt="Stars" />
+  </a>
+  <a href="https://github.com/paviro/koshelf/releases/latest">
+    <img src="https://img.shields.io/github/v/release/paviro/koshelf?label=release" alt="Latest Release" />
+  </a>
+  <a href="https://github.com/paviro/koshelf/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/paviro/koshelf" alt="License" />
+  </a>
+</p>
 
-A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+<p align="center">
+  <strong>
+    A Rust CLI tool that generates a beautiful static website from your KoReader library,<br>
+    showcasing your ebook collection with highlights, annotations, and reading progress.
+  </strong>
+</p>
+
+## Screenshots
+
+<div align="center" style="border: 1px solid #e1e4e8; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 16px; background: #f9f9f9; margin-bottom: 2em;">
+
+  <img src="https://github.com/user-attachments/assets/ad096bc9-c53a-40eb-9de9-06085e854a26" alt="Library overview" width="45%" />
+  <img src="https://github.com/user-attachments/assets/44113be0-aa19-4018-b864-135ddb067a9d" alt="Book details" width="45%" />
+  <br/>
+  <img src="https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de" alt="Statistics dashboard" width="45%" />
+  <img src="https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323" alt="Reading calendar" width="45%" />
+
+  <p style="color: #555; font-size: 1.1em; margin-top: 1em;">
+    Your reading companion with a responsive and modern UI.
+  </p>
+</div>
+
 
 ## Table of Contents
 
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Installation](#installation)
   - [Home Assistant](#home-assistant)
@@ -33,8 +62,7 @@ A Rust CLI tool that generates a beautiful static website from your KoReader lib
 
 - 📚 **Book Library Overview**: Displays your currently reading, completed and unread books (EPUBs only!)
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
-- 📝 **Annotations & Highlights**: Shows all your KoReader highlights and notes with elegant formatting
-- 📖 **Book Details**: Individual pages for each book with metadata and organized annotations
+- 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page with elegant formatting
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
 - 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
 - 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
