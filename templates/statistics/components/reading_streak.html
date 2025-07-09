@@ -85,16 +85,18 @@
             <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start bg-gradient-to-br from-primary-50 to-primary-100/80 dark:from-primary-800/40 dark:to-primary-900/30 border border-primary-200/80 dark:border-primary-700/30 rounded-l-xl border-r-0 p-3 md:p-4 lg:p-6 xl:p-6">
                 <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
                     <div class="flex items-baseline justify-center lg:justify-start mb-2 lg:mb-0 lg:mr-2">
-                        <span class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-primary-600 dark:text-white drop-shadow-sm leading-none">{{ reading_stats.current_streak.days }}</span>
-                        <span class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-500 dark:text-primary-100 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{% if reading_stats.current_streak.days == 1 %}day{% else %}days{% endif %}</span>
+                        <span id="currentStreakDays" class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-primary-600 dark:text-white drop-shadow-sm leading-none"
+                              data-last-streak-date="{% match reading_stats.current_streak.end_date %}{% when Some with (end_date) %}{{ end_date }}{% when None %}{% endmatch %}">{{ reading_stats.current_streak.days }}</span>
+                        <span id="currentStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-500 dark:text-primary-100 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{% if reading_stats.current_streak.days == 1 %}day{% else %}days{% endif %}</span>
                     </div>
                     <div class="flex items-center lg:ml-6">
                         <div>
                             <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-primary-600 dark:text-primary-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">Current Streak</div>
                             {% match reading_stats.current_streak.date_range_display() %}
                             {% when Some with (date_range) %}
-                                <div class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-100/80">{{ date_range }}</div>
+                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-100/80">{{ date_range }}</div>
                             {% when None %}
+                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-100/80"></div>
                             {% endmatch %}
                         </div>
                     </div>
