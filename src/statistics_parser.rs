@@ -72,6 +72,7 @@ impl StatisticsParser {
                 md5: row.get(7)?,
                 total_read_time: row.get(8)?,
                 total_read_pages: row.get(9)?,
+                completions: None, // Will be populated later by completion detection
             })
         })?;
         
@@ -115,7 +116,9 @@ impl StatisticsParser {
     }
     
     /// Calculate reading statistics based on the parsed data
-    pub fn calculate_stats(stats_data: &StatisticsData) -> crate::models::ReadingStats {
+    pub fn calculate_stats(stats_data: &mut StatisticsData) -> crate::models::ReadingStats {
         StatisticsCalculator::calculate_stats(stats_data)
     }
+    
+
 } 

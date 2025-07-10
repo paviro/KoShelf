@@ -65,10 +65,12 @@ impl SiteGenerator {
             Vec::new()
         };
         
-        // Load statistics if path is provided
-        let stats_data = if let Some(ref stats_path) = self.statistics_db_path {
+        // After loading statistics if path is provided
+        let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
-                Some(StatisticsParser::parse(stats_path)?)
+                let mut data = StatisticsParser::parse(stats_path)?;
+                crate::statistics::StatisticsCalculator::populate_completions(&mut data);
+                Some(data)
             } else {
                 info!("Statistics database not found: {:?}", stats_path);
                 None
@@ -85,16 +87,16 @@ impl SiteGenerator {
         
         // Generate book covers
         self.generate_covers(&books).await?;
-        
+
         // Generate individual book pages
-        self.generate_book_pages(&books, &stats_data).await?;
+        self.generate_book_pages(&books, &mut stats_data).await?;
         
         if !books.is_empty() {
             // Generate book list page at index.html
             self.generate_book_list(&books).await?;
         }
         
-        if let Some(ref stats_data) = stats_data {
+        if let Some(ref mut stats_data) = stats_data {
             // Generate statistics page (render to root if no books)
             self.generate_statistics_page(stats_data, books.is_empty()).await?;
             
@@ -358,27 +360,24 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_book_pages(&self, books: &[Book], stats_data: &Option<StatisticsData>) -> Result<()> {
+    async fn generate_book_pages(&self, books: &[Book], stats_data: &mut Option<StatisticsData>) -> Result<()> {
         info!("Generating book detail pages...");
         
         for book in books {
             // Try to find matching statistics by MD5
-            let book_stats = if let Some(stats) = stats_data {
+            let book_stats = stats_data.as_ref().and_then(|stats| {
                 // Try to match using the partial_md5_checksum from KoReader metadata
                 book.koreader_metadata
                     .as_ref()
                     .and_then(|metadata| metadata.partial_md5_checksum.as_ref())
                     .and_then(|md5| stats.stats_by_md5.get(md5))
                     .cloned()
-            } else {
-                None
-            };
+            });
             
             // Calculate session statistics if we have book stats
-            let session_stats = if let (Some(stats), Some(book_stat)) = (stats_data, &book_stats) {
-                Some(book_stat.calculate_session_stats(&stats.page_stats))
-            } else {
-                None
+            let session_stats = match (stats_data.as_ref(), &book_stats) {
+                (Some(stats), Some(book_stat)) => Some(book_stat.calculate_session_stats(&stats.page_stats)),
+                _ => None,
             };
             
             let template = BookTemplate {
@@ -434,7 +433,8 @@ impl SiteGenerator {
                 "annotations": book.koreader_metadata.as_ref().map(|m| &m.annotations).unwrap_or(&vec![]),
                 "statistics": {
                     "book_stats": book_stats,
-                    "session_stats": session_stats
+                    "session_stats": session_stats,
+                    "completions": book_stats.as_ref().and_then(|stats| stats.completions.as_ref())
                 },
                 "export_info": {
                     "generated_by": "KoShelf",
@@ -449,14 +449,14 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_statistics_page(&self, stats_data: &StatisticsData, render_to_root: bool) -> Result<()> {
+    async fn generate_statistics_page(&self, stats_data: &mut StatisticsData, render_to_root: bool) -> Result<()> {
         if render_to_root {
             info!("Generating statistics page at root index...");
         } else {
             info!("Generating statistics page...");
         }
         
-        // Calculate reading stats from the parsed data
+        // Calculate reading stats from the parsed data and populate completions
         let reading_stats = StatisticsParser::calculate_stats(stats_data);
         
         // Export daily activity data grouped by year as separate JSON files and get available years
@@ -577,7 +577,7 @@ impl SiteGenerator {
         items
     }
     
-    async fn generate_calendar_page(&self, stats_data: &StatisticsData, books: &[Book]) -> Result<()> {
+    async fn generate_calendar_page(&self, stats_data: &mut StatisticsData, books: &[Book]) -> Result<()> {
         info!("Generating calendar page...");
         
         // Generate per-month calendar payloads (events + books + stats)

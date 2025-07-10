@@ -12,9 +12,11 @@ mod web_server;
 mod file_watcher;
 mod book_scanner;
 mod utils;
+mod session_calculator;
 mod statistics_parser;
 mod statistics;
 mod calendar;
+mod read_completion_analyzer;
 
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
