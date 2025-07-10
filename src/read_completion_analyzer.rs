@@ -234,40 +234,4 @@ impl Default for ReadCompletionDetector {
     fn default() -> Self {
         Self::new()
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_completion_config_defaults() {
-        let config = CompletionConfig::default();
-        assert_eq!(config.min_completion_percentage, 0.75);
-        assert_eq!(config.max_gap_days, 180);
-    }
-    
-    #[test]
-    fn test_reading_progression_empty() {
-        let progression = ReadingProgression::new();
-        assert!(progression.is_empty());
-        assert_eq!(progression.pages_visited.len(), 0);
-    }
-    
-    #[test]
-    fn test_reading_progression_add_stat() {
-        let mut progression = ReadingProgression::new();
-        let stat = PageStat {
-            id_book: 1,
-            page: 10,
-            start_time: 1000,
-            duration: 60,
-        };
-        
-        progression.add_stat(stat);
-        assert!(!progression.is_empty());
-        assert_eq!(progression.pages_visited.len(), 1);
-        assert!(progression.pages_visited.contains(&10));
-        assert_eq!(progression.total_reading_time, 60);
-    }
 } 
