@@ -58,8 +58,25 @@
                                 </svg>
                             </div>
                             <div>
-                                <div class="text-lg font-bold text-gray-900 dark:text-white">Complete</div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Reading Status</div>
+                                <div class="text-lg font-bold text-gray-900 dark:text-white">Completed</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">
+                                    {% match book_stats %}
+                                    {% when Some with (book_stat) %}
+                                        {% match book_stat.completions %}
+                                        {% when Some with (completions) %}
+                                            {% match completions.last_completion_date %}
+                                            {% when Some with (date) %}
+                                                Last: {{ date }}
+                                            {% when None %}
+                                                Reading Progress
+                                            {% endmatch %}
+                                        {% when None %}
+                                            Reading Progress
+                                        {% endmatch %}
+                                    {% when None %}
+                                        Reading Progress
+                                    {% endmatch %}
+                                </div>
                             </div>
                         </div>
                     </div>

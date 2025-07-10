@@ -167,6 +167,113 @@
             </div>
         </div>
         
+        <!-- Reading Completions Section -->
+        {% match book_stats %}
+        {% when Some with (book_stat) %}
+            {% match book_stat.completions %}
+            {% when Some with (completions) %}
+                {% if completions.total_completions > 0 %}
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <div class="w-2 h-5 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full mr-3"></div>
+                        Reading Completions
+                    </h3>
+                    
+                    <!-- Individual Completions List -->
+                    <div class="space-y-3">
+                        {% for completion in completions.entries %}
+                        <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-primary-500/10 to-primary-600/10 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                            {{ completion.date_range_display() }}
+                                        </div>
+                                        <div class="flex flex-wrap items-center mt-1 gap-2 text-xs text-gray-500 dark:text-dark-400">
+                                            <!-- Total reading time -->
+                                            <span class="flex items-center whitespace-nowrap">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                {% let minutes = completion.reading_time / 60 %}
+                                                {% if minutes >= 60 %}
+                                                    {% let hours = minutes / 60 %}
+                                                    {% let remaining_mins = minutes % 60 %}
+                                                    {{ hours }}h {{ remaining_mins }}m
+                                                {% else %}
+                                                    {{ minutes }}m
+                                                {% endif %}
+                                            </span>
+
+                                            <!-- Session count -->
+                                            <span class="flex items-center whitespace-nowrap">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                                </svg>
+                                                {{ completion.session_count }} sessions
+                                            </span>
+
+                                            <!-- Average session length -->
+                                            {% match completion.avg_session_duration() %}
+                                            {% when Some with (avg_dur) %}
+                                            <span class="flex items-center whitespace-nowrap">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                {% let minutes = avg_dur / 60 %}
+                                                {% if minutes >= 60 %}
+                                                    {% let hours = minutes / 60 %}
+                                                    {% let remaining_mins = minutes % 60 %}
+                                                    {{ hours }}h {{ remaining_mins }}m/avg session
+                                                {% else %}
+                                                    {{ minutes }}m/avg session
+                                                {% endif %}
+                                            </span>
+                                            {% when None %}
+                                            {% endmatch %}
+
+                                            <!-- Average speed -->
+                                            {% match completion.average_speed() %}
+                                            {% when Some with (speed) %}
+                                            <span class="flex items-center whitespace-nowrap">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                </svg>
+                                                {{ "{:.1}"|format(speed) }} pph
+                                            </span>
+                                            {% when None %}
+                                            {% endmatch %}
+
+                                            <!-- Calendar length -->
+                                            {% match completion.calendar_length_days() %}
+                                            {% when Some with (days) %}
+                                            <span class="flex items-center whitespace-nowrap">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                                {{ days }} days
+                                            </span>
+                                            {% when None %}
+                                            {% endmatch %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% when None %}
+            {% endmatch %}
+        {% when None %}
+        {% endmatch %}
+        
         <!-- Info Footer -->
         <div class="mt-6 p-4 bg-primary-50 dark:bg-dark-800/30 rounded-lg border border-primary-200 dark:border-dark-700/50">
             <div class="flex items-center text-sm text-gray-500 dark:text-dark-400">

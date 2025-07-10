@@ -2,6 +2,8 @@ use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc, Local};
 use std::collections::HashMap;
 
 use crate::models::*;
+use crate::read_completion_analyzer::{ReadCompletionDetector, CompletionConfig};
+use crate::session_calculator;
 
 /// Trait for calculating book session statistics
 pub trait BookStatistics {
@@ -16,52 +18,15 @@ impl BookStatistics for StatBook {
             .filter(|stat| stat.id_book == self.id && stat.duration > 0)
             .collect();
 
-        // Calculate actual reading sessions by grouping consecutive page reads
-        // Pages read within 30 seconds of each other are considered the same session
-        let (session_count, average_session_duration, longest_session_duration) = if !book_sessions.is_empty() {
-            let mut sessions: Vec<i64> = Vec::new();
-            let mut current_session_duration = 0;
-            let mut last_end_time = 0;
-            let gap_threshold = 300; // seconds
-            
-            // Sort sessions by start time
-            let mut sorted_sessions = book_sessions.clone();
-            sorted_sessions.sort_by_key(|s| s.start_time);
-            
-            for session in sorted_sessions {
-                let session_start = session.start_time;
-                let session_end = session.start_time + session.duration;
-                
-                if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
-                    // Continue the current session
-                    current_session_duration += session.duration;
-                } else {
-                    // Start a new session
-                    if current_session_duration > 0 {
-                        sessions.push(current_session_duration);
-                    }
-                    current_session_duration = session.duration;
-                }
-                last_end_time = session_end;
-            }
-            
-            // Don't forget the last session
-            if current_session_duration > 0 {
-                sessions.push(current_session_duration);
-            }
-            
-            let session_count = sessions.len() as i64;
-            let longest_session = sessions.iter().max().copied();
-            let average_session = if !sessions.is_empty() {
-                let total: i64 = sessions.iter().sum();
-                Some(total / session_count)
-            } else {
-                None
-            };
-            
-            (session_count, average_session, longest_session)
+        // Calculate session statistics using shared helper
+        let book_stats: Vec<PageStat> = book_sessions.iter().cloned().cloned().collect();
+        let durations = session_calculator::session_durations(&book_stats);
+        let session_count = durations.len() as i64;
+        let longest_session_duration = durations.iter().max().copied();
+        let average_session_duration = if !durations.is_empty() {
+            Some(durations.iter().sum::<i64>() / session_count)
         } else {
-            (0, None, None)
+            None
         };
 
         let last_read_date = book_sessions
@@ -103,14 +68,14 @@ impl BookStatistics for StatBook {
             reading_speed,
         }
     }
-}
+} 
 
 /// Main statistics calculator
 pub struct StatisticsCalculator;
 
 impl StatisticsCalculator {
-    /// Calculate reading statistics based on the parsed data
-    pub fn calculate_stats(stats_data: &StatisticsData) -> ReadingStats {
+    /// Calculate reading statistics based on the parsed data and populate completions
+    pub fn calculate_stats(stats_data: &mut StatisticsData) -> ReadingStats {
         // Initialize overall stats
         let mut total_read_time = 0;
         let mut total_page_reads = 0;
@@ -165,7 +130,10 @@ impl StatisticsCalculator {
         let most_pages_in_day = daily_page_reads.values().cloned().max().unwrap_or(0);
         
         // Calculate overall session statistics
-        let (average_session_duration, longest_session_duration) = Self::session_metrics(&stats_data.page_stats);
+        let (average_session_duration, longest_session_duration) = session_calculator::session_metrics(&stats_data.page_stats);
+        
+        // Calculate completion statistics
+        let (total_completions, books_completed, most_completions) = Self::calculate_completion_stats(stats_data);
         
         // Convert weekly stats to WeeklyStats structs
         let weeks = Self::build_weekly_stats(weekly_stats);
@@ -183,6 +151,9 @@ impl StatisticsCalculator {
             most_pages_in_day,
             average_session_duration,
             longest_session_duration,
+            total_completions,
+            books_completed,
+            most_completions,
             longest_streak,
             current_streak,
             weeks,
@@ -203,7 +174,7 @@ impl StatisticsCalculator {
             let end_date = start_date_approx + Duration::days(6); // Sunday
             
             // Calculate session statistics for this week
-            let (average_session_duration, longest_session_duration) = Self::session_metrics(&page_stats);
+            let (average_session_duration, longest_session_duration) = session_calculator::session_metrics(&page_stats);
             
             let weekly_stat = WeeklyStats {
                 start_date: start_date_approx.format("%Y-%m-%d").to_string(),
@@ -223,77 +194,8 @@ impl StatisticsCalculator {
         weeks.sort_by(|a, b| b.start_date.cmp(&a.start_date));
         weeks
     }
-    
-    /// Internal helper: Given a slice of `&PageStat` that all belong to the same
-    /// book and are already sorted by `start_time`, compute the duration (in
-    /// seconds) of each reading session. A new session starts whenever the gap
-    /// between two consecutive page reads exceeds the `gap_threshold`.
-    fn compute_session_durations(sorted_stats: &[&PageStat], gap_threshold: i64) -> Vec<i64> {
-        let mut sessions: Vec<i64> = Vec::new();
-        let mut current_session_duration = 0;
-        let mut last_end_time = 0;
 
-        for stat in sorted_stats {
-            let session_start = stat.start_time;
-            let session_end = stat.start_time + stat.duration;
-
-            if last_end_time > 0 && session_start - last_end_time <= gap_threshold {
-                // Continue the current session
-                current_session_duration += stat.duration;
-            } else {
-                // Start a new session
-                if current_session_duration > 0 {
-                    sessions.push(current_session_duration);
-                }
-                current_session_duration = stat.duration;
-            }
-            last_end_time = session_end;
-        }
-
-        // Push the final session (if any)
-        if current_session_duration > 0 {
-            sessions.push(current_session_duration);
-        }
-
-        sessions
-    }
-
-    /// Internal helper: Aggregate session durations across all books contained
-    /// in `page_stats`.
-    fn aggregate_session_durations(page_stats: &[PageStat], gap_threshold: i64) -> Vec<i64> {
-        // Group stats by book ID first
-        let mut sessions_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
-        for stat in page_stats.iter().filter(|s| s.duration > 0) {
-            sessions_by_book.entry(stat.id_book).or_default().push(stat);
-        }
-
-        // Collect sessions across all books
-        let mut all_sessions: Vec<i64> = Vec::new();
-        for stats in sessions_by_book.values_mut() {
-            // Sort chronologically
-            stats.sort_by_key(|s| s.start_time);
-            let mut durations = Self::compute_session_durations(stats, gap_threshold);
-            all_sessions.append(&mut durations);
-        }
-
-        all_sessions
-    }
-
-    /// Internal helper: Calculate `(average_session_duration, longest_session_duration)`
-    /// for the provided `page_stats` slice. Returns `(None, None)` when no valid
-    /// sessions are present.
-    fn session_metrics(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
-        let sessions = Self::aggregate_session_durations(page_stats, 60);
-        if sessions.is_empty() {
-            return (None, None);
-        }
-
-        let total: i64 = sessions.iter().sum();
-        let average = Some(total / sessions.len() as i64);
-        let longest = sessions.iter().max().copied();
-
-        (average, longest)
-    }
+    // session_metrics moved to session_calculator
 
     /// Build daily activity data from daily stats maps
     fn build_daily_activity(
@@ -404,5 +306,44 @@ impl StatisticsCalculator {
         };
         
         (longest_streak_info, current_streak_info)
+    }
+    
+    /// Populate completion data for all books in the statistics data
+    pub fn populate_completions(stats_data: &mut StatisticsData) {
+        let detector = ReadCompletionDetector::with_config(CompletionConfig::default());
+        let all_completions = detector.detect_all_completions(stats_data);
+        
+        // Update each book with its completion data
+        for book in &mut stats_data.books {
+            if let Some(completions) = all_completions.get(&book.md5) {
+                book.completions = Some(completions.clone());
+            }
+        }
+        
+        // Also update the stats_by_md5 map for consistency
+        for (md5, book) in &mut stats_data.stats_by_md5 {
+            if let Some(completions) = all_completions.get(md5) {
+                book.completions = Some(completions.clone());
+            }
+        }
+    }
+    
+    /// Calculate completion statistics across all books
+    fn calculate_completion_stats(stats_data: &StatisticsData) -> (i64, i64, i64) {
+        let mut total_completions = 0i64;
+        let mut books_completed = 0i64;
+        let mut most_completions = 0i64;
+        
+        for book in &stats_data.books {
+            if let Some(ref completions) = book.completions {
+                if completions.total_completions > 0 {
+                    total_completions += completions.total_completions as i64;
+                    books_completed += 1;
+                    most_completions = most_completions.max(completions.total_completions as i64);
+                }
+            }
+        }
+        
+        (total_completions, books_completed, most_completions)
     }
 } 
