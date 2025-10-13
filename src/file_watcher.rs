@@ -166,11 +166,14 @@ impl FileWatcher {
     
     fn event_affects_relevant_files(&self, event: &Event) -> bool {
         event.paths.iter().any(|path| {
-            let extension = path.extension().and_then(|s| s.to_str());
+		let extension = path
+			.extension()
+			.and_then(|s| s.to_str())
+			.map(|ext| ext.to_ascii_lowercase());
             let filename = path.file_name().and_then(|s| s.to_str());
             
             // Check for EPUB files and metadata files
-            if extension == Some("epub") || filename == Some("metadata.epub.lua") {
+		if extension.as_deref() == Some("epub") || filename == Some("metadata.epub.lua") {
                 return true;
             }
             
@@ -198,8 +201,13 @@ impl FileWatcher {
             
             match &event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) => {
-                    // Check EPUB files
-                    if path.extension().and_then(|s| s.to_str()) == Some("epub") {
+					// Check EPUB files
+					if path
+						.extension()
+						.and_then(|s| s.to_str())
+						.map(|ext| ext.eq_ignore_ascii_case("epub"))
+						.unwrap_or(false)
+					{
                         info!("EPUB file modified: {:?}", path);
                     }
                     
@@ -223,8 +231,13 @@ impl FileWatcher {
                     }
                 }
                 EventKind::Remove(_) => {
-                    // Check EPUB files
-                    if path.extension().and_then(|s| s.to_str()) == Some("epub") {
+					// Check EPUB files
+					if path
+						.extension()
+						.and_then(|s| s.to_str())
+						.map(|ext| ext.eq_ignore_ascii_case("epub"))
+						.unwrap_or(false)
+					{
                         info!("EPUB file removed: {:?}", path);
                     }
                     
