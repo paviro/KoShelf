@@ -20,7 +20,12 @@ pub async fn scan_books(books_path: &PathBuf) -> Result<Vec<Book>> {
         let entry = entry?;
         let path = entry.path();
         
-        if path.extension().and_then(|s| s.to_str()) == Some("epub") {
+		if path
+			.extension()
+			.and_then(|s| s.to_str())
+			.map(|ext| ext.eq_ignore_ascii_case("epub"))
+			.unwrap_or(false)
+		{
             debug!("Processing: {:?}", path);
             
             // Parse epub
