@@ -25,7 +25,7 @@ tempfile = "3.20.0"
 zip = "4.1.0"
 # Image processing
 image = "0.25.6"
-webp = "0.3.0"
+webp = "0.3.1"
 # Lua parsing
 mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
 # Serialization
