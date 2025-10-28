@@ -3,7 +3,8 @@ use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 use log::{info, warn, debug};
 use crate::models::{StatBook, PageStat, StatisticsData};
-use crate::statistics::{StatisticsCalculator};
+use crate::statistics::StatisticsCalculator;
+use crate::time_config::TimeConfig;
 use std::fs;
 use tempfile::TempDir;
 
@@ -116,8 +117,8 @@ impl StatisticsParser {
     }
     
     /// Calculate reading statistics based on the parsed data
-    pub fn calculate_stats(stats_data: &mut StatisticsData) -> crate::models::ReadingStats {
-        StatisticsCalculator::calculate_stats(stats_data)
+    pub fn calculate_stats(stats_data: &mut StatisticsData, time_config: &TimeConfig) -> crate::models::ReadingStats {
+        StatisticsCalculator::calculate_stats(stats_data, time_config)
     }
     
 

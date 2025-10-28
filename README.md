@@ -164,14 +164,17 @@ KoShelf can operate in several modes:
 
 ### Command Line Options
 
-- `--books-path, -b`: Path to your folder containing EPUB files and KoReader metadata (optional if --statistics-db is provided)
-- `--statistics-db, -s`: Path to the statistics.sqlite3 file for additional reading stats (optional if --books-path is provided)
-- `--output, -o`: Output directory for the generated site
-- `--watch, -w`: Enable file watching with static output (requires --output)
-- `--title, -t`: Site title (default: "KoShelf")
-- `--include-unread`: Include unread books (EPUBs without KoReader metadata)
-- `--port, -p`: Port for web server mode (default: 3000)
+- `-b, --books-path`: Path to your folder containing EPUB files and KoReader metadata (optional if `--statistics-db` is provided)
+- `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--books-path` is provided)
+- `-o, --output`: Output directory for the generated site
+- `-p, --port`: Port for web server mode (default: 3000)
+- `-w, --watch`: Enable file watching with static output (requires `--output`)
+- `-t, --title`: Site title (default: "KoShelf")
 - `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
+- `--include-unread`: Include unread books (EPUBs without KoReader metadata)
+- `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
+- `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
+- `--github`: Print GitHub repository URL
 
 ### Example
 
@@ -180,19 +183,22 @@ KoShelf can operate in several modes:
 ./koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
 
 # Generate site with statistics and unread books included
-./koshelf -b ~/Books -o ~/my-reading-site --s ~/KOReaderSettings/statistics.sqlite3 --include-unread
+./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
 # Start web server with live file watching and statistics
-./koshelf -b ~/Books --s ~/KOReaderSettings/statistics.sqlite3 -p 8080
+./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -p 8080
 
 # Generate static site with file watching and statistics
-./koshelf -books-path ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
+./koshelf --books-path ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
 
 # Generate site with custom heatmap color scaling (2 hours = highest intensity)
 ./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 2h
 
 # Generate site with custom heatmap color scaling (1.5 hours = highest intensity)
 ./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
+
+# Generate site with explicit timezone and non-midnight day start (good for night owls)
+./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --timezone Australia/Sydney --day-start-time 03:00
 ```
 
 ## KoReader Setup

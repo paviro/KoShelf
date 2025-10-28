@@ -1,9 +1,9 @@
-use chrono::{DateTime, Local, Utc};
 use std::collections::{HashMap, HashSet};
 use log::{debug, info};
 
 use crate::models::*;
 use crate::session_calculator;
+use crate::time_config::TimeConfig;
 
 /// Configuration for read completion detection
 #[derive(Debug, Clone)]
@@ -70,18 +70,11 @@ impl ReadingProgression {
 /// Main detector for reading completions
 pub struct ReadCompletionDetector {
     config: CompletionConfig,
+    time_config: TimeConfig,
 }
 
 impl ReadCompletionDetector {
-    pub fn new() -> Self {
-        Self {
-            config: CompletionConfig::default(),
-        }
-    }
-    
-    pub fn with_config(config: CompletionConfig) -> Self {
-        Self { config }
-    }
+    pub fn with_config_and_time(config: CompletionConfig, time_config: TimeConfig) -> Self { Self { config, time_config } }
     
     /// Detect reading completions for a single book
     pub fn detect_completions(&self, book: &StatBook, page_stats: &[PageStat]) -> BookCompletions {
@@ -187,8 +180,8 @@ impl ReadCompletionDetector {
         let session_count = session_calculator::session_count(&progression.stats);
         
         // Convert timestamps to dates
-        let start_date = self.timestamp_to_date(progression.start_time);
-        let end_date = self.timestamp_to_date(progression.end_time);
+        let start_date = self.time_config.format_date(progression.start_time);
+        let end_date = self.time_config.format_date(progression.end_time);
         
         debug!("Valid completion found: {:.1}% completion, {} sessions, {} pages", 
             completion_percentage * 100.0, session_count, pages_covered);
@@ -200,16 +193,6 @@ impl ReadCompletionDetector {
             session_count,
             pages_covered,
         ))
-    }
-    
-    /// Convert Unix timestamp to ISO date string
-    fn timestamp_to_date(&self, timestamp: i64) -> String {
-        DateTime::<Utc>::from_timestamp(timestamp, 0)
-            .map(|utc_dt| {
-                let local_dt = utc_dt.with_timezone(&Local);
-                local_dt.format("%Y-%m-%d").to_string()
-            })
-            .unwrap_or_else(|| "1970-01-01".to_string())
     }
     
     /// Detect completions for all books in the statistics data
@@ -230,8 +213,4 @@ impl ReadCompletionDetector {
     }
 }
 
-impl Default for ReadCompletionDetector {
-    fn default() -> Self {
-        Self::new()
-    }
-} 
+ 
