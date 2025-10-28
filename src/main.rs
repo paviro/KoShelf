@@ -17,49 +17,59 @@ mod statistics_parser;
 mod statistics;
 mod calendar;
 mod read_completion_analyzer;
+mod time_config;
 
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
+use crate::time_config::TimeConfig;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Path to the folder containing epub files and KoReader metadata (optional if statistics_db is provided)
-    #[arg(short, long)]
+    #[arg(short, long, display_order = 1)]
     books_path: Option<PathBuf>,
 
     /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
-    #[arg(short, long)]
+    #[arg(short, long, display_order = 2)]
     statistics_db: Option<PathBuf>,
     
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
-    #[arg(short, long)]
+    #[arg(short, long, display_order = 3)]
     output: Option<PathBuf>,
 
     /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
-    #[arg(long, default_value = "auto")]
+    #[arg(long, default_value = "auto", display_order = 7)]
     heatmap_scale_max: String,
     
     /// Enable file watching with static output (requires --output)
-    #[arg(short, long, default_value = "false")]
+    #[arg(short, long, default_value = "false", display_order = 5)]
     watch: bool,
     
     /// Site title
-    #[arg(short, long, default_value = "KoShelf")]
+    #[arg(short, long, default_value = "KoShelf", display_order = 6)]
     title: String,
     
     /// Include unread books (EPUBs without KoReader metadata) in the generated site
-    #[arg(long, default_value = "false")]
+    #[arg(long, default_value = "false", display_order = 8)]
     include_unread: bool,
     
     /// Port for web server mode (default: 3000)
-    #[arg(short, long, default_value = "3000")]
+    #[arg(short, long, default_value = "3000", display_order = 4)]
     port: u16,
     
     /// Print GitHub repository URL
-    #[arg(long)]
+    #[arg(long, display_order = 11)]
     github: bool,
+
+    /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
+    #[arg(long, display_order = 9)]
+    timezone: Option<String>,
+
+    /// Logical day start time (HH:MM). Defaults to 00:00.
+    #[arg(long, value_name = "HH:MM", display_order = 10)]
+    day_start_time: Option<String>,
 }
 
 // Parse time format strings like "1h", "1h30m", "45min" into seconds
@@ -169,6 +179,9 @@ async fn main() -> Result<()> {
     let heatmap_scale_max = parse_time_to_seconds(&cli.heatmap_scale_max)
         .with_context(|| format!("Invalid heatmap-scale-max format: {}", cli.heatmap_scale_max))?;
 
+    // Build time configuration from CLI
+    let time_config = TimeConfig::from_cli(&cli.timezone, &cli.day_start_time)?;
+
     // Determine output directory
     let (output_dir, is_static_site) = match &cli.output {
         Some(output_dir) => (output_dir.clone(), !cli.watch),
@@ -186,6 +199,7 @@ async fn main() -> Result<()> {
         cli.books_path.clone(),
         cli.statistics_db.clone(),
         heatmap_scale_max,
+        time_config.clone(),
     );
     
     // Generate initial site
@@ -207,6 +221,7 @@ async fn main() -> Result<()> {
             cli.include_unread,
             cli.statistics_db.clone(),
             heatmap_scale_max,
+            time_config.clone(),
         ).await?;
         
         // Run file watcher
@@ -222,6 +237,7 @@ async fn main() -> Result<()> {
             cli.include_unread,
             cli.statistics_db.clone(),
             heatmap_scale_max,
+            time_config.clone(),
         ).await?;
 
         // Start web server

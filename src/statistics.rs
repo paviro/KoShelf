@@ -1,18 +1,19 @@
-use chrono::{NaiveDate, Duration, Datelike, DateTime, Utc, Local};
+use chrono::{NaiveDate, Duration, Datelike};
 use std::collections::HashMap;
 
 use crate::models::*;
 use crate::read_completion_analyzer::{ReadCompletionDetector, CompletionConfig};
 use crate::session_calculator;
+use crate::time_config::TimeConfig;
 
 /// Trait for calculating book session statistics
 pub trait BookStatistics {
-    fn calculate_session_stats(&self, page_stats: &[PageStat]) -> BookSessionStats;
+    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig) -> BookSessionStats;
 }
 
 impl BookStatistics for StatBook {
     /// Calculate additional statistics for this book from page stats
-    fn calculate_session_stats(&self, page_stats: &[PageStat]) -> BookSessionStats {
+    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig) -> BookSessionStats {
         let book_sessions: Vec<&PageStat> = page_stats
             .iter()
             .filter(|stat| stat.id_book == self.id && stat.duration > 0)
@@ -33,20 +34,14 @@ impl BookStatistics for StatBook {
             .iter()
             .map(|s| s.start_time)
             .max()
-            .and_then(|timestamp| {
-                chrono::DateTime::<chrono::Utc>::from_timestamp(timestamp, 0)
-                    .map(|utc_dt| {
-                        // Convert UTC to local timezone
-                        let local_dt = utc_dt.with_timezone(&Local);
-                        let current_year = Local::now().year();
-                        let date_year = local_dt.year();
-                        
-                        if date_year == current_year {
-                            local_dt.format("%b %d").to_string()
-                        } else {
-                            local_dt.format("%b %d %Y").to_string()
-                        }
-                    })
+            .map(|timestamp| {
+                let date = time_config.date_for_timestamp(timestamp);
+                let current_year = time_config.today_date().year();
+                if date.year() == current_year {
+                    date.format("%b %d").to_string()
+                } else {
+                    date.format("%b %d %Y").to_string()
+                }
             });
 
         let reading_speed = if let (Some(total_time), Some(total_pages)) = 
@@ -75,7 +70,7 @@ pub struct StatisticsCalculator;
 
 impl StatisticsCalculator {
     /// Calculate reading statistics based on the parsed data and populate completions
-    pub fn calculate_stats(stats_data: &mut StatisticsData) -> ReadingStats {
+    pub fn calculate_stats(stats_data: &mut StatisticsData, time_config: &TimeConfig) -> ReadingStats {
         // Initialize overall stats
         let mut total_read_time = 0;
         let mut total_page_reads = 0;
@@ -98,26 +93,17 @@ impl StatisticsCalculator {
             total_read_time += stat.duration;
             total_page_reads += 1;
             
-            // Convert unix timestamp to local date
-            // Using the approach that handles timestamps safely
-            let date_time = DateTime::<Utc>::from_timestamp(stat.start_time, 0)
-                .map(|utc_dt| {
-                    // Convert UTC to local timezone, then get naive local time
-                    utc_dt.with_timezone(&Local).naive_local()
-                })
-                .unwrap_or_else(|| {
-                    DateTime::<Utc>::from_timestamp(0, 0).unwrap().with_timezone(&Local).naive_local()
-                });
-            
-            let date_str = date_time.date().format("%Y-%m-%d").to_string();
+            // Convert unix timestamp to logical local date using configured timezone/day start
+            let date = time_config.date_for_timestamp(stat.start_time);
+            let date_str = date.format("%Y-%m-%d").to_string();
             
             // Add to daily stats
             *daily_read_time.entry(date_str.clone()).or_insert(0) += stat.duration;
             *daily_page_reads.entry(date_str).or_insert(0) += 1;
             
             // Add to weekly stats
-            let year = date_time.year();
-            let week = date_time.iso_week().week();
+            let year = date.year();
+            let week = date.iso_week().week();
             let key = (year, week);
             let entry = weekly_stats.entry(key).or_insert((0, 0, Vec::new()));
             entry.0 += stat.duration;
@@ -142,7 +128,7 @@ impl StatisticsCalculator {
         let daily_activity = Self::build_daily_activity(daily_read_time, daily_page_reads);
         
         // Calculate reading streaks
-        let (longest_streak, current_streak) = Self::calculate_streaks(&daily_activity);
+        let (longest_streak, current_streak) = Self::calculate_streaks(&daily_activity, time_config);
         
         ReadingStats {
             total_read_time,
@@ -219,7 +205,7 @@ impl StatisticsCalculator {
     
     /// Calculate reading streaks from daily activity data
     /// Returns (longest_streak_info, current_streak_info)
-    fn calculate_streaks(daily_activity: &[DailyStats]) -> (StreakInfo, StreakInfo) {
+    fn calculate_streaks(daily_activity: &[DailyStats], time_config: &TimeConfig) -> (StreakInfo, StreakInfo) {
         if daily_activity.is_empty() {
             return (
                 StreakInfo::new(0, None, None),
@@ -245,7 +231,7 @@ impl StatisticsCalculator {
         let mut sorted_dates = reading_dates;
         sorted_dates.sort();
         
-        let today = Local::now().naive_local().date();
+        let today = time_config.today_date();
         
         // Find all streaks and their date ranges
         let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new(); // (length, start_date, end_date)
@@ -309,8 +295,8 @@ impl StatisticsCalculator {
     }
     
     /// Populate completion data for all books in the statistics data
-    pub fn populate_completions(stats_data: &mut StatisticsData) {
-        let detector = ReadCompletionDetector::with_config(CompletionConfig::default());
+    pub fn populate_completions(stats_data: &mut StatisticsData, time_config: &TimeConfig) {
+        let detector = ReadCompletionDetector::with_config_and_time(CompletionConfig::default(), time_config.clone());
         let all_completions = detector.detect_all_completions(stats_data);
         
         // Update each book with its completion data

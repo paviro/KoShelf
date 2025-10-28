@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.0.21"
+version = "1.0.22"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
@@ -51,3 +51,4 @@ futures = "0.3"
 # SQLite database access
 rusqlite = { version = "0.36.0", features = ["bundled"] }
 minify-html = "0.15" # 0.16 has an issue with inline js
+chrono-tz = "0.8"

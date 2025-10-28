@@ -10,10 +10,10 @@ use std::path::{Path, PathBuf};
 use log::info;
 use minify_html::{Cfg, minify};
 use std::time::SystemTime;
-use chrono::{Local};
 use webp;
 use futures::future;
 use crate::calendar::CalendarGenerator;
+use crate::time_config::TimeConfig;
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -22,6 +22,7 @@ pub struct SiteGenerator {
     books_path: Option<PathBuf>,
     statistics_db_path: Option<PathBuf>,
     heatmap_scale_max: Option<u32>,
+    time_config: TimeConfig,
 }
 
 impl SiteGenerator {
@@ -31,7 +32,8 @@ impl SiteGenerator {
         include_unread: bool, 
         books_path: Option<PathBuf>, 
         statistics_db_path: Option<PathBuf>,
-        heatmap_scale_max: Option<u32>
+        heatmap_scale_max: Option<u32>,
+        time_config: TimeConfig,
     ) -> Self {
         Self {
             output_dir,
@@ -40,6 +42,7 @@ impl SiteGenerator {
             books_path,
             statistics_db_path,
             heatmap_scale_max,
+            time_config,
         }
     }
 
@@ -69,7 +72,7 @@ impl SiteGenerator {
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
                 let mut data = StatisticsParser::parse(stats_path)?;
-                crate::statistics::StatisticsCalculator::populate_completions(&mut data);
+                crate::statistics::StatisticsCalculator::populate_completions(&mut data, &self.time_config);
                 Some(data)
             } else {
                 info!("Statistics database not found: {:?}", stats_path);
@@ -115,9 +118,7 @@ impl SiteGenerator {
     }
     
     // Get current datetime as formatted string
-    fn get_last_updated(&self) -> String {
-        Local::now().format("%Y-%m-%d %H:%M").to_string()
-    }
+    fn get_last_updated(&self) -> String { self.time_config.now_formatted() }
 
     // Minifies and writes HTML to disk.
     fn write_minify_html<P: AsRef<Path>>(&self, path: P, html: &str) -> Result<()> {
@@ -376,7 +377,7 @@ impl SiteGenerator {
             
             // Calculate session statistics if we have book stats
             let session_stats = match (stats_data.as_ref(), &book_stats) {
-                (Some(stats), Some(book_stat)) => Some(book_stat.calculate_session_stats(&stats.page_stats)),
+                (Some(stats), Some(book_stat)) => Some(book_stat.calculate_session_stats(&stats.page_stats, &self.time_config)),
                 _ => None,
             };
             
@@ -457,7 +458,7 @@ impl SiteGenerator {
         }
         
         // Calculate reading stats from the parsed data and populate completions
-        let reading_stats = StatisticsParser::calculate_stats(stats_data);
+            let reading_stats = StatisticsParser::calculate_stats(stats_data, &self.time_config);
         
         // Export daily activity data grouped by year as separate JSON files and get available years
         let available_years = self.export_daily_activity_by_year(&reading_stats.daily_activity).await?;
@@ -581,7 +582,7 @@ impl SiteGenerator {
         info!("Generating calendar page...");
         
         // Generate per-month calendar payloads (events + books + stats)
-        let calendar_months = CalendarGenerator::generate_calendar_months(stats_data, books);
+        let calendar_months = CalendarGenerator::generate_calendar_months(stats_data, books, &self.time_config);
 
         // ------------------------------------------------------------------
         // Write JSON files --------------------------------------------------

@@ -1,8 +1,9 @@
 /// Provides utilities for generating calendar-related data (events, monthly payloads, stats).
-use chrono::{NaiveDate, Duration, DateTime, Utc, Local};
+use chrono::{NaiveDate, Duration};
 use std::collections::{HashMap, BTreeMap};
 use chrono::Datelike;
 use crate::models::*;
+use crate::time_config::TimeConfig;
 
 pub struct CalendarGenerator;
 
@@ -12,6 +13,7 @@ impl CalendarGenerator {
     pub fn generate_calendar_months(
         stats_data: &StatisticsData,
         books: &[Book],
+        time_config: &TimeConfig,
     ) -> CalendarMonths {
         // Group page stats by book ID first
         let mut book_sessions: HashMap<i64, Vec<&PageStat>> = HashMap::new();
@@ -82,7 +84,7 @@ impl CalendarGenerator {
             let mut sessions_by_day: HashMap<NaiveDate, Vec<&PageStat>> = HashMap::new();
             for session in &sorted_sessions {
                 if let Ok(date) =
-                    NaiveDate::parse_from_str(&Self::timestamp_to_date_string(session.start_time), "%Y-%m-%d")
+                    NaiveDate::parse_from_str(&Self::timestamp_to_date_string(session.start_time, time_config), "%Y-%m-%d")
                 {
                     sessions_by_day.entry(date).or_default().push(session);
                 }
@@ -127,7 +129,7 @@ impl CalendarGenerator {
         //------------------------------------------------------------------
 
         // Pre-compute monthly statistics once.
-        let monthly_stats_map = Self::build_monthly_stats(stats_data);
+        let monthly_stats_map = Self::build_monthly_stats(stats_data, time_config);
 
         let mut months_map: std::collections::BTreeMap<String, CalendarMonthData> =
             std::collections::BTreeMap::new();
@@ -285,23 +287,13 @@ impl CalendarGenerator {
     }
 
     /// Convert Unix timestamp to ISO date string (yyyy-mm-dd)
-    fn timestamp_to_date_string(timestamp: i64) -> String {
-        DateTime::<Utc>::from_timestamp(timestamp, 0)
-            .map(|utc_dt| {
-                // Convert UTC to local timezone, then get date
-                utc_dt
-                    .with_timezone(&Local)
-                    .date_naive()
-                    .format("%Y-%m-%d")
-                    .to_string()
-            })
-            .unwrap_or_else(|| "1970-01-01".to_string())
-    }
+    fn timestamp_to_date_string(timestamp: i64, time_config: &TimeConfig) -> String { time_config.format_date(timestamp) }
 
     /// Build per-month reading statistics from raw `StatisticsData`.
     /// Returns a map keyed by "YYYY-MM" → `MonthlyStats`.
     pub fn build_monthly_stats(
         stats_data: &StatisticsData,
+        time_config: &TimeConfig,
     ) -> std::collections::HashMap<String, MonthlyStats> {
         use std::collections::{HashMap, HashSet};
         use chrono::{Datelike, NaiveDate};
@@ -322,16 +314,8 @@ impl CalendarGenerator {
                 continue;
             }
 
-            // Convert timestamp to local date (yyyy-mm-dd)
-            let local_date = chrono::DateTime::<chrono::Utc>::from_timestamp(ps.start_time, 0)
-                .map(|utc_dt| utc_dt.with_timezone(&chrono::Local))
-                .unwrap_or_else(|| {
-                    chrono::DateTime::<chrono::Utc>::from_timestamp(0, 0)
-                        .unwrap()
-                        .with_timezone(&chrono::Local)
-                })
-                .naive_local()
-                .date();
+            // Convert timestamp to logical local date (yyyy-mm-dd)
+            let local_date = time_config.date_for_timestamp(ps.start_time);
 
             let year_month = format!("{}-{:02}", local_date.year(), local_date.month());
 
