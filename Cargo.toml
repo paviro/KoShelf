@@ -41,7 +41,7 @@ env_logger = "0.11.8"
 # XML parsing
 quick-xml = "0.37.5"
 # HTML sanitization
-ammonia = "4.1.0"
+ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.4"
 tower = "0.4"
