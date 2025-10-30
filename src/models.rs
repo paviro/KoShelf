@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use chrono::Datelike;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap, HashSet};
 
 /// Sanitizes HTML content to only allow safe tags while removing styles and dangerous elements
 pub fn sanitize_html(html: &str) -> String {
@@ -38,14 +38,14 @@ impl Identifier {
         match self.scheme.to_lowercase().as_str() {
             "isbn" => "ISBN".to_string(),
             "google" => "Google Books".to_string(),
-            "amazon" => "Amazon".to_string(),
-            "asin" => "Amazon".to_string(),
-            "mobi-asin" => "Amazon".to_string(),
+            "amazon" | "asin" | "mobi-asin" => "Amazon".to_string(),
             "goodreads" => "Goodreads".to_string(),
             "doi" => "DOI".to_string(),
             "kobo" => "Kobo".to_string(),
             "oclc" => "WorldCat".to_string(),
             "lccn" => "Library of Congress".to_string(),
+            "hardcover" | "hardcover-slug" => "Hardcover".to_string(),
+            "hardcover-edition" => "Hardcover Edition".to_string(),
             _ => self.scheme.clone(),
         }
     }
@@ -60,6 +60,9 @@ impl Identifier {
             "doi" => Some(format!("https://doi.org/{}", self.value)),
             "kobo" => Some(format!("https://www.kobo.com/ebook/{}", self.value)),
             "oclc" => Some(format!("https://www.worldcat.org/oclc/{}", self.value)),
+            // For hardcover identifiers, the value is already normalized to the path segment
+            // e.g., "the-coldest-touch" or "the-coldest-touch/editions/30409163"
+            "hardcover" | "hardcover-edition" => Some(format!("https://hardcover.app/books/{}", self.value)),
             _ => None,
         }
     }
@@ -160,9 +163,36 @@ impl Book {
         self.epub_info.publisher.as_ref()
     }
     
-    /// Get all identifiers from EPUB metadata, filtered to only include those with proper display schemes
-    pub fn identifiers(&self) -> Vec<&Identifier> {
-        self.epub_info.identifiers.iter()
+    /// Get identifiers normalized for display and linking.
+    /// This includes Hardcover normalization and edition linking.
+    pub fn identifiers(&self) -> Vec<Identifier> {
+        let mut result: Vec<Identifier> = Vec::new();
+        // Tracks (scheme_lowercase, value) pairs to avoid duplicate identifiers
+        let mut dedupe_keys: HashSet<(String, String)> = HashSet::new();
+
+        // 1) Add normalized Hardcover identifiers
+        for id in self.get_normalized_hardcover_identifiers() {
+            let key = (id.scheme.to_lowercase(), id.value.clone());
+            if dedupe_keys.insert(key) {
+                result.push(id);
+            }
+        }
+
+        // 2) Add all other identifiers as-is (skip raw Hardcover family)
+        for id in &self.epub_info.identifiers {
+            let scheme_lc = id.scheme.to_lowercase();
+            if scheme_lc == "hardcover" || scheme_lc == "hardcover-slug" || scheme_lc == "hardcover-edition" {
+                continue;
+            }
+            let key = (scheme_lc, id.value.clone());
+            if dedupe_keys.insert(key) {
+                result.push(id.clone());
+            }
+        }
+
+        // Keep only identifiers with a recognized display scheme
+        result
+            .into_iter()
             .filter(|id| id.display_scheme() != id.scheme)
             .collect()
     }
@@ -179,6 +209,40 @@ impl Book {
         } else {
             Some(self.epub_info.subjects.join(", "))
         }
+    }
+    
+    /// Get normalized Hardcover-related identifiers (slug and editions).
+    /// - Picks slug from `hardcover` or `hardcover-slug` and emits a single `hardcover` entry
+    /// - Emits `hardcover-edition` as `{slug}/editions/{editionId}` only when slug exists
+    fn get_normalized_hardcover_identifiers(&self) -> Vec<Identifier> {
+        let mut out: Vec<Identifier> = Vec::new();
+
+        // Find Hardcover slug from either scheme
+        let slug = self
+            .epub_info
+            .identifiers
+            .iter()
+            .find(|id| {
+                let s = id.scheme.to_lowercase();
+                s == "hardcover" || s == "hardcover-slug"
+            })
+            .map(|id| id.value.clone());
+
+        if let Some(slug_val) = slug {
+            // Normalized hardcover slug
+            out.push(Identifier::new("hardcover".to_string(), slug_val.clone()));
+            // Normalized hardcover editions
+            for id in &self.epub_info.identifiers {
+                if id.scheme.eq_ignore_ascii_case("hardcover-edition") {
+                    out.push(Identifier::new(
+                        "hardcover-edition".to_string(),
+                        format!("{}/editions/{}", slug_val, id.value),
+                    ));
+                }
+            }
+        }
+
+        out
     }
     
     /// Get series information from EPUB metadata
