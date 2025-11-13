@@ -1,3 +1,4 @@
+{% if book.publisher().is_some() || !book.identifiers().is_empty() %}
 <!-- Additional Information -->
 <section data-name="additional-info" data-default-visible="false">
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
@@ -77,5 +78,6 @@
         </div>
     </div>
 </section>
+{% endif %}
 
  
