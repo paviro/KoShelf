@@ -165,9 +165,15 @@
                                             <div class="text-sm text-gray-500 dark:text-dark-300 mt-1">{{ item.series_display.as_ref().unwrap() }}</div>
                                         {% endif %}
                                         {% if item.authors.len() > 0 %}
-                                            <div>
+                                            <div class="text-sm text-gray-600 dark:text-dark-300">
+                                                by 
                                                 {% for a in item.authors %}
-                                                by <a href="/?search={{ a }}" class="text-primary-600 dark:text-primary-400 hover:underline text-sm">{{ a }}</a>{% if !loop.last %}, {% endif %}
+                                                    {% if item.book_path.is_some() %}
+                                                        <a href="/?search={{ a }}" class="text-primary-600 dark:text-primary-400 hover:underline">{{ a }}</a>
+                                                    {% else %}
+                                                        {{ a }}
+                                                    {% endif %}
+                                                    {% if !loop.last %}, {% endif %}
                                                 {% endfor %}
                                             </div>
                                         {% endif %}
