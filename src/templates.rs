@@ -22,6 +22,19 @@ pub struct IndexTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "recap/recap_year.html", whitespace = "minimize")]
+pub struct RecapTemplate {
+    pub site_title: String,
+    pub year: i32,
+    pub prev_year: Option<i32>,
+    pub next_year: Option<i32>,
+    pub monthly: Vec<MonthRecap>,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
+}
+
+#[derive(Template)]
 #[template(path = "book_details/book_details.html", whitespace = "minimize")]
 pub struct BookTemplate {
     pub site_title: String,

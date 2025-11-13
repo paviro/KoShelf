@@ -51,6 +51,7 @@
 - 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page with elegant formatting
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
 - 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
+- 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished books, hours read), and rich per‑book details
 - 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
@@ -266,12 +267,19 @@ This way, every time Syncthing pulls updates from my e-reader, the website autom
 - Per-book reading sessions and statistics
 - Reading speed calculations
 - Session duration tracking
+- Book completions (used by Yearly Recap)
 
 ## Generated Site Structure
 
 ```
 site/
 ├── index.html              # Main library page
+├── recap/                  # Yearly Recap pages (latest year linked in sidebar)
+│   ├── 2025/
+│   │   └── index.html
+│   ├── 2024/
+│   │   └── index.html
+│   └── ...
 ├── statistics/
 │   └── index.html          # Reading statistics dashboard
 ├── calendar/

@@ -14,6 +14,7 @@ use webp;
 use futures::future;
 use crate::calendar::CalendarGenerator;
 use crate::time_config::TimeConfig;
+use std::collections::{BTreeMap, HashMap};
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -50,6 +51,7 @@ impl SiteGenerator {
     fn books_dir(&self) -> PathBuf { self.output_dir.join("books") }
     fn calendar_dir(&self) -> PathBuf { self.output_dir.join("calendar") }
     fn statistics_dir(&self) -> PathBuf { self.output_dir.join("statistics") }
+    fn recap_dir(&self) -> PathBuf { self.output_dir.join("recap") }
     fn assets_dir(&self) -> PathBuf { self.output_dir.join("assets") }
     fn covers_dir(&self) -> PathBuf { self.assets_dir().join("covers") }
     fn css_dir(&self) -> PathBuf { self.assets_dir().join("css") }
@@ -81,6 +83,30 @@ impl SiteGenerator {
         } else {
             None
         };
+
+        // Compute latest recap href (if any completions are available)
+        let recap_latest_href: Option<String> = stats_data.as_ref().and_then(|sd| {
+            let mut years: Vec<i32> = Vec::new();
+            for b in &sd.books {
+                if let Some(cs) = &b.completions {
+                    for c in &cs.entries {
+                        if c.end_date.len() >= 4 {
+                            if let Ok(y) = c.end_date[0..4].parse::<i32>() {
+                                if !years.contains(&y) {
+                                    years.push(y);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if years.is_empty() {
+                None
+            } else {
+                years.sort_by(|a, b| b.cmp(a));
+                Some(format!("/recap/{}/", years[0]))
+            }
+        });
         
         // Create output directories based on what we're generating
         self.create_directories(&books, &stats_data).await?;
@@ -92,19 +118,22 @@ impl SiteGenerator {
         self.generate_covers(&books).await?;
 
         // Generate individual book pages
-        self.generate_book_pages(&books, &mut stats_data).await?;
+        self.generate_book_pages(&books, &mut stats_data, recap_latest_href.clone()).await?;
         
         if !books.is_empty() {
             // Generate book list page at index.html
-            self.generate_book_list(&books).await?;
+            self.generate_book_list(&books, recap_latest_href.clone()).await?;
         }
         
         if let Some(ref mut stats_data) = stats_data {
             // Generate statistics page (render to root if no books)
-            self.generate_statistics_page(stats_data, books.is_empty()).await?;
+            self.generate_statistics_page(stats_data, books.is_empty(), recap_latest_href.clone()).await?;
             
             // Generate calendar page if we have statistics data
-            self.generate_calendar_page(stats_data, &books).await?;
+            self.generate_calendar_page(stats_data, &books, recap_latest_href.clone()).await?;
+
+            // Generate recap pages (static yearly)
+            self.generate_recap_pages(stats_data, &books).await?;
         }
 
         info!("Static site generation completed!");
@@ -153,6 +182,8 @@ impl SiteGenerator {
             fs::create_dir_all(self.json_dir())?;
             fs::create_dir_all(self.statistics_json_dir())?;
             fs::create_dir_all(self.calendar_json_dir())?;
+            // Recap pages directory (static HTML)
+            fs::create_dir_all(self.recap_dir())?;
             
             // Create calendar directory
             fs::create_dir_all(self.calendar_dir())?;
@@ -205,6 +236,10 @@ impl SiteGenerator {
             
             let calendar_init_js_content = include_str!("../assets/calendar.js");
             fs::write(self.js_dir().join("calendar.js"), calendar_init_js_content)?;
+
+            // Recap small UI logic
+            let recap_js_content = include_str!("../assets/recap.js");
+            fs::write(self.js_dir().join("recap.js"), recap_js_content)?;
         }
         
         Ok(())
@@ -278,7 +313,7 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_book_list(&self, books: &[Book]) -> Result<()> {
+    async fn generate_book_list(&self, books: &[Book], recap_latest_href: Option<String>) -> Result<()> {
         info!("Generating book list page...");
         
         let mut reading_books = Vec::new();
@@ -352,7 +387,7 @@ impl SiteGenerator {
             unread_books,
             version: self.get_version(),
             last_updated: self.get_last_updated(),
-            navbar_items: self.create_navbar_items("books"),
+            navbar_items: self.create_navbar_items_with_recap("books", recap_latest_href.as_deref()),
         };
 
         let html = template.render()?;
@@ -361,7 +396,7 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_book_pages(&self, books: &[Book], stats_data: &mut Option<StatisticsData>) -> Result<()> {
+    async fn generate_book_pages(&self, books: &[Book], stats_data: &mut Option<StatisticsData>, recap_latest_href: Option<String>) -> Result<()> {
         info!("Generating book detail pages...");
         
         for book in books {
@@ -388,7 +423,7 @@ impl SiteGenerator {
                 session_stats: session_stats.clone(),
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
-                navbar_items: self.create_navbar_items("books"),
+                navbar_items: self.create_navbar_items_with_recap("books", recap_latest_href.as_deref()),
             };
             
             let html = template.render()?;
@@ -450,7 +485,7 @@ impl SiteGenerator {
         Ok(())
     }
     
-    async fn generate_statistics_page(&self, stats_data: &mut StatisticsData, render_to_root: bool) -> Result<()> {
+    async fn generate_statistics_page(&self, stats_data: &mut StatisticsData, render_to_root: bool, recap_latest_href: Option<String>) -> Result<()> {
         if render_to_root {
             info!("Generating statistics page at root index...");
         } else {
@@ -476,7 +511,7 @@ impl SiteGenerator {
             available_years,
             version: self.get_version(),
             last_updated: self.get_last_updated(),
-            navbar_items: self.create_navbar_items("statistics"),
+            navbar_items: self.create_navbar_items_with_recap("statistics", recap_latest_href.as_deref()),
         };
         
         // Render and write the template
@@ -577,8 +612,23 @@ impl SiteGenerator {
         
         items
     }
+
+    fn create_navbar_items_with_recap(&self, current_page: &str, recap_latest_href: Option<&str>) -> Vec<NavItem> {
+        let mut items = self.create_navbar_items(current_page);
+        if self.statistics_db_path.is_some() {
+            if let Some(href) = recap_latest_href {
+                items.push(NavItem {
+                    label: "Recap".to_string(),
+                    href: href.to_string(),
+                    icon_svg: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.288 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.383 2.46a1 1 0 00-.364 1.118l1.288 3.966c.3.922-.755 1.688-1.54 1.118l-3.383-2.46a1 1 0 00-1.176 0l-3.383 2.46c-.784.57-1.838-.196-1.539-1.118l1.288-3.966a1 1 0 00-.364-1.118L2.046 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.287-3.966z".to_string(),
+                    is_active: current_page == "recap",
+                });
+            }
+        }
+        items
+    }
     
-    async fn generate_calendar_page(&self, stats_data: &mut StatisticsData, books: &[Book]) -> Result<()> {
+    async fn generate_calendar_page(&self, stats_data: &mut StatisticsData, books: &[Book], recap_latest_href: Option<String>) -> Result<()> {
         info!("Generating calendar page...");
         
         // Generate per-month calendar payloads (events + books + stats)
@@ -611,7 +661,7 @@ impl SiteGenerator {
             site_title: self.site_title.clone(),
             version: self.get_version(),
             last_updated: self.get_last_updated(),
-            navbar_items: self.create_navbar_items("calendar"),
+            navbar_items: self.create_navbar_items_with_recap("calendar", recap_latest_href.as_deref()),
         };
         
         // Render and write the template
@@ -620,6 +670,188 @@ impl SiteGenerator {
         // Write to the calendar directory (already created in create_directories)
         self.write_minify_html(self.calendar_dir().join("index.html"), &html)?;
         
+        Ok(())
+    }
+
+    async fn generate_recap_pages(&self, stats_data: &mut StatisticsData, books: &[Book]) -> Result<()> {
+        info!("Generating recap pages...");
+
+        let format_duration = |seconds: i64| -> String {
+            if seconds <= 0 { return "0m".to_string(); }
+            let hrs = seconds / 3600;
+            let mins = (seconds % 3600) / 60;
+            if hrs > 0 {
+                if mins > 0 { format!("{}h {}m", hrs, mins) } else { format!("{}h", hrs) }
+            } else {
+                format!("{}m", mins)
+            }
+        };
+
+        // Build md5 -> &Book map for cover/link enrichment
+        let mut md5_to_book: HashMap<String, &Book> = HashMap::new();
+        for book in books {
+            if let Some(md5) = book
+                .koreader_metadata
+                .as_ref()
+                .and_then(|m| m.partial_md5_checksum.as_ref())
+            {
+                md5_to_book.insert(md5.clone(), book);
+            }
+        }
+
+        // Compute reading stats once to get daily activity for hour totals
+        let reading_stats = crate::statistics_parser::StatisticsParser::calculate_stats(stats_data, &self.time_config);
+
+        // Human-friendly date formatter without year, using month name (e.g., "7 March")
+        let format_day_month = |iso: &str| -> String {
+            if let Ok(date) = chrono::NaiveDate::parse_from_str(iso, "%Y-%m-%d") {
+                // "%e %B" -> day (space-padded) and full month name; trim_left for clean day
+                let s = date.format("%e %B").to_string();
+                s.trim_start().to_string()
+            } else {
+                iso.to_string()
+            }
+        };
+
+        // Build year -> month (YYYY-MM) -> Vec<RecapItem>
+        let mut year_month_items: HashMap<i32, BTreeMap<String, Vec<crate::models::RecapItem>>> = HashMap::new();
+        let mut years: Vec<i32> = Vec::new();
+
+        for sb in &stats_data.books {
+            if let Some(comps) = &sb.completions {
+                for c in &comps.entries {
+                    if c.end_date.len() < 7 { continue; }
+                    let year_str = &c.end_date[0..4];
+                    let ym = c.end_date[0..7].to_string(); // YYYY-MM
+                    let year: i32 = match year_str.parse() { Ok(v) => v, Err(_) => continue };
+
+                    if !years.contains(&year) {
+                        years.push(year);
+                    }
+
+                    // Enrich from Book when possible
+                    let (title, authors, rating, review_note, series_display, book_path, book_cover) = if let Some(book) = md5_to_book.get(&sb.md5) {
+                        let title = book.epub_info.title.clone();
+                        let authors = book.epub_info.authors.clone();
+                        let rating = book.rating();
+                        let review_note = book.review_note().cloned();
+                        let series_display = book.series_display();
+                        let book_path = Some(format!("/books/{}/index.html", book.id));
+                        let book_cover = Some(format!("/assets/covers/{}.webp", book.id));
+                        (title, authors, rating, review_note, series_display, book_path, book_cover)
+                    } else {
+                        // Fallback to StatBook minimal info
+                        let title = sb.title.clone();
+                        let authors = sb.authors.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect::<Vec<_>>();
+                        (title, authors, None, None, None, None, None)
+                    };
+
+                    let item = crate::models::RecapItem {
+                        title,
+                        authors,
+                        start_date: c.start_date.clone(),
+                        end_date: c.end_date.clone(),
+                        start_display: format_day_month(&c.start_date),
+                        end_display: format_day_month(&c.end_date),
+                        reading_time: c.reading_time,
+                        reading_time_display: format_duration(c.reading_time),
+                        session_count: c.session_count,
+                        pages_read: c.pages_read,
+                        rating,
+                        review_note,
+                        series_display,
+                        book_path,
+                        book_cover,
+                        star_display: {
+                            let mut stars = [false; 5];
+                            if let Some(r) = rating {
+                                let n = std::cmp::min(r as usize, 5);
+                                for i in 0..n { stars[i] = true; }
+                            }
+                            stars
+                        },
+                    };
+
+                    year_month_items
+                        .entry(year)
+                        .or_default()
+                        .entry(ym.clone())
+                        .or_default()
+                        .push(item);
+                }
+            }
+        }
+
+        if years.is_empty() {
+            // No completions → don't generate recap pages
+            return Ok(());
+        }
+
+        years.sort_by(|a, b| b.cmp(a)); // newest first
+
+        // Pre-compute monthly hours from daily activity: map YYYY-MM -> seconds
+        let mut month_hours: HashMap<String, i64> = HashMap::new();
+        for day in &reading_stats.daily_activity {
+            if day.date.len() >= 7 {
+                let ym = day.date[0..7].to_string();
+                *month_hours.entry(ym).or_insert(0) += day.read_time;
+            }
+        }
+
+        // Render each year page
+        for (idx, year) in years.iter().enumerate() {
+            let months_map = year_month_items.get(year).cloned().unwrap_or_default();
+            // Build MonthRecap BTreeMap sorted by month ascending (Jan..Dec)
+            let mut monthly: BTreeMap<String, crate::models::MonthRecap> = BTreeMap::new();
+
+            for (ym, mut items) in months_map {
+                if items.is_empty() { continue; }
+                items.sort_by(|a, b| a.end_date.cmp(&b.end_date));
+
+                let month_label = if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d") {
+                    date.format("%B").to_string()
+                } else { ym.clone() };
+
+                let hours = *month_hours.get(&ym).unwrap_or(&0);
+                let month_recap = crate::models::MonthRecap {
+                    month_key: ym.clone(),
+                    month_label,
+                    books_finished: items.len(),
+                    hours_read_seconds: hours,
+                    hours_read_display: format_duration(hours),
+                    items,
+                };
+                monthly.insert(ym, month_recap);
+            }
+
+            // Determine prev/next year for controls
+            let prev_year = years.get(idx + 1).cloned();
+            let next_year = if idx > 0 { years.get(idx - 1).cloned() } else { None };
+
+            // Convert monthly map to a vector in chronological order
+            let monthly_vec: Vec<crate::models::MonthRecap> = monthly.into_values().collect();
+
+            // Latest year href for sidebar
+            let latest_href = format!("/recap/{}/", years[0]);
+
+            let template = crate::templates::RecapTemplate {
+                site_title: self.site_title.clone(),
+                year: *year,
+                prev_year,
+                next_year,
+                monthly: monthly_vec,
+                version: self.get_version(),
+                last_updated: self.get_last_updated(),
+                navbar_items: self.create_navbar_items_with_recap("recap", Some(latest_href.as_str())),
+            };
+
+            let html = template.render()?;
+            let year_dir = self.recap_dir().join(format!("{}", year));
+            fs::create_dir_all(&year_dir)?;
+            let path = year_dir.join("index.html");
+            self.write_minify_html(path, &html)?;
+        }
+
         Ok(())
     }
 } 
