@@ -165,9 +165,9 @@
                                             <div class="text-sm text-gray-500 dark:text-dark-300 mt-1">{{ item.series_display.as_ref().unwrap() }}</div>
                                         {% endif %}
                                         {% if item.authors.len() > 0 %}
-                                            <div class="mt-1">
+                                            <div>
                                                 {% for a in item.authors %}
-                                                <a href="/?search={{ a }}" class="text-primary-600 dark:text-primary-400 hover:underline text-sm">{{ a }}</a>{% if !loop.last %}, {% endif %}
+                                                by <a href="/?search={{ a }}" class="text-primary-600 dark:text-primary-400 hover:underline text-sm">{{ a }}</a>{% if !loop.last %}, {% endif %}
                                                 {% endfor %}
                                             </div>
                                         {% endif %}
