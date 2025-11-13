@@ -26,6 +26,7 @@ pub struct IndexTemplate {
 pub struct RecapTemplate {
     pub site_title: String,
     pub year: i32,
+    pub available_years: Vec<i32>,
     pub prev_year: Option<i32>,
     pub next_year: Option<i32>,
     pub monthly: Vec<MonthRecap>,
