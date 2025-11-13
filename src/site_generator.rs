@@ -620,7 +620,7 @@ impl SiteGenerator {
                 items.push(NavItem {
                     label: "Recap".to_string(),
                     href: href.to_string(),
-                    icon_svg: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.288 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.383 2.46a1 1 0 00-.364 1.118l1.288 3.966c.3.922-.755 1.688-1.54 1.118l-3.383-2.46a1 1 0 00-1.176 0l-3.383 2.46c-.784.57-1.838-.196-1.539-1.118l1.288-3.966a1 1 0 00-.364-1.118L2.046 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.287-3.966z".to_string(),
+                    icon_svg: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z".to_string(),
                     is_active: current_page == "recap",
                 });
             }
@@ -678,13 +678,15 @@ impl SiteGenerator {
 
         let format_duration = |seconds: i64| -> String {
             if seconds <= 0 { return "0m".to_string(); }
-            let hrs = seconds / 3600;
-            let mins = (seconds % 3600) / 60;
-            if hrs > 0 {
-                if mins > 0 { format!("{}h {}m", hrs, mins) } else { format!("{}h", hrs) }
-            } else {
-                format!("{}m", mins)
-            }
+            let total_minutes = seconds / 60;
+            let days = total_minutes / (24 * 60);
+            let hours = (total_minutes % (24 * 60)) / 60;
+            let mins = total_minutes % 60;
+            let mut parts: Vec<String> = Vec::new();
+            if days > 0 { parts.push(format!("{}d", days)); }
+            if hours > 0 { parts.push(format!("{}h", hours)); }
+            if mins > 0 || parts.is_empty() { parts.push(format!("{}m", mins)); }
+            parts.join(" ")
         };
 
         // Build md5 -> &Book map for cover/link enrichment
@@ -702,11 +704,11 @@ impl SiteGenerator {
         // Compute reading stats once to get daily activity for hour totals
         let reading_stats = crate::statistics_parser::StatisticsParser::calculate_stats(stats_data, &self.time_config);
 
-        // Human-friendly date formatter without year, using month name (e.g., "7 March")
+        // Human-friendly date formatter without year, using month name (e.g., "7 Mar")
         let format_day_month = |iso: &str| -> String {
             if let Ok(date) = chrono::NaiveDate::parse_from_str(iso, "%Y-%m-%d") {
-                // "%e %B" -> day (space-padded) and full month name; trim_left for clean day
-                let s = date.format("%e %B").to_string();
+                // "%e %b" -> day (space-padded) and abbreviated month name; trim_left for clean day
+                let s = date.format("%e %b").to_string();
                 s.trim_start().to_string()
             } else {
                 iso.to_string()
@@ -837,6 +839,7 @@ impl SiteGenerator {
             let template = crate::templates::RecapTemplate {
                 site_title: self.site_title.clone(),
                 year: *year,
+                available_years: years.clone(),
                 prev_year,
                 next_year,
                 monthly: monthly_vec,

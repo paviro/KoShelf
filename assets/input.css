@@ -286,7 +286,7 @@
     top: -100px;      /* extend upward to touch header */
     bottom: -50px;   /* extend below the last event toward page bottom */
     width: 2px;
-    background: theme(colors.gray.300);
+    background: theme(colors.gray.200);
   }
   .dark .recap-timeline:before {
     background: theme(colors.gray.700);
@@ -294,11 +294,27 @@
   .recap-dot {
     position: absolute;
     left: 7px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 1rem;
+    transform: none;
     width: 12px;
     height: 12px;
     border-radius: 9999px;
     box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
+  }
+  @screen md {
+    .recap-dot {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+  
+  /* Recap cover max height: slightly larger on mobile, full on md+ */
+  .recap-cover-max {
+    max-height: 20rem;
+  }
+  @screen md {
+    .recap-cover-max {
+      max-height: 100%;
+    }
   }
 } 
