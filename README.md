@@ -72,6 +72,36 @@ Using Home Assistant? Install KOShelf as an add-on with just one click below.
 
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
 
+### Docker Compose Deployment
+Deploy Koshelf easily using the community-maintained Docker image.
+#### Quick Start
+1. Create a docker-compose.yml file:
+
+```yaml
+services:
+  koshelf:
+    image: ghcr.io/devtigro/koshelf:latest
+    ports:
+     - "3000:3000"
+    volumes:
+      - /path/to/your/books:/books:ro
+      - /path/to/your/settings:/settings:ro
+    restart: unless-stopped
+```
+
+2. Update the volume paths:
+- Replace `/path/to/your/books` with the absolute path to your book library
+- Replace `/path/to/your/settings` with the absolute path to your settings directory
+
+3. Start the container:
+```bash
+docker compose up -d
+```
+
+4. Access Koshelf at http://localhost:3000
+
+Docker Image Repository: [koshelf-docker](https://github.com/DevTigro/koshelf-docker)
+
 ### Prebuilt Binaries
 
 The easiest way to get started is to download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
