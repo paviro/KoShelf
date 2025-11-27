@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.1.0"
+version = "1.2.0"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
@@ -26,8 +26,8 @@ zip = "4.1.0"
 # Image processing
 image = "0.25.6"
 webp = "0.3.1"
-# Lua parsing
-mlua = { version = "0.10.5", features = ["lua54", "vendored"] }
+# Lua parsing (use LuaJIT to match KoReader's runtime)
+mlua = { version = "0.11.5", features = ["luajit", "vendored"] }
 # Serialization
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0"
@@ -53,3 +53,7 @@ rusqlite = { version = "0.36.0", features = ["bundled"] }
 minify-html = "0.15" # 0.16 has an issue with inline js
 chrono-tz = "0.8"
 md5 = "0.8.0"
+
+[dev-dependencies]
+regex = "1.12.2"
+ureq = { version = "3.1.4", features = ["json"] }

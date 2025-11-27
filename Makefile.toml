@@ -106,6 +106,11 @@ dependencies = [
     "build-macos-universal"
 ]
 
+[tasks.run-tests]
+description = "Execute the full test suite before building releases"
+command = "cargo"
+args = ["test"]
+
 [tasks.clean-all]
 description = "Clean all build artifacts"
 command = "cargo"
@@ -241,6 +246,7 @@ dependencies = [
 [tasks.release-all]
 description = "Build and package all platforms"
 dependencies = [
+    "run-tests",
     "build-all",
     "package-all",
     "notarize-macos-intel",
