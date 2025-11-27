@@ -208,9 +208,9 @@ KoShelf can operate in several modes:
 - `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
-- `--min-pages-per-day`: Minimum pages read per day to be counted in statistics (optional)
-- `--min-time-per-day`: Minimum reading time per day to be counted in statistics (e.g., "15m", "1h") (optional)
-  > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a day is counted if **either** condition is met.
+- `--min-pages-per-day`: Minimum pages read per book per day to be counted in statistics (optional)
+- `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
+  > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
 - `--github`: Print GitHub repository URL
 
 ### Example
