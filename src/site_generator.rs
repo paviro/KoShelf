@@ -24,6 +24,8 @@ pub struct SiteGenerator {
     statistics_db_path: Option<PathBuf>,
     heatmap_scale_max: Option<u32>,
     time_config: TimeConfig,
+    min_pages_per_day: Option<u32>,
+    min_time_per_day: Option<u32>,
 }
 
 impl SiteGenerator {
@@ -35,6 +37,8 @@ impl SiteGenerator {
         statistics_db_path: Option<PathBuf>,
         heatmap_scale_max: Option<u32>,
         time_config: TimeConfig,
+        min_pages_per_day: Option<u32>,
+        min_time_per_day: Option<u32>,
     ) -> Self {
         Self {
             output_dir,
@@ -44,6 +48,8 @@ impl SiteGenerator {
             statistics_db_path,
             heatmap_scale_max,
             time_config,
+            min_pages_per_day,
+            min_time_per_day,
         }
     }
 
@@ -74,6 +80,17 @@ impl SiteGenerator {
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
                 let mut data = StatisticsParser::parse(stats_path)?;
+                
+                // Filter statistics if minimums are set
+                if self.min_pages_per_day.is_some() || self.min_time_per_day.is_some() {
+                    crate::statistics::StatisticsCalculator::filter_stats(
+                        &mut data, 
+                        &self.time_config, 
+                        self.min_pages_per_day, 
+                        self.min_time_per_day
+                    );
+                }
+                
                 crate::statistics::StatisticsCalculator::populate_completions(&mut data, &self.time_config);
                 Some(data)
             } else {

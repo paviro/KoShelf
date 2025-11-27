@@ -17,6 +17,8 @@ pub struct FileWatcher {
     heatmap_scale_max: Option<u32>,
     rebuild_tx: Option<mpsc::UnboundedSender<()>>,
     time_config: TimeConfig,
+    min_pages_per_day: Option<u32>,
+    min_time_per_day: Option<u32>,
 }
 
 impl FileWatcher {
@@ -28,6 +30,8 @@ impl FileWatcher {
         statistics_db_path: Option<PathBuf>,
         heatmap_scale_max: Option<u32>,
         time_config: TimeConfig,
+        min_pages_per_day: Option<u32>,
+        min_time_per_day: Option<u32>,
     ) -> Result<Self> {
         Ok(Self {
             books_path,
@@ -38,6 +42,8 @@ impl FileWatcher {
             heatmap_scale_max,
             rebuild_tx: None,
             time_config,
+            min_pages_per_day,
+            min_time_per_day,
         })
     }
     
@@ -86,6 +92,8 @@ impl FileWatcher {
         let statistics_db_path_clone = self.statistics_db_path.clone();
         let heatmap_scale_max_clone = self.heatmap_scale_max;
         let time_config_clone = self.time_config.clone();
+        let min_pages_per_day_clone = self.min_pages_per_day;
+        let min_time_per_day_clone = self.min_time_per_day;
         
         // Spawn delayed rebuild task
         let rebuild_task = tokio::task::spawn_blocking(move || {
@@ -111,6 +119,8 @@ impl FileWatcher {
                         statistics_db_path_clone.clone(),
                         heatmap_scale_max_clone,
                         time_config_clone.clone(),
+                        min_pages_per_day_clone,
+                        min_time_per_day_clone,
                     );
                     
                     match site_generator.generate().await {
