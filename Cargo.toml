@@ -52,3 +52,4 @@ futures = "0.3"
 rusqlite = { version = "0.36.0", features = ["bundled"] }
 minify-html = "0.15" # 0.16 has an issue with inline js
 chrono-tz = "0.8"
+md5 = "0.8.0"

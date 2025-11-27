@@ -1,4 +1,5 @@
 use crate::site_generator::SiteGenerator;
+use crate::book_scanner::MetadataLocation;
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
@@ -10,6 +11,7 @@ use crate::time_config::TimeConfig;
 
 pub struct FileWatcher {
     books_path: Option<PathBuf>,
+    metadata_location: MetadataLocation,
     site_dir: PathBuf,
     site_title: String,
     include_unread: bool,
@@ -24,6 +26,7 @@ pub struct FileWatcher {
 impl FileWatcher {
     pub async fn new(
         books_path: Option<PathBuf>,
+        metadata_location: MetadataLocation,
         site_dir: PathBuf,
         site_title: String,
         include_unread: bool,
@@ -35,6 +38,7 @@ impl FileWatcher {
     ) -> Result<Self> {
         Ok(Self {
             books_path,
+            metadata_location,
             site_dir,
             site_title,
             include_unread,
@@ -73,6 +77,21 @@ impl FileWatcher {
             info!("File watcher started for books directory: {:?}", books_path);
         }
         
+        // Watch external metadata locations if configured
+        match &self.metadata_location {
+            MetadataLocation::DocSettings(path) => {
+                watcher.watch(path, RecursiveMode::Recursive)?;
+                info!("File watcher started for docsettings directory: {:?}", path);
+            }
+            MetadataLocation::HashDocSettings(path) => {
+                watcher.watch(path, RecursiveMode::Recursive)?;
+                info!("File watcher started for hashdocsettings directory: {:?}", path);
+            }
+            MetadataLocation::InBookFolder => {
+                // Already watching books_path recursively
+            }
+        }
+        
         // Also watch the statistics database if provided
         if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
@@ -86,6 +105,7 @@ impl FileWatcher {
         
         // Clone necessary data for the rebuild task
         let books_path_clone = self.books_path.clone();
+        let metadata_location_clone = self.metadata_location.clone();
         let site_dir_clone = self.site_dir.clone();
         let site_title_clone = self.site_title.clone();
         let include_unread_clone = self.include_unread;
@@ -116,6 +136,7 @@ impl FileWatcher {
                         site_title_clone.clone(),
                         include_unread_clone,
                         books_path_clone.clone(),
+                        metadata_location_clone.clone(),
                         statistics_db_path_clone.clone(),
                         heatmap_scale_max_clone,
                         time_config_clone.clone(),
