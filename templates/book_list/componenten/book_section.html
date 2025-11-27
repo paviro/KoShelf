@@ -49,7 +49,7 @@
                         {% endif %}
                         {% when None %}
                         {% endmatch %}
-                    {% if section_name == "abandoned" %}
+                    {% elif section_name == "abandoned" %}
                         <!-- Progress Bar -->
                         <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
                         
