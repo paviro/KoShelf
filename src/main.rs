@@ -19,6 +19,9 @@ mod calendar;
 mod read_completion_analyzer;
 mod time_config;
 
+#[cfg(test)]
+mod tests;
+
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
@@ -70,6 +73,14 @@ struct Cli {
     /// Logical day start time (HH:MM). Defaults to 00:00.
     #[arg(long, value_name = "HH:MM", display_order = 10)]
     day_start_time: Option<String>,
+
+    /// Minimum pages read per day to be counted in statistics (optional)
+    #[arg(long, display_order = 12)]
+    min_pages_per_day: Option<u32>,
+
+    /// Minimum reading time per day to be counted in statistics (e.g., "15m", "1h"). (optional)
+    #[arg(long, display_order = 13)]
+    min_time_per_day: Option<String>,
 }
 
 // Parse time format strings like "1h", "1h30m", "45min" into seconds
@@ -191,6 +202,14 @@ async fn main() -> Result<()> {
         }
     };
 
+    // Parse min time per day
+    let min_time_per_day = if let Some(ref min_time_str) = cli.min_time_per_day {
+        parse_time_to_seconds(min_time_str)
+            .with_context(|| format!("Invalid min-time-per-day format: {}", min_time_str))?
+    } else {
+        None
+    };
+
     // Create site generator - it will handle book scanning and stats loading internally
     let site_generator = SiteGenerator::new(
         output_dir.clone(), 
@@ -200,6 +219,8 @@ async fn main() -> Result<()> {
         cli.statistics_db.clone(),
         heatmap_scale_max,
         time_config.clone(),
+        cli.min_pages_per_day,
+        min_time_per_day,
     );
     
     // Generate initial site
@@ -222,6 +243,8 @@ async fn main() -> Result<()> {
             cli.statistics_db.clone(),
             heatmap_scale_max,
             time_config.clone(),
+            cli.min_pages_per_day,
+            min_time_per_day,
         ).await?;
         
         // Run file watcher
@@ -238,6 +261,8 @@ async fn main() -> Result<()> {
             cli.statistics_db.clone(),
             heatmap_scale_max,
             time_config.clone(),
+            cli.min_pages_per_day,
+            min_time_per_day,
         ).await?;
 
         // Start web server

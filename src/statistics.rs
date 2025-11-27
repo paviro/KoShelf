@@ -332,4 +332,63 @@ impl StatisticsCalculator {
         
         (total_completions, books_completed, most_completions)
     }
-} 
+    /// Filter statistics to exclude days that don't meet the minimum requirements
+    pub fn filter_stats(
+        stats_data: &mut StatisticsData, 
+        time_config: &TimeConfig, 
+        min_pages: Option<u32>, 
+        min_time: Option<u32>
+    ) {
+        // 1. Aggregate daily totals
+        let mut daily_pages: HashMap<String, i64> = HashMap::new();
+        let mut daily_time: HashMap<String, i64> = HashMap::new();
+
+        for stat in &stats_data.page_stats {
+            if stat.duration <= 0 { continue; }
+            
+            let date = time_config.date_for_timestamp(stat.start_time);
+            let date_str = date.format("%Y-%m-%d").to_string();
+            
+            *daily_pages.entry(date_str.clone()).or_insert(0) += 1;
+            *daily_time.entry(date_str).or_insert(0) += stat.duration;
+        }
+
+        // 2. Identify valid dates
+        let mut valid_dates: HashMap<String, bool> = HashMap::new();
+        
+        // Collect all unique dates
+        let mut all_dates: Vec<String> = daily_pages.keys().cloned().collect();
+        all_dates.extend(daily_time.keys().cloned());
+        all_dates.sort();
+        all_dates.dedup();
+        
+        for date in all_dates {
+            let pages = *daily_pages.get(&date).unwrap_or(&0);
+            let time = *daily_time.get(&date).unwrap_or(&0);
+            
+            let pages_ok = min_pages.map_or(false, |min| pages >= min as i64);
+            let time_ok = min_time.map_or(false, |min| time >= min as i64);
+            
+            // OR logic: valid if either condition is met
+            let is_valid = if min_pages.is_some() && min_time.is_some() {
+                pages_ok || time_ok
+            } else if min_pages.is_some() {
+                pages_ok
+            } else {
+                time_ok
+            };
+            
+            valid_dates.insert(date, is_valid);
+        }
+
+        // 3. Filter page_stats
+        stats_data.page_stats.retain(|stat| {
+            if stat.duration <= 0 { return false; }
+            let date = time_config.date_for_timestamp(stat.start_time);
+            let date_str = date.format("%Y-%m-%d").to_string();
+            *valid_dates.get(&date_str).unwrap_or(&false)
+        });
+    }
+}
+
+ 

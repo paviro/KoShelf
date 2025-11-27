@@ -205,6 +205,9 @@ KoShelf can operate in several modes:
 - `--include-unread`: Include unread books (EPUBs without KoReader metadata)
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
+- `--min-pages-per-day`: Minimum pages read per day to be counted in statistics (optional)
+- `--min-time-per-day`: Minimum reading time per day to be counted in statistics (e.g., "15m", "1h") (optional)
+  > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a day is counted if **either** condition is met.
 - `--github`: Print GitHub repository URL
 
 ### Example
