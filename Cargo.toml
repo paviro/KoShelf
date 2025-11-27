@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.2.1"
+version = "1.2.2"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
@@ -53,7 +53,7 @@ rusqlite = { version = "0.36.0", features = ["bundled"] }
 minify-html = "0.15" # 0.16 has an issue with inline js
 chrono-tz = "0.8"
 md5 = "0.8.0"
+regex = "1.12.2"
 
 [dev-dependencies]
-regex = "1.12.2"
 ureq = { version = "3.1.4", features = ["json"] }

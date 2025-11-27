@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 use anyhow::{Result, Context};
+use regex::Regex;
 use log::info;
 
 mod models;
@@ -93,54 +94,36 @@ struct Cli {
     github: bool,
 }
 
-// Parse time format strings like "1h", "1h30m", "45min" into seconds
+// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds
 fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
-    if time_str == "auto" {
+    if time_str.eq_ignore_ascii_case("auto") {
         return Ok(None);
     }
-    
-    let time_str = time_str.to_lowercase();
-    let mut total_seconds = 0u32;
-    
-    // Handle hours
-    if let Some(h_pos) = time_str.find('h') {
-        let hours_str = &time_str[..h_pos];
-        if let Ok(hours) = hours_str.parse::<u32>() {
-            total_seconds += hours * 3600;
-        } else {
-            anyhow::bail!("Invalid hour format in: {}", time_str);
-        }
-        
-        // Check for minutes after hours
-        let remaining = &time_str[h_pos + 1..];
-        if !remaining.is_empty() {
-            // Remove common minute suffixes and parse
-            let remaining = remaining.replace("min", "").replace('m', "");
-            if !remaining.is_empty() {
-                if let Ok(minutes) = remaining.parse::<u32>() {
-                    if minutes >= 60 {
-                        anyhow::bail!("Minutes cannot be 60 or more: {}", time_str);
-                    }
-                    total_seconds += minutes * 60;
-                } else {
-                    anyhow::bail!("Invalid minute format in: {}", time_str);
-                }
-            }
-        }
-    } else {
-        // Only minutes specified
-        let minutes_str = time_str.replace("min", "").replace('m', "");
-        if let Ok(minutes) = minutes_str.parse::<u32>() {
-            total_seconds = minutes * 60;
-        } else {
-            anyhow::bail!("Invalid time format: {}", time_str);
+
+    let re = Regex::new(r"(?i)(\d+)(h|m|min|s)")?;
+    let mut total_seconds: u32 = 0;
+    let mut matched_any = false;
+
+    for cap in re.captures_iter(time_str) {
+        matched_any = true;
+        let value: u32 = cap[1].parse()?;
+        let unit = &cap[2].to_lowercase();
+
+        match unit.as_str() {
+            "h" => total_seconds += value * 3600,
+            "m" | "min" => total_seconds += value * 60,
+            "s" => total_seconds += value,
+            _ => anyhow::bail!("Unknown time unit: {}", unit),
         }
     }
-    
+
+    if !matched_any {
+        anyhow::bail!("Invalid time format: {}", time_str);
+    }
     if total_seconds == 0 {
         anyhow::bail!("Time cannot be zero: {}", time_str);
     }
-    
+
     Ok(Some(total_seconds))
 }
 
