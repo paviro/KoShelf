@@ -124,6 +124,7 @@ impl LuaParser {
                 .map(|s| match s.as_str() {
                     "reading" => BookStatus::Reading,
                     "complete" => BookStatus::Complete,
+                    "abandoned" => BookStatus::Abandoned,
                     _ => BookStatus::Unknown,
                 })
                 .unwrap_or(BookStatus::Unknown);

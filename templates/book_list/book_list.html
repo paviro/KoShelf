@@ -66,6 +66,7 @@
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="all">All</button>
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="reading">Reading</button>
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="completed">Completed</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="abandoned">Abandoned</button>
                             {% if !unread_books.is_empty() %}
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200" data-filter="unread">Unread</button>
                             {% endif %}
@@ -96,6 +97,16 @@
                 {% set section_name = "completed" %}
                 {% set section_title = "Completed" %}
                 {% set books = completed_books %}
+                {% set default_visible = "true" %}
+                {% set gradient_classes = "from-green-400 to-green-600" %}
+                {% set badge_classes = "from-green-500 to-green-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
+                {% if !abandoned_books.is_empty() %}
+                {% set section_name = "abandoned" %}
+                {% set section_title = "Abandoned" %}
+                {% set books = abandoned_books %}
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-green-400 to-green-600" %}
                 {% set badge_classes = "from-green-500 to-green-600" %}
