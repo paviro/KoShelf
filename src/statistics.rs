@@ -332,39 +332,40 @@ impl StatisticsCalculator {
         
         (total_completions, books_completed, most_completions)
     }
-    /// Filter statistics to exclude days that don't meet the minimum requirements
+    /// Filter statistics to exclude days that don't meet the minimum requirements per book
     pub fn filter_stats(
         stats_data: &mut StatisticsData, 
         time_config: &TimeConfig, 
         min_pages: Option<u32>, 
         min_time: Option<u32>
     ) {
-        // 1. Aggregate daily totals
-        let mut daily_pages: HashMap<String, i64> = HashMap::new();
-        let mut daily_time: HashMap<String, i64> = HashMap::new();
+        // 1. Aggregate daily totals per book per day
+        let mut daily_book_pages: HashMap<(i64, String), i64> = HashMap::new();
+        let mut daily_book_time: HashMap<(i64, String), i64> = HashMap::new();
 
         for stat in &stats_data.page_stats {
             if stat.duration <= 0 { continue; }
             
             let date = time_config.date_for_timestamp(stat.start_time);
             let date_str = date.format("%Y-%m-%d").to_string();
+            let key = (stat.id_book, date_str);
             
-            *daily_pages.entry(date_str.clone()).or_insert(0) += 1;
-            *daily_time.entry(date_str).or_insert(0) += stat.duration;
+            *daily_book_pages.entry(key.clone()).or_insert(0) += 1;
+            *daily_book_time.entry(key).or_insert(0) += stat.duration;
         }
 
-        // 2. Identify valid dates
-        let mut valid_dates: HashMap<String, bool> = HashMap::new();
+        // 2. Identify valid (book, date) combinations
+        let mut valid_book_dates: HashMap<(i64, String), bool> = HashMap::new();
         
-        // Collect all unique dates
-        let mut all_dates: Vec<String> = daily_pages.keys().cloned().collect();
-        all_dates.extend(daily_time.keys().cloned());
-        all_dates.sort();
-        all_dates.dedup();
+        // Collect all unique (book, date) combinations
+        let mut all_book_dates: Vec<(i64, String)> = daily_book_pages.keys().cloned().collect();
+        all_book_dates.extend(daily_book_time.keys().cloned());
+        all_book_dates.sort();
+        all_book_dates.dedup();
         
-        for date in all_dates {
-            let pages = *daily_pages.get(&date).unwrap_or(&0);
-            let time = *daily_time.get(&date).unwrap_or(&0);
+        for book_date in all_book_dates {
+            let pages = *daily_book_pages.get(&book_date).unwrap_or(&0);
+            let time = *daily_book_time.get(&book_date).unwrap_or(&0);
             
             let pages_ok = min_pages.map_or(false, |min| pages >= min as i64);
             let time_ok = min_time.map_or(false, |min| time >= min as i64);
@@ -378,15 +379,16 @@ impl StatisticsCalculator {
                 time_ok
             };
             
-            valid_dates.insert(date, is_valid);
+            valid_book_dates.insert(book_date, is_valid);
         }
 
-        // 3. Filter page_stats
+        // 3. Filter page_stats based on per-book-per-day validity
         stats_data.page_stats.retain(|stat| {
             if stat.duration <= 0 { return false; }
             let date = time_config.date_for_timestamp(stat.start_time);
             let date_str = date.format("%Y-%m-%d").to_string();
-            *valid_dates.get(&date_str).unwrap_or(&false)
+            let key = (stat.id_book, date_str);
+            *valid_book_dates.get(&key).unwrap_or(&false)
         });
     }
 }
