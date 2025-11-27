@@ -2,7 +2,7 @@ use crate::models::*;
 use crate::templates::*;
 use crate::statistics_parser::StatisticsParser;
 use crate::statistics::{BookStatistics};
-use crate::book_scanner::scan_books;
+use crate::book_scanner::{scan_books, MetadataLocation};
 use anyhow::{Result, Context};
 use askama::Template;
 use std::fs;
@@ -21,6 +21,7 @@ pub struct SiteGenerator {
     site_title: String,
     include_unread: bool,
     books_path: Option<PathBuf>,
+    metadata_location: MetadataLocation,
     statistics_db_path: Option<PathBuf>,
     heatmap_scale_max: Option<u32>,
     time_config: TimeConfig,
@@ -33,7 +34,8 @@ impl SiteGenerator {
         output_dir: PathBuf, 
         site_title: String, 
         include_unread: bool, 
-        books_path: Option<PathBuf>, 
+        books_path: Option<PathBuf>,
+        metadata_location: MetadataLocation,
         statistics_db_path: Option<PathBuf>,
         heatmap_scale_max: Option<u32>,
         time_config: TimeConfig,
@@ -45,6 +47,7 @@ impl SiteGenerator {
             site_title,
             include_unread,
             books_path,
+            metadata_location,
             statistics_db_path,
             heatmap_scale_max,
             time_config,
@@ -71,7 +74,7 @@ impl SiteGenerator {
         
         // Scan books if books_path is provided
         let books = if let Some(ref books_path) = self.books_path {
-            scan_books(books_path).await?
+            scan_books(books_path, &self.metadata_location).await?
         } else {
             Vec::new()
         };

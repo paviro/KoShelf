@@ -18,6 +18,7 @@ mod statistics;
 mod calendar;
 mod read_completion_analyzer;
 mod time_config;
+mod partial_md5;
 
 #[cfg(test)]
 mod tests;
@@ -26,6 +27,7 @@ use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
 use crate::time_config::TimeConfig;
+use crate::book_scanner::MetadataLocation;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,53 +36,61 @@ struct Cli {
     #[arg(short, long, display_order = 1)]
     books_path: Option<PathBuf>,
 
+    /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --books-path. Mutually exclusive with --hashdocsettings-path.
+    #[arg(long, display_order = 2)]
+    docsettings_path: Option<PathBuf>,
+
+    /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --books-path. Mutually exclusive with --docsettings-path.
+    #[arg(long, display_order = 3)]
+    hashdocsettings_path: Option<PathBuf>,
+
     /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
-    #[arg(short, long, display_order = 2)]
+    #[arg(short, long, display_order = 4)]
     statistics_db: Option<PathBuf>,
     
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
-    #[arg(short, long, display_order = 3)]
+    #[arg(short, long, display_order = 5)]
     output: Option<PathBuf>,
 
-    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
-    #[arg(long, default_value = "auto", display_order = 7)]
-    heatmap_scale_max: String,
-    
+    /// Port for web server mode (default: 3000)
+    #[arg(short, long, default_value = "3000", display_order = 6)]
+    port: u16,
+
     /// Enable file watching with static output (requires --output)
-    #[arg(short, long, default_value = "false", display_order = 5)]
+    #[arg(short, long, default_value = "false", display_order = 7)]
     watch: bool,
     
     /// Site title
-    #[arg(short, long, default_value = "KoShelf", display_order = 6)]
+    #[arg(short, long, default_value = "KoShelf", display_order = 8)]
     title: String,
-    
-    /// Include unread books (EPUBs without KoReader metadata) in the generated site
-    #[arg(long, default_value = "false", display_order = 8)]
-    include_unread: bool,
-    
-    /// Port for web server mode (default: 3000)
-    #[arg(short, long, default_value = "3000", display_order = 4)]
-    port: u16,
-    
-    /// Print GitHub repository URL
-    #[arg(long, display_order = 11)]
-    github: bool,
 
+    /// Include unread books (EPUBs without KoReader metadata) in the generated site
+    #[arg(long, default_value = "false", display_order = 9)]
+    include_unread: bool,
+
+    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
+    #[arg(long, default_value = "auto", display_order = 10)]
+    heatmap_scale_max: String,
+    
     /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
-    #[arg(long, display_order = 9)]
+    #[arg(long, display_order = 11)]
     timezone: Option<String>,
 
     /// Logical day start time (HH:MM). Defaults to 00:00.
-    #[arg(long, value_name = "HH:MM", display_order = 10)]
+    #[arg(long, value_name = "HH:MM", display_order = 12)]
     day_start_time: Option<String>,
 
     /// Minimum pages read per day to be counted in statistics (optional)
-    #[arg(long, display_order = 12)]
+    #[arg(long, display_order = 13)]
     min_pages_per_day: Option<u32>,
 
     /// Minimum reading time per day to be counted in statistics (e.g., "15m", "1h"). (optional)
-    #[arg(long, display_order = 13)]
+    #[arg(long, display_order = 14)]
     min_time_per_day: Option<String>,
+
+    /// Print GitHub repository URL
+    #[arg(long, display_order = 15)]
+    github: bool,
 }
 
 // Parse time format strings like "1h", "1h30m", "45min" into seconds
@@ -169,6 +179,39 @@ async fn main() -> Result<()> {
         anyhow::bail!("--include-unread can only be used when --books-path is provided");
     }
 
+    // Validate docsettings-path and hashdocsettings-path options
+    if cli.docsettings_path.is_some() && cli.hashdocsettings_path.is_some() {
+        anyhow::bail!("--docsettings-path and --hashdocsettings-path are mutually exclusive. Please use only one.");
+    }
+    
+    if cli.docsettings_path.is_some() && cli.books_path.is_none() {
+        anyhow::bail!("--docsettings-path requires --books-path to be provided");
+    }
+    
+    if cli.hashdocsettings_path.is_some() && cli.books_path.is_none() {
+        anyhow::bail!("--hashdocsettings-path requires --books-path to be provided");
+    }
+    
+    // Validate docsettings path if provided
+    if let Some(ref docsettings_path) = cli.docsettings_path {
+        if !docsettings_path.exists() {
+            anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
+        }
+        if !docsettings_path.is_dir() {
+            anyhow::bail!("Docsettings path is not a directory: {:?}", docsettings_path);
+        }
+    }
+    
+    // Validate hashdocsettings path if provided
+    if let Some(ref hashdocsettings_path) = cli.hashdocsettings_path {
+        if !hashdocsettings_path.exists() {
+            anyhow::bail!("Hashdocsettings path does not exist: {:?}", hashdocsettings_path);
+        }
+        if !hashdocsettings_path.is_dir() {
+            anyhow::bail!("Hashdocsettings path is not a directory: {:?}", hashdocsettings_path);
+        }
+    }
+
     // Validate watch option
     if cli.watch && cli.output.is_none() {
         info!("--watch specified without --output. Note that file watching is enabled by default when no output directory is specified (web server mode)");
@@ -210,12 +253,22 @@ async fn main() -> Result<()> {
         None
     };
 
+    // Determine metadata location
+    let metadata_location = if let Some(ref docsettings_path) = cli.docsettings_path {
+        MetadataLocation::DocSettings(docsettings_path.clone())
+    } else if let Some(ref hashdocsettings_path) = cli.hashdocsettings_path {
+        MetadataLocation::HashDocSettings(hashdocsettings_path.clone())
+    } else {
+        MetadataLocation::InBookFolder
+    };
+
     // Create site generator - it will handle book scanning and stats loading internally
     let site_generator = SiteGenerator::new(
         output_dir.clone(), 
         cli.title.clone(), 
         cli.include_unread,
         cli.books_path.clone(),
+        metadata_location.clone(),
         cli.statistics_db.clone(),
         heatmap_scale_max,
         time_config.clone(),
@@ -237,6 +290,7 @@ async fn main() -> Result<()> {
         // Start file watcher only
         let file_watcher = FileWatcher::new(
             cli.books_path.clone(),
+            metadata_location.clone(),
             output_dir,
             cli.title.clone(),
             cli.include_unread,
@@ -255,6 +309,7 @@ async fn main() -> Result<()> {
         // Start file watcher
         let file_watcher = FileWatcher::new(
             cli.books_path.clone(),
+            metadata_location.clone(),
             output_dir.clone(),
             cli.title.clone(),
             cli.include_unread,

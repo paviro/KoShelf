@@ -35,6 +35,7 @@
   - [Command Line Options](#command-line-options)
   - [Example](#example)
 - [KoReader Setup](#koreader-setup)
+  - [Metadata Storage Options](#metadata-storage-options)
   - [Typical Deployment Setup](#typical-deployment-setup)
 - [Supported Data](#supported-data)
   - [From EPUB Files](#from-epub-files)
@@ -196,13 +197,15 @@ KoShelf can operate in several modes:
 ### Command Line Options
 
 - `-b, --books-path`: Path to your folder containing EPUB files and KoReader metadata (optional if `--statistics-db` is provided)
+- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--books-path`, mutually exclusive with `--hashdocsettings-path`)
+- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--books-path`, mutually exclusive with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--books-path` is provided)
 - `-o, --output`: Output directory for the generated site
 - `-p, --port`: Port for web server mode (default: 3000)
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
 - `-t, --title`: Site title (default: "KoShelf")
-- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
 - `--include-unread`: Include unread books (EPUBs without KoReader metadata)
+- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
 - `--min-pages-per-day`: Minimum pages read per day to be counted in statistics (optional)
@@ -233,11 +236,23 @@ KoShelf can operate in several modes:
 
 # Generate site with explicit timezone and non-midnight day start (good for night owls)
 ./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --timezone Australia/Sydney --day-start-time 03:00
+
+# Using hashdocsettings (metadata stored by content hash)
+./koshelf -b ~/Books -o ~/my-reading-site --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+
+# Using docsettings (metadata stored in central folder by path)
+./koshelf -b ~/Books -o ~/my-reading-site --docsettings-path ~/KOReaderSettings/docsettings
 ```
 
 ## KoReader Setup
 
-This tool expects your books to be organized like this:
+### Metadata Storage Options
+
+KOReader offers three ways to store book metadata (reading progress, highlights, annotations). KOShelf supports all three:
+
+#### 1. Default: Metadata Next to Books (Recommended)
+
+By default, KOReader creates `.sdr` folders next to each book file:
 
 ```
 Books/
@@ -250,7 +265,56 @@ Books/
 └── ...
 ```
 
-The `.sdr` directories are automatically created by KoReader when you read books and make highlights/annotations.
+This is the simplest setup - just point `--books-path` to your books folder.
+
+#### 2. Hashdocsettings
+
+If you select "hashdocsettings" in KOReader settings, metadata is stored in a central folder organized by content hash:
+
+```
+KOReaderSettings/
+└── hashdocsettings/
+    ├── 57/
+    │   └── 570615f811d504e628db1ef262bea270.sdr/
+    │       └── metadata.epub.lua
+    └── a3/
+        └── a3b2c1d4e5f6...sdr/
+            └── metadata.epub.lua
+```
+
+
+
+
+**Usage:**
+```bash
+./koshelf --books-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+```
+
+#### 3. Docsettings
+
+If you select "docsettings" in KOReader settings, KOReader mirrors your book folder structure in a central folder and stores the metadata there:
+
+```
+KOReaderSettings/
+└── docsettings/
+    └── home/
+        └── user/
+            └── Books/
+                ├── Book Title.sdr/
+                │   └── metadata.epub.lua
+                └── Another Book.sdr/
+                    └── metadata.epub.lua
+```
+
+**Note:**  Unlike KOReader, KOShelf matches books by filename only, since the folder structure reflects the device path (which may differ from your local path). If you have multiple books with the same filename, KOShelf will show an error - use `hashdocsettings` or `book folder` instead.
+
+**Usage:**
+```bash
+./koshelf --books-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
+```
+
+### Supported Formats
+
 Although KOReader supports more than just EPUBs, this tool does not, and probably never will, as I don't use them and this is a weekend project that probably won't be maintained much.
 
 ### Typical Deployment Setup
