@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Duration, Local, NaiveDate, Utc, TimeZone};
+use anyhow::{Result, anyhow};
+use chrono::{DateTime, Duration, Local, NaiveDate, TimeZone, Utc};
 use chrono_tz::Tz;
 
 #[derive(Clone, Debug)]
@@ -10,16 +10,19 @@ pub struct TimeConfig {
 
 impl TimeConfig {
     pub fn new(timezone: Option<Tz>, day_start_minutes: u16) -> Self {
-        Self { timezone, day_start_minutes }
+        Self {
+            timezone,
+            day_start_minutes,
+        }
     }
 
     /// Build from optional CLI strings (timezone IANA name, day start as HH:MM)
     pub fn from_cli(timezone: &Option<String>, day_start_time: &Option<String>) -> Result<Self> {
         let tz = match timezone {
             Some(tz_str) if !tz_str.trim().is_empty() => {
-                let parsed: Tz = tz_str
-                    .parse()
-                    .map_err(|_| anyhow!("Invalid timezone: {}. Example: Australia/Sydney", tz_str))?;
+                let parsed: Tz = tz_str.parse().map_err(|_| {
+                    anyhow!("Invalid timezone: {}. Example: Australia/Sydney", tz_str)
+                })?;
                 Some(parsed)
             }
             _ => None,
@@ -36,7 +39,9 @@ impl TimeConfig {
     fn parse_day_start_minutes(s: &str) -> Result<u16> {
         let parts: Vec<&str> = s.split(':').collect();
         if parts.len() != 2 {
-            return Err(anyhow!("Invalid --day-start-time format. Use HH:MM (e.g., 03:00)"));
+            return Err(anyhow!(
+                "Invalid --day-start-time format. Use HH:MM (e.g., 03:00)"
+            ));
         }
         let hours: u16 = parts[0]
             .parse()
@@ -69,7 +74,9 @@ impl TimeConfig {
 
     /// Format a timestamp as YYYY-MM-DD under configured timezone/day-start.
     pub fn format_date(&self, timestamp: i64) -> String {
-        self.date_for_timestamp(timestamp).format("%Y-%m-%d").to_string()
+        self.date_for_timestamp(timestamp)
+            .format("%Y-%m-%d")
+            .to_string()
     }
 
     /// Today's logical date under configured timezone/day-start.
@@ -81,10 +88,11 @@ impl TimeConfig {
     /// Format current time as YYYY-MM-DD HH:MM in configured timezone (no day-start adjustment).
     pub fn now_formatted(&self) -> String {
         match self.timezone {
-            Some(tz) => Utc::now().with_timezone(&tz).format("%Y-%m-%d %H:%M").to_string(),
+            Some(tz) => Utc::now()
+                .with_timezone(&tz)
+                .format("%Y-%m-%d %H:%M")
+                .to_string(),
             None => Local::now().format("%Y-%m-%d %H:%M").to_string(),
         }
     }
 }
-
-
