@@ -1,6 +1,6 @@
 <!-- Book Section Component -->
 <!-- Parameters expected (set via template variables before including):
-     - section_name: "reading", "completed", or "unread"
+     - section_name: "reading", "completed", "abandoned" or "unread"
      - section_title: Display title for the section
      - books: Array of books to display
      - default_visible: boolean for initial visibility
@@ -49,6 +49,17 @@
                         {% endif %}
                         {% when None %}
                         {% endmatch %}
+                    {% elif section_name == "abandoned" %}
+                        <!-- Progress Bar -->
+                        <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
+                        
+                        <!-- Pause  Indicator for Onhold -->
+                        <div class="absolute top-2 left-2 bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xs px-2 py-1 rounded-lg shadow-lg backdrop-blur-sm border border-red-400/30 flex items-center space-x-1">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 4h4v16H6zM14 4h4v16h-4z"></path>
+                            </svg>
+                        </div>
+
                     {% elif section_name == "completed" %}
                         <!-- Rating Indicator -->
                         {% match book.rating() %}
