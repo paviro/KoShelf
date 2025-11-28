@@ -173,8 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (abandonedSection) {
-            const shouldShowCompleted = completedVisible > 0 && (filter === 'all' || filter === 'abandoned');
-            completedSection.style.display = shouldShowCompleted ? 'block' : 'none';
+            const shouldShowAbandoned = completedVisible > 0 && (filter === 'all' || filter === 'abandoned');
+            abandonedSection.style.display = shouldShowCompleted ? 'block' : 'none';
         }
         
         if (unreadSection) {
