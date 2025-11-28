@@ -338,14 +338,14 @@ impl SiteGenerator {
         
         let mut reading_books = Vec::new();
         let mut completed_books = Vec::new();
-        let mut abandoned_books = Vec::new();
+        let mut onhold_books = Vec::new();
         let mut unread_books = Vec::new();
         
         for book in books {
             match book.status() {
                 BookStatus::Reading => reading_books.push(book.clone()),
                 BookStatus::Complete => completed_books.push(book.clone()),
-                BookStatus::Abandoned => abandoned_books.push(book.clone()),
+                BookStatus::Onhold => onhold_books.push(book.clone()),
                 BookStatus::Unknown => {
                     // If it has KoReader metadata, add to reading; otherwise check if we should include unread
                     if book.koreader_metadata.is_some() {
@@ -361,7 +361,7 @@ impl SiteGenerator {
         // Sort by title
         reading_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
         completed_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
-        abandoned_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
+        onhold_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
         unread_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
         
         // ------------------------------------------------------------------
@@ -385,7 +385,7 @@ impl SiteGenerator {
 
         let reading_json: Vec<_> = reading_books.iter().map(to_manifest_entry).collect();
         let completed_json: Vec<_> = completed_books.iter().map(to_manifest_entry).collect();
-        let abandoned_json: Vec<_> = abandoned_books.iter().map(to_manifest_entry).collect();
+        let abandoned_json: Vec<_> = onhold_books.iter().map(to_manifest_entry).collect();
         let new_json: Vec<_> = unread_books.iter().map(to_manifest_entry).collect();
 
         let manifest = json!({
@@ -409,7 +409,7 @@ impl SiteGenerator {
             site_title: self.site_title.clone(),
             reading_books,
             completed_books,
-            abandoned_books,
+            onhold_books,
             unread_books,
             version: self.get_version(),
             last_updated: self.get_last_updated(),

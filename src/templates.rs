@@ -15,7 +15,7 @@ pub struct IndexTemplate {
     pub site_title: String,
     pub reading_books: Vec<Book>,
     pub completed_books: Vec<Book>,
-    pub abandoned_books: Vec<Book>,
+    pub onhold_books: Vec<Book>,
     pub unread_books: Vec<Book>,
     pub version: String,
     pub last_updated: String,
