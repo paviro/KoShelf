@@ -93,6 +93,16 @@
                 {% include "book_list/componenten/book_section.html" %}
                 {% endif %}
                 
+                {% if !onhold_books.is_empty() %}
+                {% set section_name = "abandoned" %}
+                {% set section_title = "On Hold" %}
+                {% set books = onhold_books %}
+                {% set default_visible = "false" %}
+                {% set gradient_classes = "from-purple-400 to-purple-600" %}
+                {% set badge_classes = "from-purple-500 to-purple-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
                 {% if !completed_books.is_empty() %}
                 {% set section_name = "completed" %}
                 {% set section_title = "Completed" %}
@@ -100,16 +110,6 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-green-400 to-green-600" %}
                 {% set badge_classes = "from-green-500 to-green-600" %}
-                {% include "book_list/componenten/book_section.html" %}
-                {% endif %}
-                
-                {% if !onhold_books.is_empty() %}
-                {% set section_name = "abandoned" %}
-                {% set section_title = "On hold" %}
-                {% set books = onhold_books %}
-                {% set default_visible = "false" %}
-                {% set gradient_classes = "from-purple-400 to-purple-600" %}
-                {% set badge_classes = "from-purple-500 to-purple-600" %}
                 {% include "book_list/componenten/book_section.html" %}
                 {% endif %}
                 
