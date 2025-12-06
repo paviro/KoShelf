@@ -93,11 +93,11 @@
                 {% include "book_list/componenten/book_section.html" %}
                 {% endif %}
                 
-                {% if !onhold_books.is_empty() %}
+                {% if !abandoned_books.is_empty() %}
                 {% set section_name = "abandoned" %}
                 {% set section_title = "On Hold" %}
-                {% set books = onhold_books %}
-                {% set default_visible = "false" %}
+                {% set books = abandoned_books %}
+                {% set default_visible = "true" %}
                 {% set gradient_classes = "from-purple-400 to-purple-600" %}
                 {% set badge_classes = "from-purple-500 to-purple-600" %}
                 {% include "book_list/componenten/book_section.html" %}

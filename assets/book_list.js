@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterButtons = document.querySelectorAll('[data-filter]');
     const readingSection = document.querySelector('section:has(#readingContainer)');
     const completedSection = document.querySelector('section:has(#completedContainer)');
-    const onholdSection = document.querySelector('section:has(#onholdContainer)');
+    const abandonedSection = document.querySelector('section:has(#abandonedContainer)');
     const unreadSection = document.querySelector('section:has(#unreadContainer)');
     const bookCards = document.querySelectorAll('.book-card');
     
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // After filtering, expand/collapse sections based on visible books
         if (searchTerm) {
             // For each section, check if it has visible books
-            ['reading', 'completed', 'onhold', 'unread'].forEach(name => {
+            ['reading', 'completed', 'abandoned', 'unread'].forEach(name => {
                 const container = document.getElementById(name + 'Container');
                 if (!container) return;
                 const hasVisible = Array.from(container.children).some(child => child.style.display !== 'none');
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function filterBooks(searchTerm, filter) {
         let readingVisible = 0;
         let completedVisible = 0;
-        let onholdVisible = 0;
+        let abandonedVisible = 0;
         let unreadVisible = 0;
         
         bookCards.forEach(card => {
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const matchesFilter = filter === 'all' || 
                 (filter === 'reading' && status === 'reading') ||
                 (filter === 'completed' && status === 'completed') ||
-                (filter === 'onhold' && status === 'onhold') ||
+                (filter === 'abandoned' && status === 'abandoned') ||
                 (filter === 'unread' && status === 'unread');
             
             // Show/hide card with animation
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Count visible books by status
                 if (status === 'reading') readingVisible++;
                 if (status === 'completed') completedVisible++;
-                if (status === 'onhold') onholdVisible++;
+                if (status === 'abandoned') abandonedVisible++;
                 if (status === 'unread') unreadVisible++;
             } else {
                 card.style.display = 'none';
@@ -172,9 +172,9 @@ document.addEventListener('DOMContentLoaded', function() {
             completedSection.style.display = shouldShowCompleted ? 'block' : 'none';
         }
         
-        if (onholdSection) {
-            const shouldShowOnhold = completedVisible > 0 && (filter === 'all' || filter === 'onhold');
-            onholdSection.style.display = shouldShowCompleted ? 'block' : 'none';
+        if (abandonedSection) {
+            const shouldShowAbandoned = abandonedVisible > 0 && (filter === 'all' || filter === 'abandoned');
+            abandonedSection.style.display = shouldShowAbandoned ? 'block' : 'none';
         }
         
         if (unreadSection) {
@@ -182,7 +182,8 @@ document.addEventListener('DOMContentLoaded', function() {
             unreadSection.style.display = shouldShowUnread ? 'block' : 'none';
         }
         
-        updateEmptyState(readingVisible + completedVisible + onholdVisible + unreadVisible);
+
+        updateEmptyState(readingVisible + completedVisible + abandonedVisible + unreadVisible);
     }
     
     function updateEmptyState(visibleCount) {
