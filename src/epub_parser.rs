@@ -114,6 +114,8 @@ impl EpubParser {
     fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
         use quick_xml::Reader;
         use quick_xml::events::Event;
+        use std::collections::HashMap;
+
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -125,110 +127,179 @@ impl EpubParser {
         let mut language = None;
         let mut identifiers = Vec::new();
         let mut subjects = Vec::new();
+        
         let mut meta_cover_id: Option<String> = None;
-        let mut series = None;
-        let mut series_number = None;
+        let mut cal_series: Option<String> = None;
+        let mut cal_series_number: Option<String> = None;
+        
+        // EPUB3 collection tracking
+        let mut epub3_collections: HashMap<String, String> = HashMap::new(); // id -> name
+        let mut epub3_indices: HashMap<String, String> = HashMap::new(); // refines (#id) -> index
 
         loop {
             match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
-                    let name = e.local_name();
-                    match name.as_ref() {
-                        b"metadata" => in_metadata = true,
-                        b"title" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                title = Some(text.unescape().unwrap_or_default().to_string());
-                            }
-                        },
-                        b"creator" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                authors.push(text.unescape().unwrap_or_default().to_string());
-                            }
-                        },
-                        b"description" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                description = Some(text.unescape().unwrap_or_default().to_string());
-                            }
-                        },
-                        b"publisher" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                publisher = Some(text.unescape().unwrap_or_default().to_string());
-                            }
-                        },
-                        b"language" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                language = Some(text.unescape().unwrap_or_default().to_string());
-                            }
-                        },
-                        b"identifier" if in_metadata => {
-                            let mut scheme = None;
-                            for attr in e.attributes().flatten() {
-                                let key = attr.key.as_ref();
-                                if key == b"opf:scheme" || key == b"scheme" {
-                                    scheme = Some(String::from_utf8_lossy(&attr.value).to_string());
+                Ok(Event::Start(ref e)) => {
+                    let local_name = e.local_name();
+                    if local_name.as_ref() == b"metadata" {
+                        in_metadata = true;
+                    } else if in_metadata {
+                        match local_name.as_ref() {
+                            b"title" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    title = Some(text.unescape().unwrap_or_default().to_string());
                                 }
                             }
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                let value = text.unescape().unwrap_or_default().to_string();
-                                let (final_scheme, final_value) = if let Some(s) = scheme {
-                                    (s, value.clone())
-                                } else if let Some(colon_pos) = value.find(':') {
-                                    let potential_scheme = &value[..colon_pos];
-                                    let potential_value = &value[colon_pos + 1..];
-                                    (potential_scheme.to_string(), potential_value.to_string())
-                                } else {
-                                    ("unknown".to_string(), value.clone())
-                                };
-                                identifiers.push(Identifier::new(final_scheme, final_value));
-                            }
-                        },
-                        b"subject" if in_metadata => {
-                            if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                let subject = text.unescape().unwrap_or_default().to_string();
-                                if !subject.is_empty() {
-                                    subjects.push(subject);
+                            b"creator" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    authors.push(text.unescape().unwrap_or_default().to_string());
                                 }
                             }
-                        },
-                        b"meta" if in_metadata => {
-                            let mut name = None;
-                            let mut content = None;
-                            for attr in e.attributes().flatten() {
-                                let key = attr.key.as_ref();
-                                if key == b"name" {
-                                    name = Some(String::from_utf8_lossy(&attr.value).to_string());
-                                } else if key == b"content" {
-                                    content = Some(String::from_utf8_lossy(&attr.value).to_string());
+                            b"description" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    description = Some(text.unescape().unwrap_or_default().to_string());
                                 }
                             }
-                            if let (Some(n), Some(c)) = (name, content) {
-                                if n == "cover" {
-                                    meta_cover_id = Some(c.clone());
-                                }
-                                if n == "calibre:series" {
-                                    series = Some(c.clone());
-                                }
-                                if n == "calibre:series_index" {
-                                    series_number = Some(c);
+                            b"publisher" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    publisher = Some(text.unescape().unwrap_or_default().to_string());
                                 }
                             }
-                        },
-                        _ => {}
+                            b"language" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    language = Some(text.unescape().unwrap_or_default().to_string());
+                                }
+                            }
+                            b"identifier" => {
+                                let mut scheme = None;
+                                for attr in e.attributes().flatten() {
+                                    let key = attr.key.as_ref();
+                                    if key == b"opf:scheme" || key == b"scheme" {
+                                        scheme = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                    }
+                                }
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    let value = text.unescape().unwrap_or_default().to_string();
+                                    let (final_scheme, final_value) = if let Some(s) = scheme {
+                                        (s, value.clone())
+                                    } else if let Some(colon_pos) = value.find(':') {
+                                        let potential_scheme = &value[..colon_pos];
+                                        let potential_value = &value[colon_pos + 1..];
+                                        (potential_scheme.to_string(), potential_value.to_string())
+                                    } else {
+                                        ("unknown".to_string(), value.clone())
+                                    };
+                                    identifiers.push(Identifier::new(final_scheme, final_value));
+                                }
+                            }
+                            b"subject" => {
+                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                    let subject = text.unescape().unwrap_or_default().to_string();
+                                    if !subject.is_empty() {
+                                        subjects.push(subject);
+                                    }
+                                }
+                            }
+                            b"meta" => {
+                                let mut property = None;
+                                let mut id = None;
+                                let mut refines = None;
+                                
+                                let mut name_attr = None;
+                                let mut content_attr = None;
+
+                                for attr in e.attributes().flatten() {
+                                    let key = attr.key.as_ref();
+                                    match key {
+                                        b"property" => property = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"id" => id = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"refines" => refines = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        _ => {}
+                                    }
+                                }
+
+                                if let (Some(n), Some(c)) = (&name_attr, &content_attr) {
+                                    if n == "cover" { meta_cover_id = Some(c.clone()); }
+                                    if n == "calibre:series" { cal_series = Some(c.clone()); }
+                                    if n == "calibre:series_index" { cal_series_number = Some(c.clone()); }
+                                }
+
+                                if let Some(prop) = property {
+                                    if prop == "belongs-to-collection" {
+                                        if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                            if let Some(i) = id {
+                                                epub3_collections.insert(i, text.unescape().unwrap_or_default().to_string());
+                                            }
+                                        }
+                                    } else if prop == "group-position" {
+                                        if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
+                                            if let Some(r) = refines {
+                                                let clean_refines = r.trim_start_matches('#');
+                                                epub3_indices.insert(clean_refines.to_string(), text.unescape().unwrap_or_default().to_string());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
                     }
-                },
+                }
+                Ok(Event::Empty(ref e)) => {
+                    let local_name = e.local_name();
+                    if in_metadata && local_name.as_ref() == b"meta" {
+                        let mut name_attr = None;
+                        let mut content_attr = None;
+                        for attr in e.attributes().flatten() {
+                            let key = attr.key.as_ref();
+                            match key {
+                                b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                _ => {}
+                            }
+                        }
+                        if let (Some(n), Some(c)) = (name_attr, content_attr) {
+                            if n == "cover" { 
+                                meta_cover_id = Some(c); 
+                            } else if n == "calibre:series" { 
+                                cal_series = Some(c); 
+                            } else if n == "calibre:series_index" { 
+                                cal_series_number = Some(c); 
+                            }
+                        }
+                    }
+                }
                 Ok(Event::End(ref e)) => {
-                    let name = e.local_name();
-                    match name.as_ref() {
-                        b"metadata" => in_metadata = false,
-                        _ => {}
+                    if e.local_name().as_ref() == b"metadata" {
+                        in_metadata = false;
                     }
-                },
+                }
                 Ok(Event::Eof) => break,
                 Err(e) => return Err(anyhow!("Error parsing OPF: {}", e)),
                 _ => {}
             }
             buf.clear();
         }
+
+        let (series, series_number) = if !epub3_collections.is_empty() {
+            let mut best = None;
+            for (id, name) in &epub3_collections {
+                if let Some(idx) = epub3_indices.get(id) {
+                    best = Some((Some(name.clone()), Some(idx.clone())));
+                    break;
+                }
+            }
+            best.unwrap_or_else(|| {
+                if let Some((_, name)) = epub3_collections.iter().next() {
+                    (Some(name.clone()), None)
+                } else {
+                    (None, None)
+                }
+            })
+        } else {
+            (cal_series, cal_series_number)
+        };
 
         let cover_id = meta_cover_id;
         let info = EpubInfo {
@@ -304,4 +375,4 @@ impl EpubParser {
         }
         Ok((None, None))
     }
-} 
+}
