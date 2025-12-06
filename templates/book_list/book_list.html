@@ -90,7 +90,7 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-primary-400 to-primary-600" %}
                 {% set badge_classes = "from-primary-500 to-primary-600" %}
-                {% include "book_list/componenten/book_section.html" %}
+                {% include "book_list/components/book_section.html" %}
                 {% endif %}
                 
                 {% if !abandoned_books.is_empty() %}
@@ -100,7 +100,7 @@
                 {% set default_visible = "false" %}
                 {% set gradient_classes = "from-purple-400 to-purple-600" %}
                 {% set badge_classes = "from-purple-500 to-purple-600" %}
-                {% include "book_list/componenten/book_section.html" %}
+                {% include "book_list/components/book_section.html" %}
                 {% endif %}
                 
                 {% if !completed_books.is_empty() %}
@@ -110,7 +110,7 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-green-400 to-green-600" %}
                 {% set badge_classes = "from-green-500 to-green-600" %}
-                {% include "book_list/componenten/book_section.html" %}
+                {% include "book_list/components/book_section.html" %}
                 {% endif %}
                 
                 {% if !unread_books.is_empty() %}
@@ -120,11 +120,11 @@
                 {% set default_visible = "false" %}
                 {% set gradient_classes = "from-orange-400 to-orange-600" %}
                 {% set badge_classes = "from-orange-500 to-orange-600" %}
-                {% include "book_list/componenten/book_section.html" %}
+                {% include "book_list/components/book_section.html" %}
                 {% endif %}
                 
                 <!-- Empty State Component -->
-                {% include "book_list/componenten/empty_state.html" %}
+                {% include "book_list/components/empty_state.html" %}
         </main>
     </div>
 
