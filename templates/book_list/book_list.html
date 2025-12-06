@@ -66,6 +66,7 @@
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="all">All</button>
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="reading">Reading</button>
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="completed">Completed</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="abandoned">Onhold</button>
                             {% if !unread_books.is_empty() %}
                             <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200" data-filter="unread">Unread</button>
                             {% endif %}
@@ -89,6 +90,16 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-primary-400 to-primary-600" %}
                 {% set badge_classes = "from-primary-500 to-primary-600" %}
+                {% include "book_list/componenten/book_section.html" %}
+                {% endif %}
+                
+                {% if !abandoned_books.is_empty() %}
+                {% set section_name = "abandoned" %}
+                {% set section_title = "On Hold" %}
+                {% set books = abandoned_books %}
+                {% set default_visible = "false" %}
+                {% set gradient_classes = "from-purple-400 to-purple-600" %}
+                {% set badge_classes = "from-purple-500 to-purple-600" %}
                 {% include "book_list/componenten/book_section.html" %}
                 {% endif %}
                 

@@ -319,6 +319,7 @@ impl EpubInfo {
 pub enum BookStatus {
     Reading,
     Complete,
+    Abandoned,
     #[serde(other)]
     Unknown,
 }
@@ -328,6 +329,7 @@ impl std::fmt::Display for BookStatus {
         match self {
             BookStatus::Reading => write!(f, "reading"),
             BookStatus::Complete => write!(f, "complete"),
+            BookStatus::Abandoned => write!(f, "abandoned"),
             BookStatus::Unknown => write!(f, "unknown"),
         }
     }
