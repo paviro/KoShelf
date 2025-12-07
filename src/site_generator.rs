@@ -829,12 +829,13 @@ impl SiteGenerator {
         // Render each year page
         for (idx, year) in years.iter().enumerate() {
             let months_map = year_month_items.get(year).cloned().unwrap_or_default();
-            // Build MonthRecap BTreeMap sorted by month ascending (Jan..Dec)
+            // Build MonthRecap BTreeMap sorted by month descending (Dec..Jan)
             let mut monthly: BTreeMap<String, crate::models::MonthRecap> = BTreeMap::new();
 
             for (ym, mut items) in months_map {
                 if items.is_empty() { continue; }
-                items.sort_by(|a, b| a.end_date.cmp(&b.end_date));
+                // Sort items by end_date descending (Newest first)
+                items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
                 let month_label = if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d") {
                     date.format("%B").to_string()
