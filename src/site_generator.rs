@@ -258,6 +258,10 @@ impl SiteGenerator {
             let calendar_init_js_content = include_str!("../assets/calendar.js");
             fs::write(self.js_dir().join("calendar.js"), calendar_init_js_content)?;
 
+            // Storage utility
+            let storage_js_content = include_str!("../assets/storage-manager.js");
+            fs::write(self.js_dir().join("storage-manager.js"), storage_js_content)?;
+
             // Recap small UI logic
             let recap_js_content = include_str!("../assets/recap.js");
             fs::write(self.js_dir().join("recap.js"), recap_js_content)?;
