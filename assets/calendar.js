@@ -221,6 +221,9 @@ function initializeEventCalendar(events) {
             const newMonth = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
             updateDisplayedMonth(newMonth);
 
+            // Update Today button disabled state
+            updateTodayButtonState(currentMonthDate);
+
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
         }
@@ -365,11 +368,15 @@ function hideModal() {
 
 function setupEventHandlers() {
     // Today
-    document.getElementById('todayBtn')?.addEventListener('click', () => {
-        if (calendar) {
+    const todayBtn = document.getElementById('todayBtn');
+    todayBtn?.addEventListener('click', () => {
+        if (calendar && !todayBtn.disabled) {
             calendar.setOption('date', new Date());
         }
     });
+
+    // Set initial state of Today button
+    updateTodayButtonState(new Date());
 
     // Prev / next navigation
     document.getElementById('prevBtn')?.addEventListener('click', () => {
@@ -388,6 +395,29 @@ function setupEventHandlers() {
     document.getElementById('eventModal')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) hideModal();
     });
+}
+
+// Update Today button disabled state based on whether we're viewing the current month
+function updateTodayButtonState(displayedDate) {
+    const todayBtn = document.getElementById('todayBtn');
+    if (!todayBtn) return;
+
+    const now = new Date();
+    const isCurrentMonth =
+        displayedDate.getFullYear() === now.getFullYear() &&
+        displayedDate.getMonth() === now.getMonth();
+
+    todayBtn.disabled = isCurrentMonth;
+
+    if (isCurrentMonth) {
+        // Disabled styling - match recap page disabled buttons
+        todayBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700', 'text-white');
+        todayBtn.classList.add('bg-gray-100', 'dark:bg-dark-800', 'text-gray-400', 'dark:text-dark-400', 'cursor-not-allowed');
+    } else {
+        // Enabled styling - primary color
+        todayBtn.classList.add('bg-primary-600', 'hover:bg-primary-700', 'text-white');
+        todayBtn.classList.remove('bg-gray-100', 'dark:bg-dark-800', 'text-gray-400', 'dark:text-dark-400', 'cursor-not-allowed');
+    }
 }
 
 // Update monthly statistics for the given month/year (preferring pre-calculated stats when available)
