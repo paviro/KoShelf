@@ -36,3 +36,21 @@ pub struct MonthRecap {
     pub hours_read_display: String, // formatted e.g. "12h 30m"
     pub items: Vec<RecapItem>,      // enriched completion entries (sorted by end date)
 }
+
+/// Aggregated yearly statistics for the recap header
+#[derive(Debug, Clone, Serialize)]
+pub struct YearlySummary {
+    pub total_books: usize,
+    pub total_time_seconds: i64,
+    pub total_time_days: i64,
+    pub total_time_hours: i64,
+    pub longest_session_hours: i64,
+    pub longest_session_minutes: i64,
+    pub average_session_hours: i64,
+    pub average_session_minutes: i64,
+    pub active_days: usize,
+    pub active_days_percentage: f64,
+    pub longest_streak: i64,
+    pub best_month_name: Option<String>,
+    pub best_month_time_display: Option<String>,
+}

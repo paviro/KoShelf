@@ -11,10 +11,10 @@
     {% include "sidebar.html" %}
     
     <!-- Header - Fixed at top -->
-    <header class="fixed top-0 left-0 right-0 md:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40 flex items-center justify-between">
+    <header class="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40 flex items-center justify-between">
         <div class="flex items-center h-full min-w-0 flex-1">
             <!-- Mobile Title & Back Button -->
-            <div class="md:hidden flex items-center space-x-3 min-w-0 flex-1">
+            <div class="lg:hidden flex items-center space-x-3 min-w-0 flex-1">
                 <button onclick="if (typeof smartBack === 'function') { smartBack(document.referrer); }" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -22,7 +22,7 @@
                 </button>
                 <div class="h-8 w-px bg-gray-200 dark:bg-dark-700 mx-3 md:mx-6"></div>
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ book.epub_info.title }}</h1>
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.epub_info.title }}</h1>
                     {% if !book.epub_info.authors.is_empty() %}
                     <p class="text-xs text-gray-500 dark:text-dark-300 truncate">by {{ book.epub_info.authors[0] }}</p>
                     {% endif %}
@@ -30,7 +30,7 @@
             </div>
             
             <!-- Desktop Title -->
-            <div class="hidden md:block min-w-0 flex-1">
+            <div class="hidden lg:block min-w-0 flex-1">
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.epub_info.title }}</h1>
                 {% if !book.epub_info.authors.is_empty() %}
                 <p class="text-sm text-gray-500 dark:text-dark-300 truncate">by {{ book.epub_info.authors[0] }}</p>
@@ -58,7 +58,7 @@
         </div>
     </header>
     
-    <div class="min-h-full md:ml-64">
+    <div class="min-h-full lg:ml-64">
     <!-- Main Content -->
         <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
             <!-- Book Header -->

@@ -15,6 +15,7 @@ use futures::future;
 use crate::calendar::CalendarGenerator;
 use crate::time_config::TimeConfig;
 use std::collections::{BTreeMap, HashMap};
+use chrono::Datelike;
 
 pub struct SiteGenerator {
     output_dir: PathBuf,
@@ -863,6 +864,132 @@ impl SiteGenerator {
             // Latest year href for sidebar
             let latest_href = format!("/recap/{}/", years[0]);
 
+            // ------------------------------------------------------------------
+            // Calculate Yearly Summary Stats
+            // ------------------------------------------------------------------
+            // 1. Basic sums from monthly data
+            let mut total_books = 0;
+            let mut total_time_seconds = 0;
+
+            for m in &monthly_vec {
+                total_books += m.books_finished;
+                total_time_seconds += m.hours_read_seconds;
+            }
+
+            // 2. Session stats from page_stats (filtered by year)
+            // Filter page_stats for the current year
+            let year_page_stats: Vec<crate::models::PageStat> = stats_data.page_stats.iter()
+                .filter(|ps| {
+                    if let Some(dt) = chrono::DateTime::from_timestamp(ps.start_time, 0) {
+                        dt.year() == *year
+                    } else {
+                        false
+                    }
+                })
+                .cloned()
+                .collect();
+
+            // Use session_calculator to aggregate stats into valid sessions (handling gaps)
+            let all_sessions = crate::session_calculator::aggregate_session_durations(&year_page_stats);
+            
+            let session_count = all_sessions.len() as i64;
+            let longest_session_duration = all_sessions.iter().max().copied().unwrap_or(0);
+            let average_session_duration = if session_count > 0 {
+                all_sessions.iter().sum::<i64>() / session_count
+            } else {
+                0
+            };
+
+            // 3. Calculate active reading days for this year
+            let year_str = format!("{}", year);
+            let active_days: usize = reading_stats.daily_activity.iter()
+                .filter(|day| day.date.starts_with(&year_str) && day.read_time > 0)
+                .count();
+            
+            // Calculate percentage based on days in the year (365 or 366 for leap years)
+            let days_in_year = if chrono::NaiveDate::from_ymd_opt(*year, 12, 31).map_or(false, |d| d.ordinal() == 366) {
+                366.0
+            } else {
+                365.0
+            };
+            let active_days_percentage = (active_days as f64 / days_in_year * 100.0).round();
+
+            // 4. Calculate longest streak within this year
+            let mut year_reading_dates: Vec<chrono::NaiveDate> = reading_stats.daily_activity.iter()
+                .filter(|day| day.date.starts_with(&year_str) && day.read_time > 0)
+                .filter_map(|day| chrono::NaiveDate::parse_from_str(&day.date, "%Y-%m-%d").ok())
+                .collect();
+            year_reading_dates.sort();
+            year_reading_dates.dedup();
+            
+            let longest_streak = if year_reading_dates.is_empty() {
+                0
+            } else {
+                let mut max_streak = 1i64;
+                let mut current_streak = 1i64;
+                for i in 1..year_reading_dates.len() {
+                    let diff = (year_reading_dates[i] - year_reading_dates[i - 1]).num_days();
+                    if diff == 1 {
+                        current_streak += 1;
+                        max_streak = max_streak.max(current_streak);
+                    } else {
+                        current_streak = 1;
+                    }
+                }
+                max_streak
+            };
+
+            // 5. Find best month (highest reading time) in this year
+            let best_month: Option<(String, i64)> = month_hours.iter()
+                .filter(|(ym, _)| ym.starts_with(&year_str))
+                .max_by_key(|(_, secs)| *secs)
+                .map(|(ym, secs)| (ym.clone(), *secs));
+            
+            let (best_month_name, best_month_time_display) = if let Some((ym, secs)) = best_month {
+                if secs > 0 {
+                    let month_name = if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d") {
+                        Some(date.format("%B").to_string())
+                    } else {
+                        None
+                    };
+                    (month_name, Some(format_duration(secs)))
+                } else {
+                    (None, None)
+                }
+            } else {
+                (None, None)
+            };
+
+            // Calculate days and hours from total time (drop minutes)
+            let total_minutes = total_time_seconds / 60;
+            let total_time_days = total_minutes / (24 * 60);
+            let total_time_hours = (total_minutes % (24 * 60)) / 60;
+
+            // Calculate hours and minutes for session stats
+            let longest_session_total_mins = longest_session_duration / 60;
+            let longest_session_hours = longest_session_total_mins / 60;
+            let longest_session_minutes = longest_session_total_mins % 60;
+
+            let avg_session_total_mins = average_session_duration / 60;
+            let average_session_hours = avg_session_total_mins / 60;
+            let average_session_minutes = avg_session_total_mins % 60;
+
+            let summary = crate::models::YearlySummary {
+                total_books,
+                total_time_seconds,
+                total_time_days,
+                total_time_hours,
+                longest_session_hours,
+                longest_session_minutes,
+                average_session_hours,
+                average_session_minutes,
+                active_days,
+                active_days_percentage,
+                longest_streak,
+                best_month_name,
+                best_month_time_display,
+            };
+
             let template = crate::templates::RecapTemplate {
                 site_title: self.site_title.clone(),
                 year: *year,
@@ -870,6 +997,7 @@ impl SiteGenerator {
                 prev_year,
                 next_year,
                 monthly: monthly_vec,
+                summary,
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap("recap", Some(latest_href.as_str())),
