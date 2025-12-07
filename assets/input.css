@@ -307,6 +307,17 @@
       transform: translateY(-50%);
     }
   }
+  /* Yearly summary dot stays aligned with the title, not centered */
+  .recap-dot-top {
+    top: 0.5rem;
+    transform: none;
+  }
+  @screen md {
+    .recap-dot-top {
+      top: 0.75rem;
+      transform: none;
+    }
+  }
   
   /* Recap cover max height: slightly larger on mobile, full on md+ */
   .recap-cover-max {

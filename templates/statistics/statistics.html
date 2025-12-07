@@ -11,24 +11,19 @@
     {% include "sidebar.html" %}
     
     <!-- Header - Fixed at top -->
-    <header class="fixed top-0 left-0 right-0 md:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+    <header class="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
         <div class="flex items-center justify-between h-full">
             <!-- Mobile Logo/Title -->
-            <div class="md:hidden flex items-center space-x-3">
-                <div class="w-6 h-6 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                </div>
-                <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">Reading Statistics</h1>
+            <div class="lg:hidden flex items-center">
+                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">Reading Statistics</h1>
             </div>
             
             <!-- Desktop Page Title -->
-            <h2 class="hidden md:block text-2xl font-bold text-gray-900 dark:text-white">Reading Statistics</h2>
+            <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">Reading Statistics</h2>
         </div>
     </header>
     
-    <div class="min-h-full md:ml-64">
+    <div class="min-h-full lg:ml-64">
         <!-- Main Content -->
         <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
             {% include "statistics/components/overall_stats.html" %}

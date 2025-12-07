@@ -125,29 +125,29 @@ async function fetchMonthData(targetMonth = null) {
             const now = new Date();
             targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         }
-        
+
         // Check if month data is already cached
         if (monthlyDataCache.has(targetMonth)) {
             return monthlyDataCache.get(targetMonth);
         }
-        
+
         // Check if this month has data available
         if (availableMonths.length > 0 && !availableMonths.includes(targetMonth)) {
             console.info(`No calendar data available for ${targetMonth}`);
             return { events: [], books: {} }; // Return empty data instead of null
         }
-        
+
         const response = await fetch(`/assets/json/calendar/${targetMonth}.json`);
         if (!response.ok) {
             console.error(`Failed to load calendar data for ${targetMonth}:`, response.status);
             return { events: [], books: {} };
         }
-        
+
         const calendarData = await response.json();
-        
+
         // Cache the loaded data
         monthlyDataCache.set(targetMonth, calendarData);
-        
+
         return calendarData;
     } catch (error) {
         console.error(`Error loading calendar data for ${targetMonth}:`, error);
@@ -213,14 +213,14 @@ function initializeEventCalendar(events) {
         datesSet: info => {
             const viewTitle = info.view.title;
             const currentMonthDate = info.view.currentStart;
-            
+
             updateCalendarTitleDirect(viewTitle);
             updateMonthlyStats(currentMonthDate);
-            
+
             // Load data for the new month if it's different from current data
             const newMonth = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
             updateDisplayedMonth(newMonth);
-            
+
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
         }
@@ -245,15 +245,15 @@ function updateCalendarTitle(currentDate) {
 // Update the calendar title directly with the provided title string
 function updateCalendarTitleDirect(title) {
     if (!title) return;
-    
+
     // Update mobile h1 title
-    const mobileTitle = document.querySelector('.md\\:hidden h1');
+    const mobileTitle = document.querySelector('.lg\\:hidden h1');
     if (mobileTitle) {
         mobileTitle.textContent = title;
     }
-    
+
     // Update desktop h2 title
-    const desktopTitle = document.querySelector('.hidden.md\\:block');
+    const desktopTitle = document.querySelector('.hidden.lg\\:block');
     if (desktopTitle) {
         desktopTitle.textContent = title;
     }
@@ -421,25 +421,25 @@ function updateMonthlyStats(currentDate) {
 function scrollCurrentDayIntoView() {
     const calendarContainer = document.querySelector('.calendar-container');
     const todayCell = document.querySelector('.ec-today');
-    
+
     if (!calendarContainer || !todayCell) return;
-    
+
     // Get the container's scroll width and visible width
     const containerRect = calendarContainer.getBoundingClientRect();
     const todayRect = todayCell.getBoundingClientRect();
-    
+
     // Calculate if today is outside the visible area
     const containerLeft = containerRect.left;
     const containerRight = containerRect.right;
     const todayLeft = todayRect.left;
     const todayRight = todayRect.right;
-    
+
     // If today is outside the visible area, scroll to center it
     if (todayLeft < containerLeft || todayRight > containerRight) {
         const todayCenter = todayLeft + (todayRect.width / 2);
         const containerCenter = containerLeft + (containerRect.width / 2);
         const scrollOffset = todayCenter - containerCenter;
-        
+
         calendarContainer.scrollBy({
             left: scrollOffset,
             behavior: 'smooth'

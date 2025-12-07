@@ -31,6 +31,7 @@ pub struct RecapTemplate {
     pub prev_year: Option<i32>,
     pub next_year: Option<i32>,
     pub monthly: Vec<MonthRecap>,
+    pub summary: YearlySummary,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
