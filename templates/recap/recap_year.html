@@ -89,6 +89,13 @@
                         {% endfor %}
                     </div>
                 </div>
+                
+                <!-- Sort Button -->
+                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="Toggle sort order" aria-label="Toggle sort order">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
+                    </svg>
+                </button>
             </div>
         </div>
     </header>
@@ -96,8 +103,9 @@
     <div class="min-h-full md:ml-64">
         <main class="pt-[88px] md:pt-24 pb-28 md:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
             <!-- Single full-year timeline -->
-            <div class="recap-timeline space-y-6">
-                {% for month in monthly %}
+            <div class="recap-timeline space-y-6" id="recapTimeline">
+                {% for month in monthly.iter().rev() %}
+                <div class="month-group space-y-6" data-month="{{ month.month_key }}">
                 <!-- Month header as timeline event -->
                 <div class="relative pl-10 recap-event">
                     <span class="recap-dot bg-gray-400 dark:bg-dark-400"></span>
@@ -265,6 +273,7 @@
                     </div>
                 </div>
                 {% endfor %}
+                </div>
                 {% endfor %}
             </div>
         </main>
