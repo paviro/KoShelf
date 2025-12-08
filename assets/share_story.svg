@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="2240" viewBox="0 0 1260 2240">
+  <defs>
+    <!-- Subtle grain filter for paper texture -->
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.08 0"/>
+      <feBlend mode="multiply" in2="SourceGraphic"/>
+    </filter>
+    <!-- Warm shadow for depth -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="9" flood-color="#2C2C2C" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Background: Warm Ivory -->
+  <rect width="100%" height="100%" fill="#FAF8F3"/>
+  <rect width="100%" height="100%" fill="#FAF8F3" filter="url(#grain)" opacity="0.5"/>
+
+  <!-- Decorative Frame -->
+  <rect x="56" y="56" width="1148" height="2128" fill="none" stroke="#C9B99A" stroke-width="1.2"/>
+  <!-- Inner frame with gap for footer -->
+  <path d="M84 84 L1176 84 L1176 2156 L800 2156" fill="none" stroke="#3D3D3D" stroke-width="2.3"/>
+  <path d="M460 2156 L84 2156 L84 84" fill="none" stroke="#3D3D3D" stroke-width="2.3"/>
+  
+  <!-- Corner Ornaments -->
+  <g fill="none" stroke="#3D3D3D" stroke-width="1.75">
+    <!-- Top Left -->
+    <path d="M112 112 L112 159 M112 112 L159 112"/>
+    <circle cx="112" cy="112" r="5" fill="#3D3D3D"/>
+    <!-- Top Right -->
+    <path d="M1148 112 L1148 159 M1148 112 L1101 112"/>
+    <circle cx="1148" cy="112" r="5" fill="#3D3D3D"/>
+    <!-- Bottom Left -->
+    <path d="M112 2128 L112 2081 M112 2128 L159 2128"/>
+    <circle cx="112" cy="2128" r="5" fill="#3D3D3D"/>
+    <!-- Bottom Right -->
+    <path d="M1148 2128 L1148 2081 M1148 2128 L1101 2128"/>
+    <circle cx="1148" cy="2128" r="5" fill="#3D3D3D"/>
+  </g>
+
+  <!-- Top Decorative Element -->
+  <g transform="translate(630, 210)">
+    <line x1="-140" y1="0" x2="-47" y2="0" stroke="#3D3D3D" stroke-width="1.2"/>
+    <circle cx="0" cy="0" r="9" fill="none" stroke="#3D3D3D" stroke-width="1.2"/>
+    <circle cx="0" cy="0" r="3.5" fill="#3D3D3D"/>
+    <line x1="47" y1="0" x2="140" y2="0" stroke="#3D3D3D" stroke-width="1.2"/>
+  </g>
+
+  <!-- Header Typography -->
+  <text x="630" y="350" font-family="Georgia, 'Times New Roman', serif" font-size="50" letter-spacing="14" fill="#8C7B6B" text-anchor="middle">THE READING YEAR</text>
+  
+  <!-- Year with refined styling -->
+  <text x="630" y="502" font-family="Georgia, 'Times New Roman', serif" font-size="163" font-weight="normal" letter-spacing="19" fill="#3D3D3D" text-anchor="middle">{{YEAR}}</text>
+
+  <!-- Ornamental Divider -->
+  <g transform="translate(630, 618)">
+    <line x1="-257" y1="0" x2="-70" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+    <path d="M-58 0 Q-29 -17 0 0 Q29 17 58 0" fill="none" stroke="#3D3D3D" stroke-width="1.75"/>
+    <line x1="70" y1="0" x2="257" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+  </g>
+
+  <!-- Hero Stat: Active Days -->
+  <g transform="translate(0, 93)">
+    <text x="630" y="850" font-family="Georgia, 'Times New Roman', serif" font-size="373" font-weight="normal" letter-spacing="9" fill="#3D3D3D" text-anchor="middle">{{ACTIVE_DAYS}}</text>
+    <text x="630" y="1027" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-style="italic" fill="#5D5D5D" text-anchor="middle">Days of Reading</text>
+    
+    <!-- Percentage in elegant frame -->
+    <g transform="translate(630, 1132)">
+      <line x1="-117" y1="0" x2="-58" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+      <text x="0" y="9" font-family="Georgia, 'Times New Roman', serif" font-size="48" fill="#8C7B6B" text-anchor="middle">{{ACTIVE_PCT}}%</text>
+      <line x1="58" y1="0" x2="117" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+    </g>
+    <text x="630" y="1210" font-family="Georgia, 'Times New Roman', serif" font-size="40" letter-spacing="4" fill="#A69888" text-anchor="middle">OF THE YEAR</text>
+  </g>
+
+  <!-- Central Ornament -->
+  <g transform="translate(630, 1372)">
+    <line x1="-210" y1="0" x2="-23" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+    <circle cx="0" cy="0" r="6" fill="#3D3D3D"/>
+    <line x1="23" y1="0" x2="210" y2="0" stroke="#C9B99A" stroke-width="1.2"/>
+  </g>
+
+  <!-- Secondary Stats - Elegant Grid -->
+  <g filter="url(#softShadow)">
+    <!-- Books Finished -->
+    <g transform="translate(380, 1570)">
+      <text x="0" y="0" font-family="Georgia, 'Times New Roman', serif" font-size="140" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BOOKS}}</text>
+      <line x1="-85" y1="50" x2="85" y2="50" stroke="#C9B99A" stroke-width="1.2"/>
+      <text x="0" y="110" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="5" fill="#8C7B6B" text-anchor="middle">BOOKS</text>
+      <text x="0" y="155" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="5" fill="#8C7B6B" text-anchor="middle">FINISHED</text>
+    </g>
+    
+    <!-- Longest Streak -->
+    <g transform="translate(880, 1570)">
+      <text x="0" y="0" font-family="Georgia, 'Times New Roman', serif" font-size="140" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{STREAK}}</text>
+      <line x1="-85" y1="50" x2="85" y2="50" stroke="#C9B99A" stroke-width="1.2"/>
+      <text x="0" y="110" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="5" fill="#8C7B6B" text-anchor="middle">LONGEST</text>
+      <text x="0" y="155" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="3.5" fill="#A69888" text-anchor="middle">STREAK (DAYS)</text>
+    </g>
+    
+    <!-- Reading Time -->
+    <g transform="translate(380, 1900)">
+      <text x="0" y="0" font-family="Georgia, 'Times New Roman', serif" font-size="95" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{READING_TIME}}</text>
+      <line x1="-100" y1="42" x2="100" y2="42" stroke="#C9B99A" stroke-width="1.2"/>
+      <text x="0" y="98" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="5" fill="#8C7B6B" text-anchor="middle">TIME READ</text>
+    </g>
+    
+    <!-- Best Month -->
+    <g transform="translate(880, 1900)">
+      <text x="0" y="0" font-family="Georgia, 'Times New Roman', serif" font-size="95" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BEST_MONTH}}</text>
+      <line x1="-100" y1="42" x2="100" y2="42" stroke="#C9B99A" stroke-width="1.2"/>
+      <text x="0" y="98" font-family="Georgia, 'Times New Roman', serif" font-size="42" letter-spacing="5" fill="#8C7B6B" text-anchor="middle">BEST MONTH</text>
+    </g>
+  </g>
+
+
+  <!-- Footer in frame gap -->
+  <text x="630" y="2164" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-style="italic" letter-spacing="2.3" fill="#A69888" text-anchor="middle">crafted with KoShelf</text>
+
+</svg>

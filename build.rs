@@ -10,6 +10,9 @@ fn main() {
     println!("cargo:rerun-if-changed=assets/heatmap.js");
     println!("cargo:rerun-if-changed=assets/section-toggle.js");
     println!("cargo:rerun-if-changed=assets/recap.js");
+    println!("cargo:rerun-if-changed=assets/share_story.svg");
+    println!("cargo:rerun-if-changed=assets/share_square.svg");
+    println!("cargo:rerun-if-changed=assets/share_banner.svg");
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=templates/");
     println!("cargo:rerun-if-changed=src/");

@@ -20,6 +20,7 @@ mod calendar;
 mod read_completion_analyzer;
 mod time_config;
 mod partial_md5;
+mod share_image;
 
 #[cfg(test)]
 mod tests;
