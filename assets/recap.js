@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Handle share/download button clicks
-    document.querySelectorAll('.share-png-btn').forEach(btn => {
+    document.querySelectorAll('.share-webp-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const url = btn.dataset.shareUrl;
         const filename = btn.dataset.shareFilename;
@@ -177,11 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fetch the image and convert to a File object
             const response = await fetch(url);
             const blob = await response.blob();
-            const file = new File([blob], filename, { type: 'image/png' });
+            const file = new File([blob], filename, { type: 'image/webp' });
 
             // Check if we can share this file
             if (navigator.canShare({ files: [file] })) {
-              // Extract year from filename (e.g., "koshelf_2024_story.png" -> "2024")
+              // Extract year from filename (e.g., "koshelf_2024_story.webp" -> "2024")
               const yearMatch = filename.match(/koshelf_(\d{4})_/);
               const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
 
