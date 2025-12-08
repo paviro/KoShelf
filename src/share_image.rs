@@ -40,12 +40,12 @@ impl ShareFormat {
         }
     }
 
-    /// Get the PNG filename for this format
+    /// Get the WebP filename for this format
     pub fn filename(&self) -> &'static str {
         match self {
-            ShareFormat::Story => "share_story.png",
-            ShareFormat::Square => "share_square.png",
-            ShareFormat::Banner => "share_banner.png",
+            ShareFormat::Story => "share_story.webp",
+            ShareFormat::Square => "share_square.webp",
+            ShareFormat::Banner => "share_banner.webp",
         }
     }
 
@@ -90,12 +90,12 @@ pub fn generate_share_image(
     // Render SVG to pixmap
     resvg::render(&tree, resvg::tiny_skia::Transform::default(), &mut pixmap.as_mut());
     
-    // Encode as PNG and write to file
-    let png_data = pixmap.encode_png()
-        .context("Failed to encode PNG")?;
+    // Encode as WebP and write to file
+    let encoder = webp::Encoder::from_rgba(pixmap.data(), width, height);
+    let webp_data = encoder.encode(90.0); // 90% quality for good balance of size/quality
     
-    std::fs::write(output_path, png_data)
-        .context("Failed to write PNG file")?;
+    std::fs::write(output_path, &*webp_data)
+        .context("Failed to write WebP file")?;
     
     // Also generate SVG file
     let svg_path = output_path.with_extension("svg");
