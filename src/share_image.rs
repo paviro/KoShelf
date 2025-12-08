@@ -6,6 +6,10 @@ const STORY_TEMPLATE: &str = include_str!("../assets/share_story.svg");
 const SQUARE_TEMPLATE: &str = include_str!("../assets/share_square.svg");
 const BANNER_TEMPLATE: &str = include_str!("../assets/share_banner.svg");
 
+// Embed fonts at compile time for cross-platform consistency
+const FONT_REGULAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Regular.ttf"));
+const FONT_ITALIC: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Italic.ttf"));
+
 /// Data needed to generate a share image
 #[derive(Debug, Clone)]
 pub struct ShareImageData {
@@ -70,8 +74,15 @@ pub fn generate_share_image(
     // Generate SVG content by replacing placeholders in template
     let svg_content = fill_template(data, format);
     
-    // Set up font database with system fonts
+    // Set up font database with embedded fonts
+    // Load bundled Gelasio font for consistent cross-platform rendering
     let mut fontdb = resvg::usvg::fontdb::Database::new();
+    
+    // Load embedded fonts - these are bundled at compile time
+    fontdb.load_font_data(FONT_REGULAR.to_vec());
+    fontdb.load_font_data(FONT_ITALIC.to_vec());
+    
+    // Also try system fonts as fallback
     fontdb.load_system_fonts();
     
     // Parse SVG with usvg
@@ -105,6 +116,7 @@ pub fn generate_share_image(
 }
 
 /// Generate a share SVG file from the given data and format
+/// Text is converted to paths for font-independent rendering
 pub fn generate_share_svg(
     data: &ShareImageData,
     format: ShareFormat,
@@ -112,7 +124,25 @@ pub fn generate_share_svg(
 ) -> Result<()> {
     let svg_content = fill_template(data, format);
     
-    std::fs::write(output_path, svg_content)
+    // Set up font database with embedded fonts
+    let mut fontdb = resvg::usvg::fontdb::Database::new();
+    fontdb.load_font_data(FONT_REGULAR.to_vec());
+    fontdb.load_font_data(FONT_ITALIC.to_vec());
+    fontdb.load_system_fonts();
+    
+    // Parse SVG with usvg - this converts text to paths
+    let options = resvg::usvg::Options {
+        fontdb: std::sync::Arc::new(fontdb),
+        ..Default::default()
+    };
+    
+    let tree = resvg::usvg::Tree::from_str(&svg_content, &options)
+        .context("Failed to parse SVG for path conversion")?;
+    
+    // Write the processed SVG (with text converted to paths)
+    let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
+    
+    std::fs::write(output_path, svg_output)
         .context("Failed to write SVG file")?;
     
     Ok(())

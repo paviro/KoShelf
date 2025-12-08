@@ -40,8 +40,8 @@
   </g>
 
   <!-- Header -->
-  <text x="1080" y="330" font-family="Georgia, 'Times New Roman', serif" font-size="60" letter-spacing="20" fill="#8C7B6B" text-anchor="middle">THE READING YEAR</text>
-  <text x="1080" y="500" font-family="Georgia, 'Times New Roman', serif" font-size="200" font-weight="normal" letter-spacing="28" fill="#3D3D3D" text-anchor="middle">{{YEAR}}</text>
+  <text x="1080" y="330" font-family="Gelasio, Georgia, serif" font-size="60" letter-spacing="20" fill="#8C7B6B" text-anchor="middle">THE READING YEAR</text>
+  <text x="1080" y="500" font-family="Gelasio, Georgia, serif" font-size="200" font-weight="normal" letter-spacing="28" fill="#3D3D3D" text-anchor="middle">{{YEAR}}</text>
 
   <!-- Decorative Divider -->
   <g transform="translate(1080, 600)">
@@ -51,11 +51,11 @@
   </g>
 
   <!-- Hero Stat: Active Days -->
-  <text x="1080" y="895" font-family="Georgia, 'Times New Roman', serif" font-size="400" font-weight="normal" letter-spacing="12" fill="#3D3D3D" text-anchor="middle">{{ACTIVE_DAYS}}</text>
-  <text x="1080" y="1060" font-family="Georgia, 'Times New Roman', serif" font-size="88" font-style="italic" fill="#5D5D5D" text-anchor="middle">Days of Reading</text>
+  <text x="1080" y="895" font-family="Gelasio, Georgia, serif" font-size="400" font-weight="normal" letter-spacing="12" fill="#3D3D3D" text-anchor="middle">{{ACTIVE_DAYS}}</text>
+  <text x="1080" y="1060" font-family="Gelasio, Georgia, serif" font-size="88" font-style="italic" fill="#5D5D5D" text-anchor="middle">Days of Reading</text>
   
   <!-- Percentage -->
-  <text x="1080" y="1200" font-family="Georgia, 'Times New Roman', serif" font-size="68" fill="#8C7B6B" text-anchor="middle">{{ACTIVE_PCT}}% of the year</text>
+  <text x="1080" y="1200" font-family="Gelasio, Georgia, serif" font-size="68" fill="#8C7B6B" text-anchor="middle">{{ACTIVE_PCT}}% of the year</text>
 
   <!-- Central Divider -->
   <g transform="translate(1080, 1300)">
@@ -67,19 +67,19 @@
   <!-- Stats Grid - 2x2 with inline labels, each cell centered -->
   <!-- Row 1 -->
   <!-- Books Finished (left cell) -->
-  <text x="650" y="1530" font-family="Georgia, 'Times New Roman', serif" font-size="190" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BOOKS}} <tspan font-size="76" fill="#8C7B6B">books</tspan></text>
+  <text x="650" y="1530" font-family="Gelasio, Georgia, serif" font-size="190" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BOOKS}} <tspan font-size="76" fill="#8C7B6B">books</tspan></text>
 
   <!-- Longest Streak (right cell) -->
-  <text x="1510" y="1530" font-family="Georgia, 'Times New Roman', serif" font-size="190" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{STREAK}} <tspan font-size="76" fill="#8C7B6B">days streak</tspan></text>
+  <text x="1510" y="1530" font-family="Gelasio, Georgia, serif" font-size="190" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{STREAK}} <tspan font-size="76" fill="#8C7B6B">days streak</tspan></text>
 
   <!-- Row 2 -->
   <!-- Time Read (left cell) -->
-  <text x="650" y="1820" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{READING_TIME}} <tspan font-size="76" fill="#8C7B6B">read</tspan></text>
+  <text x="650" y="1820" font-family="Gelasio, Georgia, serif" font-size="150" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{READING_TIME}} <tspan font-size="76" fill="#8C7B6B">read</tspan></text>
 
   <!-- Best Month (right cell) -->
-  <text x="1510" y="1820" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BEST_MONTH}} <tspan font-size="76" fill="#8C7B6B">best</tspan></text>
+  <text x="1510" y="1820" font-family="Gelasio, Georgia, serif" font-size="150" font-weight="normal" fill="#3D3D3D" text-anchor="middle">{{BEST_MONTH}} <tspan font-size="76" fill="#8C7B6B">best</tspan></text>
 
   <!-- Footer in frame gap -->
-  <text x="1080" y="2050" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-style="italic" letter-spacing="2" fill="#A69888" text-anchor="middle">crafted with KoShelf</text>
+  <text x="1080" y="2050" font-family="Gelasio, Georgia, serif" font-size="48" font-style="italic" letter-spacing="2" fill="#A69888" text-anchor="middle">crafted with KoShelf</text>
 
 </svg>
