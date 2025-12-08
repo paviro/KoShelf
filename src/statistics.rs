@@ -322,12 +322,11 @@ impl StatisticsCalculator {
         let mut most_completions = 0i64;
         
         for book in &stats_data.books {
-            if let Some(ref completions) = book.completions {
-                if completions.total_completions > 0 {
-                    total_completions += completions.total_completions as i64;
-                    books_completed += 1;
-                    most_completions = most_completions.max(completions.total_completions as i64);
-                }
+            if let Some(ref completions) = book.completions
+                && completions.total_completions > 0 {
+                total_completions += completions.total_completions as i64;
+                books_completed += 1;
+                most_completions = most_completions.max(completions.total_completions as i64);
             }
         }
         
@@ -368,8 +367,8 @@ impl StatisticsCalculator {
             let pages = *daily_book_pages.get(&book_date).unwrap_or(&0);
             let time = *daily_book_time.get(&book_date).unwrap_or(&0);
             
-            let pages_ok = min_pages.map_or(false, |min| pages >= min as i64);
-            let time_ok = min_time.map_or(false, |min| time >= min as i64);
+            let pages_ok = min_pages.is_some_and(|min| pages >= min as i64);
+            let time_ok = min_time.is_some_and(|min| time >= min as i64);
             
             // OR logic: valid if either condition is met
             let is_valid = if min_pages.is_some() && min_time.is_some() {

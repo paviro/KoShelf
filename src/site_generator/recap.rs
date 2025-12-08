@@ -84,7 +84,7 @@ impl SiteGenerator {
                             let mut stars = [false; 5];
                             if let Some(r) = rating {
                                 let n = std::cmp::min(r as usize, 5);
-                                for i in 0..n { stars[i] = true; }
+                                for star in stars.iter_mut().take(n) { *star = true; }
                             }
                             stars
                         },
@@ -196,7 +196,7 @@ impl SiteGenerator {
                 .count();
             
             // Calculate percentage based on days in the year (365 or 366 for leap years)
-            let days_in_year = if chrono::NaiveDate::from_ymd_opt(*year, 12, 31).map_or(false, |d| d.ordinal() == 366) {
+            let days_in_year = if chrono::NaiveDate::from_ymd_opt(*year, 12, 31).is_some_and(|d| d.ordinal() == 366) {
                 366.0
             } else {
                 365.0

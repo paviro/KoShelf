@@ -1,56 +1,30 @@
+use crate::config::SiteConfig;
 use crate::site_generator::SiteGenerator;
 use crate::book_scanner::MetadataLocation;
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use log::{info, warn, debug};
-use crate::time_config::TimeConfig;
 
 pub struct FileWatcher {
-    books_path: Option<PathBuf>,
-    metadata_location: MetadataLocation,
-    site_dir: PathBuf,
-    site_title: String,
-    include_unread: bool,
-    statistics_db_path: Option<PathBuf>,
-    heatmap_scale_max: Option<u32>,
+    config: SiteConfig,
     rebuild_tx: Option<mpsc::UnboundedSender<()>>,
-    time_config: TimeConfig,
-    min_pages_per_day: Option<u32>,
-    min_time_per_day: Option<u32>,
-    include_all_stats: bool,
+}
+
+impl std::ops::Deref for FileWatcher {
+    type Target = SiteConfig;
+    fn deref(&self) -> &Self::Target {
+        &self.config
+    }
 }
 
 impl FileWatcher {
-    pub async fn new(
-        books_path: Option<PathBuf>,
-        metadata_location: MetadataLocation,
-        site_dir: PathBuf,
-        site_title: String,
-        include_unread: bool,
-        statistics_db_path: Option<PathBuf>,
-        heatmap_scale_max: Option<u32>,
-        time_config: TimeConfig,
-        min_pages_per_day: Option<u32>,
-        min_time_per_day: Option<u32>,
-        include_all_stats: bool,
-    ) -> Result<Self> {
+    pub async fn new(config: SiteConfig) -> Result<Self> {
         Ok(Self {
-            books_path,
-            metadata_location,
-            site_dir,
-            site_title,
-            include_unread,
-            statistics_db_path,
-            heatmap_scale_max,
+            config,
             rebuild_tx: None,
-            time_config,
-            min_pages_per_day,
-            min_time_per_day,
-            include_all_stats,
         })
     }
     
@@ -96,28 +70,17 @@ impl FileWatcher {
         }
         
         // Also watch the statistics database if provided
-        if let Some(ref stats_path) = self.statistics_db_path {
-            if stats_path.exists() {
-                // Watch the parent directory of the statistics database
-                if let Some(parent) = stats_path.parent() {
-                    watcher.watch(parent, RecursiveMode::NonRecursive)?;
-                    info!("File watcher started for statistics database: {:?}", stats_path);
-                }
+        if let Some(ref stats_path) = self.statistics_db_path
+            && stats_path.exists() {
+            // Watch the parent directory of the statistics database
+            if let Some(parent) = stats_path.parent() {
+                watcher.watch(parent, RecursiveMode::NonRecursive)?;
+                info!("File watcher started for statistics database: {:?}", stats_path);
             }
         }
         
-        // Clone necessary data for the rebuild task
-        let books_path_clone = self.books_path.clone();
-        let metadata_location_clone = self.metadata_location.clone();
-        let site_dir_clone = self.site_dir.clone();
-        let site_title_clone = self.site_title.clone();
-        let include_unread_clone = self.include_unread;
-        let statistics_db_path_clone = self.statistics_db_path.clone();
-        let heatmap_scale_max_clone = self.heatmap_scale_max;
-        let time_config_clone = self.time_config.clone();
-        let min_pages_per_day_clone = self.min_pages_per_day;
-        let min_time_per_day_clone = self.min_time_per_day;
-        let include_all_stats_clone = self.include_all_stats;
+        // Clone the config for the rebuild task
+        let config_clone = self.config.clone();
         
         // Spawn delayed rebuild task
         let rebuild_task = tokio::task::spawn_blocking(move || {
@@ -125,7 +88,7 @@ impl FileWatcher {
             rt.block_on(async move {
                 let rebuild_delay = Duration::from_secs(10); // Wait 10 seconds after last event
                 
-                while let Some(_) = rebuild_rx.recv().await {
+                while (rebuild_rx.recv().await).is_some() {
                     // Wait for the delay period to debounce multiple events
                     sleep(rebuild_delay).await;
                     
@@ -135,19 +98,7 @@ impl FileWatcher {
                     info!("Starting delayed site rebuild after quiet period");
                     
                     // Create new site generator and regenerate everything
-                    let site_generator = SiteGenerator::new(
-                        site_dir_clone.clone(),
-                        site_title_clone.clone(),
-                        include_unread_clone,
-                        books_path_clone.clone(),
-                        metadata_location_clone.clone(),
-                        statistics_db_path_clone.clone(),
-                        heatmap_scale_max_clone,
-                        time_config_clone.clone(),
-                        min_pages_per_day_clone,
-                        min_time_per_day_clone,
-                        include_all_stats_clone,
-                    );
+                    let site_generator = SiteGenerator::new(config_clone.clone());
                     
                     match site_generator.generate().await {
                         Ok(_) => info!("Delayed site rebuild completed successfully"),
@@ -220,17 +171,15 @@ impl FileWatcher {
             }
             
             // Check for .sdr directories (KoReader metadata folders)
-            if let Some(filename) = filename {
-                if filename.ends_with(".sdr") {
-                    return true;
-                }
+            if let Some(filename) = filename
+                && filename.ends_with(".sdr") {
+                return true;
             }
             
             // Check for statistics database files
-            if let Some(ref stats_path) = self.statistics_db_path {
-                if path == stats_path {
-                    return true;
-                }
+            if let Some(ref stats_path) = self.statistics_db_path
+                && path == stats_path {
+                return true;
             }
             
             false
@@ -259,17 +208,15 @@ impl FileWatcher {
                     }
                     
                     // Check .sdr directories
-                    if let Some(filename) = filename {
-                        if filename.ends_with(".sdr") {
-                            info!("KoReader metadata directory modified: {:?}", path);
-                        }
+                    if let Some(filename) = filename
+                        && filename.ends_with(".sdr") {
+                        info!("KoReader metadata directory modified: {:?}", path);
                     }
                     
                     // Check statistics database
-                    if let Some(ref stats_path) = self.statistics_db_path {
-                        if path == stats_path {
-                            info!("Statistics database modified: {:?}", path);
-                        }
+                    if let Some(ref stats_path) = self.statistics_db_path
+                        && path == stats_path {
+                        info!("Statistics database modified: {:?}", path);
                     }
                 }
                 EventKind::Remove(_) => {
@@ -289,17 +236,15 @@ impl FileWatcher {
                     }
                     
                     // Check .sdr directories  
-                    if let Some(filename) = filename {
-                        if filename.ends_with(".sdr") {
-                            info!("KoReader metadata directory removed: {:?}", path);
-                        }
+                    if let Some(filename) = filename
+                        && filename.ends_with(".sdr") {
+                        info!("KoReader metadata directory removed: {:?}", path);
                     }
                     
                     // Check statistics database
-                    if let Some(ref stats_path) = self.statistics_db_path {
-                        if path == stats_path {
-                            info!("Statistics database removed: {:?}", path);
-                        }
+                    if let Some(ref stats_path) = self.statistics_db_path
+                        && path == stats_path {
+                        info!("Statistics database removed: {:?}", path);
                     }
                 }
                 _ => {}

@@ -63,10 +63,9 @@ impl SiteGenerator {
         
         for day_stat in daily_activity {
             // Extract year from date (format: yyyy-mm-dd)
-            if let Some(year_str) = day_stat.date.get(0..4) {
-                if let Ok(year) = year_str.parse::<i32>() {
-                    activity_by_year.entry(year).or_default().push(day_stat);
-                }
+            if let Some(year_str) = day_stat.date.get(0..4)
+                && let Ok(year) = year_str.parse::<i32>() {
+                activity_by_year.entry(year).or_default().push(day_stat);
             }
         }
         

@@ -74,7 +74,7 @@ impl StreakInfo {
         match (&self.start_date, &self.end_date) {
             (Some(start), Some(end)) => {
                 if start == end {
-                    Some(format!("{}", Self::format_date_display(start)))
+                    Self::format_date_display(start).to_string().into()
                 } else {
                     Some(format!(
                         "{} - {}",

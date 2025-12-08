@@ -92,7 +92,7 @@ impl ReadCompletionDetector {
             return BookCompletions::new(Vec::new());
         }
         
-        let total_pages = book.pages.unwrap_or(0) as i64;
+        let total_pages = book.pages.unwrap_or(0);
         if total_pages <= 0 {
             debug!("Book {} has no valid page count", book.title);
             return BookCompletions::new(Vec::new());
