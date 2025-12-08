@@ -5,6 +5,7 @@ use regex::Regex;
 use log::info;
 
 mod models;
+mod config;
 mod epub_parser;
 mod lua_parser;
 mod site_generator;
@@ -25,6 +26,7 @@ mod share_image;
 #[cfg(test)]
 mod tests;
 
+use crate::config::SiteConfig;
 use crate::site_generator::SiteGenerator;
 use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
@@ -214,10 +216,9 @@ async fn main() -> Result<()> {
     }
 
     // Validate statistics database if provided
-    if let Some(ref stats_path) = cli.statistics_db {
-        if !stats_path.exists() {
-            anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
-        }
+    if let Some(ref stats_path) = cli.statistics_db
+        && !stats_path.exists() {
+        anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
     }
 
     // Parse heatmap scale max
@@ -253,20 +254,23 @@ async fn main() -> Result<()> {
         MetadataLocation::InBookFolder
     };
 
-    // Create site generator - it will handle book scanning and stats loading internally
-    let site_generator = SiteGenerator::new(
-        output_dir.clone(), 
-        cli.title.clone(), 
-        cli.include_unread,
-        cli.books_path.clone(),
-        metadata_location.clone(),
-        cli.statistics_db.clone(),
+    // Create site config - bundles all generation options
+    let config = SiteConfig {
+        output_dir: output_dir.clone(),
+        site_title: cli.title.clone(),
+        include_unread: cli.include_unread,
+        books_path: cli.books_path.clone(),
+        metadata_location: metadata_location.clone(),
+        statistics_db_path: cli.statistics_db.clone(),
         heatmap_scale_max,
-        time_config.clone(),
-        cli.min_pages_per_day,
+        time_config: time_config.clone(),
+        min_pages_per_day: cli.min_pages_per_day,
         min_time_per_day,
-        cli.include_all_stats,
-    );
+        include_all_stats: cli.include_all_stats,
+    };
+
+    // Create site generator - it will handle book scanning and stats loading internally
+    let site_generator = SiteGenerator::new(config.clone());
     
     // Generate initial site
     site_generator.generate().await?;
@@ -280,19 +284,7 @@ async fn main() -> Result<()> {
         info!("Starting file watcher mode for static output");
         
         // Start file watcher only
-        let file_watcher = FileWatcher::new(
-            cli.books_path.clone(),
-            metadata_location.clone(),
-            output_dir,
-            cli.title.clone(),
-            cli.include_unread,
-            cli.statistics_db.clone(),
-            heatmap_scale_max,
-            time_config.clone(),
-            cli.min_pages_per_day,
-            min_time_per_day,
-            cli.include_all_stats,
-        ).await?;
+        let file_watcher = FileWatcher::new(config.clone()).await?;
         
         // Run file watcher
         if let Err(e) = file_watcher.run().await {
@@ -300,19 +292,7 @@ async fn main() -> Result<()> {
         }
     } else {
         // Start file watcher
-        let file_watcher = FileWatcher::new(
-            cli.books_path.clone(),
-            metadata_location.clone(),
-            output_dir.clone(),
-            cli.title.clone(),
-            cli.include_unread,
-            cli.statistics_db.clone(),
-            heatmap_scale_max,
-            time_config.clone(),
-            cli.min_pages_per_day,
-            min_time_per_day,
-            cli.include_all_stats,
-        ).await?;
+        let file_watcher = FileWatcher::new(config).await?;
 
         // Start web server
         let web_server = WebServer::new(output_dir, cli.port);

@@ -19,7 +19,7 @@ impl SiteGenerator {
         // ------------------------------------------------------------------
         // Write JSON files --------------------------------------------------
         // ------------------------------------------------------------------
-        fs::create_dir_all(&self.calendar_json_dir())?;
+        fs::create_dir_all(self.calendar_json_dir())?;
 
         // Available months (newest first)
         let mut available_months: Vec<String> = calendar_months.keys().cloned().collect();

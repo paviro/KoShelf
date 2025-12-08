@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use anyhow::{Result, bail};
 use log::{debug, info, warn};
-use walkdir;
 
 use crate::models::Book;
 use crate::epub_parser::EpubParser;
@@ -11,20 +10,15 @@ use crate::utils::generate_book_id;
 use crate::partial_md5::calculate_partial_md5;
 
 /// Configuration for where to find KOReader metadata
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub enum MetadataLocation {
     /// Default: metadata stored in .sdr folder next to each book
+    #[default]
     InBookFolder,
     /// Metadata stored in docsettings folder with full path structure
     DocSettings(PathBuf),
     /// Metadata stored in hashdocsettings folder organized by partial MD5 hash
     HashDocSettings(PathBuf),
-}
-
-impl Default for MetadataLocation {
-    fn default() -> Self {
-        MetadataLocation::InBookFolder
-    }
 }
 
 /// Build an index of metadata files in a docsettings folder.
@@ -48,24 +42,24 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
         let path = entry.path();
         
         // Look for .sdr directories
-        if path.is_dir() {
-            if let Some(dir_name) = path.file_name().and_then(|s| s.to_str()) {
-                if dir_name.ends_with(".sdr") {
-                    // Extract the book filename from the sdr directory name
-                    // e.g., "MyBook.sdr" -> "MyBook.epub"
-                    let book_stem = &dir_name[..dir_name.len() - 4]; // Remove ".sdr"
-                    
-                    // Check for metadata.epub.lua inside the .sdr folder
-                    let metadata_path = path.join("metadata.epub.lua");
-                    if metadata_path.exists() {
-                        let book_filename = format!("{}.epub", book_stem);
-                        
-                        if index.contains_key(&book_filename) {
-                            duplicates.push(book_filename.clone());
-                        } else {
-                            debug!("Found docsettings metadata for: {}", book_filename);
-                            index.insert(book_filename, metadata_path);
-                        }
+        if path.is_dir()
+            && let Some(dir_name) = path.file_name().and_then(|s| s.to_str())
+            && let Some(book_stem) = dir_name.strip_suffix(".sdr") {
+            // Extract the book filename from the sdr directory name
+            // e.g., "MyBook.sdr" -> "MyBook.epub"
+            
+            // Check for metadata.epub.lua inside the .sdr folder
+            let metadata_path = path.join("metadata.epub.lua");
+            if metadata_path.exists() {
+                let book_filename = format!("{}.epub", book_stem);
+                
+                match index.entry(book_filename.clone()) {
+                    std::collections::hash_map::Entry::Occupied(_) => {
+                        duplicates.push(book_filename);
+                    }
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        debug!("Found docsettings metadata for: {}", book_filename);
+                        entry.insert(metadata_path);
                     }
                 }
             }
@@ -110,32 +104,28 @@ fn build_hashdocsettings_index(hashdocsettings_path: &PathBuf) -> Result<HashMap
         let path = entry.path();
         
         // Look for .sdr directories with hash names
-        if path.is_dir() {
-            if let Some(dir_name) = path.file_name().and_then(|s| s.to_str()) {
-                if dir_name.ends_with(".sdr") {
-                    // Extract the hash from the directory name
-                    // e.g., "570615f811d504e628db1ef262bea270.sdr" -> "570615f811d504e628db1ef262bea270"
-                    let hash = &dir_name[..dir_name.len() - 4]; // Remove ".sdr"
-                    
-                    // Validate it looks like an MD5 hash (32 hex characters)
-                    if hash.len() == 32 && hash.chars().all(|c| c.is_ascii_hexdigit()) {
-                        // Check for metadata file (could be .epub.lua or other extensions)
-                        let epub_metadata_path = path.join("metadata.epub.lua");
-                        if epub_metadata_path.exists() {
-                            debug!("Found hashdocsettings metadata for hash: {}", hash);
-                            index.insert(hash.to_lowercase(), epub_metadata_path);
-                        } else {
-                            // Check for any metadata.*.lua file
-                            if let Ok(entries) = std::fs::read_dir(path) {
-                                for entry in entries.flatten() {
-                                    if let Some(name) = entry.file_name().to_str() {
-                                        if name.starts_with("metadata.") && name.ends_with(".lua") {
-                                            debug!("Found hashdocsettings metadata for hash: {} ({})", hash, name);
-                                            index.insert(hash.to_lowercase(), entry.path());
-                                            break;
-                                        }
-                                    }
-                                }
+        if path.is_dir()
+            && let Some(dir_name) = path.file_name().and_then(|s| s.to_str())
+            && let Some(hash) = dir_name.strip_suffix(".sdr") {
+            // Extract the hash from the directory name
+            // e.g., "570615f811d504e628db1ef262bea270.sdr" -> "570615f811d504e628db1ef262bea270"
+            
+            // Validate it looks like an MD5 hash (32 hex characters)
+            if hash.len() == 32 && hash.chars().all(|c| c.is_ascii_hexdigit()) {
+                // Check for metadata file (could be .epub.lua or other extensions)
+                let epub_metadata_path = path.join("metadata.epub.lua");
+                if epub_metadata_path.exists() {
+                    debug!("Found hashdocsettings metadata for hash: {}", hash);
+                    index.insert(hash.to_lowercase(), epub_metadata_path);
+                } else {
+                    // Check for any metadata.*.lua file
+                    if let Ok(entries) = std::fs::read_dir(path) {
+                        for entry in entries.flatten() {
+                            if let Some(name) = entry.file_name().to_str()
+                                && name.starts_with("metadata.") && name.ends_with(".lua") {
+                                debug!("Found hashdocsettings metadata for hash: {} ({})", hash, name);
+                                index.insert(hash.to_lowercase(), entry.path());
+                                break;
                             }
                         }
                     }

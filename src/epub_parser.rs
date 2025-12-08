@@ -226,19 +226,15 @@ impl EpubParser {
                                 }
 
                                 if let Some(prop) = property {
-                                    if prop == "belongs-to-collection" {
-                                        if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                            if let Some(i) = id {
-                                                epub3_collections.insert(i, text.unescape().unwrap_or_default().to_string());
-                                            }
-                                        }
-                                    } else if prop == "group-position" {
-                                        if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                            if let Some(r) = refines {
-                                                let clean_refines = r.trim_start_matches('#');
-                                                epub3_indices.insert(clean_refines.to_string(), text.unescape().unwrap_or_default().to_string());
-                                            }
-                                        }
+                                    if prop == "belongs-to-collection"
+                                        && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
+                                        && let Some(i) = id {
+                                        epub3_collections.insert(i, text.unescape().unwrap_or_default().to_string());
+                                    } else if prop == "group-position"
+                                        && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
+                                        && let Some(r) = refines {
+                                        let clean_refines = r.trim_start_matches('#');
+                                        epub3_indices.insert(clean_refines.to_string(), text.unescape().unwrap_or_default().to_string());
                                     }
                                 }
                             }
@@ -348,21 +344,18 @@ impl EpubParser {
                             }
                         }
                         
-                        if let (Some(href), Some(media_type)) = (href, media_type) {
-                            if media_type.starts_with("image/") {
-                                // Check if this is the cover using EPUB 3.0 properties
-                                if let Some(props) = &properties {
-                                    if props.contains("cover-image") {
-                                        return Ok((Some(href), Some(media_type)));
-                                    }
-                                }
-                                
-                                // Check if this matches the cover_id from meta tags (EPUB 2.0 style)
-                                if let (Some(cover_id), Some(id)) = (cover_id, &id) {
-                                    if id == cover_id {
-                                        return Ok((Some(href), Some(media_type)));
-                                    }
-                                }
+                        if let (Some(href), Some(media_type)) = (href, media_type)
+                            && media_type.starts_with("image/") {
+                            // Check if this is the cover using EPUB 3.0 properties
+                            if let Some(props) = &properties
+                                && props.contains("cover-image") {
+                                return Ok((Some(href), Some(media_type)));
+                            }
+                            
+                            // Check if this matches the cover_id from meta tags (EPUB 2.0 style)
+                            if let (Some(cover_id), Some(id)) = (cover_id, &id)
+                                && id == cover_id {
+                                return Ok((Some(href), Some(media_type)));
                             }
                         }
                     }

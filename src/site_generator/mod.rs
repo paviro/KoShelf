@@ -15,55 +15,28 @@ mod recap;
 mod statistics;
 mod utils;
 
+use crate::config::SiteConfig;
 use crate::statistics_parser::StatisticsParser;
 use crate::statistics::StatisticsCalculator;
-use crate::book_scanner::{scan_books, MetadataLocation};
-use crate::time_config::TimeConfig;
+use crate::book_scanner::scan_books;
 use anyhow::Result;
 use log::info;
 use std::path::PathBuf;
 
 pub struct SiteGenerator {
-    pub(crate) output_dir: PathBuf,
-    pub(crate) site_title: String,
-    pub(crate) include_unread: bool,
-    pub(crate) books_path: Option<PathBuf>,
-    pub(crate) metadata_location: MetadataLocation,
-    pub(crate) statistics_db_path: Option<PathBuf>,
-    pub(crate) heatmap_scale_max: Option<u32>,
-    pub(crate) time_config: TimeConfig,
-    pub(crate) min_pages_per_day: Option<u32>,
-    pub(crate) min_time_per_day: Option<u32>,
-    pub(crate) include_all_stats: bool,
+    config: SiteConfig,
+}
+
+impl std::ops::Deref for SiteGenerator {
+    type Target = SiteConfig;
+    fn deref(&self) -> &Self::Target {
+        &self.config
+    }
 }
 
 impl SiteGenerator {
-    pub fn new(
-        output_dir: PathBuf, 
-        site_title: String, 
-        include_unread: bool, 
-        books_path: Option<PathBuf>,
-        metadata_location: MetadataLocation,
-        statistics_db_path: Option<PathBuf>,
-        heatmap_scale_max: Option<u32>,
-        time_config: TimeConfig,
-        min_pages_per_day: Option<u32>,
-        min_time_per_day: Option<u32>,
-        include_all_stats: bool,
-    ) -> Self {
-        Self {
-            output_dir,
-            site_title,
-            include_unread,
-            books_path,
-            metadata_location,
-            statistics_db_path,
-            heatmap_scale_max,
-            time_config,
-            min_pages_per_day,
-            min_time_per_day,
-            include_all_stats,
-        }
+    pub fn new(config: SiteConfig) -> Self {
+        Self { config }
     }
 
     // Path constants to avoid duplication
@@ -127,12 +100,10 @@ impl SiteGenerator {
             for b in &sd.books {
                 if let Some(cs) = &b.completions {
                     for c in &cs.entries {
-                        if c.end_date.len() >= 4 {
-                            if let Ok(y) = c.end_date[0..4].parse::<i32>() {
-                                if !years.contains(&y) {
-                                    years.push(y);
-                                }
-                            }
+                        if c.end_date.len() >= 4
+                            && let Ok(y) = c.end_date[0..4].parse::<i32>()
+                            && !years.contains(&y) {
+                            years.push(y);
                         }
                     }
                 }

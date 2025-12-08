@@ -54,7 +54,7 @@ fn main() {
     let output_path = std::env::temp_dir().join("style.css");
     
     let tailwind_output = Command::new("npx")
-        .args(&[
+        .args([
             "tailwindcss",
             "-i", "./assets/input.css",
             "-o", &output_path.to_string_lossy(),
