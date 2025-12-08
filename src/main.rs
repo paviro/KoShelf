@@ -90,8 +90,14 @@ struct Cli {
     #[arg(long, display_order = 14)]
     min_time_per_day: Option<String>,
 
+    /// Include statistics for all books in the database, not just those in --books-path.
+    /// By default, when --books-path is provided, statistics are filtered to only include
+    /// books present in that directory. Use this flag to include all statistics.
+    #[arg(long, default_value = "false", display_order = 15)]
+    include_all_stats: bool,
+
     /// Print GitHub repository URL
-    #[arg(long, display_order = 15)]
+    #[arg(long, display_order = 16)]
     github: bool,
 }
 
@@ -132,6 +138,7 @@ fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
 async fn main() -> Result<()> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
+        .parse_default_env()
         .init();
     let cli = Cli::parse();
     
@@ -258,6 +265,7 @@ async fn main() -> Result<()> {
         time_config.clone(),
         cli.min_pages_per_day,
         min_time_per_day,
+        cli.include_all_stats,
     );
     
     // Generate initial site
@@ -283,6 +291,7 @@ async fn main() -> Result<()> {
             time_config.clone(),
             cli.min_pages_per_day,
             min_time_per_day,
+            cli.include_all_stats,
         ).await?;
         
         // Run file watcher
@@ -302,6 +311,7 @@ async fn main() -> Result<()> {
             time_config.clone(),
             cli.min_pages_per_day,
             min_time_per_day,
+            cli.include_all_stats,
         ).await?;
 
         // Start web server

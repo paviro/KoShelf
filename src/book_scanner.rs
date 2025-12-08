@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use anyhow::{Result, bail};
 use log::{debug, info, warn};
@@ -151,7 +151,7 @@ fn build_hashdocsettings_index(hashdocsettings_path: &PathBuf) -> Result<HashMap
 pub async fn scan_books(
     books_path: &PathBuf,
     metadata_location: &MetadataLocation,
-) -> Result<Vec<Book>> {
+) -> Result<(Vec<Book>, HashSet<String>)> {
     info!("Scanning books in directory: {:?}", books_path);
     let epub_parser = EpubParser::new();
     let lua_parser = LuaParser::new();
@@ -168,6 +168,7 @@ pub async fn scan_books(
     };
     
     let mut books = Vec::new();
+    let mut library_md5s = HashSet::new();
     
     // Walk through all epub files
     for entry in walkdir::WalkDir::new(books_path) {
@@ -190,6 +191,10 @@ pub async fn scan_books(
                     continue;
                 }
             };
+            
+            // Track the MD5 for this book (for statistics filtering)
+            // We may already have it from hashdocsettings lookup, or will get it from metadata
+            let mut book_md5: Option<String> = None;
             
             // Find metadata based on the configured location
             let metadata_path = match metadata_location {
@@ -219,6 +224,8 @@ pub async fn scan_books(
                     match calculate_partial_md5(path) {
                         Ok(hash) => {
                             debug!("Calculated partial MD5 for {:?}: {}", path, hash);
+                            // Store the calculated MD5 for later use
+                            book_md5 = Some(hash.clone());
                             hashdocsettings_index
                                 .as_ref()
                                 .and_then(|idx| idx.get(&hash.to_lowercase()).cloned())
@@ -246,6 +253,24 @@ pub async fn scan_books(
                 None
             };
             
+            // Collect MD5 for statistics filtering:
+            // 1. Prefer MD5 from metadata (stable even if file is updated)
+            // 2. Use calculated MD5 from hashdocsettings lookup if available
+            // 3. Fall back to calculating MD5 for books without metadata
+            if let Some(ref metadata) = koreader_metadata {
+                if let Some(ref md5) = metadata.partial_md5_checksum {
+                    library_md5s.insert(md5.clone());
+                } else if let Some(ref md5) = book_md5 {
+                    library_md5s.insert(md5.clone());
+                } else if let Ok(md5) = calculate_partial_md5(path) {
+                    library_md5s.insert(md5);
+                }
+            } else if let Some(ref md5) = book_md5 {
+                library_md5s.insert(md5.clone());
+            } else if let Ok(md5) = calculate_partial_md5(path) {
+                library_md5s.insert(md5);
+            }
+            
             let book = Book {
                 id: generate_book_id(&epub_info.title),
                 epub_info,
@@ -258,5 +283,5 @@ pub async fn scan_books(
     }
     
     info!("Found {} books!", books.len());
-    Ok(books)
+    Ok((books, library_md5s))
 }

@@ -1,5 +1,6 @@
 use chrono::{NaiveDate, Duration, Datelike};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use log::debug;
 
 use crate::models::*;
 use crate::read_completion_analyzer::{ReadCompletionDetector, CompletionConfig};
@@ -390,6 +391,36 @@ impl StatisticsCalculator {
             let key = (stat.id_book, date_str);
             *valid_book_dates.get(&key).unwrap_or(&false)
         });
+    }
+
+    /// Filter statistics to only include books present in the library.
+    /// The library_md5s set contains MD5 hashes of books in the scanned library.
+    /// This filters out statistics for deleted books or books in other directories.
+    pub fn filter_to_library(stats_data: &mut StatisticsData, library_md5s: &HashSet<String>) {
+        let original_count = stats_data.books.len();
+        
+        // 1. Get IDs of books to keep (those whose MD5 is in library_md5s)
+        let mut ids_to_keep: HashSet<i64> = HashSet::new();
+        stats_data.books.retain(|book| {
+            if library_md5s.contains(&book.md5) {
+                ids_to_keep.insert(book.id);
+                true
+            } else {
+                debug!("Filtering out statistics for book not in library: '{}' by {} (md5: {})", 
+                    book.title, book.authors, book.md5);
+                false
+            }
+        });
+        
+        // 2. Filter page_stats to only include entries for kept books
+        stats_data.page_stats.retain(|stat| ids_to_keep.contains(&stat.id_book));
+        
+        // 3. Update stats_by_md5 map to only include kept books
+        stats_data.stats_by_md5.retain(|md5, _| library_md5s.contains(md5));
+        
+        let filtered_count = original_count - stats_data.books.len();
+        log::info!("Filtered statistics to {} books present in library ({} excluded)", 
+            stats_data.books.len(), filtered_count);
     }
 }
 
