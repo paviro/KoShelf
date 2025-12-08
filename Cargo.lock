@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "koshelf"
-version = "1.4.2"
+version = "1.4.3"
 dependencies = [
  "ammonia",
  "anyhow",
