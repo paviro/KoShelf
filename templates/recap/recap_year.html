@@ -107,7 +107,7 @@
         <div class="bg-gray-100 dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-700/50">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Download Recap Image</h3>
+                <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">Download Recap Image</h3>
                 <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -131,9 +131,9 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="/recap/{{ year }}/share_story.png" download="koshelf_{{ year }}_story.png" class="flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
-                            Download PNG
-                        </a>
+                        <button data-share-url="/recap/{{ year }}/share_story.png" data-share-filename="koshelf_{{ year }}_story.png" class="share-png-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
+                            <span class="share-btn-text">Download PNG</span>
+                        </button>
                         <a href="/recap/{{ year }}/share_story.svg" download="koshelf_{{ year }}_story.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-600 dark:text-gray-400 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
                             SVG
                         </a>
@@ -154,9 +154,9 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="/recap/{{ year }}/share_square.png" download="koshelf_{{ year }}_square.png" class="flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
-                            Download PNG
-                        </a>
+                        <button data-share-url="/recap/{{ year }}/share_square.png" data-share-filename="koshelf_{{ year }}_square.png" class="share-png-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
+                            <span class="share-btn-text">Download PNG</span>
+                        </button>
                         <a href="/recap/{{ year }}/share_square.svg" download="koshelf_{{ year }}_square.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-600 dark:text-gray-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
                             SVG
                         </a>
@@ -177,9 +177,9 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <a href="/recap/{{ year }}/share_banner.png" download="koshelf_{{ year }}_banner.png" class="flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-700 dark:text-gray-200 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
-                            Download PNG
-                        </a>
+                        <button data-share-url="/recap/{{ year }}/share_banner.png" data-share-filename="koshelf_{{ year }}_banner.png" class="share-png-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-700 dark:text-gray-200 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
+                            <span class="share-btn-text">Download PNG</span>
+                        </button>
                         <a href="/recap/{{ year }}/share_banner.svg" download="koshelf_{{ year }}_banner.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
                             SVG
                         </a>

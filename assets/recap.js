@@ -101,6 +101,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareBtn = document.getElementById('shareButton');
   const shareModal = document.getElementById('shareModal');
   const shareModalClose = document.getElementById('shareModalClose');
+  const shareModalTitle = document.getElementById('shareModalTitle');
+
+  // Detect if we're on a mobile device (iOS, Android, etc.)
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+  };
+
+  // Check if Web Share API is available and can share files
+  const canUseWebShare = () => {
+    return navigator.share && navigator.canShare;
+  };
+
+  const isMobile = isMobileDevice();
+  const useWebShare = isMobile && canUseWebShare();
+
+  // Update button text and modal title based on device type
+  if (useWebShare) {
+    // Update modal title
+    if (shareModalTitle) {
+      shareModalTitle.textContent = 'Share Recap Image';
+    }
+    // Update button texts
+    document.querySelectorAll('.share-btn-text').forEach(span => {
+      span.textContent = 'Share';
+    });
+    // Update header button title/aria-label
+    if (shareBtn) {
+      shareBtn.title = 'Share recap image';
+      shareBtn.setAttribute('aria-label', 'Share recap image');
+    }
+  }
 
   if (shareBtn && shareModal) {
     // Open modal
@@ -132,5 +164,59 @@ document.addEventListener('DOMContentLoaded', () => {
         shareModal.classList.remove('flex');
       }
     });
+
+    // Handle share/download button clicks
+    document.querySelectorAll('.share-png-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const url = btn.dataset.shareUrl;
+        const filename = btn.dataset.shareFilename;
+
+        if (useWebShare) {
+          // Use Web Share API on mobile
+          try {
+            // Fetch the image and convert to a File object
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            // Check if we can share this file
+            if (navigator.canShare({ files: [file] })) {
+              // Extract year from filename (e.g., "koshelf_2024_story.png" -> "2024")
+              const yearMatch = filename.match(/koshelf_(\d{4})_/);
+              const year = yearMatch ? yearMatch[1] : new Date().getFullYear();
+
+              await navigator.share({
+                files: [file],
+                title: 'My KoShelf Reading Recap',
+                text: `📚 My ${year} reading journey! These graphics were crafted by KoShelf, my KoReader reading companion. Check it out: https://github.com/paviro/KoShelf`,
+              });
+            } else {
+              // Fallback to download if file sharing isn't supported
+              triggerDownload(url, filename);
+            }
+          } catch (err) {
+            // User cancelled or error occurred - only log if it's not a user cancel
+            if (err.name !== 'AbortError') {
+              console.error('Share failed:', err);
+              // Fallback to download
+              triggerDownload(url, filename);
+            }
+          }
+        } else {
+          // Use download on desktop
+          triggerDownload(url, filename);
+        }
+      });
+    });
+  }
+
+  // Helper function to trigger a download
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 });
