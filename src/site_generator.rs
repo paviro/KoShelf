@@ -1,7 +1,7 @@
 use crate::models::*;
 use crate::templates::*;
 use crate::statistics_parser::StatisticsParser;
-use crate::statistics::{BookStatistics};
+use crate::statistics::{BookStatistics, StatisticsCalculator};
 use crate::book_scanner::{scan_books, MetadataLocation};
 use anyhow::{Result, Context};
 use askama::Template;
@@ -28,6 +28,7 @@ pub struct SiteGenerator {
     time_config: TimeConfig,
     min_pages_per_day: Option<u32>,
     min_time_per_day: Option<u32>,
+    include_all_stats: bool,
 }
 
 impl SiteGenerator {
@@ -42,6 +43,7 @@ impl SiteGenerator {
         time_config: TimeConfig,
         min_pages_per_day: Option<u32>,
         min_time_per_day: Option<u32>,
+        include_all_stats: bool,
     ) -> Self {
         Self {
             output_dir,
@@ -54,6 +56,7 @@ impl SiteGenerator {
             time_config,
             min_pages_per_day,
             min_time_per_day,
+            include_all_stats,
         }
     }
 
@@ -74,10 +77,11 @@ impl SiteGenerator {
         info!("Generating static site in: {:?}", self.output_dir);
         
         // Scan books if books_path is provided
-        let books = if let Some(ref books_path) = self.books_path {
+        // Also returns the set of MD5 hashes for all books (for statistics filtering)
+        let (books, library_md5s) = if let Some(ref books_path) = self.books_path {
             scan_books(books_path, &self.metadata_location).await?
         } else {
-            Vec::new()
+            (Vec::new(), std::collections::HashSet::new())
         };
         
         // After loading statistics if path is provided
@@ -93,6 +97,12 @@ impl SiteGenerator {
                         self.min_pages_per_day, 
                         self.min_time_per_day
                     );
+                }
+                
+                // Filter statistics to library books only (unless --include-all-stats is set)
+                // This is skipped if no books_path is provided (can't filter without a library)
+                if !self.include_all_stats && !books.is_empty() {
+                    StatisticsCalculator::filter_to_library(&mut data, &library_md5s);
                 }
                 
                 crate::statistics::StatisticsCalculator::populate_completions(&mut data, &self.time_config);

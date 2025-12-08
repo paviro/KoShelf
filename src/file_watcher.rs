@@ -21,6 +21,7 @@ pub struct FileWatcher {
     time_config: TimeConfig,
     min_pages_per_day: Option<u32>,
     min_time_per_day: Option<u32>,
+    include_all_stats: bool,
 }
 
 impl FileWatcher {
@@ -35,6 +36,7 @@ impl FileWatcher {
         time_config: TimeConfig,
         min_pages_per_day: Option<u32>,
         min_time_per_day: Option<u32>,
+        include_all_stats: bool,
     ) -> Result<Self> {
         Ok(Self {
             books_path,
@@ -48,6 +50,7 @@ impl FileWatcher {
             time_config,
             min_pages_per_day,
             min_time_per_day,
+            include_all_stats,
         })
     }
     
@@ -114,6 +117,7 @@ impl FileWatcher {
         let time_config_clone = self.time_config.clone();
         let min_pages_per_day_clone = self.min_pages_per_day;
         let min_time_per_day_clone = self.min_time_per_day;
+        let include_all_stats_clone = self.include_all_stats;
         
         // Spawn delayed rebuild task
         let rebuild_task = tokio::task::spawn_blocking(move || {
@@ -142,6 +146,7 @@ impl FileWatcher {
                         time_config_clone.clone(),
                         min_pages_per_day_clone,
                         min_time_per_day_clone,
+                        include_all_stats_clone,
                     );
                     
                     match site_generator.generate().await {
