@@ -124,4 +124,52 @@ fn main() {
     }
     
     eprintln!("Event calendar library files copied successfully");
+
+    // Download and embed fonts for SVG rendering
+    download_fonts(&out_dir);
+}
+
+/// Download Gelasio font files for SVG rendering
+fn download_fonts(out_dir: &str) {
+    let fonts = [
+        (
+            "Gelasio-Regular.ttf",
+            "https://fonts.gstatic.com/s/gelasio/v14/cIfiMaFfvUQxTTqS3iKJkLGbI41wQL8Ilycs.ttf"
+        ),
+        (
+            "Gelasio-Italic.ttf", 
+            "https://fonts.gstatic.com/s/gelasio/v14/cIfsMaFfvUQxTTqS9Cu7b2nySBfeR6rA1M9v8zQ.ttf"
+        ),
+    ];
+
+    for (filename, url) in fonts {
+        let dest_path = Path::new(out_dir).join(filename);
+        
+        // Skip if already downloaded (caching)
+        if dest_path.exists() {
+            eprintln!("Font {} already cached, skipping download", filename);
+            continue;
+        }
+
+        eprintln!("Downloading font: {}...", filename);
+        
+        match ureq::get(url).call() {
+            Ok(response) => {
+                let bytes = match response.into_body().read_to_vec() {
+                    Ok(b) => b,
+                    Err(e) => panic!("Failed to read font data for {}: {}", filename, e),
+                };
+                
+                fs::write(&dest_path, &bytes)
+                    .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
+                
+                eprintln!("Font {} downloaded successfully ({} bytes)", filename, bytes.len());
+            }
+            Err(e) => {
+                panic!("Failed to download font {}: {}", filename, e);
+            }
+        }
+    }
+    
+    eprintln!("Font files downloaded/verified successfully");
 } 
