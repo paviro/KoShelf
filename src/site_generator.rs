@@ -990,7 +990,7 @@ impl SiteGenerator {
                 active_days,
                 active_days_percentage,
                 longest_streak,
-                best_month_name,
+                best_month_name: best_month_name.clone(),
                 best_month_time_display,
             };
 
@@ -1012,6 +1012,61 @@ impl SiteGenerator {
             fs::create_dir_all(&year_dir)?;
             let path = year_dir.join("index.html");
             self.write_minify_html(path, &html)?;
+
+            // Generate share images for social media
+            let share_data = crate::share_image::ShareImageData {
+                year: *year,
+                books_read: total_books as u32,
+                reading_time_hours: total_time_hours as u32,
+                reading_time_days: total_time_days as u32,
+                active_days: active_days as u32,
+                active_days_percentage: active_days_percentage as u8,
+                longest_streak: longest_streak as u32,
+                best_month: best_month_name.clone(),
+            };
+
+            // Check if we need to regenerate share images (skip if stats DB hasn't changed)
+            let stats_db_time = self.statistics_db_path.as_ref()
+                .and_then(|p| fs::metadata(p).ok())
+                .and_then(|m| m.modified().ok())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
+
+            // Generate all three formats in parallel using spawn_blocking (only if needed)
+            let share_tasks: Vec<_> = [
+                crate::share_image::ShareFormat::Story,
+                crate::share_image::ShareFormat::Square,
+                crate::share_image::ShareFormat::Banner,
+            ]
+            .into_iter()
+            .filter_map(|format| {
+                let output_path = year_dir.join(format.filename());
+                
+                // Check if share image needs regeneration
+                let should_generate = match fs::metadata(&output_path) {
+                    Ok(img_meta) => {
+                        let img_time = img_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                        stats_db_time > img_time // Only regenerate if stats DB is newer
+                    }
+                    Err(_) => true, // Image missing, need to generate
+                };
+
+                if should_generate {
+                    let share_data = share_data.clone();
+                    Some(tokio::task::spawn_blocking(move || {
+                        if let Err(e) = crate::share_image::generate_share_image(&share_data, format, &output_path) {
+                            log::warn!("Failed to generate share image {:?}: {}", output_path, e);
+                        }
+                    }))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+            // Wait for all share image generation tasks to complete
+            for task in share_tasks {
+                let _ = task.await;
+            }
         }
 
         Ok(())

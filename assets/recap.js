@@ -96,4 +96,41 @@ document.addEventListener('DOMContentLoaded', () => {
       flipOrder();
     });
   }
+
+  // --- Share Modal Logic ---
+  const shareBtn = document.getElementById('shareButton');
+  const shareModal = document.getElementById('shareModal');
+  const shareModalClose = document.getElementById('shareModalClose');
+
+  if (shareBtn && shareModal) {
+    // Open modal
+    shareBtn.addEventListener('click', () => {
+      shareModal.classList.remove('hidden');
+      shareModal.classList.add('flex');
+    });
+
+    // Close modal on X button
+    if (shareModalClose) {
+      shareModalClose.addEventListener('click', () => {
+        shareModal.classList.add('hidden');
+        shareModal.classList.remove('flex');
+      });
+    }
+
+    // Close modal on backdrop click
+    shareModal.addEventListener('click', (e) => {
+      if (e.target === shareModal) {
+        shareModal.classList.add('hidden');
+        shareModal.classList.remove('flex');
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !shareModal.classList.contains('hidden')) {
+        shareModal.classList.add('hidden');
+        shareModal.classList.remove('flex');
+      }
+    });
+  }
 });
