@@ -107,8 +107,8 @@
     </header>
 
     <!-- Share Modal -->
-    <div id="shareModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-gray-100 dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-700/50">
+    <div id="shareModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div id="shareModalCard" class="bg-gray-100 dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-700/50 transform transition-all duration-300 scale-95 opacity-0">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
                 <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">Download Recap Image</h3>

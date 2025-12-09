@@ -4,6 +4,8 @@
 //   import { initializeCalendar } from '/assets/js/calendar.js';
 //   initializeCalendar();
 
+import { showModal, hideModal, setupModalCloseHandlers } from './modal-utils.js';
+
 let calendar;
 let currentEvents = [];
 let currentBooks = {};
@@ -332,7 +334,7 @@ function showEventModal(_title, event) {
     if (event.book_path) {
         viewBookBtn.classList.remove('hidden');
         viewBookBtn.onclick = () => {
-            hideModal(); // Ensure modal hidden immediately
+            hideEventModal(); // Ensure modal hidden immediately
             window.location.href = event.book_path;
         };
     } else {
@@ -340,30 +342,15 @@ function showEventModal(_title, event) {
         viewBookBtn.onclick = null;
     }
 
-    // Animate open
-    modal.classList.remove('hidden');
-    modal.classList.add('opacity-0');
-    modalCard.classList.add('scale-95', 'opacity-0');
-    modal.offsetHeight; // Force reflow
-    requestAnimationFrame(() => {
-        modal.classList.replace('opacity-0', 'opacity-100');
-        modalCard.classList.remove('scale-95', 'opacity-0');
-        modalCard.classList.add('scale-100', 'opacity-100');
-    });
+    // Animate open using shared utility
+    showModal(modal, modalCard);
 }
 
-function hideModal() {
+// Helper to hide the event modal using the shared utility
+function hideEventModal() {
     const modal = document.getElementById('eventModal');
     const modalCard = document.getElementById('modalCard');
-    if (!modal || !modalCard) return;
-
-    modal.classList.replace('opacity-100', 'opacity-0');
-    modalCard.classList.replace('scale-100', 'scale-95');
-    modalCard.classList.replace('opacity-100', 'opacity-0');
-
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
+    hideModal(modal, modalCard);
 }
 
 function setupEventHandlers() {
@@ -390,11 +377,11 @@ function setupEventHandlers() {
         }
     });
 
-    // Modal close / backdrop click
-    document.getElementById('closeModal')?.addEventListener('click', hideModal);
-    document.getElementById('eventModal')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) hideModal();
-    });
+    // Modal close handlers using shared utility
+    const modal = document.getElementById('eventModal');
+    const modalCard = document.getElementById('modalCard');
+    const closeBtn = document.getElementById('closeModal');
+    setupModalCloseHandlers(modal, modalCard, closeBtn);
 }
 
 // Update Today button disabled state based on whether we're viewing the current month

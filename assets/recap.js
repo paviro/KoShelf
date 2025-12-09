@@ -1,4 +1,5 @@
 import { StorageManager } from './storage-manager.js';
+import { showModal, setupModalCloseHandlers } from './modal-utils.js';
 
 // Recap interactions: year dropdown + navigation
 document.addEventListener('DOMContentLoaded', () => {
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Share Modal Logic ---
   const shareBtn = document.getElementById('shareButton');
   const shareModal = document.getElementById('shareModal');
+  const shareModalCard = document.getElementById('shareModalCard');
   const shareModalClose = document.getElementById('shareModalClose');
   const shareModalTitle = document.getElementById('shareModalTitle');
 
@@ -134,36 +136,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  if (shareBtn && shareModal) {
-    // Open modal
+  if (shareBtn && shareModal && shareModalCard) {
+    // Open modal with animation
     shareBtn.addEventListener('click', () => {
-      shareModal.classList.remove('hidden');
-      shareModal.classList.add('flex');
+      showModal(shareModal, shareModalCard);
     });
 
-    // Close modal on X button
-    if (shareModalClose) {
-      shareModalClose.addEventListener('click', () => {
-        shareModal.classList.add('hidden');
-        shareModal.classList.remove('flex');
-      });
-    }
-
-    // Close modal on backdrop click
-    shareModal.addEventListener('click', (e) => {
-      if (e.target === shareModal) {
-        shareModal.classList.add('hidden');
-        shareModal.classList.remove('flex');
-      }
-    });
-
-    // Close modal on Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !shareModal.classList.contains('hidden')) {
-        shareModal.classList.add('hidden');
-        shareModal.classList.remove('flex');
-      }
-    });
+    // Setup close handlers (X button, backdrop click, Escape key)
+    setupModalCloseHandlers(shareModal, shareModalCard, shareModalClose);
 
     // Handle share/download button clicks
     document.querySelectorAll('.share-webp-btn').forEach(btn => {
