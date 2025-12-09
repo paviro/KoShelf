@@ -38,6 +38,15 @@ pub struct RecapTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "recap/recap_empty.html", whitespace = "minimize")]
+pub struct RecapEmptyTemplate {
+    pub site_title: String,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
+}
+
+#[derive(Template)]
 #[template(path = "book_details/book_details.html", whitespace = "minimize")]
 pub struct BookTemplate {
     pub site_title: String,

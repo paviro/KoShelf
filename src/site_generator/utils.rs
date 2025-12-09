@@ -106,8 +106,8 @@ impl SiteGenerator {
 
     pub(crate) fn create_navbar_items_with_recap(&self, current_page: &str, recap_latest_href: Option<&str>) -> Vec<NavItem> {
         let mut items = self.create_navbar_items(current_page);
-        if self.statistics_db_path.is_some()
-            && let Some(href) = recap_latest_href {
+        if self.statistics_db_path.is_some() {
+            let href = recap_latest_href.unwrap_or("/recap/");
             items.push(NavItem {
                 label: "Recap".to_string(),
                 href: href.to_string(),
