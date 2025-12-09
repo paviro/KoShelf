@@ -130,6 +130,7 @@ fn main() {
 }
 
 /// Download Gelasio font files for SVG rendering
+/// Uses a shared cache directory so fonts are only downloaded once across all targets
 fn download_fonts(out_dir: &str) {
     let fonts = [
         (
@@ -142,12 +143,20 @@ fn download_fonts(out_dir: &str) {
         ),
     ];
 
+    // Use a shared cache directory in target/ so fonts are only downloaded once
+    // across all target architectures during cross-compilation
+    let cache_dir = Path::new("target").join(".font-cache");
+    fs::create_dir_all(&cache_dir).expect("Failed to create font cache directory");
+
     for (filename, url) in fonts {
+        let cache_path = cache_dir.join(filename);
         let dest_path = Path::new(out_dir).join(filename);
         
-        // Skip if already downloaded (caching)
-        if dest_path.exists() {
-            eprintln!("Font {} already cached, skipping download", filename);
+        // Check if font is already in shared cache
+        if cache_path.exists() {
+            eprintln!("Font {} found in cache, copying to build dir", filename);
+            fs::copy(&cache_path, &dest_path)
+                .unwrap_or_else(|e| panic!("Failed to copy cached font {}: {}", filename, e));
             continue;
         }
 
@@ -160,10 +169,15 @@ fn download_fonts(out_dir: &str) {
                     Err(e) => panic!("Failed to read font data for {}: {}", filename, e),
                 };
                 
+                // Save to shared cache
+                fs::write(&cache_path, &bytes)
+                    .unwrap_or_else(|e| panic!("Failed to cache font {}: {}", filename, e));
+                
+                // Copy to build output directory
                 fs::write(&dest_path, &bytes)
                     .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
                 
-                eprintln!("Font {} downloaded successfully ({} bytes)", filename, bytes.len());
+                eprintln!("Font {} downloaded and cached ({} bytes)", filename, bytes.len());
             }
             Err(e) => {
                 panic!("Failed to download font {}: {}", filename, e);
