@@ -14,7 +14,7 @@ clap = { version = "4.5.40", features = ["derive"] }
 # Error handling
 anyhow = "1.0.98"
 # Async
-tokio = { version = "1.45.1", features = ["full"] }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] }
 # File system
 walkdir = "2.5.0"
 # File system watching
@@ -24,7 +24,7 @@ tempfile = "3.20.0"
 # EPUB parsing
 zip = "4.1.0"
 # Image processing
-image = "0.25.6"
+image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
 webp = "0.3.1"
 # Lua parsing (use LuaJIT to match KoReader's runtime)
 mlua = { version = "0.11.5", features = ["luajit", "vendored"] }
@@ -61,3 +61,8 @@ ureq = "3.1.4"
 
 [dev-dependencies]
 ureq = { version = "3.1.4", features = ["json"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
