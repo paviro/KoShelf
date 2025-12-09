@@ -3,6 +3,7 @@
     "short_name": "KoShelf",
     "description": "Your personal reading companion",
     "start_url": "/",
+    "id": "/",
     "display": "standalone",
     "background_color": "#111827",
     "theme_color": "#6366f1",
