@@ -22,6 +22,7 @@ mod read_completion_analyzer;
 mod time_config;
 mod partial_md5;
 mod share_image;
+mod version_notifier;
 
 #[cfg(test)]
 mod tests;
@@ -32,6 +33,7 @@ use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
 use crate::time_config::TimeConfig;
 use crate::book_scanner::MetadataLocation;
+use crate::version_notifier::create_version_notifier;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -254,6 +256,9 @@ async fn main() -> Result<()> {
         MetadataLocation::InBookFolder
     };
 
+    // Determine if we're running with internal web server (not static export)
+    let is_internal_server = !is_static_site && cli.output.is_none();
+
     // Create site config - bundles all generation options
     let config = SiteConfig {
         output_dir: output_dir.clone(),
@@ -267,6 +272,7 @@ async fn main() -> Result<()> {
         min_pages_per_day: cli.min_pages_per_day,
         min_time_per_day,
         include_all_stats: cli.include_all_stats,
+        is_internal_server,
     };
 
     // Create site generator - it will handle book scanning and stats loading internally
@@ -283,19 +289,22 @@ async fn main() -> Result<()> {
     if cli.output.is_some() && cli.watch {
         info!("Starting file watcher mode for static output");
         
-        // Start file watcher only
-        let file_watcher = FileWatcher::new(config.clone()).await?;
+        // Start file watcher only (no long-polling needed for static output)
+        let file_watcher = FileWatcher::new(config.clone(), None).await?;
         
         // Run file watcher
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);
         }
     } else {
-        // Start file watcher
-        let file_watcher = FileWatcher::new(config).await?;
+        // Create shared version notifier for long-polling
+        let version_notifier = create_version_notifier();
 
-        // Start web server
-        let web_server = WebServer::new(output_dir, cli.port);
+        // Start file watcher with version notifier
+        let file_watcher = FileWatcher::new(config, Some(version_notifier.clone())).await?;
+
+        // Start web server with version notifier
+        let web_server = WebServer::new(output_dir, cli.port, version_notifier);
 
         // Run both file watcher and web server concurrently
         tokio::select! {

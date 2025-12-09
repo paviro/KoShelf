@@ -12,63 +12,63 @@
   .sidebar-item {
     @apply flex items-center px-4 py-3 text-gray-700 dark:text-dark-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg mx-2 transition-all duration-200;
   }
-  
+
   .sidebar-item-active {
     @apply bg-primary-600 text-white shadow-lg;
   }
-  
+
   .sidebar-item-modern {
     @apply flex items-center space-x-3 px-4 py-3 rounded-lg mx-2 transition-all duration-200 hover:bg-primary-50 dark:hover:bg-primary-900/20;
   }
-  
+
   .sidebar-item-modern-active {
     @apply bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700/50 shadow-sm;
   }
-  
+
   .nav-item {
     @apply text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200;
   }
-  
+
   .nav-item-active {
     @apply text-primary-400 bg-gray-100/60 dark:bg-dark-700/60;
   }
-  
+
   .book-card {
     @apply relative bg-white dark:bg-dark-800 rounded-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl;
   }
-  
+
   .book-progress-bar {
     @apply absolute bottom-0 left-0 h-1 bg-gradient-to-r transition-all duration-300;
   }
-  
+
   .progress-reading {
     @apply from-primary-500 to-primary-400;
   }
-  
+
   .progress-complete {
     @apply from-green-500 to-green-400;
   }
-  
+
   .search-input {
     @apply w-full bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
-  
+
   .filter-button {
     @apply px-4 py-2 bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white rounded-lg transition-all duration-200 shadow;
   }
-  
+
   .filter-button-active {
     @apply bg-primary-600 text-white;
   }
-  
+
   .book-description p {
     @apply mb-4;
   }
-  
+
   .book-description p:last-child {
     @apply mb-0;
   }
-  
+
   .book-description h1,
   .book-description h2,
   .book-description h3,
@@ -77,7 +77,7 @@
   .book-description h6 {
     @apply mt-6 mb-3;
   }
-  
+
   .book-description h1:first-child,
   .book-description h2:first-child,
   .book-description h3:first-child,
@@ -86,21 +86,21 @@
   .book-description h6:first-child {
     @apply mt-0;
   }
-  
+
   .book-description ul,
   .book-description ol {
     @apply mb-4;
   }
-  
+
   .book-description blockquote {
     @apply my-4;
   }
-  
+
   /* EventCalendar Custom Styles */
   .ec {
     @apply font-sans;
   }
-  
+
   /* Custom EC-Dark Theme */
   .ec-dark .ec {
     --ec-bg-fallback-color: theme('calendar.darkBg');
@@ -119,35 +119,35 @@
     --ec-list-day-bg-color: theme('calendar.darkButtonBg');
     --ec-now-indicator-color: theme('calendar.primaryLight');
   }
-  
+
   /* Specific EC Elements Styling */
-  .ec-dark .ec-button:not(:disabled):hover, 
+  .ec-dark .ec-button:not(:disabled):hover,
   .ec-dark .ec-button.ec-active {
     @apply bg-primary-600 border-primary-700 text-white;
   }
-  
-  .ec-dark .ec-header, 
-  .ec-dark .ec-all-day, 
-  .ec-dark .ec-body, 
-  .ec-dark .ec-days, 
-  .ec-dark .ec-day, 
+
+  .ec-dark .ec-header,
+  .ec-dark .ec-all-day,
+  .ec-dark .ec-body,
+  .ec-dark .ec-days,
+  .ec-dark .ec-day,
   .ec-dark .ec-day-head,
   .ec-dark .ec-sidebar,
   .ec-dark .ec-popup {
     @apply border-gray-200 dark:border-dark-700;
   }
-  
+
   /* Calendar container specific styles */
   .calendar-container {
     @apply w-full overflow-x-auto;
   }
-  
+
   .calendar-container .ec {
     @apply min-w-[700px];
     border: none;
     background-color: transparent;
   }
-  
+
   .calendar-container .ec .ec-header,
   .calendar-container .ec .ec-all-day,
   .calendar-container .ec .ec-body,
@@ -155,7 +155,7 @@
     border: none;
     background-color: transparent;
   }
-  
+
   /* Improve the overall calendar appearance */
   .calendar-container .ec {
     margin: 0;
@@ -164,59 +164,59 @@
   .calendar-container .ec .ec-toolbar {
     display: none;
   }
-  
+
   .calendar-container .ec .ec-header .ec-days {
     margin: 0;
     @apply bg-gray-200 dark:bg-dark-800 shadow-sm border-b border-gray-200 dark:border-dark-700 rounded-t-lg;
     @apply text-gray-800 dark:text-primary-300 text-sm md:text-base lg:text-lg xl:text-xl py-2 font-medium;
   }
-  
+
   .calendar-container .ec .ec-header .ec-day {
     @apply border-gray-300 dark:border-dark-700/50 py-3 font-medium text-primary-800 dark:text-primary-300;
     border-right-width: 1px;
     border-right-style: solid;
   }
-  
+
   .calendar-container .ec .ec-header .ec-day:last-child {
     border-right: none;
   }
-  
+
   /* Fix day cells to have no outer border */
   .calendar-container .ec .ec-day:last-child {
     border-right: none;
   }
-  
+
   .calendar-container .ec .ec-days:last-child .ec-day {
     border-bottom: none;
   }
-  
+
   /* Style the calendar body */
   .calendar-container .ec .ec-body {
     @apply bg-gray-50 dark:bg-dark-850/50 mt-1 border border-gray-200 dark:border-dark-700 shadow-sm;
     border-top: none;
   }
-  
+
   /* Day cell borders and hover */
   .calendar-container .ec .ec-day {
     @apply border-gray-300 dark:border-dark-700/50 transition-colors duration-200;
   }
-  
+
   /* Today highlighting */
   .calendar-container .ec .ec-today {
     @apply bg-primary-200/60 dark:bg-primary-900/30 font-medium border border-primary-400;
   }
-  
+
   /* Event styling */
   .calendar-container .ec-event {
     @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
     @apply mb-1 mx-0.5;
   }
-  
+
   /* Scrollbar styling */
   .ec-dark .ec ::-webkit-scrollbar-thumb {
     @apply bg-dark-700 border-4 border-transparent rounded-lg;
   }
-  
+
   .ec-dark .ec :hover::-webkit-scrollbar-thumb {
     @apply bg-dark-600;
   }
@@ -230,6 +230,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -256,21 +257,21 @@
   .week-stats {
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
   }
-  
+
   .week-stats.transition-out {
     opacity: 0.3;
   }
-  
+
   .week-stats.transition-in {
     opacity: 1;
     transform: translateY(0);
   }
-  
+
   #statsLoadingIndicator {
     transition: opacity 0.25s ease-in-out;
     opacity: 0;
   }
-  
+
   #statsLoadingIndicator.active {
     opacity: 1;
   }
@@ -279,18 +280,23 @@
   .recap-timeline {
     position: relative;
   }
+
   .recap-timeline:before {
     content: "";
     position: absolute;
     left: 12px;
-    top: -100px;      /* extend upward to touch header */
-    bottom: -50px;   /* extend below the last event toward page bottom */
+    top: -100px;
+    /* extend upward to touch header */
+    bottom: -50px;
+    /* extend below the last event toward page bottom */
     width: 2px;
     background: theme(colors.gray.200);
   }
+
   .dark .recap-timeline:before {
     background: theme(colors.gray.700);
   }
+
   .recap-dot {
     position: absolute;
     left: 7px;
@@ -301,31 +307,48 @@
     border-radius: 9999px;
     box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
   }
+
   @screen md {
     .recap-dot {
       top: 50%;
       transform: translateY(-50%);
     }
   }
+
   /* Yearly summary dot stays aligned with the title, not centered */
   .recap-dot-top {
     top: 0.5rem;
     transform: none;
   }
+
   @screen md {
     .recap-dot-top {
       top: 0.75rem;
       transform: none;
     }
   }
-  
+
   /* Recap cover max height: slightly larger on mobile, full on md+ */
   .recap-cover-max {
     max-height: 20rem;
   }
+
   @screen md {
     .recap-cover-max {
       max-height: 100%;
     }
   }
-} 
+
+  /* PWA Update Toggling */
+  body.update-available .update-hidden {
+    display: none !important;
+  }
+
+  body.update-available .update-visible {
+    display: block !important;
+  }
+
+  .update-visible {
+    display: none;
+  }
+}

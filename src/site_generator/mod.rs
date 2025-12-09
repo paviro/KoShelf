@@ -6,14 +6,18 @@
 //! - `statistics`: Statistics page and JSON export
 //! - `calendar`: Calendar page generation
 //! - `recap`: Yearly recap page generation
+//! - `cache_manifest`: PWA cache manifest generation
 //! - `utils`: Utility functions (minification, navbar, version info)
 
 mod assets;
 mod books;
+mod cache_manifest;
 mod calendar;
 mod recap;
 mod statistics;
 mod utils;
+
+pub use cache_manifest::CacheManifestBuilder;
 
 use crate::config::SiteConfig;
 use crate::statistics_parser::StatisticsParser;
@@ -22,9 +26,12 @@ use crate::book_scanner::scan_books;
 use anyhow::Result;
 use log::info;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 pub struct SiteGenerator {
     config: SiteConfig,
+    /// Cache manifest builder for PWA smart caching
+    cache_manifest: Arc<CacheManifestBuilder>,
 }
 
 impl std::ops::Deref for SiteGenerator {
@@ -36,7 +43,11 @@ impl std::ops::Deref for SiteGenerator {
 
 impl SiteGenerator {
     pub fn new(config: SiteConfig) -> Self {
-        Self { config }
+        // Create cache manifest with current timestamp as version
+        let version = chrono::Local::now().to_rfc3339();
+        let cache_manifest = Arc::new(CacheManifestBuilder::new(version));
+        
+        Self { config, cache_manifest }
     }
 
     // Path constants to avoid duplication
@@ -48,6 +59,7 @@ impl SiteGenerator {
     pub(crate) fn covers_dir(&self) -> PathBuf { self.assets_dir().join("covers") }
     pub(crate) fn css_dir(&self) -> PathBuf { self.assets_dir().join("css") }
     pub(crate) fn js_dir(&self) -> PathBuf { self.assets_dir().join("js") }
+    pub(crate) fn icons_dir(&self) -> PathBuf { self.assets_dir().join("icons") }
     pub(crate) fn json_dir(&self) -> PathBuf { self.assets_dir().join("json") }
     pub(crate) fn statistics_json_dir(&self) -> PathBuf { self.json_dir().join("statistics") }
     pub(crate) fn calendar_json_dir(&self) -> PathBuf { self.json_dir().join("calendar") }
@@ -143,6 +155,9 @@ impl SiteGenerator {
             // Generate recap pages (static yearly)
             self.generate_recap_pages(stats_data, &books).await?;
         }
+
+        // Write cache manifest for PWA smart caching
+        self.cache_manifest.write(self.output_dir.join("cache-manifest.json"))?;
 
         info!("Static site generation completed!");
 

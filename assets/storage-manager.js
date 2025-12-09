@@ -5,10 +5,13 @@
 export class StorageManager {
     static PREFIX = 'koshelf_';
 
-    // Centralized keys configuration
     static KEYS = {
         RECAP_SORT_ORDER: 'recap_sort_newest_first',
-        // Add future keys here
+        // PWA & Versioning
+        VERSION: 'version',
+        SERVER_MODE: 'server_mode',
+        RELOAD_COUNT: 'reload_count',
+        LAST_RELOAD: 'last_reload_time',
     };
 
     /**

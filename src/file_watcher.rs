@@ -1,6 +1,7 @@
 use crate::config::SiteConfig;
 use crate::site_generator::SiteGenerator;
 use crate::book_scanner::MetadataLocation;
+use crate::version_notifier::SharedVersionNotifier;
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::time::Duration;
@@ -11,6 +12,7 @@ use log::{info, warn, debug};
 pub struct FileWatcher {
     config: SiteConfig,
     rebuild_tx: Option<mpsc::UnboundedSender<()>>,
+    version_notifier: Option<SharedVersionNotifier>,
 }
 
 impl std::ops::Deref for FileWatcher {
@@ -21,10 +23,11 @@ impl std::ops::Deref for FileWatcher {
 }
 
 impl FileWatcher {
-    pub async fn new(config: SiteConfig) -> Result<Self> {
+    pub async fn new(config: SiteConfig, version_notifier: Option<SharedVersionNotifier>) -> Result<Self> {
         Ok(Self {
             config,
             rebuild_tx: None,
+            version_notifier,
         })
     }
     
@@ -79,8 +82,9 @@ impl FileWatcher {
             }
         }
         
-        // Clone the config for the rebuild task
+        // Clone the config and version notifier for the rebuild task
         let config_clone = self.config.clone();
+        let version_notifier_clone = self.version_notifier.clone();
         
         // Spawn delayed rebuild task
         let rebuild_task = tokio::task::spawn_blocking(move || {
@@ -101,7 +105,15 @@ impl FileWatcher {
                     let site_generator = SiteGenerator::new(config_clone.clone());
                     
                     match site_generator.generate().await {
-                        Ok(_) => info!("Delayed site rebuild completed successfully"),
+                        Ok(_) => {
+                            info!("Delayed site rebuild completed successfully");
+                            
+                            // Notify long-polling clients that a new version is available
+                            if let Some(ref notifier) = version_notifier_clone {
+                                let version = chrono::Local::now().to_rfc3339();
+                                notifier.notify(version);
+                            }
+                        }
                         Err(e) => warn!("Failed to rebuild site: {}", e),
                     }
                 }

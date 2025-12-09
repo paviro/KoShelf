@@ -317,6 +317,15 @@ impl SiteGenerator {
                 .unwrap_or(SystemTime::UNIX_EPOCH);
 
             // Generate all three formats in parallel using spawn_blocking (only if needed)
+            let share_image_paths: Vec<std::path::PathBuf> = [
+                crate::share_image::ShareFormat::Story,
+                crate::share_image::ShareFormat::Square,
+                crate::share_image::ShareFormat::Banner,
+            ]
+            .into_iter()
+            .map(|format| year_dir.join(format.filename()))
+            .collect();
+
             let share_tasks: Vec<_> = [
                 crate::share_image::ShareFormat::Story,
                 crate::share_image::ShareFormat::Square,
@@ -351,6 +360,13 @@ impl SiteGenerator {
             // Wait for all share image generation tasks to complete
             for task in share_tasks {
                 let _ = task.await;
+            }
+
+            // Register share images in cache manifest
+            for path in &share_image_paths {
+                if let Ok(content) = fs::read(path) {
+                    self.cache_manifest.register_file(path, &self.output_dir, &content);
+                }
             }
         }
 

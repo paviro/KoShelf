@@ -73,10 +73,10 @@ impl SiteGenerator {
             "generated_at": self.get_last_updated(),
         });
 
-        fs::write(
-            self.books_dir().join("list.json"),
-            serde_json::to_string_pretty(&manifest)?,
-        )?;
+        let list_json_path = self.books_dir().join("list.json");
+        let list_json_content = serde_json::to_string_pretty(&manifest)?;
+        self.cache_manifest.register_file(&list_json_path, &self.output_dir, list_json_content.as_bytes());
+        fs::write(list_json_path, list_json_content)?;
 
         // ------------------------------------------------------------------
         // Render book list HTML
@@ -144,7 +144,9 @@ impl SiteGenerator {
                 last_updated: self.get_last_updated(),
             };
             let markdown = md_template.render()?;
-            fs::write(book_dir.join("details.md"), markdown)?;
+            let md_path = book_dir.join("details.md");
+            self.cache_manifest.register_file(&md_path, &self.output_dir, markdown.as_bytes());
+            fs::write(md_path, markdown)?;
 
             // Generate JSON export / not used by the frontend code - only for the user's convenience
             let json_data = serde_json::json!({
@@ -182,7 +184,9 @@ impl SiteGenerator {
                 }
             });
             let json_str = serde_json::to_string_pretty(&json_data)?;
-            fs::write(book_dir.join("details.json"), json_str)?;
+            let json_path = book_dir.join("details.json");
+            self.cache_manifest.register_file(&json_path, &self.output_dir, json_str.as_bytes());
+            fs::write(json_path, json_str)?;
         }
         
         Ok(())

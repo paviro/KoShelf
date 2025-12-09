@@ -6,6 +6,10 @@
     <title>Reading Calendar - {{ site_title }}</title>
     <link rel="stylesheet" href="/assets/css/event-calendar.min.css">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans dark:ec-dark">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
@@ -134,5 +138,6 @@
             initializeCalendar();
         });
     </script>
+    <script type="module" src="/assets/js/pwa.js"></script>
 </body>
 </html> 
