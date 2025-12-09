@@ -1,6 +1,6 @@
 <div align="center">
 
-# KOShelf
+# KoShelf
 
 <p>
   <a href="https://github.com/paviro/koshelf/stargazers">
@@ -73,12 +73,12 @@
 
 ### Home Assistant
 
-Using Home Assistant? Install KOShelf as an add-on with just one click below.
+Using Home Assistant? Install KoShelf as an add-on with just one click below.
 
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
 
 ### Docker Compose Deployment
-Deploy Koshelf easily using the community-maintained Docker image.
+Deploy KoShelf easily using the community-maintained Docker image.
 #### Quick Start
 1. Create a docker-compose.yml file:
 
@@ -103,7 +103,7 @@ services:
 docker compose up -d
 ```
 
-4. Access Koshelf at http://localhost:3000
+4. Access KoShelf at http://localhost:3000
 
 Docker Image Repository: [koshelf-docker](https://github.com/DevTigro/koshelf-docker)
 
@@ -171,8 +171,8 @@ If you prefer to build from source or need a custom build:
 #### Building the tool
 
 ```bash
-git clone https://github.com/paviro/KOShelf
-cd koshelf
+git clone https://github.com/paviro/KoShelf
+cd KoShelf
 
 # Build the Rust binary
 cargo build --release
