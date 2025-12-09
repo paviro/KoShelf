@@ -376,11 +376,17 @@ This way, every time Syncthing pulls updates from my e-reader, the website autom
 ```
 site/
 ├── index.html              # Main library page
-├── recap/                  # Yearly Recap pages (latest year linked in sidebar)
-│   ├── 2025/
-│   │   └── index.html
+├── manifest.json           # PWA Manifest
+├── service-worker.js       # PWA Service Worker
+├── cache-manifest.json     # PWA Smart Cache Manifest
+├── version.txt             # Version timestamp for lightweight polling
+├── recap/                  # Yearly Recap pages
+│   ├── index.html          # Empty state / Recap landing
 │   ├── 2024/
-│   │   └── index.html
+│   │   ├── index.html      # Yearly recap page
+│   │   ├── share_story.webp # Social media share image (Story format)
+│   │   ├── share_square.webp # Social media share image (Square format)
+│   │   └── share_banner.webp # Social media share image (Banner format)
 │   └── ...
 ├── statistics/
 │   └── index.html          # Reading statistics dashboard
@@ -392,37 +398,38 @@ site/
 │   │   ├── index.html      # Book detail page with annotations
 │   │   ├── details.md      # Markdown export (human-readable)
 │   │   └── details.json    # JSON export (machine-readable)
-│   └── book-id2/
-│       ├── index.html
-│       ├── details.md
-│       └── details.json
+│   └── ...
 └── assets/
     ├── covers/             # Optimized book covers
     │   ├── book-id1.webp
-    │   └── book-id2.webp
+    │   └── ...
     ├── css/
     │   ├── style.css       # Compiled Tailwind CSS
     │   └── event-calendar.min.css # Event calendar library styles
     ├── js/
     │   ├── book_list.js    # Search and filtering functionality
+    │   ├── book_detail.js  # Book detail page functionality
     │   ├── lazy-loading.js # Image lazy loading
+    │   ├── section-toggle.js # Section collapsing/expanding
     │   ├── statistics.js   # Statistics page functionality
-    │   ├── calendar.js     # Calendar functionality
     │   ├── heatmap.js      # Activity heatmap visualization
-    │   └── event-calendar.min.js # Event calendar library
-    └── json/               # Data files used by the frontend (when available)
+    │   ├── calendar.js     # Calendar initialization
+    │   ├── event-calendar.min.js # Event calendar library
+    │   ├── recap.js        # Recap page interactions
+    │   ├── storage-manager.js # Centralized local storage management
+    │   └── pwa.js          # PWA installation and update logic
+    ├── icons/              # PWA icons
+    │   ├── icon-192.png
+    │   └── icon-512.png
+    └── json/               # Data files used by the frontend (for dynamic loading)
         ├── calendar/           # Calendar data split by month
-        │   ├── available_months.json # List of months with calendar data
-        │   ├── 2024-01.json   # January 2024 events and book data
-        │   ├── 2024-02.json   # February 2024 events and book data
-        │   └── ...            # Additional monthly files
+        │   ├── available_months.json 
+        │   ├── 2024-01.json   
+        │   └── ...            
         └── statistics/         # Statistics data
-            ├── week_0.json     # Weekly statistics data
-            ├── week_1.json
+            ├── week_0.json     
             ├── ...
-            ├── daily_activity_2023.json # Daily activity data for heatmap
-            ├── daily_activity_2024.json
-            └── ...
+            └── daily_activity_2024.json
 ```
 
 ## Credits
