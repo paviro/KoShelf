@@ -3,7 +3,7 @@
 use super::SiteGenerator;
 use super::utils::{format_duration, format_day_month};
 use crate::models::{Book, StatisticsData, RecapItem, MonthRecap, YearlySummary};
-use crate::templates::RecapTemplate;
+use crate::templates::{RecapTemplate, RecapEmptyTemplate};
 use anyhow::Result;
 use askama::Template;
 use chrono::Datelike;
@@ -101,7 +101,20 @@ impl SiteGenerator {
         }
 
         if years.is_empty() {
-            // No completions → don't generate recap pages
+            // No completions → render empty state page
+            let template = RecapEmptyTemplate {
+                site_title: self.site_title.clone(),
+                version: self.get_version(),
+                last_updated: self.get_last_updated(),
+                navbar_items: self.create_navbar_items_with_recap("recap", None),
+            };
+            
+            let html = template.render()?;
+            let recap_dir = self.recap_dir();
+            fs::create_dir_all(&recap_dir)?;
+            let path = recap_dir.join("index.html");
+            self.write_minify_html(path, &html)?;
+            
             return Ok(());
         }
 
