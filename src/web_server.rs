@@ -11,6 +11,7 @@ use log::info;
 use std::path::PathBuf;
 use std::time::Duration;
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -34,7 +35,9 @@ impl WebServer {
             .route("/version-poll", get(version_poll_handler))
             .with_state(self.version_notifier.clone())
             .fallback_service(ServeDir::new(&self.site_dir).not_found_service(not_found_service))
-            .layer(ServiceBuilder::new().layer(CorsLayer::permissive()));
+            .layer(ServiceBuilder::new()
+                .layer(CompressionLayer::new())
+                .layer(CorsLayer::permissive()));
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 

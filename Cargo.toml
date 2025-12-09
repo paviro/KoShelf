@@ -45,7 +45,7 @@ ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.4"
 tower = "0.4"
-tower-http = { version = "0.5.2", features = ["fs", "cors"] }
+tower-http = { version = "0.5.2", features = ["fs", "cors", "compression-gzip", "compression-br"] }
 # Futures utilities
 futures = "0.3"
 # SQLite database access
