@@ -90,19 +90,21 @@ impl SiteGenerator {
             
             let calendar_init_js_content = include_str!("../../assets/calendar.js");
             self.write_asset(self.js_dir().join("calendar.js"), calendar_init_js_content.as_bytes())?;
-
-            // Storage utility
-            let storage_js_content = include_str!("../../assets/storage-manager.js");
-            self.write_asset(self.js_dir().join("storage-manager.js"), storage_js_content.as_bytes())?;
-
-            // Recap small UI logic
+            
             let recap_js_content = include_str!("../../assets/recap.js");
             self.write_asset(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
+
+            let modal_utils_content = include_str!("../../assets/modal-utils.js");
+            self.write_asset(self.js_dir().join("modal-utils.js"), modal_utils_content.as_bytes())?;
         }
         
-        // PWA files (manifest and service worker are static, don't cache them)
+        // Storage utility - always needed as pwa.js depends on it
+        let storage_js_content = include_str!("../../assets/storage-manager.js");
+        self.write_asset(self.js_dir().join("storage-manager.js"), storage_js_content.as_bytes())?;
+        
+        // PWA manifest
         let manifest_content = include_str!("../../assets/manifest.json");
-        fs::write(self.output_dir.join("manifest.json"), manifest_content)?;
+        self.write_asset(self.output_dir.join("manifest.json"), manifest_content.as_bytes())?;
         
         let sw_content = include_str!("../../assets/service-worker.js");
         fs::write(self.output_dir.join("service-worker.js"), sw_content)?;

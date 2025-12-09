@@ -1,150 +1,164 @@
 // PWA utilities - service worker registration and update notifications
 import { StorageManager } from './storage-manager.js';
 
+const KEYS = StorageManager.KEYS;
+const RECOVERY_CONFIG = { maxRetries: 3, cooldownMs: 60000 };
+const RECONNECT_DELAY_MS = 5000;
+const POLL_INTERVAL_MS = 10000;
+const SERVER_MODE = '{{SERVER_MODE}}'; // Injected at build time
+
+// Version tracking state
+let initialVersion = StorageManager.get(KEYS.VERSION);
+let lastNotifiedVersion = null; // Track which version we last triggered an update for
+
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(error => {
-        console.error('Service Worker registration failed:', error);
+    initializeServiceWorker();
+}
+
+async function initializeServiceWorker() {
+    try {
+        await navigator.serviceWorker.register('/service-worker.js');
+    } catch (error) {
+        console.error('[PWA] Service Worker registration failed:', error);
         recoveryReload();
-    });
+    }
 
-    navigator.serviceWorker.addEventListener('message', (e) => {
-        if (e.data?.type === 'CACHE_UPDATED') {
-            showUpdateToast();
-        } else if (e.data?.type === 'CRITICAL_ERROR') {
-            console.error('Service Worker reported critical error:', e.data.error);
-            recoveryReload();
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    window.addEventListener('error', handleWindowError);
+
+    // Start version monitoring after page load
+    setTimeout(startVersionMonitoring, 1000);
+}
+
+function handleServiceWorkerMessage({ data }) {
+    if (data?.type === 'CACHE_UPDATED') {
+        showUpdateNotification();
+    } else if (data?.type === 'CRITICAL_ERROR') {
+        console.error('[PWA] Service Worker critical error:', data.error);
+        recoveryReload();
+    }
+}
+
+function handleWindowError(event) {
+    if (event.error || event.message) {
+        console.error('[PWA] Window error detected:', event.error || event.message);
+        recoveryReload();
+    }
+}
+
+function recoveryReload() {
+    const now = Date.now();
+    const lastReload = parseInt(StorageManager.get(KEYS.LAST_RELOAD) || '0');
+    let count = parseInt(StorageManager.get(KEYS.RELOAD_COUNT) || '0');
+
+    // Reset counter after cooldown period
+    if (now - lastReload > RECOVERY_CONFIG.cooldownMs) {
+        count = 0;
+    }
+
+    if (count >= RECOVERY_CONFIG.maxRetries) {
+        console.error('[PWA] Recovery limit reached, stopping auto-reload');
+        return;
+    }
+
+    StorageManager.set(KEYS.RELOAD_COUNT, String(count + 1));
+    StorageManager.set(KEYS.LAST_RELOAD, String(now));
+
+    console.log('[PWA] Attempting recovery reload...');
+
+    navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(r => r.unregister()))
+        .then(() => location.reload());
+}
+
+// Version monitoring
+async function startVersionMonitoring() {
+    const version = await fetchVersion();
+    if (version) handleVersionChange(version);
+
+    if (SERVER_MODE === 'internal') {
+        startLongPolling();
+    } else {
+        startIntervalPolling();
+    }
+}
+
+async function fetchVersion() {
+    try {
+        const response = await fetch('/version.txt', { cache: 'no-store' });
+        return response.ok ? (await response.text()).trim() : null;
+    } catch {
+        return null;
+    }
+}
+
+function handleVersionChange(version) {
+    console.log(`[PWA] Version check: stored=${initialVersion}, fetched=${version}, lastNotified=${lastNotifiedVersion}`);
+
+    if (initialVersion === null) {
+        initialVersion = version;
+        StorageManager.set(KEYS.VERSION, version);
+        console.log('[PWA] First load, storing initial version');
+        return;
+    }
+
+    // Trigger update if version changed from initial AND we haven't already notified for this specific version
+    if (initialVersion !== version && lastNotifiedVersion !== version) {
+        console.log('[PWA] Version changed! Requesting cache update...');
+        lastNotifiedVersion = version;
+        StorageManager.set(KEYS.VERSION, version);
+        requestCacheUpdate();
+    }
+}
+
+function requestCacheUpdate() {
+    if (navigator.serviceWorker.controller) {
+        console.log('[PWA] Sending CHECK_FOR_UPDATES to service worker');
+        navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATES' });
+    } else {
+        console.log('[PWA] No SW controller, showing notification directly');
+        showUpdateNotification();
+    }
+}
+
+async function startLongPolling() {
+    while (true) {
+        try {
+            const response = await fetch('/api/events/version', { cache: 'no-store' });
+
+            if (response.status === 200) {
+                handleVersionChange((await response.text()).trim());
+            }
+            // 204 = timeout, loop continues automatically
+        } catch {
+            // Connection lost - wait for server to come back
+            await waitForServerRecovery();
         }
-    });
+    }
+}
 
-    // Global error handlers for main thread
-    window.addEventListener('error', (event) => {
-        // Broadly catch errors to recover from broken deployments (e.g. syntax errors, missing files)
-        // We rely on recoveryReload()'s loop protection to prevent infinite reloads for persistent bugs
-        if (event.error || event.message) {
-            console.error('Recoverable window error detected:', event.error || event.message);
-            recoveryReload();
-        }
-    });
-
-    // Recovery mechanism - auto-reload if things are broken
-    function recoveryReload() {
-        // Prevent infinite reload loops
-        let count = parseInt(StorageManager.get(StorageManager.KEYS.RELOAD_COUNT) || '0');
-        const lastReload = parseInt(StorageManager.get(StorageManager.KEYS.LAST_RELOAD) || '0');
-        const now = Date.now();
-
-        // Reset count if last reload was more than 1 minute ago
-        if (now - lastReload > 60000) {
-            count = 0;
-        }
-
-        if (count >= 3) {
-            console.error('Too many reloads, stopping auto-recovery to prevent loop.');
+async function waitForServerRecovery() {
+    while (true) {
+        await sleep(RECONNECT_DELAY_MS);
+        const version = await fetchVersion();
+        if (version) {
+            handleVersionChange(version);
             return;
         }
-
-        StorageManager.set(StorageManager.KEYS.RELOAD_COUNT, (count + 1).toString());
-        StorageManager.set(StorageManager.KEYS.LAST_RELOAD, now.toString());
-
-        console.log('Attempting recovery reload...');
-
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            for (let registration of registrations) {
-                registration.unregister();
-            }
-
-            // Force reload ignoring cache
-            window.location.reload(true);
-        });
     }
+}
 
-    // Version checking - use long-polling if available, fallback to regular polling
-    // Use StorageManager to track the version we loaded with
-    let initialVersion = StorageManager.get(StorageManager.KEYS.VERSION);
-    let hasShownToast = false;
+function startIntervalPolling() {
+    setInterval(async () => {
+        const version = await fetchVersion();
+        if (version) handleVersionChange(version);
+    }, POLL_INTERVAL_MS);
+}
 
-    function handleVersionChange(version) {
-        if (initialVersion === null) {
-            // First check on this page load - store the version
-            initialVersion = version;
-            StorageManager.set(StorageManager.KEYS.VERSION, version);
-        } else if (initialVersion !== version && !hasShownToast) {
-            hasShownToast = true;
+function showUpdateNotification() {
+    document.body.classList.add('update-available');
+}
 
-            StorageManager.set(StorageManager.KEYS.VERSION, version);
-
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATES' });
-            } else {
-                showUpdateToast();
-            }
-        }
-    }
-
-    // Long-polling - keeps connection open until version changes or timeout (60s)
-    async function longPoll() {
-        while (true) {
-            try {
-                const response = await fetch('/version-poll', { cache: 'no-store' });
-
-                if (response.status === 200) {
-                    const version = (await response.text()).trim();
-                    handleVersionChange(version);
-                } else if (response.status === 204) {
-                    // Timeout, reconnect immediately
-                    continue;
-                }
-            } catch (e) {
-                // Connection error, wait a bit and retry
-                await new Promise(resolve => setTimeout(resolve, 5000));
-            }
-        }
-    }
-
-    let pollingInterval = null;
-
-    async function checkVersion() {
-        try {
-            const response = await fetch('/version.txt', { cache: 'no-store' });
-            if (!response.ok) return;
-
-            const version = (await response.text()).trim();
-            handleVersionChange(version);
-        } catch (e) {
-            // Offline or error, ignore
-        }
-    }
-
-    function startRegularPolling() {
-        if (pollingInterval) return; // Already polling
-        checkVersion();
-        pollingInterval = setInterval(checkVersion, 10000);
-    }
-
-    // Server mode is injected during build time
-    const SERVER_MODE = "{{SERVER_MODE}}";
-
-    // Start after a short delay to let the page fully load
-    setTimeout(async () => {
-        // First, get initial version via regular request
-        try {
-            const response = await fetch('/version.txt', { cache: 'no-store' });
-            if (response.ok) {
-                const version = (await response.text()).trim();
-                handleVersionChange(version);
-            }
-        } catch (e) {
-            // Ignore errors
-        }
-
-        if (SERVER_MODE === 'internal') {
-            longPoll();
-        } else {
-            startRegularPolling();
-        }
-    }, 1000);
-
-    function showUpdateToast() {
-        document.body.classList.add('update-available');
-    }
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
