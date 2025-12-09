@@ -25,7 +25,6 @@ function broadcastCriticalError(errorMessage) {
 
 
 const CACHE_NAME = 'koshelf-cache-v1';
-const MANIFEST_CACHE = 'koshelf-manifest';
 const MANIFEST_URL = '/cache-manifest.json';
 
 // Files to skip caching (always fetch fresh)
@@ -55,7 +54,7 @@ async function fetchManifest() {
 
 async function getStoredManifest() {
     try {
-        const cache = await caches.open(MANIFEST_CACHE);
+        const cache = await caches.open(CACHE_NAME);
         const response = await cache.match(MANIFEST_URL);
         if (!response) return null;
         return await response.json();
@@ -67,7 +66,7 @@ async function getStoredManifest() {
 
 async function storeManifest(manifest) {
     try {
-        const cache = await caches.open(MANIFEST_CACHE);
+        const cache = await caches.open(CACHE_NAME);
         const response = new Response(JSON.stringify(manifest), {
             headers: { 'Content-Type': 'application/json' }
         });
@@ -177,7 +176,7 @@ self.addEventListener('activate', (event) => {
             const cacheNames = await caches.keys();
             await Promise.all(
                 cacheNames
-                    .filter(name => name !== CACHE_NAME && name !== MANIFEST_CACHE)
+                    .filter(name => name !== CACHE_NAME)
                     .map(name => caches.delete(name))
             );
             // Take control of all clients immediately
@@ -247,7 +246,7 @@ self.addEventListener('message', (event) => {
         event.waitUntil(
             (async () => {
                 await caches.delete(CACHE_NAME);
-                await caches.delete(MANIFEST_CACHE);
+
                 // Notify all clients that cache was cleared
                 const clients = await self.clients.matchAll();
                 clients.forEach(client => {
