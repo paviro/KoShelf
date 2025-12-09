@@ -22,7 +22,7 @@ notify = "8.0.0"
 # Temporary directories
 tempfile = "3.20.0" 
 # EPUB parsing
-zip = "4.1.0"
+zip = "6"
 # Image processing
 image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
 webp = "0.3.1"
@@ -39,19 +39,19 @@ chrono = { version = "0.4.41", features = ["serde", "std"] }
 log = "0.4.27"
 env_logger = "0.11.8"
 # XML parsing
-quick-xml = "0.37.5"
+quick-xml = "0.38"
 # HTML sanitization
 ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.4"
-tower = "0.4"
-tower-http = { version = "0.5.2", features = ["fs", "cors", "compression-gzip", "compression-br"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors", "compression-gzip", "compression-br"] }
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-rusqlite = { version = "0.36.0", features = ["bundled"] }
-minify-html = "0.15" # 0.16 has an issue with inline js
-chrono-tz = "0.8"
+rusqlite = { version = "0.37", features = ["bundled"] }
+minify-html = "0.18"
+chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"
 resvg = "0.45.1"
