@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::path::Path;
+use std::sync::{Arc, LazyLock};
 
 // Embed SVG templates at compile time
 const STORY_TEMPLATE: &str = include_str!("../assets/share_story.svg");
@@ -9,6 +10,17 @@ const BANNER_TEMPLATE: &str = include_str!("../assets/share_banner.svg");
 // Embed fonts at compile time for cross-platform consistency
 const FONT_REGULAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Regular.ttf"));
 const FONT_ITALIC: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Italic.ttf"));
+
+/// Cached font database - initialized once and reused across all share image generations.
+static FONT_DATABASE: LazyLock<Arc<resvg::usvg::fontdb::Database>> = LazyLock::new(|| {
+    let mut fontdb = resvg::usvg::fontdb::Database::new();
+    
+    // Load embedded fonts - these are bundled at compile time
+    fontdb.load_font_data(FONT_REGULAR.to_vec());
+    fontdb.load_font_data(FONT_ITALIC.to_vec());
+    
+    Arc::new(fontdb)
+});
 
 /// Data needed to generate a share image
 #[derive(Debug, Clone)]
@@ -26,11 +38,8 @@ pub struct ShareImageData {
 /// Available share image formats
 #[derive(Debug, Clone, Copy)]
 pub enum ShareFormat {
-    /// Story format - 1080×1920 (9:16 vertical)
     Story,
-    /// Square format - 1080×1080 (1:1)
     Square,
-    /// Banner format - 1200×630 (horizontal)
     Banner,
 }
 
@@ -74,20 +83,9 @@ pub fn generate_share_image(
     // Generate SVG content by replacing placeholders in template
     let svg_content = fill_template(data, format);
     
-    // Set up font database with embedded fonts
-    // Load bundled Gelasio font for consistent cross-platform rendering
-    let mut fontdb = resvg::usvg::fontdb::Database::new();
-    
-    // Load embedded fonts - these are bundled at compile time
-    fontdb.load_font_data(FONT_REGULAR.to_vec());
-    fontdb.load_font_data(FONT_ITALIC.to_vec());
-    
-    // Also try system fonts as fallback
-    fontdb.load_system_fonts();
-    
-    // Parse SVG with usvg
+    // Parse SVG with usvg using cached font database
     let options = resvg::usvg::Options {
-        fontdb: std::sync::Arc::new(fontdb),
+        fontdb: FONT_DATABASE.clone(),
         ..Default::default()
     };
     
@@ -124,15 +122,9 @@ pub fn generate_share_svg(
 ) -> Result<()> {
     let svg_content = fill_template(data, format);
     
-    // Set up font database with embedded fonts
-    let mut fontdb = resvg::usvg::fontdb::Database::new();
-    fontdb.load_font_data(FONT_REGULAR.to_vec());
-    fontdb.load_font_data(FONT_ITALIC.to_vec());
-    fontdb.load_system_fonts();
-    
-    // Parse SVG with usvg - this converts text to paths
+    // Parse SVG with usvg using cached font database
     let options = resvg::usvg::Options {
-        fontdb: std::sync::Arc::new(fontdb),
+        fontdb: FONT_DATABASE.clone(),
         ..Default::default()
     };
     
