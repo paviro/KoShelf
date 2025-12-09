@@ -200,22 +200,45 @@ self.addEventListener('fetch', (event) => {
 
     event.respondWith(
         (async () => {
+            // Normalize URL to prevent duplicates from path variations
+            const requestUrl = new URL(event.request.url);
+            let pathname = requestUrl.pathname;
+
+            // Normalize trailing slashes - /books/ and /books should be the same
+            if (pathname.length > 1 && pathname.endsWith('/')) {
+                pathname = pathname.slice(0, -1);
+            }
+
+            // For navigation requests, ignore query params in cache key
+            // (browser may add its own params like _x_tr_sl for translation)
+            const cacheKey = event.request.mode === 'navigate'
+                ? pathname
+                : pathname + requestUrl.search;
+
             // Try cache first
             const cache = await caches.open(CACHE_NAME);
-            const cachedResponse = await cache.match(event.request);
+            const cachedResponse = await cache.match(cacheKey);
 
             if (cachedResponse) {
                 return cachedResponse;
             }
 
-            // Not in cache, fetch from network
+            // Not in cache, fetch from network with cache buster
             try {
-                const networkResponse = await fetch(event.request);
+                // Add cache buster to bypass browser HTTP cache
+                const bustUrl = new URL(event.request.url);
+                bustUrl.searchParams.set('_cb', Date.now());
+                const networkResponse = await fetch(bustUrl.toString(), {
+                    method: event.request.method,
+                    headers: event.request.headers,
+                    mode: 'cors',
+                    credentials: event.request.credentials
+                });
 
-                // Cache the response for future use
+                // Cache the response for future use (using URL as key to prevent duplicates)
                 if (networkResponse.ok) {
                     const responseToCache = networkResponse.clone();
-                    cache.put(event.request, responseToCache);
+                    cache.put(cacheKey, responseToCache);
                 }
 
                 return networkResponse;
