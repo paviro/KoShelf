@@ -29,4 +29,6 @@ pub struct SiteConfig {
     pub min_time_per_day: Option<u32>,
     /// Whether to include all stats or filter to library books only
     pub include_all_stats: bool,
+    /// Whether running with internal web server (enables long-polling)
+    pub is_internal_server: bool,
 }

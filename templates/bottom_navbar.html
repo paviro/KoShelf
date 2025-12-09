@@ -1,6 +1,6 @@
 {% if navbar_items.len() > 1 %}
 <nav class="lg:hidden fixed bottom-4 left-8 right-8 z-50">
-    <div class="bg-white/75 dark:bg-dark-850/75 backdrop-blur-sm border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl">
+    <div class="bg-white/75 dark:bg-dark-850/75 backdrop-blur-sm border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl update-hidden">
         <div class="flex items-center justify-around">
             {% for nav_item in navbar_items %}
             <a onclick="if (typeof smartBack === 'function' && ('{{ nav_item.label }}' === 'Books' || '{{ nav_item.label }}' === 'Calendar')) { smartBack('{{ nav_item.href }}'); }" href="{{ nav_item.href }}" class="nav-item {% if nav_item.is_active %}nav-item-active{% endif %} flex flex-col items-center py-1.5 px-2 rounded-xl">
@@ -11,6 +11,23 @@
             </a>
             {% endfor %}
         </div>
+    </div>
+    
+    <div class="bg-white/90 dark:bg-dark-850/90 backdrop-blur-md border border-primary-500/30 shadow-2xl rounded-2xl p-3 hidden update-visible">
+        <button onclick="window.location.reload()" class="w-full flex items-center justify-between group">
+            <div class="flex items-center space-x-3">
+                 <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center text-primary-600 dark:text-primary-400">
+                    <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                 </div>
+                 <div class="text-left">
+                     <p class="text-sm font-bold text-gray-900 dark:text-white">New Version Available</p>
+                     <p class="text-xs text-gray-500 dark:text-dark-400">Tap to reload</p>
+                 </div>
+            </div>
+            <div class="pr-2">
+                <svg class="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+        </button>
     </div>
 </nav>
 {% endif %} 

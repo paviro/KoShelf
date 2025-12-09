@@ -27,7 +27,9 @@ impl SiteGenerator {
         // Export individual week data as separate JSON files
         for (index, week) in reading_stats.weeks.iter().enumerate() {
             let week_json = serde_json::to_string_pretty(&week)?;
-            fs::write(self.statistics_json_dir().join(format!("week_{}.json", index)), week_json)?;
+            let file_path = self.statistics_json_dir().join(format!("week_{}.json", index));
+            self.cache_manifest.register_file(&file_path, &self.output_dir, week_json.as_bytes());
+            fs::write(file_path, week_json)?;
         }
         
         // Create the template with appropriate navbar
@@ -87,9 +89,11 @@ impl SiteGenerator {
             });
             
             let json = serde_json::to_string_pretty(&json_data)?;
+            self.cache_manifest.register_file(&file_path, &self.output_dir, json.as_bytes());
             fs::write(file_path, json)?;
         }
         
         Ok(available_years)
     }
 }
+

@@ -43,7 +43,7 @@ impl SiteGenerator {
         self.time_config.now_formatted() 
     }
 
-    /// Minifies and writes HTML to disk.
+    /// Minifies and writes HTML to disk, registering in cache manifest.
     pub(crate) fn write_minify_html<P: AsRef<Path>>(&self, path: P, html: &str) -> Result<()> {
         let cfg = Cfg {
             minify_js: true,
@@ -53,6 +53,10 @@ impl SiteGenerator {
 
         // Attempt minification; on failure fall back to original HTML
         let minified = String::from_utf8(minify(html.as_bytes(), &cfg)).unwrap_or_else(|_| html.to_string());
+        
+        // Register in cache manifest before writing
+        self.cache_manifest.register_file(&path, &self.output_dir, minified.as_bytes());
+        
         fs::write(path, minified)?;
         Ok(())
     }
