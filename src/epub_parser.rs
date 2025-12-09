@@ -146,27 +146,27 @@ impl EpubParser {
                         match local_name.as_ref() {
                             b"title" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    title = Some(text.unescape().unwrap_or_default().to_string());
+                                    title = Some(text.xml_content().unwrap_or_default().to_string());
                                 }
                             }
                             b"creator" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    authors.push(text.unescape().unwrap_or_default().to_string());
+                                    authors.push(text.xml_content().unwrap_or_default().to_string());
                                 }
                             }
                             b"description" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    description = Some(text.unescape().unwrap_or_default().to_string());
+                                    description = Some(text.xml_content().unwrap_or_default().to_string());
                                 }
                             }
                             b"publisher" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    publisher = Some(text.unescape().unwrap_or_default().to_string());
+                                    publisher = Some(text.xml_content().unwrap_or_default().to_string());
                                 }
                             }
                             b"language" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    language = Some(text.unescape().unwrap_or_default().to_string());
+                                    language = Some(text.xml_content().unwrap_or_default().to_string());
                                 }
                             }
                             b"identifier" => {
@@ -178,7 +178,7 @@ impl EpubParser {
                                     }
                                 }
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    let value = text.unescape().unwrap_or_default().to_string();
+                                    let value = text.xml_content().unwrap_or_default().to_string();
                                     let (final_scheme, final_value) = if let Some(s) = scheme {
                                         (s, value.clone())
                                     } else if let Some(colon_pos) = value.find(':') {
@@ -193,7 +193,7 @@ impl EpubParser {
                             }
                             b"subject" => {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    let subject = text.unescape().unwrap_or_default().to_string();
+                                    let subject = text.xml_content().unwrap_or_default().to_string();
                                     if !subject.is_empty() {
                                         subjects.push(subject);
                                     }
@@ -229,12 +229,12 @@ impl EpubParser {
                                     if prop == "belongs-to-collection"
                                         && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
                                         && let Some(i) = id {
-                                        epub3_collections.insert(i, text.unescape().unwrap_or_default().to_string());
+                                        epub3_collections.insert(i, text.xml_content().unwrap_or_default().to_string());
                                     } else if prop == "group-position"
                                         && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
                                         && let Some(r) = refines {
                                         let clean_refines = r.trim_start_matches('#');
-                                        epub3_indices.insert(clean_refines.to_string(), text.unescape().unwrap_or_default().to_string());
+                                        epub3_indices.insert(clean_refines.to_string(), text.xml_content().unwrap_or_default().to_string());
                                     }
                                 }
                             }
