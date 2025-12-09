@@ -1,51 +1,100 @@
 // Service Worker for KoShelf PWA
 // Implements manifest-based caching with differential updates
 
-self.onerror = function (message, source, lineno, colno, error) {
-    console.error('[SW] Critical error:', message, error);
-    broadcastCriticalError(message);
-    return false; // Let default handler run
-};
-
-self.onunhandledrejection = function (event) {
-    console.error('[SW] Unhandled rejection:', event.reason);
-    broadcastCriticalError(event.reason ? event.reason.toString() : 'Unhandled Rejection');
-};
-
-function broadcastCriticalError(errorMessage) {
-    self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-            client.postMessage({
-                type: 'CRITICAL_ERROR',
-                error: errorMessage
-            });
-        });
-    });
-}
-
-
 const CACHE_NAME = 'koshelf-cache-v1';
 const MANIFEST_URL = '/cache-manifest.json';
+const BATCH_SIZE = 10;
 
-// Files to skip caching (always fetch fresh)
 const SKIP_CACHE_PATTERNS = [
     '/version.txt',
-    '/server-mode.txt',
-    '/version-poll',
+    '/api/events/version',
     '/service-worker.js',
     '/cache-manifest.json'
 ];
+
+// =============================================================================
+// Error Handling
+// =============================================================================
+
+self.onerror = (message, source, lineno, colno, error) => {
+    console.error('[SW] Critical error:', message, error);
+    broadcast({ type: 'CRITICAL_ERROR', error: message });
+    return false;
+};
+
+self.onunhandledrejection = (event) => {
+    console.error('[SW] Unhandled rejection:', event.reason);
+    broadcast({ type: 'CRITICAL_ERROR', error: String(event.reason || 'Unhandled Rejection') });
+};
+
+// =============================================================================
+// Client Communication
+// =============================================================================
+
+async function broadcast(message) {
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => client.postMessage(message));
+}
+
+// =============================================================================
+// Cache Utilities
+// =============================================================================
 
 function shouldSkipCache(url) {
     const pathname = new URL(url).pathname;
     return SKIP_CACHE_PATTERNS.some(pattern => pathname.endsWith(pattern));
 }
 
+function toFullUrl(urlPath) {
+    return new URL(urlPath, self.location.origin).href;
+}
+
+// Normalize URL for cache matching - handles /foo/index.html -> /foo/ mapping
+function normalizeUrlForCache(url) {
+    const parsed = new URL(url);
+    let pathname = parsed.pathname;
+
+    // Remove query string for cache lookup
+    parsed.search = '';
+
+    // If path ends with index.html, convert to directory form
+    if (pathname.endsWith('/index.html')) {
+        pathname = pathname.slice(0, -10); // Remove 'index.html', keep trailing '/'
+        parsed.pathname = pathname;
+    }
+
+    return parsed.href;
+}
+
+async function cacheUrlsInBatches(cache, urlPaths) {
+    for (let i = 0; i < urlPaths.length; i += BATCH_SIZE) {
+        const batch = urlPaths.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(urlPath => cacheUrl(cache, urlPath)));
+    }
+}
+
+async function cacheUrl(cache, urlPath) {
+    try {
+        const fullUrl = toFullUrl(urlPath);
+        const response = await fetch(fullUrl, { cache: 'no-store' });
+        if (response.ok) {
+            await cache.put(fullUrl, response.clone());
+        } else {
+            console.warn(`[SW] Failed to cache ${urlPath}: ${response.status}`);
+        }
+    } catch (err) {
+        console.warn(`[SW] Failed to cache ${urlPath}:`, err);
+    }
+}
+
+// =============================================================================
+// Manifest Management
+// =============================================================================
+
 async function fetchManifest() {
     try {
         const response = await fetch(MANIFEST_URL, { cache: 'no-store' });
-        if (!response.ok) return null;
-        return await response.json();
+        return response.ok ? response.json() : null;
     } catch (e) {
         console.error('[SW] Failed to fetch manifest:', e);
         return null;
@@ -56,8 +105,7 @@ async function getStoredManifest() {
     try {
         const cache = await caches.open(CACHE_NAME);
         const response = await cache.match(MANIFEST_URL);
-        if (!response) return null;
-        return await response.json();
+        return response ? response.json() : null;
     } catch (e) {
         console.warn('[SW] Failed to get stored manifest:', e);
         return null;
@@ -76,228 +124,166 @@ async function storeManifest(manifest) {
     }
 }
 
+// =============================================================================
+// Cache Operations
+// =============================================================================
+
 async function precacheFiles(manifest) {
-    if (!manifest || !manifest.files) return;
+    if (!manifest?.files) return;
 
     const cache = await caches.open(CACHE_NAME);
-    const urls = Object.keys(manifest.files);
+    const urlPaths = Object.keys(manifest.files);
 
-    console.log(`[SW] Pre-caching ${urls.length} files...`);
-
-    // Cache files in parallel with a concurrency limit
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-        const batch = urls.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async (url) => {
-            try {
-                const response = await fetch(url, { cache: 'no-store' });
-                if (response.ok) {
-                    await cache.put(url, response);
-                }
-            } catch (e) {
-                console.warn(`[SW] Failed to cache ${url}:`, e);
-            }
-        }));
-    }
-
+    console.log(`[SW] Pre-caching ${urlPaths.length} files...`);
+    await cacheUrlsInBatches(cache, urlPaths);
     console.log('[SW] Pre-caching complete');
 }
 
 async function updateChangedFiles(oldManifest, newManifest) {
-    if (!newManifest || !newManifest.files) return;
+    if (!newManifest?.files) return;
 
     const cache = await caches.open(CACHE_NAME);
     const oldFiles = oldManifest?.files || {};
     const newFiles = newManifest.files;
 
-    // Find changed files (new or different hash)
-    const changedUrls = Object.keys(newFiles).filter(url => {
-        return !oldFiles[url] || oldFiles[url] !== newFiles[url];
-    });
+    const changedUrls = Object.keys(newFiles).filter(
+        url => oldFiles[url] !== newFiles[url]
+    );
+    const deletedUrls = Object.keys(oldFiles).filter(
+        url => !(url in newFiles)
+    );
 
-    const deletedUrls = Object.keys(oldFiles).filter(url => !newFiles[url]);
+    console.log(`[SW] Updating: ${changedUrls.length} changed, ${deletedUrls.length} deleted`);
 
-    console.log(`[SW] Updating cache: ${changedUrls.length} changed, ${deletedUrls.length} deleted`);
+    // Remove deleted files
+    await Promise.all(deletedUrls.map(url => cache.delete(toFullUrl(url))));
 
-    for (const url of deletedUrls) {
-        await cache.delete(url);
-    }
-
-    // Fetch and cache changed files
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < changedUrls.length; i += BATCH_SIZE) {
-        const batch = changedUrls.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async (url) => {
-            try {
-                const response = await fetch(url, { cache: 'no-store' });
-                if (response.ok) {
-                    await cache.put(url, response);
-                }
-            } catch (e) {
-                console.warn(`[SW] Failed to update ${url}:`, e);
-            }
-        }));
-    }
-
+    // Cache changed files
+    await cacheUrlsInBatches(cache, changedUrls);
     await storeManifest(newManifest);
 
     if (changedUrls.length > 0) {
-        const clients = await self.clients.matchAll();
-        clients.forEach(client => {
-            client.postMessage({ type: 'CACHE_UPDATED', changedCount: changedUrls.length });
-        });
+        broadcast({ type: 'CACHE_UPDATED', changedCount: changedUrls.length });
     }
 
     console.log('[SW] Cache update complete');
 }
 
-// Install event - pre-cache all files from manifest
+// =============================================================================
+// Event Handlers
+// =============================================================================
+
 self.addEventListener('install', (event) => {
     console.log('[SW] Installing...');
-    event.waitUntil(
-        (async () => {
-            const manifest = await fetchManifest();
-            if (manifest) {
-                await precacheFiles(manifest);
-                await storeManifest(manifest);
-            }
-            // Skip waiting to activate immediately
-            await self.skipWaiting();
-        })()
-    );
+    event.waitUntil((async () => {
+        const manifest = await fetchManifest();
+        if (manifest) {
+            await precacheFiles(manifest);
+            await storeManifest(manifest);
+        }
+        await self.skipWaiting();
+    })());
 });
 
-// Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
     console.log('[SW] Activating...');
-    event.waitUntil(
-        (async () => {
-            // Clean up old cache versions (but keep current ones)
-            const cacheNames = await caches.keys();
-            await Promise.all(
-                cacheNames
-                    .filter(name => name !== CACHE_NAME)
-                    .map(name => caches.delete(name))
-            );
-            // Take control of all clients immediately
-            await self.clients.claim();
-        })()
-    );
+    event.waitUntil((async () => {
+        // Clean up old cache versions
+        const cacheNames = await caches.keys();
+        await Promise.all(
+            cacheNames
+                .filter(name => name !== CACHE_NAME)
+                .map(name => caches.delete(name))
+        );
+        await self.clients.claim();
+    })());
 });
 
-// Fetch event - cache-first strategy with network fallback
 self.addEventListener('fetch', (event) => {
-    const url = event.request.url;
+    const { request } = event;
 
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') {
+    // Only handle GET requests for cacheable resources
+    if (request.method !== 'GET' || shouldSkipCache(request.url)) {
         return;
     }
 
-    if (shouldSkipCache(url)) {
-        return;
-    }
-
-    event.respondWith(
-        (async () => {
-            // Normalize URL to prevent duplicates from path variations
-            const requestUrl = new URL(event.request.url);
-            let pathname = requestUrl.pathname;
-
-            // Normalize trailing slashes - /books/ and /books should be the same
-            if (pathname.length > 1 && pathname.endsWith('/')) {
-                pathname = pathname.slice(0, -1);
-            }
-
-            // For navigation requests, ignore query params in cache key
-            // (browser may add its own params like _x_tr_sl for translation)
-            const cacheKey = event.request.mode === 'navigate'
-                ? pathname
-                : pathname + requestUrl.search;
-
-            // Try cache first
-            const cache = await caches.open(CACHE_NAME);
-            const cachedResponse = await cache.match(cacheKey);
-
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            // Not in cache, fetch from network with cache buster
-            try {
-                // Add cache buster to bypass browser HTTP cache
-                const bustUrl = new URL(event.request.url);
-                bustUrl.searchParams.set('_cb', Date.now());
-                const networkResponse = await fetch(bustUrl.toString(), {
-                    method: event.request.method,
-                    headers: event.request.headers,
-                    mode: 'cors',
-                    credentials: event.request.credentials
-                });
-
-                // Cache the response for future use (using URL as key to prevent duplicates)
-                if (networkResponse.ok) {
-                    const responseToCache = networkResponse.clone();
-                    cache.put(cacheKey, responseToCache);
-                }
-
-                return networkResponse;
-            } catch (e) {
-                // Network failed
-                // If it's a navigation request, try to return cached index.html
-                if (event.request.mode === 'navigate') {
-                    const cachedIndex = await cache.match('/index.html');
-                    if (cachedIndex) return cachedIndex;
-                }
-
-                // Return offline response
-                return new Response('Offline', {
-                    status: 503,
-                    statusText: 'Service Unavailable'
-                });
-            }
-        })()
-    );
+    event.respondWith(handleFetch(request));
 });
+
+async function handleFetch(request) {
+    const cache = await caches.open(CACHE_NAME);
+
+    // Normalize URL for cache matching (handles /foo/index.html -> /foo/ mapping)
+    const normalizedUrl = normalizeUrlForCache(request.url);
+
+    // Cache-first strategy - try normalized URL
+    const cached = await cache.match(normalizedUrl, { ignoreVary: true });
+    if (cached) return cached;
+
+    // Network fallback with cache-busting
+    try {
+        const bustUrl = new URL(request.url);
+        bustUrl.searchParams.set('_cb', Date.now());
+
+        const response = await fetch(bustUrl.toString(), {
+            method: request.method,
+            headers: request.headers,
+            mode: 'cors',
+            credentials: request.credentials
+        });
+
+        if (response.ok) {
+            // Store with normalized URL for consistent cache keys
+            cache.put(normalizedUrl, response.clone());
+        }
+
+        return response;
+    } catch {
+        // Offline - try index.html for navigation, else 503
+        if (request.mode === 'navigate') {
+            // Try root page - cache stores it as '/' not '/index.html'
+            const index = await cache.match(toFullUrl('/'), { ignoreVary: true });
+            if (index) return index;
+        }
+
+        return new Response('Offline', {
+            status: 503,
+            statusText: 'Service Unavailable'
+        });
+    }
+}
 
 self.addEventListener('message', (event) => {
-    if (event.data?.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+    const { type } = event.data || {};
 
-    if (event.data?.type === 'CLEAR_CACHE') {
-        event.waitUntil(
-            (async () => {
-                await caches.delete(CACHE_NAME);
+    const handlers = {
+        SKIP_WAITING: () => self.skipWaiting(),
 
-                // Notify all clients that cache was cleared
-                const clients = await self.clients.matchAll();
-                clients.forEach(client => {
-                    client.postMessage({ type: 'CACHE_CLEARED' });
-                });
-            })()
-        );
-    }
+        CLEAR_CACHE: () => event.waitUntil((async () => {
+            await caches.delete(CACHE_NAME);
+            broadcast({ type: 'CACHE_CLEARED' });
+        })()),
 
-    if (event.data?.type === 'CHECK_FOR_UPDATES') {
-        event.waitUntil(
-            (async () => {
-                console.log('[SW] Checking for updates...');
-                const oldManifest = await getStoredManifest();
-                const newManifest = await fetchManifest();
+        CHECK_FOR_UPDATES: () => event.waitUntil((async () => {
+            console.log('[SW] Checking for updates...');
+            const [oldManifest, newManifest] = await Promise.all([
+                getStoredManifest(),
+                fetchManifest()
+            ]);
 
-                if (!newManifest) {
-                    console.log('[SW] Could not fetch new manifest');
-                    return;
-                }
+            if (!newManifest) {
+                console.log('[SW] Could not fetch new manifest');
+                return;
+            }
 
-                if (!oldManifest || oldManifest.version !== newManifest.version) {
-                    console.log('[SW] New version detected, updating cache...');
-                    await updateChangedFiles(oldManifest, newManifest);
-                } else {
-                    console.log('[SW] No updates needed');
-                }
-            })()
-        );
-    }
+            if (!oldManifest || oldManifest.version !== newManifest.version) {
+                console.log('[SW] New version detected, updating cache...');
+                await updateChangedFiles(oldManifest, newManifest);
+            } else {
+                console.log('[SW] No updates needed');
+            }
+        })())
+    };
+
+    handlers[type]?.();
 });

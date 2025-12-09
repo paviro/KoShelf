@@ -32,7 +32,7 @@ impl WebServer {
 
         let app = Router::new()
             // Long-poll endpoint for version changes
-            .route("/version-poll", get(version_poll_handler))
+            .route("/api/events/version", get(version_poll_handler))
             .with_state(self.version_notifier.clone())
             .fallback_service(ServeDir::new(&self.site_dir).not_found_service(not_found_service))
             .layer(ServiceBuilder::new()
