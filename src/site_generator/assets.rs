@@ -109,15 +109,13 @@ impl SiteGenerator {
 
         // PWA client-side script (handles update notifications)
         let pwa_js_content = include_str!("../../assets/pwa.js");
+        let server_mode = if self.is_internal_server { "internal" } else { "external" };
+        let pwa_js_content = pwa_js_content.replace("{{SERVER_MODE}}", server_mode);
         self.write_asset(self.js_dir().join("pwa.js"), pwa_js_content.as_bytes())?;
         
         // Generate version.txt for lightweight polling (plain timestamp, ~25 bytes)
         let version = chrono::Local::now().to_rfc3339();
         fs::write(self.output_dir.join("version.txt"), &version)?;
-        
-        // Generate server-mode.txt based on CLI mode
-        let server_mode = if self.is_internal_server { "internal" } else { "external" };
-        fs::write(self.output_dir.join("server-mode.txt"), server_mode)?;
         
         // PWA icons
         let icon_192 = include_bytes!("../../assets/icons/icon-192.png");

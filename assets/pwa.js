@@ -121,28 +121,8 @@ if ('serviceWorker' in navigator) {
         pollingInterval = setInterval(checkVersion, 10000);
     }
 
-    // Check if server supports long-polling (cached in StorageManager)
-    async function checkServerMode() {
-        const cachedMode = StorageManager.get(StorageManager.KEYS.SERVER_MODE);
-        if (cachedMode !== null) {
-            return cachedMode === 'internal';
-        }
-
-        // Check server-mode.txt - returns "internal" or "external"
-        try {
-            const response = await fetch('/server-mode.txt', { cache: 'no-store' });
-            if (response.ok) {
-                const mode = (await response.text()).trim();
-                StorageManager.set(StorageManager.KEYS.SERVER_MODE, mode);
-                return mode === 'internal';
-            }
-        } catch (e) {
-            // Error fetching, assume external
-        }
-
-        StorageManager.set(StorageManager.KEYS.SERVER_MODE, 'external');
-        return false;
-    }
+    // Server mode is injected during build time
+    const SERVER_MODE = "{{SERVER_MODE}}";
 
     // Start after a short delay to let the page fully load
     setTimeout(async () => {
@@ -157,8 +137,7 @@ if ('serviceWorker' in navigator) {
             // Ignore errors
         }
 
-        const supportsLongPolling = await checkServerMode();
-        if (supportsLongPolling) {
+        if (SERVER_MODE === 'internal') {
             longPoll();
         } else {
             startRegularPolling();
