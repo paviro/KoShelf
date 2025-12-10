@@ -4,12 +4,7 @@ use std::fs;
 
 fn main() {
     println!("cargo:rerun-if-changed=assets/input.css");
-    println!("cargo:rerun-if-changed=assets/book_list.js");
-    println!("cargo:rerun-if-changed=assets/lazy-loading.js");
-    println!("cargo:rerun-if-changed=assets/statistics.js");
-    println!("cargo:rerun-if-changed=assets/heatmap.js");
-    println!("cargo:rerun-if-changed=assets/section-toggle.js");
-    println!("cargo:rerun-if-changed=assets/recap.js");
+    println!("cargo:rerun-if-changed=assets/ts/");
     println!("cargo:rerun-if-changed=assets/share_story.svg");
     println!("cargo:rerun-if-changed=assets/share_square.svg");
     println!("cargo:rerun-if-changed=assets/share_banner.svg");
@@ -18,7 +13,6 @@ fn main() {
     println!("cargo:rerun-if-changed=src/");
     println!("cargo:rerun-if-changed=package.json");
     println!("cargo:rerun-if-changed=package-lock.json");
-    println!("cargo:rerun-if-changed=assets/calendar.js");
 
     // Check if we have the node_modules and package.json for Tailwind
     if !Path::new("package.json").exists() {
@@ -46,6 +40,8 @@ fn main() {
         }
         eprintln!("npm install completed successfully");
     }
+
+    let out_dir = std::env::var("OUT_DIR").unwrap();
 
     // Generate the CSS using Tailwind
     eprintln!("Compiling Tailwind CSS...");
@@ -75,7 +71,6 @@ fn main() {
         .expect("Failed to read generated CSS file");
     
     // Write the CSS to a file in the target directory for inclusion
-    let out_dir = std::env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("compiled_style.css");
     fs::write(&dest_path, css_content)
         .expect("Failed to write CSS to output directory");
@@ -84,6 +79,11 @@ fn main() {
     let _ = fs::remove_file(&output_path);
     
     eprintln!("Tailwind CSS compilation completed");
+
+    // Compile TypeScript with esbuild
+    compile_typescript(&out_dir);
+
+
 
     // Copy calendar library files
     eprintln!("Copying event calendar library files...");
@@ -127,6 +127,60 @@ fn main() {
 
     // Download and embed fonts for SVG rendering
     download_fonts(&out_dir);
+}
+
+/// Compile TypeScript files with esbuild
+/// Outputs JavaScript files to the OUT_DIR for embedding via include_str!
+fn compile_typescript(out_dir: &str) {
+    let ts_dir = Path::new("assets/ts");
+    
+    // Skip if no TypeScript directory exists yet (allows gradual migration)
+    if !ts_dir.exists() {
+        eprintln!("No assets/ts directory found, skipping TypeScript compilation");
+        return;
+    }
+    
+    // Collect all .ts files (excluding types/ subdirectory which contains type definitions only)
+    let ts_files: Vec<_> = fs::read_dir(ts_dir)
+        .expect("Failed to read assets/ts directory")
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let path = e.path();
+            path.extension().map_or(false, |ext| ext == "ts") && path.is_file()
+        })
+        .map(|e| e.path().to_string_lossy().to_string())
+        .collect();
+    
+    if ts_files.is_empty() {
+        eprintln!("No TypeScript files found in assets/ts/, skipping compilation");
+        return;
+    }
+    
+    eprintln!("Compiling {} TypeScript files...", ts_files.len());
+    
+    let mut args = vec![
+        "esbuild".to_string(),
+        "--format=esm".to_string(),
+        "--target=es2020".to_string(),
+        "--minify".to_string(),
+        format!("--outdir={}", out_dir),
+    ];
+    args.extend(ts_files);
+    
+    let esbuild_output = Command::new("npx")
+        .args(&args)
+        .output()
+        .expect("Failed to run esbuild. Make sure Node.js and npm are installed.");
+    
+    if !esbuild_output.status.success() {
+        panic!(
+            "TypeScript compilation failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&esbuild_output.stdout),
+            String::from_utf8_lossy(&esbuild_output.stderr)
+        );
+    }
+    
+    eprintln!("TypeScript compilation completed successfully");
 }
 
 /// Download Gelasio font files for SVG rendering

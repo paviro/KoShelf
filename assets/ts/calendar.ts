@@ -1,20 +1,116 @@
 // Calendar module: provides initializeCalendar() to bootstrap the reading calendar UI
 // All logic is self-contained – nothing is written to or read from the global `window` object.
-// Consumers can use:
-//   import { initializeCalendar } from '/assets/js/calendar.js';
-//   initializeCalendar();
 
 import { showModal, hideModal, setupModalCloseHandlers } from './modal-utils.js';
 
-let calendar;
-let currentEvents = [];
-let currentBooks = {};
-let monthlyDataCache = new Map(); // Cache for monthly data: month -> {events, books}
-let availableMonths = []; // List of months that have data
-let currentDisplayedMonth = null;
+// Type declarations for EventCalendar library
+declare const EventCalendar: {
+    create(el: HTMLElement, options: EventCalendarOptions): EventCalendarInstance;
+    destroy(calendar: EventCalendarInstance): void;
+};
+
+interface EventCalendarOptions {
+    view: string;
+    headerToolbar: boolean;
+    height: string;
+    firstDay: number;
+    displayEventEnd: boolean;
+    editable: boolean;
+    eventStartEditable: boolean;
+    eventDurationEditable: boolean;
+    events: CalendarEvent[];
+    eventClick: (info: EventClickInfo) => void;
+    dateClick: (info: DateClickInfo) => void;
+    datesSet: (info: DatesSetInfo) => void;
+}
+
+interface EventCalendarInstance {
+    setOption<K extends keyof EventCalendarOptions>(key: K, value: EventCalendarOptions[K]): void;
+    prev(): void;
+    next(): void;
+    destroy?(): void;
+}
+
+interface EventClickInfo {
+    event: {
+        title: string;
+        extendedProps: EventExtendedProps;
+    };
+}
+
+interface DateClickInfo {
+    dateStr: string;
+}
+
+interface DatesSetInfo {
+    view: {
+        title: string;
+        currentStart: Date;
+    };
+}
+
+interface CalendarEvent {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+    extendedProps: EventExtendedProps;
+}
+
+interface EventExtendedProps {
+    book_id: string;
+    start: string;
+    end?: string;
+    total_read_time: number;
+    total_pages_read: number;
+    book_title: string;
+    authors: string[];
+    book_path?: string;
+    book_cover?: string;
+    color?: string;
+    md5: string;
+}
+
+interface RawEvent {
+    book_id: string;
+    start: string;
+    end?: string;
+    total_read_time: number;
+    total_pages_read: number;
+}
+
+interface BookInfo {
+    title?: string;
+    authors?: string[];
+    book_path?: string;
+    book_cover?: string;
+    color?: string;
+}
+
+interface MonthData {
+    events: RawEvent[];
+    books: Record<string, BookInfo>;
+    stats?: {
+        books_read: number;
+        pages_read: number;
+        time_read: number;
+        days_read_pct: number;
+    };
+}
+
+let calendar: EventCalendarInstance | null = null;
+let currentEvents: RawEvent[] = [];
+let currentBooks: Record<string, BookInfo> = {};
+const monthlyDataCache = new Map<string, MonthData>(); // Cache for monthly data: month -> {events, books}
+let availableMonths: string[] = []; // List of months that have data
+let currentDisplayedMonth: string | null = null;
 
 // Exported entry point
-export function initializeCalendar() {
+export function initializeCalendar(): void {
     // First, load the list of available months
     loadAvailableMonths().then(() => {
         // Load calendar data for current month and its neighbours
@@ -45,11 +141,11 @@ export function initializeCalendar() {
 }
 
 // Load the list of available months
-async function loadAvailableMonths() {
+async function loadAvailableMonths(): Promise<void> {
     try {
         const response = await fetch('/assets/json/calendar/available_months.json');
         if (response.ok) {
-            availableMonths = await response.json();
+            availableMonths = await response.json() as string[];
         } else {
             console.warn('Could not load available months list');
             availableMonths = [];
@@ -61,7 +157,7 @@ async function loadAvailableMonths() {
 }
 
 // Load and update calendar for a specific month
-async function updateDisplayedMonth(targetMonth) {
+async function updateDisplayedMonth(targetMonth: string): Promise<void> {
     // Skip if this month is already displayed
     if (currentDisplayedMonth === targetMonth) {
         return;
@@ -84,7 +180,7 @@ async function updateDisplayedMonth(targetMonth) {
 
         // Update calendar events with all cached data
         if (calendar) {
-            const mapEvents = evts => evts.map(ev => {
+            const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
                 const book = currentBooks[ev.book_id] || {};
                 return {
                     id: ev.book_id,
@@ -120,7 +216,7 @@ async function updateDisplayedMonth(targetMonth) {
 }
 
 // Load calendar data from monthly JSON files
-async function fetchMonthData(targetMonth = null) {
+async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
     try {
         // If no target month specified, use current month
         if (!targetMonth) {
@@ -129,8 +225,9 @@ async function fetchMonthData(targetMonth = null) {
         }
 
         // Check if month data is already cached
-        if (monthlyDataCache.has(targetMonth)) {
-            return monthlyDataCache.get(targetMonth);
+        const cached = monthlyDataCache.get(targetMonth);
+        if (cached) {
+            return cached;
         }
 
         // Check if this month has data available
@@ -145,7 +242,7 @@ async function fetchMonthData(targetMonth = null) {
             return { events: [], books: {} };
         }
 
-        const calendarData = await response.json();
+        const calendarData = await response.json() as MonthData;
 
         // Cache the loaded data
         monthlyDataCache.set(targetMonth, calendarData);
@@ -160,7 +257,7 @@ async function fetchMonthData(targetMonth = null) {
 // ----- Internal helpers --------------------------------------------------
 
 // Build or rebuild the EventCalendar instance
-function initializeEventCalendar(events) {
+function initializeEventCalendar(events: RawEvent[]): void {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
 
@@ -168,7 +265,7 @@ function initializeEventCalendar(events) {
     if (calendar) {
         try {
             EventCalendar.destroy(calendar);
-        } catch (e) {
+        } catch {
             // Some versions expose a destroy() method on the instance instead – try that as well
             if (typeof calendar.destroy === 'function') {
                 calendar.destroy();
@@ -177,7 +274,7 @@ function initializeEventCalendar(events) {
     }
 
     // Transform raw JSON events into EventCalendar compatible structure
-    const mapEvents = evts => evts.map(ev => {
+    const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
         const book = currentBooks[ev.book_id] || {};
         return {
             id: ev.book_id,
@@ -232,23 +329,8 @@ function initializeEventCalendar(events) {
     });
 }
 
-// Update the custom toolbar title (Month YYYY)
-function updateCalendarTitle(currentDate) {
-    const titleEl = document.getElementById('calendarTitle');
-    if (!titleEl || !currentDate) return;
-
-    const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
-    titleEl.textContent = `${monthNames[month]} ${year}`;
-}
-
 // Update the calendar title directly with the provided title string
-function updateCalendarTitleDirect(title) {
+function updateCalendarTitleDirect(title: string): void {
     if (!title) return;
 
     // Update mobile h1 title
@@ -265,7 +347,7 @@ function updateCalendarTitleDirect(title) {
 }
 
 // Deterministic colour hashing based on book title (+md5 when available)
-function getEventColor(event) {
+function getEventColor(event: RawEvent): string {
     const palette = [
         '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
@@ -283,11 +365,11 @@ function getEventColor(event) {
 }
 
 // Show event details modal (animated)
-function showEventModal(_title, event) {
+function showEventModal(_title: string, event: EventExtendedProps): void {
     const modal = document.getElementById('eventModal');
     const modalCard = document.getElementById('modalCard');
     const modalTitle = document.getElementById('modalTitle');
-    const viewBookBtn = document.getElementById('viewBookBtn');
+    const viewBookBtn = document.getElementById('viewBookBtn') as HTMLButtonElement | null;
 
     if (!modal || !modalCard || !modalTitle || !viewBookBtn) return;
 
@@ -295,7 +377,7 @@ function showEventModal(_title, event) {
 
     // Handle book cover visuals
     const coverContainer = document.getElementById('bookCoverContainer');
-    const coverImg = document.getElementById('bookCoverImg');
+    const coverImg = document.getElementById('bookCoverImg') as HTMLImageElement | null;
     const coverPlaceholder = document.getElementById('bookCoverPlaceholder');
 
     if (coverImg && coverContainer && coverPlaceholder) {
@@ -327,7 +409,7 @@ function showEventModal(_title, event) {
         readTimeEl.textContent = formatDuration(event.total_read_time);
     }
     if (pagesReadEl) {
-        pagesReadEl.textContent = event.total_pages_read;
+        pagesReadEl.textContent = String(event.total_pages_read);
     }
 
     // View-book button setup
@@ -335,7 +417,7 @@ function showEventModal(_title, event) {
         viewBookBtn.classList.remove('hidden');
         viewBookBtn.onclick = () => {
             hideEventModal(); // Ensure modal hidden immediately
-            window.location.href = event.book_path;
+            window.location.href = event.book_path!;
         };
     } else {
         viewBookBtn.classList.add('hidden');
@@ -347,18 +429,42 @@ function showEventModal(_title, event) {
 }
 
 // Helper to hide the event modal using the shared utility
-function hideEventModal() {
+function hideEventModal(): void {
     const modal = document.getElementById('eventModal');
     const modalCard = document.getElementById('modalCard');
     hideModal(modal, modalCard);
 }
 
-function setupEventHandlers() {
+function setupEventHandlers(): void {
     // Today
-    const todayBtn = document.getElementById('todayBtn');
+    const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
     todayBtn?.addEventListener('click', () => {
         if (calendar && !todayBtn.disabled) {
-            calendar.setOption('date', new Date());
+            calendar.setOption('events', []); // Workaround to trigger date change
+            const now = new Date();
+            const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
+                const book = currentBooks[ev.book_id] || {};
+                return {
+                    id: ev.book_id,
+                    title: book.title || 'Unknown Book',
+                    start: ev.start,
+                    end: ev.end || ev.start,
+                    allDay: true,
+                    backgroundColor: book.color || getEventColor(ev),
+                    borderColor: book.color || getEventColor(ev),
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        ...ev,
+                        book_title: book.title || 'Unknown Book',
+                        authors: book.authors || [],
+                        book_path: book.book_path,
+                        book_cover: book.book_cover,
+                        color: book.color,
+                        md5: ev.book_id
+                    }
+                };
+            });
+            calendar.setOption('events', mapEvents(currentEvents));
         }
     });
 
@@ -385,8 +491,8 @@ function setupEventHandlers() {
 }
 
 // Update Today button disabled state based on whether we're viewing the current month
-function updateTodayButtonState(displayedDate) {
-    const todayBtn = document.getElementById('todayBtn');
+function updateTodayButtonState(displayedDate: Date): void {
+    const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
     if (!todayBtn) return;
 
     const now = new Date();
@@ -408,7 +514,7 @@ function updateTodayButtonState(displayedDate) {
 }
 
 // Update monthly statistics for the given month/year (preferring pre-calculated stats when available)
-function updateMonthlyStats(currentDate) {
+function updateMonthlyStats(currentDate: Date): void {
     if (!currentDate) return;
 
     const targetMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -419,7 +525,7 @@ function updateMonthlyStats(currentDate) {
     let timeRead = 0;
     let daysPct = 0;
 
-    if (monthData && monthData.stats) {
+    if (monthData?.stats) {
         ({ books_read: booksRead, pages_read: pagesRead, time_read: timeRead, days_read_pct: daysPct } = monthData.stats);
     }
 
@@ -428,16 +534,16 @@ function updateMonthlyStats(currentDate) {
     const timeEl = document.getElementById('monthlyTime');
     const daysPercentageEl = document.getElementById('monthlyDaysPercentage');
 
-    if (booksEl) booksEl.textContent = booksRead;
+    if (booksEl) booksEl.textContent = String(booksRead);
     if (pagesEl) pagesEl.textContent = Number(pagesRead).toLocaleString();
     if (timeEl) timeEl.textContent = formatDuration(timeRead);
     if (daysPercentageEl) daysPercentageEl.textContent = `${daysPct}%`;
 }
 
 // Scroll the current day into view within the calendar container
-function scrollCurrentDayIntoView() {
-    const calendarContainer = document.querySelector('.calendar-container');
-    const todayCell = document.querySelector('.ec-today');
+function scrollCurrentDayIntoView(): void {
+    const calendarContainer = document.querySelector<HTMLElement>('.calendar-container');
+    const todayCell = document.querySelector<HTMLElement>('.ec-today');
 
     if (!calendarContainer || !todayCell) return;
 
@@ -465,7 +571,7 @@ function scrollCurrentDayIntoView() {
 }
 
 // Convert seconds to a short human-readable string
-function formatDuration(seconds) {
+function formatDuration(seconds: number): string {
     if (!seconds || seconds < 0) return '0s';
 
     if (seconds < 60) {
@@ -482,7 +588,7 @@ function formatDuration(seconds) {
 }
 
 // Helper to compute previous and next month keys (format: YYYY-MM) for a given month key
-function getAdjacentMonths(monthKey) {
+function getAdjacentMonths(monthKey: string): [string | null, string | null] {
     if (!monthKey) return [null, null];
     const [yearStr, monthStr] = monthKey.split('-');
     const year = Number(yearStr);
@@ -491,16 +597,16 @@ function getAdjacentMonths(monthKey) {
     const prevDate = new Date(year, monthIndex - 1, 1);
     const nextDate = new Date(year, monthIndex + 1, 1);
 
-    const format = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const format = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     return [format(prevDate), format(nextDate)];
 }
 
 // Recalculate currentEvents and currentBooks from everything in monthlyDataCache
-function refreshAggregatedData() {
+function refreshAggregatedData(): void {
     currentEvents = [];
     currentBooks = {};
 
-    const seenKeys = new Set();
+    const seenKeys = new Set<string>();
 
     for (const [, monthData] of monthlyDataCache) {
         for (const ev of monthData.events || []) {
@@ -512,4 +618,4 @@ function refreshAggregatedData() {
         }
         Object.assign(currentBooks, monthData.books || {});
     }
-} 
+}

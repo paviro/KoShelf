@@ -1,6 +1,20 @@
 // Service Worker for KoShelf PWA
 // Implements manifest-based caching with differential updates
 
+// Service Worker global scope type assertion
+const sw = self as unknown as ServiceWorkerGlobalScope & typeof globalThis;
+
+interface CacheManifest {
+    version: string;
+    files: Record<string, string>;
+}
+
+interface BroadcastMessage {
+    type: string;
+    error?: string;
+    changedCount?: number;
+}
+
 const CACHE_NAME = 'koshelf-cache-v1';
 const MANIFEST_URL = '/cache-manifest.json';
 const BATCH_SIZE = 10;
@@ -16,13 +30,14 @@ const SKIP_CACHE_PATTERNS = [
 // Error Handling
 // =============================================================================
 
-self.onerror = (message, source, lineno, colno, error) => {
-    console.error('[SW] Critical error:', message, error);
-    broadcast({ type: 'CRITICAL_ERROR', error: message });
+sw.onerror = (event: Event | string) => {
+    const message = typeof event === 'string' ? event : (event as ErrorEvent).message;
+    console.error('[SW] Critical error:', message);
+    broadcast({ type: 'CRITICAL_ERROR', error: String(message) });
     return false;
 };
 
-self.onunhandledrejection = (event) => {
+sw.onunhandledrejection = (event: PromiseRejectionEvent) => {
     console.error('[SW] Unhandled rejection:', event.reason);
     broadcast({ type: 'CRITICAL_ERROR', error: String(event.reason || 'Unhandled Rejection') });
 };
@@ -31,26 +46,26 @@ self.onunhandledrejection = (event) => {
 // Client Communication
 // =============================================================================
 
-async function broadcast(message) {
-    const clients = await self.clients.matchAll();
-    clients.forEach(client => client.postMessage(message));
+async function broadcast(message: BroadcastMessage): Promise<void> {
+    const clients = await sw.clients.matchAll();
+    clients.forEach((client) => client.postMessage(message));
 }
 
 // =============================================================================
 // Cache Utilities
 // =============================================================================
 
-function shouldSkipCache(url) {
+function shouldSkipCache(url: string): boolean {
     const pathname = new URL(url).pathname;
     return SKIP_CACHE_PATTERNS.some(pattern => pathname.endsWith(pattern));
 }
 
-function toFullUrl(urlPath) {
-    return new URL(urlPath, self.location.origin).href;
+function toFullUrl(urlPath: string): string {
+    return new URL(urlPath, sw.location.origin).href;
 }
 
 // Normalize URL for cache matching - handles /foo/index.html -> /foo/ mapping
-function normalizeUrlForCache(url) {
+function normalizeUrlForCache(url: string): string {
     const parsed = new URL(url);
     let pathname = parsed.pathname;
 
@@ -66,14 +81,14 @@ function normalizeUrlForCache(url) {
     return parsed.href;
 }
 
-async function cacheUrlsInBatches(cache, urlPaths) {
+async function cacheUrlsInBatches(cache: Cache, urlPaths: string[]): Promise<void> {
     for (let i = 0; i < urlPaths.length; i += BATCH_SIZE) {
         const batch = urlPaths.slice(i, i + BATCH_SIZE);
         await Promise.all(batch.map(urlPath => cacheUrl(cache, urlPath)));
     }
 }
 
-async function cacheUrl(cache, urlPath) {
+async function cacheUrl(cache: Cache, urlPath: string): Promise<void> {
     try {
         const fullUrl = toFullUrl(urlPath);
         const response = await fetch(fullUrl, { cache: 'no-store' });
@@ -91,28 +106,28 @@ async function cacheUrl(cache, urlPath) {
 // Manifest Management
 // =============================================================================
 
-async function fetchManifest() {
+async function fetchManifest(): Promise<CacheManifest | null> {
     try {
         const response = await fetch(MANIFEST_URL, { cache: 'no-store' });
-        return response.ok ? response.json() : null;
+        return response.ok ? response.json() as Promise<CacheManifest> : null;
     } catch (e) {
         console.error('[SW] Failed to fetch manifest:', e);
         return null;
     }
 }
 
-async function getStoredManifest() {
+async function getStoredManifest(): Promise<CacheManifest | null> {
     try {
         const cache = await caches.open(CACHE_NAME);
         const response = await cache.match(MANIFEST_URL);
-        return response ? response.json() : null;
+        return response ? response.json() as Promise<CacheManifest> : null;
     } catch (e) {
         console.warn('[SW] Failed to get stored manifest:', e);
         return null;
     }
 }
 
-async function storeManifest(manifest) {
+async function storeManifest(manifest: CacheManifest): Promise<void> {
     try {
         const cache = await caches.open(CACHE_NAME);
         const response = new Response(JSON.stringify(manifest), {
@@ -128,7 +143,7 @@ async function storeManifest(manifest) {
 // Cache Operations
 // =============================================================================
 
-async function precacheFiles(manifest) {
+async function precacheFiles(manifest: CacheManifest): Promise<void> {
     if (!manifest?.files) return;
 
     const cache = await caches.open(CACHE_NAME);
@@ -139,7 +154,7 @@ async function precacheFiles(manifest) {
     console.log('[SW] Pre-caching complete');
 }
 
-async function updateChangedFiles(oldManifest, newManifest) {
+async function updateChangedFiles(oldManifest: CacheManifest | null, newManifest: CacheManifest): Promise<void> {
     if (!newManifest?.files) return;
 
     const cache = await caches.open(CACHE_NAME);
@@ -173,7 +188,7 @@ async function updateChangedFiles(oldManifest, newManifest) {
 // Event Handlers
 // =============================================================================
 
-self.addEventListener('install', (event) => {
+sw.addEventListener('install', (event) => {
     console.log('[SW] Installing...');
     event.waitUntil((async () => {
         const manifest = await fetchManifest();
@@ -181,11 +196,11 @@ self.addEventListener('install', (event) => {
             await precacheFiles(manifest);
             await storeManifest(manifest);
         }
-        await self.skipWaiting();
+        await sw.skipWaiting();
     })());
 });
 
-self.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (event) => {
     console.log('[SW] Activating...');
     event.waitUntil((async () => {
         // Clean up old cache versions
@@ -195,11 +210,11 @@ self.addEventListener('activate', (event) => {
                 .filter(name => name !== CACHE_NAME)
                 .map(name => caches.delete(name))
         );
-        await self.clients.claim();
+        await sw.clients.claim();
     })());
 });
 
-self.addEventListener('fetch', (event) => {
+sw.addEventListener('fetch', (event) => {
     const { request } = event;
 
     // Only handle GET requests for cacheable resources
@@ -210,7 +225,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleFetch(request));
 });
 
-async function handleFetch(request) {
+async function handleFetch(request: Request): Promise<Response> {
     const cache = await caches.open(CACHE_NAME);
 
     // Normalize URL for cache matching (handles /foo/index.html -> /foo/ mapping)
@@ -223,7 +238,7 @@ async function handleFetch(request) {
     // Network fallback with cache-busting
     try {
         const bustUrl = new URL(request.url);
-        bustUrl.searchParams.set('_cb', Date.now());
+        bustUrl.searchParams.set('_cb', String(Date.now()));
 
         const response = await fetch(bustUrl.toString(), {
             method: request.method,
@@ -253,11 +268,15 @@ async function handleFetch(request) {
     }
 }
 
-self.addEventListener('message', (event) => {
-    const { type } = event.data || {};
+interface MessageEventData {
+    type: string;
+}
 
-    const handlers = {
-        SKIP_WAITING: () => self.skipWaiting(),
+sw.addEventListener('message', (event) => {
+    const { type } = (event.data as MessageEventData) || {};
+
+    const handlers: Record<string, () => void> = {
+        SKIP_WAITING: () => sw.skipWaiting(),
 
         CLEAR_CACHE: () => event.waitUntil((async () => {
             await caches.delete(CACHE_NAME);

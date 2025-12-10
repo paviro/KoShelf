@@ -1,12 +1,20 @@
 // KoInsight - Lazy Loading Module
+
+declare global {
+    interface Window {
+        LazyImageLoader: typeof LazyImageLoader;
+    }
+}
+
 export class LazyImageLoader {
+    private hasScrolled = false;
+    private initialLoadProcessed = false;
+
     constructor() {
-        this.hasScrolled = false;
-        this.initialLoadProcessed = false;
         this.setupScrollListener();
     }
 
-    setupScrollListener() {
+    private setupScrollListener(): void {
         const scrollListener = () => {
             this.hasScrolled = true;
             window.removeEventListener('scroll', scrollListener);
@@ -14,9 +22,9 @@ export class LazyImageLoader {
         window.addEventListener('scroll', scrollListener, { passive: true });
     }
 
-    init() {
-        const lazyImages = document.querySelectorAll('.lazy-image');
-        
+    init(): void {
+        const lazyImages = document.querySelectorAll<HTMLImageElement>('.lazy-image');
+
         // Progressive enhancement: Images already have src for no-JS fallback
         // For JS-enabled browsers, we'll optimize by lazy loading ALL images
         lazyImages.forEach((img) => {
@@ -25,7 +33,7 @@ export class LazyImageLoader {
             // Clear src to prevent immediate loading, we'll load via data-src
             img.removeAttribute('src');
         });
-        
+
         // Use Intersection Observer for lazy loading
         if ('IntersectionObserver' in window) {
             this.setupIntersectionObserver(lazyImages);
@@ -34,17 +42,17 @@ export class LazyImageLoader {
         }
     }
 
-    setupIntersectionObserver(lazyImages) {
+    private setupIntersectionObserver(lazyImages: NodeListOf<HTMLImageElement>): void {
         const imageObserver = new IntersectionObserver((entries, observer) => {
             const intersectingEntries = entries.filter(entry => entry.isIntersecting);
-            
+
             // Check if this is the initial load (images visible immediately on page load)
             const isInitialLoad = !this.hasScrolled && !this.initialLoadProcessed;
-            
+
             if (isInitialLoad) {
                 // Load initial images immediately without staggering
                 intersectingEntries.forEach(entry => {
-                    const img = entry.target;
+                    const img = entry.target as HTMLImageElement;
                     this.loadImageWithStagger(img); // No stagger delay
                     observer.unobserve(img);
                 });
@@ -59,7 +67,7 @@ export class LazyImageLoader {
                 });
 
                 sortedEntries.forEach((entry, index) => {
-                    const img = entry.target;
+                    const img = entry.target as HTMLImageElement;
                     const staggerDelay = index * 50; // 50ms between each image
                     this.loadImageWithStagger(img, staggerDelay);
                     observer.unobserve(img);
@@ -78,7 +86,7 @@ export class LazyImageLoader {
         });
     }
 
-    fallbackLoading(lazyImages) {
+    private fallbackLoading(lazyImages: NodeListOf<HTMLImageElement>): void {
         // Fallback: load initial images immediately, rest with minimal stagger
         lazyImages.forEach((img, index) => {
             if (img.dataset.src) {
@@ -94,11 +102,11 @@ export class LazyImageLoader {
         });
     }
 
-    loadImageWithStagger(img, staggerDelay = 0) {
+    private loadImageWithStagger(img: HTMLImageElement, staggerDelay = 0): void {
         if (!img.dataset.src || img.src) return; // Already loaded or no source
-        
-        const placeholder = img.nextElementSibling;
-        
+
+        const placeholder = img.nextElementSibling as HTMLElement | null;
+
         // Start loading the image
         img.src = img.dataset.src;
         img.onload = () => {
@@ -106,12 +114,12 @@ export class LazyImageLoader {
             setTimeout(() => {
                 img.classList.remove('opacity-0');
                 img.classList.add('opacity-100');
-                
+
                 // Fade out placeholder simultaneously
-                if (placeholder && placeholder.classList.contains('book-placeholder')) {
+                if (placeholder?.classList.contains('book-placeholder')) {
                     placeholder.style.transition = 'opacity 0.3s ease-out';
                     placeholder.style.opacity = '0';
-                    
+
                     // Hide placeholder after fade completes
                     setTimeout(() => {
                         placeholder.style.display = 'none';
@@ -123,7 +131,7 @@ export class LazyImageLoader {
             // Keep placeholder visible on error, but still respect stagger timing
             setTimeout(() => {
                 img.style.display = 'none';
-                if (placeholder && placeholder.classList.contains('book-placeholder')) {
+                if (placeholder?.classList.contains('book-placeholder')) {
                     placeholder.style.display = 'flex';
                     placeholder.style.opacity = '1';
                 }
@@ -132,8 +140,8 @@ export class LazyImageLoader {
     }
 
     // Method to load images for newly visible cards (used by filtering)
-    loadImageForCard(card) {
-        const lazyImage = card.querySelector('.lazy-image[data-src]');
+    loadImageForCard(card: HTMLElement): void {
+        const lazyImage = card.querySelector<HTMLImageElement>('.lazy-image[data-src]');
         if (lazyImage && !lazyImage.src) {
             this.loadImageWithStagger(lazyImage);
         }
@@ -141,4 +149,4 @@ export class LazyImageLoader {
 }
 
 // For non-module usage (script tag import)
-window.LazyImageLoader = LazyImageLoader; 
+window.LazyImageLoader = LazyImageLoader;
