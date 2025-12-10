@@ -58,25 +58,25 @@ impl SiteGenerator {
         
         // Copy book-related JavaScript files only if we have books
         if !books.is_empty() {
-            let js_content = include_str!("../../assets/book_list.js");
+            let js_content = include_str!(concat!(env!("OUT_DIR"), "/book_list.js"));
             self.write_asset(self.js_dir().join("book_list.js"), js_content.as_bytes())?;
 
-            let js_content = include_str!("../../assets/book_detail.js");
+            let js_content = include_str!(concat!(env!("OUT_DIR"), "/book_detail.js"));
             self.write_asset(self.js_dir().join("book_detail.js"), js_content.as_bytes())?;
             
-            let lazy_loading_content = include_str!("../../assets/lazy-loading.js");
+            let lazy_loading_content = include_str!(concat!(env!("OUT_DIR"), "/lazy-loading.js"));
             self.write_asset(self.js_dir().join("lazy-loading.js"), lazy_loading_content.as_bytes())?;
 
-            let section_toggle_content = include_str!("../../assets/section-toggle.js");
+            let section_toggle_content = include_str!(concat!(env!("OUT_DIR"), "/section-toggle.js"));
             self.write_asset(self.js_dir().join("section-toggle.js"), section_toggle_content.as_bytes())?;
         }
         
         // Copy statistics-related JavaScript files only if we have stats data
         if stats_data.is_some() {
-            let stats_js_content = include_str!("../../assets/statistics.js");
+            let stats_js_content = include_str!(concat!(env!("OUT_DIR"), "/statistics.js"));
             self.write_asset(self.js_dir().join("statistics.js"), stats_js_content.as_bytes())?;
             
-            let heatmap_js_content = include_str!("../../assets/heatmap.js");
+            let heatmap_js_content = include_str!(concat!(env!("OUT_DIR"), "/heatmap.js"));
             self.write_asset(self.js_dir().join("heatmap.js"), heatmap_js_content.as_bytes())?;
 
             let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.css"));
@@ -88,29 +88,29 @@ impl SiteGenerator {
             let calendar_map = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map"));
             self.write_asset(self.js_dir().join("event-calendar.min.js.map"), calendar_map.as_bytes())?;
             
-            let calendar_init_js_content = include_str!("../../assets/calendar.js");
+            let calendar_init_js_content = include_str!(concat!(env!("OUT_DIR"), "/calendar.js"));
             self.write_asset(self.js_dir().join("calendar.js"), calendar_init_js_content.as_bytes())?;
             
-            let recap_js_content = include_str!("../../assets/recap.js");
+            let recap_js_content = include_str!(concat!(env!("OUT_DIR"), "/recap.js"));
             self.write_asset(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
 
-            let modal_utils_content = include_str!("../../assets/modal-utils.js");
+            let modal_utils_content = include_str!(concat!(env!("OUT_DIR"), "/modal-utils.js"));
             self.write_asset(self.js_dir().join("modal-utils.js"), modal_utils_content.as_bytes())?;
         }
         
         // Storage utility - always needed as pwa.js depends on it
-        let storage_js_content = include_str!("../../assets/storage-manager.js");
+        let storage_js_content = include_str!(concat!(env!("OUT_DIR"), "/storage-manager.js"));
         self.write_asset(self.js_dir().join("storage-manager.js"), storage_js_content.as_bytes())?;
         
         // PWA manifest
         let manifest_content = include_str!("../../assets/manifest.json");
         self.write_asset(self.output_dir.join("manifest.json"), manifest_content.as_bytes())?;
         
-        let sw_content = include_str!("../../assets/service-worker.js");
+        let sw_content = include_str!(concat!(env!("OUT_DIR"), "/service-worker.js"));
         fs::write(self.output_dir.join("service-worker.js"), sw_content)?;
 
         // PWA client-side script (handles update notifications)
-        let pwa_js_content = include_str!("../../assets/pwa.js");
+        let pwa_js_content = include_str!(concat!(env!("OUT_DIR"), "/pwa.js"));
         let server_mode = if self.is_internal_server { "internal" } else { "external" };
         let pwa_js_content = pwa_js_content.replace("{{SERVER_MODE}}", server_mode);
         self.write_asset(self.js_dir().join("pwa.js"), pwa_js_content.as_bytes())?;

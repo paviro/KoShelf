@@ -1,30 +1,30 @@
 /**
  * Central LocalStorage Manager
- * Handles namespaced storage to avoid collisions and provides type safety helper.
+ * Handles namespaced storage to avoid collisions and provides type safety.
  */
-export class StorageManager {
-    static PREFIX = 'koshelf_';
 
-    static KEYS = {
+type StorageKey = typeof StorageManager.KEYS[keyof typeof StorageManager.KEYS];
+
+export class StorageManager {
+    static readonly PREFIX = 'koshelf_';
+
+    static readonly KEYS = {
         RECAP_SORT_ORDER: 'recap_sort_newest_first',
         // PWA & Versioning
         VERSION: 'version',
         SERVER_MODE: 'server_mode',
         RELOAD_COUNT: 'reload_count',
         LAST_RELOAD: 'last_reload_time',
-    };
+    } as const;
 
     /**
      * Get a value from local storage
-     * @param {string} key - The key to retrieve (value from StorageManager.KEYS)
-     * @param {any} defaultValue - Default value if key doesn't exist
-     * @returns {any} - The stored value or default
      */
-    static get(key, defaultValue = null) {
+    static get<T>(key: StorageKey, defaultValue: T | null = null): T | null {
         try {
             const item = localStorage.getItem(this.PREFIX + key);
             if (item === null) return defaultValue;
-            return JSON.parse(item);
+            return JSON.parse(item) as T;
         } catch (e) {
             console.warn('StorageManager: Failed to parse item', e);
             return defaultValue;
@@ -33,10 +33,8 @@ export class StorageManager {
 
     /**
      * Set a value in local storage
-     * @param {string} key - The key to set (value from StorageManager.KEYS)
-     * @param {any} value - The value to store (will be JSON stringified)
      */
-    static set(key, value) {
+    static set(key: StorageKey, value: unknown): void {
         try {
             localStorage.setItem(this.PREFIX + key, JSON.stringify(value));
         } catch (e) {
@@ -46,9 +44,8 @@ export class StorageManager {
 
     /**
      * Remove a value from local storage
-     * @param {string} key - The key to remove (value from StorageManager.KEYS)
      */
-    static remove(key) {
+    static remove(key: StorageKey): void {
         localStorage.removeItem(this.PREFIX + key);
     }
 }

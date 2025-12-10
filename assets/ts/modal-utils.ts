@@ -2,10 +2,8 @@
 
 /**
  * Show a modal with scale/fade animation
- * @param {HTMLElement} modal - The modal backdrop element
- * @param {HTMLElement} modalCard - The modal card/content element
  */
-export function showModal(modal, modalCard) {
+export function showModal(modal: HTMLElement | null, modalCard: HTMLElement | null): void {
     if (!modal || !modalCard) return;
 
     modal.classList.remove('hidden');
@@ -14,7 +12,7 @@ export function showModal(modal, modalCard) {
     modalCard.classList.add('scale-95', 'opacity-0');
 
     // Force reflow
-    modal.offsetHeight;
+    void modal.offsetHeight;
 
     requestAnimationFrame(() => {
         modal.classList.remove('opacity-0');
@@ -26,10 +24,8 @@ export function showModal(modal, modalCard) {
 
 /**
  * Hide a modal with scale/fade animation
- * @param {HTMLElement} modal - The modal backdrop element
- * @param {HTMLElement} modalCard - The modal card/content element
  */
-export function hideModal(modal, modalCard) {
+export function hideModal(modal: HTMLElement | null, modalCard: HTMLElement | null): void {
     if (!modal || !modalCard) return;
 
     modal.classList.remove('opacity-100');
@@ -45,11 +41,12 @@ export function hideModal(modal, modalCard) {
 
 /**
  * Setup standard modal close handlers (close button, backdrop click, Escape key)
- * @param {HTMLElement} modal - The modal backdrop element
- * @param {HTMLElement} modalCard - The modal card/content element
- * @param {HTMLElement|null} closeBtn - Optional close button element
  */
-export function setupModalCloseHandlers(modal, modalCard, closeBtn = null) {
+export function setupModalCloseHandlers(
+    modal: HTMLElement | null,
+    modalCard: HTMLElement | null,
+    closeBtn: HTMLElement | null = null
+): (() => void) | undefined {
     if (!modal || !modalCard) return;
 
     const hide = () => hideModal(modal, modalCard);

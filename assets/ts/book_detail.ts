@@ -3,10 +3,10 @@
 
 import { SectionToggle } from './section-toggle.js';
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
     // Initialize section toggles using the module
-    const sectionToggle = new SectionToggle();
-    
+    new SectionToggle();
+
     // Share dropdown toggle logic
     const shareDropdownButton = document.getElementById('shareDropdownButton');
     const shareDropdownMenu = document.getElementById('shareDropdownMenu');
@@ -17,8 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!shareDropdownButton?.contains(e.target) && !shareDropdownMenu?.contains(e.target)) {
+        const target = e.target as Node;
+        if (!shareDropdownButton?.contains(target) && !shareDropdownMenu?.contains(target)) {
             shareDropdownMenu?.classList.add('hidden');
         }
     });
-}); 
+});
