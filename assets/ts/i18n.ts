@@ -1,12 +1,13 @@
 /**
  * Internationalization module - loads and provides translations from locales.json.
- * Uses i18next v4 JSON format with _one/_other suffixes for pluralization.
+ * Uses CLDR plural rules via Intl.PluralRules, with suffixes: _zero, _one, _two, _few, _many, _other.
  * 
  * Usage:
  *   await translation.init();
  *   translation.get('books');           // → "Books"
  *   translation.get('pages', 5);        // → "5 pages"
  *   translation.get('pages', 1);        // → "1 page"
+ *   translation.get('share.recap-label'); // → "Share Recap Image" (attribute syntax)
  *   translation.getLanguage();          // → "en-US"
  */
 
@@ -42,7 +43,8 @@ export const translation = {
 
     /**
      * Get a translation by key, optionally with a count for pluralization.
-     * Uses i18next format: looks up `key_one` or `key_other` based on count.
+     * Uses Intl.PluralRules for CLDR-compliant plural category selection.
+     * Looks up suffixed keys: `key_zero`, `key_one`, `key_two`, `key_few`, `key_many`, `key_other`
      * @param key - The translation key (e.g., 'pages', 'unknown-book')
      * @param count - Optional count for pluralized strings
      * @returns The translated string, or the key itself if not found
@@ -50,13 +52,20 @@ export const translation = {
     get(key: string, count?: number): string {
         if (!data) return key;
 
-        // If count is provided, try pluralized keys first
+        // If count is provided, use CLDR plural rules
         if (count !== undefined) {
-            const suffix = count === 1 ? '_one' : '_other';
-            const pluralKey = `${key}${suffix}`;
+            const pluralRules = new Intl.PluralRules(currentLanguage);
+            const category = pluralRules.select(count); // Returns: 'zero', 'one', 'two', 'few', 'many', or 'other'
+            const pluralKey = `${key}_${category}`;
             const val = data[pluralKey];
             if (val) {
-                return val.replace('{{ count }}', String(count));
+                // Replace both Fluent placeholder formats: {$count} and { $count }
+                return val.replace(/\{\s*\$count\s*\}/g, String(count));
+            }
+            // Fall back to 'other' if specific category not found
+            const otherVal = data[`${key}_other`];
+            if (otherVal) {
+                return otherVal.replace(/\{\s*\$count\s*\}/g, String(count));
             }
         }
 
@@ -64,9 +73,9 @@ export const translation = {
         const val = data[key] || data[`${key}_other`];
         if (!val) return key;
 
-        // Still replace {{ count }} if present and count was provided
+        // Still replace { $count } if present and count was provided
         return count !== undefined
-            ? val.replace('{{ count }}', String(count))
+            ? val.replace(/\{\s*\$count\s*\}/g, String(count))
             : val;
     },
 
