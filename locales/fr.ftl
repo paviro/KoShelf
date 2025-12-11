@@ -13,7 +13,7 @@
 
 # Machine-readable metadata (used by --list-languages)
 -lang-code = fr
--lang-name = Français
+-lang-name = Français (France)
 -lang-dialect = fr_FR
 
 # -----------------------------------

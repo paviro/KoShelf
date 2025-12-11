@@ -326,52 +326,47 @@ fn normalize_locale(locale: &str) -> String {
 pub fn list_supported_languages() -> String {
     use std::collections::BTreeMap;
     
-    // Map: lang_code -> (name, vec of supported locales)
-    let mut languages: BTreeMap<String, (String, Vec<String>)> = BTreeMap::new();
+    // Map: dialect_code -> name
+    let mut languages: BTreeMap<String, String> = BTreeMap::new();
     
-    // Single pass: collect all .ftl files
+    // Single pass: collect all .ftl files and parse metadata
     for file in LOCALES.files() {
         let filename = file.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
         if !filename.ends_with(".ftl") {
             continue;
         }
         
-        let is_base = !filename.contains('_');
         let content = file.contents_utf8().unwrap_or("");
         
-        if is_base {
-            // Base language file - extract metadata
-            let mut code = String::new();
-            let mut name = String::new();
-            let mut dialect = String::new();
-            
-            for line in content.lines() {
-                let line = line.trim();
-                if let Some((key, value)) = line.split_once('=') {
-                    match key.trim() {
-                        "-lang-code" => code = value.trim().to_string(),
-                        "-lang-name" => name = value.trim().to_string(),
-                        "-lang-dialect" => dialect = value.trim().to_string(),
-                        _ => {}
-                    }
-                }
+        // Extract metadata
+        let mut name = String::new();
+        let mut dialect = String::new();
+        
+        for line in content.lines() {
+            let line = line.trim();
+            // Skip comments that aren't metadata
+            if !line.starts_with("-") {
+                continue;
             }
             
-            if !code.is_empty() && !name.is_empty() {
-                let entry = languages.entry(code).or_insert_with(|| (name, Vec::new()));
-                if !dialect.is_empty() && !entry.1.contains(&dialect) {
-                    entry.1.push(dialect);
+            if let Some((key, value)) = line.split_once('=') {
+                match key.trim() {
+                    "-lang-name" => name = value.trim().to_string(),
+                    "-lang-dialect" => dialect = value.trim().to_string(),
+                    _ => {}
                 }
             }
+        }
+        
+        // If metadata is present, add to list
+        if !dialect.is_empty() && !name.is_empty() {
+            languages.insert(dialect, name);
         } else {
-            // Regional variant file (e.g., "de_AT.ftl")
-            let locale = filename.trim_end_matches(".ftl");
-            let lang_code = locale.split('_').next().unwrap_or("").to_string();
-            
-            if let Some(entry) = languages.get_mut(&lang_code) {
-                if !entry.1.contains(&locale.to_string()) {
-                    entry.1.push(locale.to_string());
-                }
+            // Fallback for files without metadata (shouldn't happen with current files)
+            // Use filename stem as code and output warning in name
+            let stem = filename.trim_end_matches(".ftl");
+            if !languages.contains_key(stem) {
+                 languages.insert(stem.to_string(), format!("Unknown ({})", stem));
             }
         }
     }
@@ -380,21 +375,18 @@ pub fn list_supported_languages() -> String {
     let mut output = String::new();
     output.push_str("Supported Languages:\n\n");
     
-    for (code, (name, dialects)) in &languages {
-        output.push_str(&format!("  {} - {}\n", code, name));
-        if !dialects.is_empty() {
-            output.push_str(&format!("      Full support: {}\n", dialects.join(", ")));
-        }
+    for (code, name) in &languages {
+        output.push_str(&format!("- {}: {}\n", code, name));
     }
     
     output.push_str("\nUsage:\n");
     output.push_str("  --language <locale>    (e.g., --language de_DE)\n\n");
     output.push_str("Note:\n");
-    output.push_str("  You can use any regional variant even if not listed above.\n");
-    output.push_str("  Unlisted variants (e.g., de_AT, en_GB) will use the base language\n");
-    output.push_str("  translations with region-specific date formatting from chrono.\n");
-    output.push_str("  For full support, the locale needs translated date format strings.\n");
-    
+    output.push_str("  You can use any country variant even if not listed above.\n");
+    output.push_str("  Unlisted variants will use the base language\n");
+    output.push_str("  and region-specific date formatting from chrono.\n");
+    output.push_str("  For full support, the locale needs a translated date format string.\n");
+
     output
 }
 

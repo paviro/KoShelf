@@ -13,7 +13,7 @@
 
 # Machine-readable metadata (used by --list-languages)
 -lang-code = de
--lang-name = Deutsch
+-lang-name = Deutsch (Deutschland)
 -lang-dialect = de_DE
 
 # -----------------------------------

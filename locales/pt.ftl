@@ -13,7 +13,7 @@
 
 # Machine-readable metadata (used by --list-languages)
 -lang-code = pt
--lang-name = Português
+-lang-name = Português (Brasil)
 -lang-dialect = pt_BR
 
 # -----------------------------------
