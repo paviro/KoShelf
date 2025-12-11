@@ -11,6 +11,11 @@
 #
 # NEW KEYS: Always add new translation keys to en.ftl first, then other bases.
 
+# Machine-readable metadata (used by --list-languages)
+-lang-code = pt
+-lang-name = Português
+-lang-dialect = pt_BR
+
 # -----------------------------------
 #           Navegação & Compartilhado
 # -----------------------------------

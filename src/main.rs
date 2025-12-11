@@ -101,12 +101,16 @@ struct Cli {
     #[arg(long, default_value = "false", display_order = 15)]
     include_all_stats: bool,
 
-    /// Language for UI translations (e.g., "en_US", "de_DE")
+    /// Language for UI translations. Use full locale (e.g., en_US, de_DE) for correct date formatting. Use --list-languages to see available options
     #[arg(long, short = 'l', default_value = "en_US", display_order = 16)]
     language: String,
 
-    /// Print GitHub repository URL
+    /// List all supported languages and exit
     #[arg(long, display_order = 17)]
+    list_languages: bool,
+
+    /// Print GitHub repository URL
+    #[arg(long, display_order = 18)]
     github: bool,
 }
 
@@ -154,6 +158,12 @@ async fn main() -> Result<()> {
     // Handle --github flag
     if cli.github {
         println!("https://github.com/paviro/KOShelf");
+        return Ok(());
+    }
+    
+    // Handle --list-languages flag
+    if cli.list_languages {
+        println!("{}", i18n::list_supported_languages());
         return Ok(());
     }
     

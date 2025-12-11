@@ -248,6 +248,83 @@ fn normalize_locale(locale: &str) -> String {
     }
 }
 
+/// List all supported languages by reading metadata from FTL files.
+/// Returns a formatted string suitable for CLI output.
+pub fn list_supported_languages() -> String {
+    use std::collections::BTreeMap;
+    
+    // Map: lang_code -> (name, vec of supported locales)
+    let mut languages: BTreeMap<String, (String, Vec<String>)> = BTreeMap::new();
+    
+    // Single pass: collect all .ftl files
+    for file in LOCALES.files() {
+        let filename = file.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !filename.ends_with(".ftl") {
+            continue;
+        }
+        
+        let is_base = !filename.contains('_');
+        let content = file.contents_utf8().unwrap_or("");
+        
+        if is_base {
+            // Base language file - extract metadata
+            let mut code = String::new();
+            let mut name = String::new();
+            let mut dialect = String::new();
+            
+            for line in content.lines() {
+                let line = line.trim();
+                if let Some((key, value)) = line.split_once('=') {
+                    match key.trim() {
+                        "-lang-code" => code = value.trim().to_string(),
+                        "-lang-name" => name = value.trim().to_string(),
+                        "-lang-dialect" => dialect = value.trim().to_string(),
+                        _ => {}
+                    }
+                }
+            }
+            
+            if !code.is_empty() && !name.is_empty() {
+                let entry = languages.entry(code).or_insert_with(|| (name, Vec::new()));
+                if !dialect.is_empty() && !entry.1.contains(&dialect) {
+                    entry.1.push(dialect);
+                }
+            }
+        } else {
+            // Regional variant file (e.g., "de_AT.ftl")
+            let locale = filename.trim_end_matches(".ftl");
+            let lang_code = locale.split('_').next().unwrap_or("").to_string();
+            
+            if let Some(entry) = languages.get_mut(&lang_code) {
+                if !entry.1.contains(&locale.to_string()) {
+                    entry.1.push(locale.to_string());
+                }
+            }
+        }
+    }
+    
+    // Format output
+    let mut output = String::new();
+    output.push_str("Supported Languages:\n\n");
+    
+    for (code, (name, dialects)) in &languages {
+        output.push_str(&format!("  {} - {}\n", code, name));
+        if !dialects.is_empty() {
+            output.push_str(&format!("      Full support: {}\n", dialects.join(", ")));
+        }
+    }
+    
+    output.push_str("\nUsage:\n");
+    output.push_str("  --language <locale>    (e.g., --language de_DE)\n\n");
+    output.push_str("Note:\n");
+    output.push_str("  You can use any regional variant even if not listed above.\n");
+    output.push_str("  Unlisted variants (e.g., de_AT, en_GB) will use the base language\n");
+    output.push_str("  translations with region-specific date formatting from chrono.\n");
+    output.push_str("  For full support, the locale needs translated date format strings.\n");
+    
+    output
+}
+
 /// Simple FTL parser
 fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
     let mut map = HashMap::new();
