@@ -324,7 +324,7 @@ KOReaderSettings/
 
 ### Supported Formats
 
-Although KOReader supports more than just EPUBs, this tool does not, and probably never will, as I don't use them and this is a weekend project that probably won't be maintained much.
+- ePUB
 
 ### Typical Deployment Setup
 
