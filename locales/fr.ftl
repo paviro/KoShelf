@@ -1,3 +1,16 @@
+# ===========================================
+#      French (fr) — Base Language File
+# ===========================================
+# This is the base translation file for French, using Metropolitan French (fr_FR).
+# Regional variants (e.g., fr_CA.ftl) should only override keys that differ.
+#
+# LOCALE HIERARCHY:
+#   1. Regional variant (e.g., fr_CA.ftl) — sparse, only differences
+#   2. Base language (this file) — complete translations
+#   3. English fallback (en.ftl) — ultimate fallback for all languages
+#
+# NEW KEYS: Always add new translation keys to en.ftl first, then other bases.
+
 # -----------------------------------
 #           Navigation & Shared
 # -----------------------------------
