@@ -91,6 +91,7 @@ impl SiteGenerator {
             version: self.get_version(),
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items_with_recap("books", recap_latest_href.as_deref()),
+            translation: self.t(),
         };
 
         let html = template.render()?;
@@ -115,7 +116,7 @@ impl SiteGenerator {
             
             // Calculate session statistics if we have book stats
             let session_stats = match (stats_data.as_ref(), &book_stats) {
-                (Some(stats), Some(book_stat)) => Some(book_stat.calculate_session_stats(&stats.page_stats, &self.time_config)),
+                (Some(stats), Some(book_stat)) => Some(book_stat.calculate_session_stats(&stats.page_stats, &self.time_config, &self.translations)),
                 _ => None,
             };
             
@@ -127,6 +128,7 @@ impl SiteGenerator {
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap("books", recap_latest_href.as_deref()),
+                translation: self.t(),
             };
             
             let html = template.render()?;

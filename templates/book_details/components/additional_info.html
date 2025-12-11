@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-cyan-400 to-cyan-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Additional Information</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("additional-information") }}</h2>
         </div>
         
         <!-- Hide/Show Button -->
@@ -25,7 +25,7 @@
                     </div>
                     <div>
                         <div class="text-lg font-bold text-gray-900 dark:text-white">{{ publisher }}</div>
-                        <div class="text-sm text-gray-500 dark:text-dark-400">Publisher</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("publisher") }}</div>
                     </div>
                 </div>
             </div>
@@ -40,7 +40,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
                         </svg>
                     </div>
-                    Book Identifiers
+                    {{ translation.get("book-identifiers") }}
                 </h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% for identifier in book.identifiers() %}

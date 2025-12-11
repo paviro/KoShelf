@@ -59,28 +59,34 @@ impl ReadCompletion {
     }
 
     /// Get a nicely formatted date range display (e.g. "Jun 05" or "Jun 05 – Jun 12 2025")
-    pub fn date_range_display(&self) -> String {
+    pub fn date_range_display(&self, translations: &crate::i18n::Translations) -> String {
         if self.start_date == self.end_date {
-            Self::format_date_display(&self.start_date)
+            Self::format_date_display(&self.start_date, translations)
         } else {
             format!(
                 "{} – {}",
-                Self::format_date_display(&self.start_date),
-                Self::format_date_display(&self.end_date)
+                Self::format_date_display(&self.start_date, translations),
+                Self::format_date_display(&self.end_date, translations)
             )
         }
     }
 
     /// Helper: format a date string (YYYY-MM-DD) into a shorter, reader-friendly form.
     /// If the date is in the current year it returns e.g. "Jun 05", otherwise "Jun 05 2024".
-    fn format_date_display(date_str: &str) -> String {
+    pub fn format_date_display(date_str: &str, translations: &crate::i18n::Translations) -> String {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
             let current_year = Utc::now().year();
-            if date.year() == current_year {
-                date.format("%b %d").to_string()
+            let locale = translations.locale();
+            
+            // Get appropriate format_string from translations
+            let format_key = if date.year() == current_year {
+                "datetime-short-current-year-format"
             } else {
-                date.format("%b %d %Y").to_string()
-            }
+                "datetime-short-with-year-format"
+            };
+            let format_str = translations.get(format_key);
+            
+            date.format_localized(&format_str, locale).to_string()
         } else {
             date_str.to_string()
         }

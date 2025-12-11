@@ -3,18 +3,19 @@ use std::collections::{HashMap, HashSet};
 use log::debug;
 
 use crate::models::*;
+use crate::i18n::Translations;
 use crate::read_completion_analyzer::{ReadCompletionDetector, CompletionConfig};
 use crate::session_calculator;
 use crate::time_config::TimeConfig;
 
 /// Trait for calculating book session statistics
 pub trait BookStatistics {
-    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig) -> BookSessionStats;
+    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig, translations: &Translations) -> BookSessionStats;
 }
 
 impl BookStatistics for StatBook {
     /// Calculate additional statistics for this book from page stats
-    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig) -> BookSessionStats {
+    fn calculate_session_stats(&self, page_stats: &[PageStat], time_config: &TimeConfig, translations: &Translations) -> BookSessionStats {
         let book_sessions: Vec<&PageStat> = page_stats
             .iter()
             .filter(|stat| stat.id_book == self.id && stat.duration > 0)
@@ -38,11 +39,17 @@ impl BookStatistics for StatBook {
             .map(|timestamp| {
                 let date = time_config.date_for_timestamp(timestamp);
                 let current_year = time_config.today_date().year();
-                if date.year() == current_year {
-                    date.format("%b %d").to_string()
+                let locale = translations.locale();
+                
+                // Get appropriate format string from translations
+                let format_key = if date.year() == current_year {
+                    "datetime-short-current-year-format"
                 } else {
-                    date.format("%b %d %Y").to_string()
-                }
+                    "datetime-short-with-year-format"
+                };
+                let format_str = translations.get(format_key);
+                
+                date.format_localized(&format_str, locale).to_string()
             });
 
         let reading_speed = if let (Some(total_time), Some(total_pages)) = 

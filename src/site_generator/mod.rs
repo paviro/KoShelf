@@ -23,6 +23,7 @@ use crate::config::SiteConfig;
 use crate::statistics_parser::StatisticsParser;
 use crate::statistics::StatisticsCalculator;
 use crate::book_scanner::scan_books;
+use crate::i18n::Translations;
 use anyhow::Result;
 use log::info;
 use std::path::PathBuf;
@@ -32,6 +33,8 @@ pub struct SiteGenerator {
     config: SiteConfig,
     /// Cache manifest builder for PWA smart caching
     cache_manifest: Arc<CacheManifestBuilder>,
+    /// Translations for i18n
+    translations: Arc<Translations>,
 }
 
 impl std::ops::Deref for SiteGenerator {
@@ -47,7 +50,19 @@ impl SiteGenerator {
         let version = chrono::Local::now().to_rfc3339();
         let cache_manifest = Arc::new(CacheManifestBuilder::new(version));
         
-        Self { config, cache_manifest }
+        // Load translations for the configured language
+        let translations = Arc::new(Translations::load(&config.language)
+            .unwrap_or_else(|e| {
+                log::warn!("Failed to load translations for '{}': {}. Falling back to English.", config.language, e);
+                Translations::load("en").expect("English translations must exist")
+            }));
+        
+        Self { config, cache_manifest, translations }
+    }
+    
+    /// Get Arc<Translations> for templates to call get()/get_with_num()
+    pub(crate) fn t(&self) -> Arc<Translations> {
+        Arc::clone(&self.translations)
     }
 
     // Path constants to avoid duplication

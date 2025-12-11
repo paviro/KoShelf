@@ -23,6 +23,7 @@ mod time_config;
 mod partial_md5;
 mod share_image;
 mod version_notifier;
+mod i18n;
 
 #[cfg(test)]
 mod tests;
@@ -100,8 +101,12 @@ struct Cli {
     #[arg(long, default_value = "false", display_order = 15)]
     include_all_stats: bool,
 
+    /// Language for UI translations (e.g., "en", "de")
+    #[arg(long, short = 'l', default_value = "en", display_order = 16)]
+    language: String,
+
     /// Print GitHub repository URL
-    #[arg(long, display_order = 16)]
+    #[arg(long, display_order = 17)]
     github: bool,
 }
 
@@ -273,6 +278,7 @@ async fn main() -> Result<()> {
         min_time_per_day,
         include_all_stats: cli.include_all_stats,
         is_internal_server,
+        language: cli.language.clone(),
     };
 
     // Create site generator - it will handle book scanning and stats loading internally

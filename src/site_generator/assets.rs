@@ -101,6 +101,14 @@ impl SiteGenerator {
         // Storage utility - always needed as pwa.js depends on it
         let storage_js_content = include_str!(concat!(env!("OUT_DIR"), "/storage-manager.js"));
         self.write_asset(self.js_dir().join("storage-manager.js"), storage_js_content.as_bytes())?;
+
+        // i18n helper - always needed for translation.get() on frontend
+        let i18n_js_content = include_str!(concat!(env!("OUT_DIR"), "/i18n.js"));
+        self.write_asset(self.js_dir().join("i18n.js"), i18n_js_content.as_bytes())?;
+
+        // Translations JSON - copy the locale file directly for the frontend
+        fs::create_dir_all(self.json_dir())?;
+        self.write_asset(self.json_dir().join("locales.json"), self.translations.raw_json().as_bytes())?;
         
         // PWA manifest
         let manifest_content = include_str!("../../assets/manifest.json");

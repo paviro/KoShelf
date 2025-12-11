@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::book::BookStatus;
@@ -30,11 +30,18 @@ pub struct Annotation {
 }
 
 impl Annotation {
-    pub fn formatted_datetime(&self) -> Option<String> {
+    pub fn formatted_datetime(&self, translations: &crate::i18n::Translations) -> Option<String> {
         self.datetime.as_ref().and_then(|dt| {
             NaiveDateTime::parse_from_str(dt, "%Y-%m-%d %H:%M:%S")
                 .ok()
-                .map(|ndt| ndt.format("%B %d, %Y at %I:%M %p").to_string())
+                .map(|ndt| {
+                    let locale = translations.locale();
+                    let format_str = translations.get("datetime-full-format");
+                    
+                    // format_localized is only available on NaiveDate and DateTime<Tz>, not NaiveDateTime - we need to convert to a DateTime<Utc> first
+                    let dt_utc: DateTime<Utc> = DateTime::from_naive_utc_and_offset(ndt, Utc);
+                    dt_utc.format_localized(&format_str, locale).to_string()
+                })
         })
     }
 
