@@ -24,6 +24,13 @@ fn extract_ftl_keys(content: &str) -> HashSet<String> {
     keys
 }
 
+/// Check if a filename represents a regional variant (e.g., de_AT.ftl, pt_BR.ftl)
+/// vs a base language file (e.g., de.ftl, en.ftl)
+fn is_regional_variant(filename: &str) -> bool {
+    let stem = filename.strip_suffix(".ftl").unwrap_or(filename);
+    stem.contains('_')
+}
+
 #[test]
 fn test_missing_translation_keys() {
     let en_keys = extract_ftl_keys(EN_FTL);
@@ -42,14 +49,35 @@ fn test_missing_translation_keys() {
             let content = fs::read_to_string(&path).expect("Failed to read locale file");
             let locale_keys = extract_ftl_keys(&content);
 
-            let missing_keys: Vec<_> = en_keys.difference(&locale_keys).collect();
-            let extra_keys: Vec<_> = locale_keys.difference(&en_keys).collect();
-            
-            if !missing_keys.is_empty() {
-                panic!("Locales file {} is missing keys: {:?}", filename, missing_keys);
-            }
-            if !extra_keys.is_empty() {
-                panic!("Locales file {} has extra keys (not in en.ftl): {:?}", filename, extra_keys);
+            // Regional variants (e.g., de_AT.ftl) are allowed to have a subset of keys
+            // They only override specific translations from their base language
+            // Base language files (e.g., de.ftl) must have all keys
+            if is_regional_variant(filename) {
+                // Regional variants: only check for extra keys (no keys that don't exist in en.ftl)
+                let extra_keys: Vec<_> = locale_keys.difference(&en_keys).collect();
+                if !extra_keys.is_empty() {
+                    panic!(
+                        "Regional variant {} has extra keys (not in en.ftl): {:?}",
+                        filename, extra_keys
+                    );
+                }
+            } else {
+                // Base language files: must have all keys from en.ftl
+                let missing_keys: Vec<_> = en_keys.difference(&locale_keys).collect();
+                let extra_keys: Vec<_> = locale_keys.difference(&en_keys).collect();
+                
+                if !missing_keys.is_empty() {
+                    panic!(
+                        "Base language file {} is missing keys: {:?}",
+                        filename, missing_keys
+                    );
+                }
+                if !extra_keys.is_empty() {
+                    panic!(
+                        "Base language file {} has extra keys (not in en.ftl): {:?}",
+                        filename, extra_keys
+                    );
+                }
             }
         }
     }
@@ -114,4 +142,3 @@ fn test_unused_translation_keys() {
         panic!("Found unused translation keys: {:?}", unused_list);
     }
 }
-

@@ -7,10 +7,11 @@
  *   translation.get('books');           // → "Books"
  *   translation.get('pages', 5);        // → "5 pages"
  *   translation.get('pages', 1);        // → "1 page"
+ *   translation.getLanguage();          // → "en-US"
  */
 
 let data: Record<string, string> | null = null;
-let currentLanguage: string = 'en'; // Default to English
+let currentLanguage: string = 'en-US';
 let loadPromise: Promise<void> | null = null;
 
 async function load(): Promise<void> {
@@ -18,12 +19,12 @@ async function load(): Promise<void> {
     try {
         const res = await fetch('/assets/json/locales.json');
         const fullData = await res.json() as { language: string; translations: Record<string, string> };
-        currentLanguage = fullData.language || 'en';
+        currentLanguage = fullData.language || 'en-US';
         data = fullData.translations || fullData; // Support both old and new format
     } catch (e) {
         console.warn('Failed to load translations:', e);
         data = {};
-        currentLanguage = 'en';
+        currentLanguage = 'en-US';
     }
 }
 
@@ -70,8 +71,7 @@ export const translation = {
     },
 
     /**
-     * Get the current language code (e.g., 'en', 'de').
-     * @returns The language code
+     * Get the locale in BCP 47 format (e.g., 'en-US', 'de-DE', 'pt-BR').
      */
     getLanguage(): string {
         return currentLanguage;
