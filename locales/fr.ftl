@@ -52,11 +52,11 @@ completed = Terminé
 unread = Non lu
 book-label = { $count ->
     [one] Livre
-    [other] Livres
+   *[other] Livres
 }
 books-finished = { $count ->
     [one] Livre terminé
-    [other] Livres terminés
+   *[other] Livres terminés
 }
 unknown-book = Livre inconnu
 unknown-author = Auteur inconnu
@@ -87,7 +87,7 @@ page-number = Page { $count }
 last-read = Dernière lecture
 pages = { $count ->
     [one] { $count } page
-    [other] { $count } pages
+   *[other] { $count } pages
 }
 pages-label = Pages
 
@@ -123,11 +123,11 @@ reading-time = Temps de lecture
 pages-read = Pages lues
 units-days = { $count ->
     [one] { $count } jour
-    [other] { $count } jours
+   *[other] { $count } jours
 }
 units-sessions = { $count ->
     [one] { $count } session
-    [other] { $count } sessions
+   *[other] { $count } sessions
 }
 
 # -----------------------------------
@@ -147,7 +147,7 @@ banner-aspect-ratio = 2400 × 1260 — Horizontal 2:1
 best-month = Meilleur mois
 active-days = { $count ->
     [one] Jour actif
-    [other] Jours actifs
+   *[other] Jours actifs
 }
 hide = Masquer
 show = Afficher
@@ -221,13 +221,13 @@ last = Dernier
 # Time unit labels
 days_label = { $count ->
     [one] jour
-    [other] jours
+   *[other] jours
 }
 hours_label = { $count ->
     [one] heure
-    [other] heures
+   *[other] heures
 }
 minutes_label = { $count ->
     [one] minute
-    [other] minutes
+   *[other] minutes
 }

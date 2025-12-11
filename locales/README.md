@@ -89,17 +89,46 @@ loading = Loading...
 ```
 
 ### Pluralization
+KoShelf supports the full set of [Unicode CLDR plural categories](http://cldr.unicode.org/index/cldr-spec/plural-rules): `zero`, `one`, `two`, `few`, `many`, and `other`.
+
 ```ftl
 book-label = { $count ->
     [one] Book
-    [other] Books
+   *[other] Books
+}
+
+items-found = { $count ->
+    [zero] No items found
+    [one] One item found
+    [few] A few items found
+   *[other] { $count } items found
 }
 ```
 
+**Important**: The categories (`zero`, `one`, `two`, `few`, `many`, `other`) follow strict [CLDR Plural Rules](https://cldr.unicode.org/index/cldr-spec/plural-rules) for each language. 
+- You do NOT need to define all categories. Only define those used by your language.
+- `[zero]` refers to the *grammatical* category "zero" (present in languages like Latvian or Arabic), NOT necessarily the number 0. 
+- In many languages (like English), the number 0 falls into `[other]` or `[one]`, so you would handle it there.
+- The `*` prefix marks the **default variant** (e.g., `*[other]`). You **MUST** have exactly one default variant per plural block. It is standard practice to attach this to the `[other]` category, as that catches everything not covered by specific rules.
+
 ### Variables
+KoShelf's parser allows variables, but with strict limitations for pluralized/numeric strings:
+- **Only `$count` is supported** for automatic number formatting.
+- **Strict formatting**: You must use `{$count}` or `{ $count }`.
+
 ```ftl
 page-number = Page { $count }
 yearly-summary = Yearly Summary { $count }
+```
+
+### Multiline Messages
+Long messages can be split across multiple lines. Continuation lines **must be indented**:
+
+```ftl
+introduction =
+    Welcome to KoShelf!
+    This is a long message that spans
+    multiple lines.
 ```
 
 ## Testing
