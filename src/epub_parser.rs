@@ -380,7 +380,10 @@ impl EpubParser {
         let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
 
         Builder::new()
-            .tags(vec!["b", "i", "em", "strong", "p", "br"].into_iter().collect::<HashSet<_>>())
+            .tags(vec![
+                "b", "i", "em", "strong", "p", "br",
+                "ul", "ol", "li", "blockquote", "a"
+            ].into_iter().collect::<HashSet<_>>())
             .clean(&decoded)
             .to_string()
     }
