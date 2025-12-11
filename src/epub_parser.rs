@@ -5,6 +5,8 @@ use std::io::Read;
 use zip::ZipArchive;
 use std::fs::File;
 use log::{debug, warn};
+use std::collections::{HashMap, HashSet};
+use ammonia::Builder;
 
 pub struct EpubParser;
 
@@ -114,8 +116,6 @@ impl EpubParser {
     fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
         use quick_xml::Reader;
         use quick_xml::events::Event;
-        use std::collections::{HashMap, HashSet};
-        use ammonia::Builder;
 
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
@@ -156,17 +156,7 @@ impl EpubParser {
                             b"description" => {
                                 match reader.read_text(e.name()) {
                                     Ok(raw_text) => {
-                                        let decoded = raw_text
-                                            .replace("&lt;", "<")
-                                            .replace("&gt;", ">")
-                                            .replace("&amp;", "&")
-                                            .replace("&quot;", "\"")
-                                            .replace("&apos;", "'");
-
-                                        let cleaned = Builder::new()
-                                            .tags(vec!["b", "i", "em", "strong", "p", "br"].into_iter().collect::<HashSet<_>>())
-                                            .clean(&decoded)
-                                            .to_string();
+                                        let cleaned = Self::clean_html(&raw_text);
 
                                         let trimmed = cleaned.trim();
                                         if !trimmed.is_empty() {
@@ -382,5 +372,20 @@ impl EpubParser {
             buf.clear();
         }
         Ok((None, None))
+    }
+    
+    fn clean_html(input: &str) -> String {
+        // Manually unescape XML entities so that ammonia sees actual HTML tags
+        let decoded = input
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&")
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'");
+
+        Builder::new()
+            .tags(vec!["b", "i", "em", "strong", "p", "br"].into_iter().collect::<HashSet<_>>())
+            .clean(&decoded)
+            .to_string()
     }
 }
