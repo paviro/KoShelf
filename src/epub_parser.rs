@@ -9,6 +9,8 @@ use std::collections::{HashMap, HashSet};
 use ammonia::Builder;
 use quick_xml::Reader;
 use quick_xml::events::Event;
+use quick_xml::escape::unescape;
+use std::borrow::Cow;
 
 pub struct EpubParser;
 
@@ -98,7 +100,7 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"full-path" {
-                                return Ok(String::from_utf8_lossy(&attr.value).to_string());
+                                return Ok(attr.unescape_value()?.into_owned());
                             }
                         }
                     }
@@ -175,7 +177,7 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     if key == b"opf:scheme" || key == b"scheme" {
-                                        scheme = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                        scheme = Some(attr.unescape_value()?.into_owned());
                                     }
                                 }
                                 if let Ok(text_content) = reader.read_text(e.name()) {
@@ -211,11 +213,11 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     match key {
-                                        b"property" => property = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"id" => id = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"refines" => refines = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"property" => property = Some(attr.unescape_value()?.into_owned()),
+                                        b"id" => id = Some(attr.unescape_value()?.into_owned()),
+                                        b"refines" => refines = Some(attr.unescape_value()?.into_owned()),
+                                        b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
+                                        b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
                                         _ => {}
                                     }
                                 }
@@ -251,8 +253,8 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             match key {
-                                b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
+                                b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
                                 _ => {}
                             }
                         }
@@ -332,13 +334,13 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"id" {
-                                id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                id = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"href" {
-                                href = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                href = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"media-type" {
-                                media_type = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                media_type = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"properties" {
-                                properties = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                properties = Some(attr.unescape_value()?.into_owned());
                             }
                         }
                         
@@ -368,13 +370,8 @@ impl EpubParser {
     }
     
     fn clean_html(input: &str) -> String {
-        // Manually unescape XML entities so that ammonia sees actual HTML tags
-        let decoded = input
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'");
+        // Unescape XML entities so that ammonia sees actual HTML tags
+        let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
 
         Builder::new()
             .tags(vec!["b", "i", "em", "strong", "p", "br"].into_iter().collect::<HashSet<_>>())
