@@ -144,11 +144,13 @@ impl EpubParser {
                     } else if in_metadata {
                         match local_name.as_ref() {
                             b"title" => {
-                                title = reader.read_text(e.name()).ok().map(|s| s.to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    title = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                }
                             }
                             b"creator" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    authors.push(text_content.to_string());
+                                    authors.push(unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
                                 }
                             }
                             b"description" => {
@@ -167,10 +169,14 @@ impl EpubParser {
                                 }
                             }
                             b"publisher" => {
-                                publisher = reader.read_text(e.name()).ok().map(|s| s.to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    publisher = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                }
                             }
                             b"language" => {
-                                language = reader.read_text(e.name()).ok().map(|s| s.to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    language = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                }
                             }
                             b"identifier" => {
                                 let mut scheme = None;
@@ -181,7 +187,7 @@ impl EpubParser {
                                     }
                                 }
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let value = text_content.to_string();
+                                    let value = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
                                     let (final_scheme, final_value) = if let Some(s) = scheme {
                                         (s, value.clone())
                                     } else if let Some(colon_pos) = value.find(':') {
@@ -196,7 +202,7 @@ impl EpubParser {
                             }
                             b"subject" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let subject = text_content.to_string();
+                                    let subject = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
                                     if !subject.is_empty() {
                                         subjects.push(subject);
                                     }
@@ -231,12 +237,12 @@ impl EpubParser {
                                 if let Some(prop) = property {
                                     if prop == "belongs-to-collection" {
                                         if let (Ok(text_content), Some(i)) = (reader.read_text(e.name()), id) {
-                                            epub3_collections.insert(i, text_content.to_string());
+                                            epub3_collections.insert(i, unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
                                         }
                                     } else if prop == "group-position" {
                                         if let (Ok(text_content), Some(r)) = (reader.read_text(e.name()), refines) {
                                             let clean_refines = r.trim_start_matches('#');
-                                            epub3_indices.insert(clean_refines.to_string(), text_content.to_string());
+                                            epub3_indices.insert(clean_refines.to_string(), unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
                                         }
                                     }
                                 }
