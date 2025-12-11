@@ -7,6 +7,8 @@ use std::fs::File;
 use log::{debug, warn};
 use std::collections::{HashMap, HashSet};
 use ammonia::Builder;
+use quick_xml::Reader;
+use quick_xml::events::Event;
 
 pub struct EpubParser;
 
@@ -50,7 +52,6 @@ impl EpubParser {
 
        // Step 4.5: Resolve cover path relative to OPF directory
        let resolved_cover_path = if let Some(ref cover_path) = cover_path {
-           use std::path::Path;
            let opf_parent = Path::new(&opf_path).parent();
            let joined = if let Some(parent) = opf_parent {
                parent.join(cover_path)
@@ -87,8 +88,6 @@ impl EpubParser {
     }
 
     fn find_opf_path(container_xml: &str) -> Result<String> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
         let mut reader = Reader::from_str(container_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -114,9 +113,6 @@ impl EpubParser {
     }
 
     fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
-
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -320,9 +316,6 @@ impl EpubParser {
     }
 
     fn find_cover_path(opf_xml: &str, cover_id: &Option<String>) -> Result<(Option<String>, Option<String>)> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
-        
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
