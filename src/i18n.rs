@@ -1,13 +1,19 @@
 //! Internationalization (i18n) module using Fluent-flavored translations.
 //! Supports a subset of Fluent syntax: simple messages and plural selectors.
+//! 
+//! Locale hierarchy (from highest to lowest priority):
+//! 1. Regional variant (e.g., `de_AT.ftl`) - only contains overrides
+//! 2. Base language (e.g., `de.ftl`) - contains all keys for the language
+//! 3. English fallback (`en.ftl`) - used for any missing keys
 
 use anyhow::Result;
 use std::collections::HashMap;
+use std::str::FromStr;
 
-/// Embedded translation files
-const EN_FTL: &str = include_str!("../locales/en.ftl");
-const DE_FTL: &str = include_str!("../locales/de.ftl");
-const PT_BR_FTL: &str = include_str!("../locales/pt_BR.ftl");
+use include_dir::{include_dir, Dir};
+
+/// Embedded locales directory
+static LOCALES: Dir = include_dir!("$CARGO_MANIFEST_DIR/locales");
 
 #[derive(Debug, Clone)]
 enum TranslationValue {
@@ -28,47 +34,104 @@ impl TranslationValue {
 }
 
 /// Translations wrapper for key-value lookups with pluralization and fallback support.
+/// 
+/// Supports a three-tier fallback hierarchy:
+/// 1. Regional variant (e.g., `de_AT`) - sparse, only overrides
+/// 2. Base language (e.g., `de`) - complete translation for the language
+/// 3. English (`en`) - final fallback for any missing keys
 pub struct Translations {
-    /// Current language code (e.g., "en", "de")
+    /// The requested language code, preserved for chrono locale (e.g., "en_US", "de_DE")
     language: String,
-    /// Current language translations
+    /// Merged translations (regional overrides + base language)
     translations: HashMap<String, TranslationValue>,
-    /// Fallback (English) translations for non-English languages
+    /// English fallback translations
     fallback: HashMap<String, TranslationValue>,
 }
 
 impl Translations {
     /// Load translations for the specified language.
-    /// Falls back to English for missing keys.
+    /// 
+    /// Accepts locale codes in various formats:
+    /// - Full POSIX format: `en_US`, `de_DE`
+    /// - Hyphenated format: `en-US`, `de-DE`
+    /// 
+    /// A full locale code (language + region) is required for proper date formatting.
+    /// 
+    /// Loading hierarchy:
+    /// - If `de_AT` is requested: loads `de_AT.ftl` (if exists) merged over `de.ftl`
+    /// - If `de_DE` is requested: loads `de_DE.ftl` (if exists) merged over `de.ftl`
+    /// - Always falls back to `en.ftl` for missing keys (unless language is English)
+    /// 
+    /// # Panics
+    /// Panics if only a language code is provided without a region (e.g., `de` instead of `de_DE`).
     pub fn load(language: &str) -> Result<Self> {
-        let ftl_string = match language {
-            "de" => DE_FTL,
-            "pt-br" | "pt_br" => PT_BR_FTL,
-            _ => EN_FTL,
-        };
-
-        let translations = parse_ftl(ftl_string)?;
-
-        let fallback = if language != "en" {
-            parse_ftl(EN_FTL)?
+        let normalized = normalize_locale(language);
+        
+        // Require full locale code (language + region)
+        if !normalized.contains('_') {
+            panic!(
+                "Invalid locale '{}': a full locale code is required (e.g., 'de_DE', 'en_US', 'pt_BR'). \
+                 Just the language code '{}' is not sufficient for proper date formatting.",
+                language,
+                normalized
+            );
+        }
+        
+        // Extract language and region
+        let parts: Vec<&str> = normalized.split('_').collect();
+        let lang_code = parts[0].to_string();
+        let region_code = parts[1..].join("_");
+        
+        // Load English fallback first (unless we're loading English)
+        let fallback = if lang_code != "en" {
+            let en_file = LOCALES.get_file("en.ftl").expect("en.ftl must exist");
+            parse_ftl(en_file.contents_utf8().unwrap_or(""))?
         } else {
             HashMap::new()
         };
-
+        
+        // Load base language file
+        let base_filename = format!("{}.ftl", lang_code);
+        let base_translations = if let Some(file) = LOCALES.get_file(&base_filename) {
+            parse_ftl(file.contents_utf8().unwrap_or(""))?
+        } else if lang_code != "en" {
+            // Base language file doesn't exist, fall back to English
+            let en_file = LOCALES.get_file("en.ftl").expect("en.ftl must exist");
+            parse_ftl(en_file.contents_utf8().unwrap_or(""))?
+        } else {
+            HashMap::new()
+        };
+        
+        // Load regional variant if it exists
+        let regional_filename = format!("{}_{}.ftl", lang_code, region_code);
+        let final_translations = if let Some(file) = LOCALES.get_file(&regional_filename) {
+            // Merge: base first, then regional overrides
+            let regional = parse_ftl(file.contents_utf8().unwrap_or(""))?;
+            let mut merged = base_translations;
+            merged.extend(regional);
+            merged
+        } else {
+            // Regional file doesn't exist, use base language translations
+            base_translations
+        };
+        
+        // Preserve the requested language code for chrono locale purposes
+        // e.g., if user requests "de_DE", keep "de_DE" even if only "de.ftl" exists
         Ok(Self {
-            language: language.to_string(),
-            translations,
+            language: normalized,
+            translations: final_translations,
             fallback,
         })
     }
 
     /// Generate a JSON string compatible with the frontend logic.
     /// Flattens plurals into `key_one` and `key_other`.
-    /// Returns a JSON object with format: { "language": "en", "translations": { "key": "value", ... } }
+    /// Returns a JSON object with format: { "language": "de-AT", "translations": { "key": "value", ... } }
+    /// Note: The language field uses BCP 47 format (hyphenated) for JavaScript Intl API compatibility.
     pub fn to_json_string(&self) -> String {
         let mut flat_translations_map = HashMap::new();
         
-        // Helper to insert into map with fallback
+        // Helper to insert into map
         let mut insert_entries = |entries: &HashMap<String, TranslationValue>| {
             for (key, value) in entries {
                 match value {
@@ -87,9 +150,10 @@ impl Translations {
         insert_entries(&self.fallback);
         insert_entries(&self.translations);
         
-        // Create wrapper JSON with language field
+        // Create wrapper JSON with language field (convert to BCP 47 format for JS Intl APIs)
+        let bcp47_language = self.language.replace('_', "-");
         let output = serde_json::json!({
-            "language": self.language,
+            "language": bcp47_language,
             "translations": flat_translations_map
         });
         
@@ -141,13 +205,45 @@ impl Translations {
             .or_else(|| self.fallback.get(key))
     }
     
-    /// Get the chrono Locale for this translation language
+    /// Get the chrono Locale for this translation language.
+    /// Requires a full locale code (e.g., `de_DE`, `en_US`) for proper date formatting.
+    /// Falls back to `en_US` if the locale code is not recognized by chrono.
     pub fn locale(&self) -> chrono::Locale {
-        match self.language.as_str() {
-            "de" => chrono::Locale::de_DE,
-            "pt-br" | "pt_br" => chrono::Locale::pt_BR,
-            "en" => chrono::Locale::en_US,
-            _ => chrono::Locale::en_US, // Default to English for unknown languages
+        chrono::Locale::from_str(&self.language).unwrap_or(chrono::Locale::en_US)
+    }
+}
+
+/// Normalize a locale string to POSIX format (ll_CC).
+/// Handles various input formats:
+/// - `pt-br` → `pt_BR`
+/// - `pt-BR` → `pt_BR`
+/// - `pt_br` → `pt_BR`
+/// - `de-DE` → `de_DE`
+fn normalize_locale(locale: &str) -> String {
+    // Replace hyphens with underscores
+    let with_underscore = locale.replace('-', "_");
+    
+    // Split into parts
+    let parts: Vec<&str> = with_underscore.split('_').collect();
+    
+    match parts.len() {
+        1 => {
+            // Just language code, return lowercase
+            parts[0].to_lowercase()
+        }
+        2 => {
+            // Language and region: lowercase language, uppercase region
+            format!("{}_{}", parts[0].to_lowercase(), parts[1].to_uppercase())
+        }
+        _ => {
+            // More complex locale (e.g., with script), join with underscores
+            // First part lowercase, rest uppercase
+            let mut result = parts[0].to_lowercase();
+            for part in &parts[1..] {
+                result.push('_');
+                result.push_str(&part.to_uppercase());
+            }
+            result
         }
     }
 }
@@ -271,21 +367,117 @@ simple = Simple { $count }
     
     #[test]
     fn test_load_english() {
-        let t = Translations::load("en").unwrap();
+        let t = Translations::load("en_US").unwrap();
+        assert_eq!(t.language, "en_US");
         assert_eq!(t.get("books"), "Books");
     }
 
     #[test]
+    fn test_load_german() {
+        let t = Translations::load("de_DE").unwrap();
+        assert_eq!(t.language, "de_DE");
+        assert_eq!(t.get("books"), "Bücher");
+    }
+    
+    #[test]
+    #[should_panic(expected = "Invalid locale")]
+    fn test_reject_bare_language_code() {
+        // Bare language codes should be rejected
+        let _ = Translations::load("de");
+    }
+
+    #[test]
     fn test_plural_lookup() {
-        let t = Translations::load("en").unwrap();
+        let t = Translations::load("en_US").unwrap();
         assert_eq!(t.get_with_num("pages", 1), "1 page");
         assert_eq!(t.get_with_num("pages", 5), "5 pages");
     }
     
     #[test]
     fn test_book_count_lookup() {
-        let t = Translations::load("en").unwrap();
+        let t = Translations::load("en_US").unwrap();
         assert!(t.get_with_num("book-label", 1).contains("Book"));
         assert!(t.get_with_num("book-label", 2).contains("Books"));
+    }
+    
+    #[test]
+    fn test_normalize_locale() {
+        assert_eq!(normalize_locale("pt-br"), "pt_BR");
+        assert_eq!(normalize_locale("pt-BR"), "pt_BR");
+        assert_eq!(normalize_locale("pt_br"), "pt_BR");
+        assert_eq!(normalize_locale("PT_BR"), "pt_BR");
+        assert_eq!(normalize_locale("en-US"), "en_US");
+        assert_eq!(normalize_locale("EN-us"), "en_US");
+        // All German locale variants should normalize correctly
+        assert_eq!(normalize_locale("de-DE"), "de_DE");
+        assert_eq!(normalize_locale("de-de"), "de_DE");
+        assert_eq!(normalize_locale("de_DE"), "de_DE");
+        assert_eq!(normalize_locale("de_de"), "de_DE");
+        assert_eq!(normalize_locale("DE_DE"), "de_DE");
+        assert_eq!(normalize_locale("de-AT"), "de_AT");
+        assert_eq!(normalize_locale("de_AT"), "de_AT");
+    }
+    
+    #[test]
+    fn test_locale_chrono() {
+        // Full locale codes work with chrono even if only base translation file exists
+        let t = Translations::load("de_DE").unwrap();
+        assert_eq!(t.language, "de_DE");
+        assert_eq!(t.locale(), chrono::Locale::de_DE);
+        
+        let t = Translations::load("en_US").unwrap();
+        assert_eq!(t.language, "en_US");
+        assert_eq!(t.locale(), chrono::Locale::en_US);
+        
+        // Unknown locale falls back to en_US for chrono
+        let t = Translations::load("xx_YY").unwrap();
+        assert_eq!(t.locale(), chrono::Locale::en_US);
+    }
+    
+    #[test]
+    fn test_load_with_hyphenated_locale() {
+        // Should work with hyphenated format, preserving full locale
+        let t = Translations::load("de-DE").unwrap();
+        assert_eq!(t.language, "de_DE"); // Normalized and preserved
+        // Translations come from de.ftl (base), but locale is de_DE
+        assert_eq!(t.get("books"), "Bücher");
+    }
+    
+    #[test]
+    fn test_fallback_to_english() {
+        // Unknown locale - requested language is preserved, translations come from English
+        let t = Translations::load("xx_YY").unwrap();
+        assert_eq!(t.language, "xx_YY");
+        // But translations come from English fallback
+        assert_eq!(t.get("books"), "Books");
+    }
+    
+    #[test]
+    fn test_json_output_uses_bcp47() {
+        let t = Translations::load("de_DE").unwrap();
+        let json = t.to_json_string();
+        // Should contain hyphenated language code
+        assert!(json.contains("\"language\": \"de-DE\""));
+        
+        let t = Translations::load("de_AT").unwrap();
+        let json = t.to_json_string();
+        assert!(json.contains("\"language\": \"de-AT\""));
+    }
+    
+    #[test]
+    fn test_regional_variant_falls_back_to_base_language() {
+        // de_AT should fall back to de.ftl (base German), NOT de_DE.ftl
+        // This is important: the fallback chain is:
+        //   de_AT.ftl (if exists) → de.ftl → en.ftl
+        // NOT:
+        //   de_AT.ftl → de_DE.ftl → de.ftl → en.ftl
+        let t = Translations::load("de_AT").unwrap();
+        assert_eq!(t.language, "de_AT");
+        
+        // Should get German translations from de.ftl (base)
+        assert_eq!(t.get("books"), "Bücher");
+        
+        // Verify chrono locale works for Austrian German
+        assert_eq!(t.locale(), chrono::Locale::de_AT);
     }
 }
