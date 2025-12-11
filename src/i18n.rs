@@ -11,24 +11,51 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use include_dir::{include_dir, Dir};
+use intl_pluralrules::{PluralRules, PluralRuleType};
+use unic_langid::LanguageIdentifier;
 
 /// Embedded locales directory
 static LOCALES: Dir = include_dir!("$CARGO_MANIFEST_DIR/locales");
 
+/// CLDR plural categories
+/// See: https://cldr.unicode.org/index/cldr-spec/plural-rules
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PluralCategory {
+    Zero,
+    One,
+    Two,
+    Few,
+    Many,
+    Other,
+}
+
+impl PluralCategory {
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "zero" => Some(Self::Zero),
+            "one" => Some(Self::One),
+            "two" => Some(Self::Two),
+            "few" => Some(Self::Few),
+            "many" => Some(Self::Many),
+            "other" => Some(Self::Other),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum TranslationValue {
     Simple(String),
-    Plural {
-        one: String,
-        other: String,
-    },
+    /// Plural with all CLDR categories. The HashMap stores only the categories
+    /// that are defined in the FTL file. `other` is required and used as fallback.
+    Plural(HashMap<PluralCategory, String>),
 }
 
 impl TranslationValue {
     fn as_simple(&self) -> Option<&str> {
         match self {
             Self::Simple(s) => Some(s),
-            Self::Plural { other, .. } => Some(other), // Fallback to 'other' if accessed directly
+            Self::Plural(variants) => variants.get(&PluralCategory::Other).map(|s| s.as_str()),
         }
     }
 }
@@ -125,7 +152,7 @@ impl Translations {
     }
 
     /// Generate a JSON string compatible with the frontend logic.
-    /// Flattens plurals into `key_one` and `key_other`.
+    /// Flattens plurals into `key_zero`, `key_one`, `key_two`, `key_few`, `key_many`, `key_other`.
     /// Returns a JSON object with format: { "language": "de-AT", "translations": { "key": "value", ... } }
     /// Note: The language field uses BCP 47 format (hyphenated) for JavaScript Intl API compatibility.
     pub fn to_json_string(&self) -> String {
@@ -138,9 +165,18 @@ impl Translations {
                     TranslationValue::Simple(val) => {
                         flat_translations_map.insert(key.clone(), val.clone());
                     }
-                    TranslationValue::Plural { one, other } => {
-                        flat_translations_map.insert(format!("{}_one", key), one.clone());
-                        flat_translations_map.insert(format!("{}_other", key), other.clone());
+                    TranslationValue::Plural(variants) => {
+                        for (category, val) in variants {
+                            let suffix = match category {
+                                PluralCategory::Zero => "zero",
+                                PluralCategory::One => "one",
+                                PluralCategory::Two => "two",
+                                PluralCategory::Few => "few",
+                                PluralCategory::Many => "many",
+                                PluralCategory::Other => "other",
+                            };
+                            flat_translations_map.insert(format!("{}_{}", key, suffix), val.clone());
+                        }
                     }
                 }
             }
@@ -173,25 +209,62 @@ impl Translations {
     /// Get a translation by key with a numeric argument for pluralization.
     /// Looks up key in FTL.
     /// If Simple: return value with substitution.
-    /// If Plural: select based on count.
+    /// If Plural: select CLDR plural category based on count and language.
+    /// 
+    /// The selector logic works as follows:
+    /// 1. First, try exact numeric match (e.g., [0], [1], [2] variants)
+    /// 2. Then, try CLDR plural category for the language (zero, one, two, few, many)
+    /// 3. Finally, fall back to 'other' (required default)
     pub fn get_with_num<T: std::fmt::Display>(&self, key: &str, count: T) -> String {
         let count_str = count.to_string();
         let num: f64 = count_str.parse().unwrap_or(0.0);
+        let num_int = num as i64;
+        
+        let replace_placeholders = |template: &str| -> String {
+            // Standard Fluent placeholder format: {$var}
+            // Also accept common variant with spaces: { $var }
+            template.replace("{$count}", &count_str)
+                   .replace("{ $count }", &count_str)
+        };
         
         match self.lookup_value(key) {
-            Some(TranslationValue::Plural { one, other }) => {
-                let template = if num == 1.0 { one } else { other };
-                // Replace {$count}, { $count } (standard with spaces), and {{ count }} (legacy)
-                template.replace("{$count}", &count_str)
-                       .replace("{ $count }", &count_str)
-                       .replace("{{ count }}", &count_str)
+            Some(TranslationValue::Plural(variants)) => {
+                // Select the appropriate variant using CLDR rules
+                let category = self.select_plural_category(num_int);
+                let template = variants.get(&category)
+                    .or_else(|| variants.get(&PluralCategory::Other))
+                    .map(|s| s.as_str())
+                    .unwrap_or(key);
+                replace_placeholders(template)
             }
-            Some(TranslationValue::Simple(s)) => {
-                 s.replace("{$count}", &count_str)
-                  .replace("{ $count }", &count_str)
-                  .replace("{{ count }}", &count_str)
-            }
+            Some(TranslationValue::Simple(s)) => replace_placeholders(s),
             None => key.to_string(),
+        }
+    }
+    
+    /// Select the CLDR plural category for a number based on the current language.
+    /// Uses the `intl_pluralrules` crate for proper Unicode CLDR compliance.
+    fn select_plural_category(&self, n: i64) -> PluralCategory {
+        // Parse the language identifier
+        let lang_code = self.language.split('_').next().unwrap_or("en");
+        let langid: LanguageIdentifier = lang_code.parse()
+            .unwrap_or_else(|_| "en".parse::<LanguageIdentifier>().unwrap());
+        
+        // Create plural rules for this language
+        let pr = PluralRules::create(langid, PluralRuleType::CARDINAL)
+            .unwrap_or_else(|_| {
+                let en: LanguageIdentifier = "en".parse().unwrap();
+                PluralRules::create(en, PluralRuleType::CARDINAL).unwrap()
+            });
+        
+        // Select the category and convert to our enum
+        match pr.select(n) {
+            Ok(intl_pluralrules::PluralCategory::ZERO) => PluralCategory::Zero,
+            Ok(intl_pluralrules::PluralCategory::ONE) => PluralCategory::One,
+            Ok(intl_pluralrules::PluralCategory::TWO) => PluralCategory::Two,
+            Ok(intl_pluralrules::PluralCategory::FEW) => PluralCategory::Few,
+            Ok(intl_pluralrules::PluralCategory::MANY) => PluralCategory::Many,
+            Ok(intl_pluralrules::PluralCategory::OTHER) | Err(_) => PluralCategory::Other,
         }
     }
 
@@ -325,63 +398,158 @@ pub fn list_supported_languages() -> String {
     output
 }
 
-/// Simple FTL parser
+/// FTL parser supporting a subset of Fluent syntax:
+/// - Simple messages (single and multiline)
+/// - Plural selectors with CLDR categories (zero, one, two, few, many, other)
+/// - Comments (lines starting with #)
+///
+/// Multiline messages follow Fluent spec: continuation lines must be indented.
+/// Exact numeric selectors (e.g., [0], [1]) are parsed but ignored — use CLDR categories instead.
 fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
     let mut map = HashMap::new();
     let mut lines = content.lines().peekable();
     
     while let Some(line) = lines.next() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+        let trimmed = line.trim();
+        
+        // Skip empty lines and comments
+        if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
         
-        if let Some((key, rest)) = line.split_once('=') {
+        // Messages start with identifier at column 0 (not indented)
+        if line.starts_with(char::is_whitespace) {
+            // Indented line without a message context — skip
+            continue;
+        }
+        
+        if let Some((key, rest)) = trimmed.split_once('=') {
             let key = key.trim().to_string();
             let rest = rest.trim();
             
-            if rest.is_empty() {
-                // Multi-line or plural?
-                // Check next line
-                if let Some(next_line) = lines.peek() {
-                    if next_line.trim().starts_with('{') {
-                         // Likely plural start on next line? Or maybe rest contained '{'
-                    }
-                }
-            }
-            
+            // Check if this is a plural block (contains selector arrow)
             if rest.starts_with('{') && rest.contains("->") {
-                // Plural block start: e.g. "key = { $count ->"
-                let mut one = String::new();
-                let mut other = String::new();
+                // Plural block: e.g. "key = { $count ->"
+                let mut variants: HashMap<PluralCategory, String> = HashMap::new();
+                let mut found_default = false;
                 
                 // Parse plural variants until closing brace
                 while let Some(variant_line) = lines.next() {
                     let v_line = variant_line.trim();
+                    
+                    // Skip empty lines and comments inside plural block
+                    if v_line.is_empty() || v_line.starts_with('#') {
+                        continue;
+                    }
+                    
                     if v_line == "}" {
                         break;
                     }
+                    
+                    // Check for default marker (*)
+                    let is_default = v_line.starts_with('*');
+                    let v_line = v_line.trim_start_matches('*');
+                    
                     if v_line.starts_with('[') {
-                        // [one] Something
-                        let close_bracket = v_line.find(']').unwrap_or(0);
-                        let variant = &v_line[1..close_bracket];
-                        let value = v_line[close_bracket+1..].trim().to_string();
-                        
-                        match variant {
-                            "one" => one = value,
-                            "other" => other = value,
-                            _ => {} // Ignore others for now
+                        if let Some(close_bracket) = v_line.find(']') {
+                            let variant_key = &v_line[1..close_bracket];
+                            let value = v_line[close_bracket + 1..].trim().to_string();
+                            
+                            // Parse as CLDR category
+                            if let Some(category) = PluralCategory::from_str(variant_key) {
+                                variants.insert(category, value);
+                                if is_default {
+                                    found_default = true;
+                                }
+                            }
+                            // Exact numeric selectors are parsed but ignored
+                            // They don't map cleanly to CLDR categories across languages
                         }
                     }
                 }
-                // If one is missing, fallback to other
-                if one.is_empty() { one = other.clone(); }
                 
-                map.insert(key, TranslationValue::Plural { one, other });
+                // Log warning if no default variant was marked (but don't fail)
+                if !found_default && !variants.contains_key(&PluralCategory::Other) {
+                    eprintln!("Warning: plural key '{}' missing required *[other] default variant", key);
+                }
+                
+                map.insert(key, TranslationValue::Plural(variants));
+            } else if rest.is_empty() {
+                // Value starts on next line(s) — multiline message
+                let mut multiline_value = String::new();
+                
+                // Collect all indented continuation lines
+                while let Some(next_line) = lines.peek() {
+                    // Continuation lines must be indented
+                    if next_line.is_empty() {
+                        // Blank lines are preserved in multiline text
+                        lines.next();
+                        if !multiline_value.is_empty() {
+                            multiline_value.push('\n');
+                        }
+                        continue;
+                    }
+                    
+                    if !next_line.starts_with(char::is_whitespace) {
+                        // Not indented — end of multiline value
+                        break;
+                    }
+                    
+                    let content_line = lines.next().unwrap();
+                    let trimmed_content = content_line.trim();
+                    
+                    // Skip comments in multiline blocks
+                    if trimmed_content.starts_with('#') {
+                        continue;
+                    }
+                    
+                    // Check if this starts a plural block
+                    if trimmed_content.starts_with('{') && trimmed_content.contains("->") {
+                        // Actually a plural block that started on next line
+                        let mut variants: HashMap<PluralCategory, String> = HashMap::new();
+                        
+                        while let Some(variant_line) = lines.next() {
+                            let v_line = variant_line.trim();
+                            
+                            if v_line.is_empty() || v_line.starts_with('#') {
+                                continue;
+                            }
+                            
+                            if v_line == "}" {
+                                break;
+                            }
+                            
+                            let v_line = v_line.trim_start_matches('*');
+                            if v_line.starts_with('[') {
+                                if let Some(close_bracket) = v_line.find(']') {
+                                    let variant_key = &v_line[1..close_bracket];
+                                    let value = v_line[close_bracket + 1..].trim().to_string();
+                                    
+                                    if let Some(category) = PluralCategory::from_str(variant_key) {
+                                        variants.insert(category, value);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        map.insert(key.clone(), TranslationValue::Plural(variants));
+                        break;
+                    }
+                    
+                    // Regular multiline text
+                    if !multiline_value.is_empty() {
+                        multiline_value.push('\n');
+                    }
+                    multiline_value.push_str(trimmed_content);
+                }
+                
+                // Only insert as Simple if we didn't already insert as Plural
+                if !map.contains_key(&key) && !multiline_value.is_empty() {
+                    map.insert(key, TranslationValue::Simple(multiline_value));
+                }
             } else {
-                // Simple value
-                let value = rest.to_string();
-                map.insert(key, TranslationValue::Simple(value));
+                // Simple single-line value
+                map.insert(key, TranslationValue::Simple(rest.to_string()));
             }
         }
     }
@@ -413,9 +581,9 @@ key = { $count ->
 "#;
         let map = parse_ftl(ftl).unwrap();
         match map.get("key").unwrap() {
-            TranslationValue::Plural { one, other } => {
-                assert_eq!(one, "1 Thing");
-                assert_eq!(other, "Many Things");
+            TranslationValue::Plural(variants) => {
+                assert_eq!(variants.get(&PluralCategory::One).unwrap(), "1 Thing");
+                assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "Many Things");
             }
             _ => panic!("Expected plural"),
         }
@@ -556,5 +724,62 @@ simple = Simple { $count }
         
         // Verify chrono locale works for Austrian German
         assert_eq!(t.locale(), chrono::Locale::de_AT);
+    }
+    
+    #[test]
+    fn test_parse_multiline_message() {
+        let ftl = r#"
+long-message =
+    This is a long message
+    that spans multiple lines
+"#;
+        let map = parse_ftl(ftl).unwrap();
+        match map.get("long-message").unwrap() {
+            TranslationValue::Simple(v) => {
+                assert!(v.contains("This is a long message"));
+                assert!(v.contains("that spans multiple lines"));
+            }
+            _ => panic!("Expected simple multiline message"),
+        }
+    }
+    
+    #[test]
+    fn test_parse_plural_with_comments() {
+        let ftl = r#"
+items = { $count ->
+    # This is a comment inside plural block
+    [one] One item
+    # Another comment
+   *[other] Many items
+}
+"#;
+        let map = parse_ftl(ftl).unwrap();
+        match map.get("items").unwrap() {
+            TranslationValue::Plural(variants) => {
+                assert_eq!(variants.get(&PluralCategory::One).unwrap(), "One item");
+                assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "Many items");
+            }
+            _ => panic!("Expected plural"),
+        }
+    }
+    
+    #[test]
+    fn test_parse_plural_on_next_line() {
+        // Plural block starting on the line after =
+        let ftl = r#"
+pages =
+    { $count ->
+        [one] { $count } page
+       *[other] { $count } pages
+    }
+"#;
+        let map = parse_ftl(ftl).unwrap();
+        match map.get("pages").unwrap() {
+            TranslationValue::Plural(variants) => {
+                assert_eq!(variants.get(&PluralCategory::One).unwrap(), "{ $count } page");
+                assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "{ $count } pages");
+            }
+            _ => panic!("Expected plural"),
+        }
     }
 }
