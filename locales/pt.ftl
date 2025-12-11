@@ -1,3 +1,16 @@
+# ===========================================
+#      Portuguese (pt) — Base Language File
+# ===========================================
+# This is the base translation file for Portuguese, using Brazilian Portuguese (pt_BR).
+# Regional variants (e.g., pt_PT.ftl) should only override keys that differ.
+#
+# LOCALE HIERARCHY:
+#   1. Regional variant (e.g., pt_PT.ftl) — sparse, only differences
+#   2. Base language (this file) — complete translations
+#   3. English fallback (en.ftl) — ultimate fallback for all languages
+#
+# NEW KEYS: Always add new translation keys to en.ftl first, then other bases.
+
 # -----------------------------------
 #           Navegação & Compartilhado
 # -----------------------------------
