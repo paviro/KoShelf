@@ -31,4 +31,6 @@ pub struct SiteConfig {
     pub include_all_stats: bool,
     /// Whether running with internal web server (enables long-polling)
     pub is_internal_server: bool,
+    /// Language for UI translations (e.g., "en_US", "de_DE")
+    pub language: String,
 }

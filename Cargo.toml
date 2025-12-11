@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.4.6"
+version = "1.5.1"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
@@ -34,7 +34,7 @@ serde_json = "1.0"
 # Templating
 askama = "0.14.0"
 # Date/time
-chrono = { version = "0.4.41", features = ["serde", "std"] }
+chrono = { version = "0.4.41", features = ["serde", "std", "unstable-locales"] }
 # Logging
 log = "0.4.27"
 env_logger = "0.11.8"
@@ -55,12 +55,17 @@ chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"
 resvg = "0.45.1"
+include_dir = "0.7.4"
+intl_pluralrules = "7.0"
+unic-langid = "0.9"
 
 [build-dependencies]
 ureq = "3.1.4"
 
 [dev-dependencies]
 ureq = { version = "3.1.4", features = ["json"] }
+fluent-syntax = "0.11"
+rayon = "1.11.0"
 
 [profile.release]
 opt-level = 3

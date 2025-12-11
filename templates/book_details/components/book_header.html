@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-primary-400 to-primary-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Book Overview</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("book-overview") }}</h2>
         </div>
         
         <!-- Hide/Show Button -->
@@ -47,7 +47,7 @@
                             </div>
                             <div>
                                 <div class="text-lg font-bold text-gray-900 dark:text-white">{{ book.progress_percentage_display() }}%</div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Reading Progress</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("reading-progress") }}</div>
                             </div>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <div class="text-lg font-bold text-gray-900 dark:text-white">Completed</div>
+                                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ translation.get("completed") }}</div>
                                 <div class="text-sm text-gray-500 dark:text-dark-400">
                                     {% match book_stats %}
                                     {% when Some with (book_stat) %}
@@ -68,15 +68,15 @@
                                         {% when Some with (completions) %}
                                             {% match completions.last_completion_date %}
                                             {% when Some with (date) %}
-                                                Last: {{ date }}
+                                                {{ translation.get("last") }}: {{ date }}
                                             {% when None %}
-                                                Reading Progress
+                                                {{ translation.get("reading-progress") }}
                                             {% endmatch %}
                                         {% when None %}
-                                            Reading Progress
+                                            {{ translation.get("reading-progress") }}
                                         {% endmatch %}
                                     {% when None %}
-                                        Reading Progress
+                                        {{ translation.get("reading-progress") }}
                                     {% endmatch %}
                                 </div>
                             </div>
@@ -112,7 +112,7 @@
                                         ?
                                     {% endmatch %}
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Pages</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("pages-label") }}</div>
                             </div>
                         </div>
                     </div>
@@ -126,7 +126,7 @@
                             </div>
                             <div>
                                 <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ book.highlight_count() }}</div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Highlights</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("highlights") }}</div>
                             </div>
                         </div>
                     </div>
@@ -157,7 +157,7 @@
                                         0
                                     {% endmatch %}
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Notes</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("notes") }}</div>
                             </div>
                         </div>
                     </div>
@@ -178,7 +178,7 @@
                                         --
                                     {% endmatch %}
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">Language</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("language") }}</div>
                             </div>
                         </div>
                     </div>
@@ -194,7 +194,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
                         </div>
-                        Description
+                        {{ translation.get("description") }}
                     </h3>
                     <div class="text-gray-700 dark:text-dark-300 leading-relaxed prose max-w-none book-description">{{ description|safe }}</div>
                 </div>
@@ -211,7 +211,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 4h-7a2 2 0 00-2 2v12a2 2 0 002 2h7m2-16a2 2 0 012 2v12a2 2 0 01-2 2m-2-16H9a2 2 0 00-2 2v12a2 2 0 002 2"></path>
                             </svg>
                         </div>
-                        Series
+                        {{ translation.get("series") }}
                     </h4>
                     {% match book.series() %}
                     {% when Some with (series_name) %}
@@ -240,7 +240,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                             </svg>
                         </div>
-                        Genres
+                        {{ translation.get("genres") }}
                     </h4>
                     <div class="flex flex-wrap gap-3">
                         {% for subject in book.subjects() %}

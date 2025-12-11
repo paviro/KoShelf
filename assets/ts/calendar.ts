@@ -2,6 +2,7 @@
 // All logic is self-contained – nothing is written to or read from the global `window` object.
 
 import { showModal, hideModal, setupModalCloseHandlers } from './modal-utils.js';
+import { translation } from './i18n.js';
 
 // Type declarations for EventCalendar library
 declare const EventCalendar: {
@@ -13,6 +14,7 @@ interface EventCalendarOptions {
     view: string;
     headerToolbar: boolean;
     height: string;
+    locale: string;
     firstDay: number;
     displayEventEnd: boolean;
     editable: boolean;
@@ -110,7 +112,10 @@ let availableMonths: string[] = []; // List of months that have data
 let currentDisplayedMonth: string | null = null;
 
 // Exported entry point
-export function initializeCalendar(): void {
+export async function initializeCalendar(): Promise<void> {
+    // Load translations first
+    await translation.init();
+
     // First, load the list of available months
     loadAvailableMonths().then(() => {
         // Load calendar data for current month and its neighbours
@@ -184,7 +189,7 @@ async function updateDisplayedMonth(targetMonth: string): Promise<void> {
                 const book = currentBooks[ev.book_id] || {};
                 return {
                     id: ev.book_id,
-                    title: book.title || 'Unknown Book',
+                    title: book.title || translation.get('unknown-book'),
                     start: ev.start,
                     end: ev.end || ev.start,
                     allDay: true,
@@ -193,7 +198,7 @@ async function updateDisplayedMonth(targetMonth: string): Promise<void> {
                     textColor: '#ffffff',
                     extendedProps: {
                         ...ev,
-                        book_title: book.title || 'Unknown Book',
+                        book_title: book.title || translation.get('unknown-book'),
                         authors: book.authors || [],
                         book_path: book.book_path,
                         book_cover: book.book_cover,
@@ -278,7 +283,7 @@ function initializeEventCalendar(events: RawEvent[]): void {
         const book = currentBooks[ev.book_id] || {};
         return {
             id: ev.book_id,
-            title: book.title || 'Unknown Book',
+            title: book.title || translation.get('unknown-book'),
             start: ev.start,
             end: ev.end || ev.start,
             allDay: true,
@@ -287,7 +292,7 @@ function initializeEventCalendar(events: RawEvent[]): void {
             textColor: '#ffffff',
             extendedProps: {
                 ...ev,
-                book_title: book.title || 'Unknown Book',
+                book_title: book.title || translation.get('unknown-book'),
                 authors: book.authors || [],
                 book_path: book.book_path,
                 book_cover: book.book_cover,
@@ -301,6 +306,7 @@ function initializeEventCalendar(events: RawEvent[]): void {
         view: 'dayGridMonth',
         headerToolbar: false,
         height: 'auto',
+        locale: translation.getLanguage(),
         firstDay: 1, // Monday
         displayEventEnd: false,
         editable: false,
@@ -403,7 +409,7 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
     const pagesReadEl = document.getElementById('modalPagesRead');
 
     if (authorEl) {
-        authorEl.textContent = event.authors?.length ? event.authors.join(', ') : 'Unknown Author';
+        authorEl.textContent = event.authors?.length ? event.authors.join(', ') : translation.get('unknown-author');
     }
     if (readTimeEl) {
         readTimeEl.textContent = formatDuration(event.total_read_time);
@@ -446,7 +452,7 @@ function setupEventHandlers(): void {
                 const book = currentBooks[ev.book_id] || {};
                 return {
                     id: ev.book_id,
-                    title: book.title || 'Unknown Book',
+                    title: book.title || translation.get('unknown-book'),
                     start: ev.start,
                     end: ev.end || ev.start,
                     allDay: true,
@@ -455,7 +461,7 @@ function setupEventHandlers(): void {
                     textColor: '#ffffff',
                     extendedProps: {
                         ...ev,
-                        book_title: book.title || 'Unknown Book',
+                        book_title: book.title || translation.get('unknown-book'),
                         authors: book.authors || [],
                         book_path: book.book_path,
                         book_cover: book.book_cover,

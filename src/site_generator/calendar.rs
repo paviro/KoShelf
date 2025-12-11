@@ -44,6 +44,7 @@ impl SiteGenerator {
             version: self.get_version(),
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items_with_recap("calendar", recap_latest_href.as_deref()),
+            translation: self.t(),
         };
         
         // Render and write the template

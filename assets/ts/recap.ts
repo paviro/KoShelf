@@ -1,8 +1,12 @@
 import { StorageManager } from './storage-manager.js';
 import { showModal, setupModalCloseHandlers } from './modal-utils.js';
+import { translation } from './i18n.js';
 
 // Recap interactions: year dropdown + navigation
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load translations
+    await translation.init();
+
     const wrapper = document.getElementById('yearSelectorWrapper');
     const options = document.getElementById('yearOptions');
     const arrow = document.getElementById('yearDropdownArrow');
@@ -57,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (svg) {
                 svg.innerHTML = isNewestFirst ? iconNewest : iconOldest;
             }
-            sortToggle.title = isNewestFirst ? "Current: Newest First" : "Current: Oldest First";
+            sortToggle.title = isNewestFirst ? translation.get('sort-newest-first') : translation.get('sort-oldest-first');
         };
 
         // Function to flip the DOM order
@@ -120,16 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (useWebShare) {
         // Update modal title
         if (shareModalTitle) {
-            shareModalTitle.textContent = 'Share Recap Image';
+            shareModalTitle.textContent = translation.get('share-recap-image');
         }
         // Update button texts
         document.querySelectorAll('.share-btn-text').forEach(span => {
-            span.textContent = 'Share';
+            span.textContent = translation.get('share');
         });
         // Update header button title/aria-label
         if (shareBtn) {
-            shareBtn.title = 'Share recap image';
-            shareBtn.setAttribute('aria-label', 'Share recap image');
+            shareBtn.title = translation.get('share-recap-image');
+            shareBtn.setAttribute('aria-label', translation.get('share-recap-image'));
         }
     }
 
@@ -166,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             await navigator.share({
                                 files: [file],
-                                title: 'My KoShelf Reading Recap',
+                                title: translation.get('my-reading-recap'),
                                 text: `📚 My ${year} reading journey! These graphics were crafted by KoShelf, my KoReader reading companion. Check it out: https://github.com/paviro/KoShelf`,
                             });
                         } else {

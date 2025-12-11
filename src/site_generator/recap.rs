@@ -2,11 +2,11 @@
 
 use super::SiteGenerator;
 use super::utils::{format_duration, format_day_month};
+use chrono::Datelike;
 use crate::models::{Book, StatisticsData, RecapItem, MonthRecap, YearlySummary};
 use crate::templates::{RecapTemplate, RecapEmptyTemplate};
 use anyhow::Result;
 use askama::Template;
-use chrono::Datelike;
 use log::info;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -69,10 +69,10 @@ impl SiteGenerator {
                         authors,
                         start_date: c.start_date.clone(),
                         end_date: c.end_date.clone(),
-                        start_display: format_day_month(&c.start_date),
-                        end_display: format_day_month(&c.end_date),
+                        start_display: format_day_month(&c.start_date, &self.translations),
+                        end_display: format_day_month(&c.end_date, &self.translations),
                         reading_time: c.reading_time,
-                        reading_time_display: format_duration(c.reading_time),
+                        reading_time_display: format_duration(c.reading_time, &self.translations),
                         session_count: c.session_count,
                         pages_read: c.pages_read,
                         rating,
@@ -107,6 +107,7 @@ impl SiteGenerator {
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap("recap", None),
+                translation: self.t(),
             };
             
             let html = template.render()?;
@@ -150,7 +151,7 @@ impl SiteGenerator {
                     month_label,
                     books_finished: items.len(),
                     hours_read_seconds: hours,
-                    hours_read_display: format_duration(hours),
+                    hours_read_display: format_duration(hours, &self.translations),
                     items,
                 };
                 monthly.insert(ym, month_recap);
@@ -254,7 +255,7 @@ impl SiteGenerator {
                     } else {
                         None
                     };
-                    (month_name, Some(format_duration(secs)))
+                    (month_name, Some(format_duration(secs, &self.translations)))
                 } else {
                     (None, None)
                 }
@@ -303,6 +304,7 @@ impl SiteGenerator {
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap("recap", Some(latest_href.as_str())),
+                translation: self.t(),
             };
 
             let html = template.render()?;
