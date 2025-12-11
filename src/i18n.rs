@@ -7,6 +7,7 @@ use std::collections::HashMap;
 /// Embedded translation files
 const EN_FTL: &str = include_str!("../locales/en.ftl");
 const DE_FTL: &str = include_str!("../locales/de.ftl");
+const PT_BR_FTL: &str = include_str!("../locales/pt_BR.ftl");
 
 #[derive(Debug, Clone)]
 enum TranslationValue {
@@ -42,6 +43,7 @@ impl Translations {
     pub fn load(language: &str) -> Result<Self> {
         let ftl_string = match language {
             "de" => DE_FTL,
+            "pt-br" | "pt_br" => PT_BR_FTL,
             _ => EN_FTL,
         };
 
@@ -143,6 +145,7 @@ impl Translations {
     pub fn locale(&self) -> chrono::Locale {
         match self.language.as_str() {
             "de" => chrono::Locale::de_DE,
+            "pt-br" | "pt_br" => chrono::Locale::pt_BR,
             "en" => chrono::Locale::en_US,
             _ => chrono::Locale::en_US, // Default to English for unknown languages
         }
