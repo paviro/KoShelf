@@ -1,3 +1,16 @@
+# ===========================================
+#      English (en) — Base Language File
+# ===========================================
+# This is the base translation file for English, using US English vocabulary.
+# Regional variants (e.g., en_GB.ftl) should only override keys that differ.
+#
+# LOCALE HIERARCHY:
+#   1. Regional variant (e.g., en_GB.ftl) — sparse, only differences
+#   2. Base language (this file) — complete translations
+#   3. English fallback (en.ftl) — ultimate fallback for all languages
+#
+# NEW KEYS: Always add new translation keys to en.ftl first, then other bases.
+
 # -----------------------------------
 #           Navigation & Shared
 # -----------------------------------

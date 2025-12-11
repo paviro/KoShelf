@@ -101,8 +101,8 @@ struct Cli {
     #[arg(long, default_value = "false", display_order = 15)]
     include_all_stats: bool,
 
-    /// Language for UI translations (e.g., "en", "de")
-    #[arg(long, short = 'l', default_value = "en", display_order = 16)]
+    /// Language for UI translations (e.g., "en_US", "de_DE")
+    #[arg(long, short = 'l', default_value = "en_US", display_order = 16)]
     language: String,
 
     /// Print GitHub repository URL
@@ -328,4 +328,4 @@ async fn main() -> Result<()> {
     }
     
     Ok(())
-} 
+}
