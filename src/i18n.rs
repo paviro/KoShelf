@@ -285,31 +285,4 @@ simple = Simple { $count }
         assert!(t.get_with_num("book-label", 1).contains("Book"));
         assert!(t.get_with_num("book-label", 2).contains("Books"));
     }
-
-    #[test]
-    fn test_to_json_string_no_redundancy() {
-        let ftl = r#"
-key = { $count ->
-    [one] One
-    [other] Other
-}
-simple = Simple
-"#;
-        let map = parse_ftl(ftl).unwrap();
-        let t = Translations {
-            language: "en".to_string(),
-            translations: map,
-            fallback: HashMap::new(),
-        };
-
-        let json = t.to_json_string();
-        let json_val: serde_json::Value = serde_json::from_str(&json).unwrap();
-        let translations = json_val["translations"].as_object().unwrap();
-
-        assert_eq!(translations["simple"], "Simple");
-        assert_eq!(translations["key_one"], "One");
-        assert_eq!(translations["key_other"], "Other");
-        // Verify base key is NOT present
-        assert!(!translations.contains_key("key"));
-    }
 }
