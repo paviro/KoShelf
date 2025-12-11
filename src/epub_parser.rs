@@ -114,7 +114,8 @@ impl EpubParser {
     fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
         use quick_xml::Reader;
         use quick_xml::events::Event;
-        use std::collections::HashMap;
+        use std::collections::{HashMap, HashSet};
+        use ammonia::Builder;
 
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
@@ -155,10 +156,21 @@ impl EpubParser {
                             b"description" => {
                                 match reader.read_text(e.name()) {
                                     Ok(raw_text) => {
-                                        let cleaned = Self::strip_html_tags(&raw_text);
+                                        let decoded = raw_text
+                                            .replace("&lt;", "<")
+                                            .replace("&gt;", ">")
+                                            .replace("&amp;", "&")
+                                            .replace("&quot;", "\"")
+                                            .replace("&apos;", "'");
 
-                                        if !cleaned.trim().is_empty() {
-                                            description = Some(cleaned);
+                                        let cleaned = Builder::new()
+                                            .tags(vec!["b", "i", "em", "strong", "p", "br"].into_iter().collect::<HashSet<_>>())
+                                            .clean(&decoded)
+                                            .to_string();
+
+                                        let trimmed = cleaned.trim();
+                                        if !trimmed.is_empty() {
+                                            description = Some(trimmed.to_string());
                                         }
                                     }
                                     Err(e) => {
@@ -371,22 +383,4 @@ impl EpubParser {
         }
         Ok((None, None))
     }
-
-    fn strip_html_tags(html: &str) -> String {
-        let decoded = html
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'");
-
-        let re = regex::Regex::new(r"<[^>]*>").unwrap();
-        let without_tags = re.replace_all(&decoded, " ");
-
-        without_tags
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
 }
