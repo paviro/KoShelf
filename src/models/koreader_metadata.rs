@@ -36,7 +36,7 @@ impl Annotation {
                 .ok()
                 .map(|ndt| {
                     let locale = translations.locale();
-                    let format_str = translations.get("datetime-full-format");
+                    let format_str = translations.get("datetime.full");
                     
                     // format_localized is only available on NaiveDate and DateTime<Tz>, not NaiveDateTime - we need to convert to a DateTime<Utc> first
                     let dt_utc: DateTime<Utc> = DateTime::from_naive_utc_and_offset(ndt, Utc);

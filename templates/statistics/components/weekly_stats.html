@@ -37,9 +37,9 @@
                     <div>
                         <div id="weekReadTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
-                            {{ reading_stats.weeks[0].read_time / 3600 }}{{ translation.get("units-h") }} {{ (reading_stats.weeks[0].read_time % 3600) / 60 }}{{ translation.get("units-m") }}
+                            {{ reading_stats.weeks[0].read_time / 3600 }}{{ translation.get("units.h") }} {{ (reading_stats.weeks[0].read_time % 3600) / 60 }}{{ translation.get("units.m") }}
                             {% else %}
-                            0{{ translation.get("units-h") }} 0{{ translation.get("units-m") }}
+                            0{{ translation.get("units.h") }} 0{{ translation.get("units.m") }}
                             {% endif %}
                         </div>
                         <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("weekly-reading-time") }}</div>
@@ -100,9 +100,9 @@
                     <div>
                         <div id="weekAvgReadTimePerDay" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
-                            {{ (reading_stats.weeks[0].avg_read_time_per_day / 60.0) as i64 }}{{ translation.get("units-m") }}
+                            {{ (reading_stats.weeks[0].avg_read_time_per_day / 60.0) as i64 }}{{ translation.get("units.m") }}
                             {% else %}
-                            0{{ translation.get("units-m") }}
+                            0{{ translation.get("units.m") }}
                             {% endif %}
                         </div>
                         <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("average-time-day") }}</div>
@@ -127,9 +127,9 @@
                                     {% if minutes >= 60 %}
                                         {% let hours = minutes / 60 %}
                                         {% let remaining_mins = minutes % 60 %}
-                                        {{ hours }}{{ translation.get("units-h") }} {{ remaining_mins }}{{ translation.get("units-m") }}
+                                        {{ hours }}{{ translation.get("units.h") }} {{ remaining_mins }}{{ translation.get("units.m") }}
                                     {% else %}
-                                        {{ minutes }}{{ translation.get("units-m") }}
+                                        {{ minutes }}{{ translation.get("units.m") }}
                                     {% endif %}
                                 {% when None %}
                                     --
@@ -138,7 +138,7 @@
                             --
                             {% endif %}
                         </div>
-                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("longest-session") }}</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("session.longest") }}</div>
                     </div>
                 </div>
             </div>
@@ -160,9 +160,9 @@
                                     {% if minutes >= 60 %}
                                         {% let hours = minutes / 60 %}
                                         {% let remaining_mins = minutes % 60 %}
-                                        {{ hours }}{{ translation.get("units-h") }} {{ remaining_mins }}{{ translation.get("units-m") }}
+                                        {{ hours }}{{ translation.get("units.h") }} {{ remaining_mins }}{{ translation.get("units.m") }}
                                     {% else %}
-                                        {{ minutes }}{{ translation.get("units-m") }}
+                                        {{ minutes }}{{ translation.get("units.m") }}
                                     {% endif %}
                                 {% when None %}
                                     --
@@ -171,7 +171,7 @@
                             --
                             {% endif %}
                         </div>
-                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("average-session") }}</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("session.average") }}</div>
                     </div>
                 </div>
             </div>

@@ -43,9 +43,9 @@ impl BookStatistics for StatBook {
                 
                 // Get appropriate format string from translations
                 let format_key = if date.year() == current_year {
-                    "datetime-short-current-year-format"
+                    "datetime.short-current-year"
                 } else {
-                    "datetime-short-with-year-format"
+                    "datetime.short-with-year"
                 };
                 let format_str = translations.get(format_key);
                 

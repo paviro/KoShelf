@@ -37,19 +37,19 @@ view-details = Ver Detalhes
 #        Lista de Livros & Biblioteca
 # -----------------------------------
 search-placeholder = Buscar livro, autor, série...
-filter-all = Todos
-filter-reading = Lendo
-filter-completed = Concluídos
-filter-unread = Não lidos
+filter =
+    .all = Todos
+    .reading = Lendo
+    .completed = Concluídos
+    .unread = Não lidos
 no-books-found = Nenhum livro encontrado
 no-books-match = Nenhum livro corresponde aos seus critérios de busca ou filtro.
 try-adjusting = Tente ajustar sua busca ou filtros
-currently-reading = Lendo Atualmente
-on-hold = Em Espera
-# Também usado como status
-completed = Concluído
-# Também usado como status
-unread = Não lido
+status =
+    .reading = Lendo Atualmente
+    .on-hold = Em Espera
+    .completed = Concluído
+    .unread = Não lido
 book-label = { $count ->
     [one] Livro
    *[other] Livros
@@ -103,12 +103,14 @@ pages-per-hour = Páginas/Hora
 # Abreviação para Páginas Por Hora
 pph-abbreviation = pph
 reading-sessions = Sessões de Leitura
-longest-session = Sessão Mais Longa
-average-session = Sessão Média
+session =
+    .longest = Sessão Mais Longa
+    .average = Sessão Média
 # Sufixo para duração média da sessão (ex: '/sessão média')
 avg-session-suffix = /sessão média
-current-streak = Sequência Atual
-longest-streak = Maior Sequência
+streak =
+    .current = Sequência Atual
+    .longest = Maior Sequência
 reading-streak = Sequência de Leitura
 days-read = Dias Lidos
 weekly-reading-time = Tempo de Leitura Semanal
@@ -135,9 +137,9 @@ units-sessions = { $count ->
 # -----------------------------------
 my-reading-recap = Minha Retrospectiva KoShelf
 share = Compartilhar
-share-recap-image = Compartilhar Imagem
-download-recap-image = Baixar Imagem
+    .recap-label = Compartilhar Imagem
 download = Baixar
+    .recap-label = Baixar Imagem
 story = Story
 story-aspect-ratio = 1260 × 2240 — Vertical 9:16
 square = Quadrado
@@ -149,8 +151,9 @@ active-days = { $count ->
     [one] Dia Ativo
    *[other] Dias Ativos
 }
-hide = Ocultar
-show = Mostrar
+toggle =
+    .hide = Ocultar
+    .show = Mostrar
 less = Menos
 more = Mais
 period = Período
@@ -158,61 +161,70 @@ sessions = Sessões
 yearly-summary = Resumo Anual { $count }
 
 # Navegação e ordenação
-aria-previous-year = Ano anterior
-aria-next-year = Próximo ano
+previous-year =
+    .aria-label = Ano anterior
+next-year =
+    .aria-label = Próximo ano
+sort-order = 
+    .aria-label-toggle = Alternar ordem
 sort-newest-first = Atual: Mais Recentes Primeiro
 sort-oldest-first = Atual: Mais Antigos Primeiro
-aria-toggle-sort-order = Alternar ordem
-aria-previous-month = Mês anterior
-aria-next-month = Próximo mês
-aria-search = Buscar
-aria-close-search = Fechar busca
-aria-close = Fechar
+previous-month = 
+    .aria-label = Mês anterior
+next-month = 
+    .aria-label = Próximo mês
+search = 
+    .aria-label = Buscar
+close-search = 
+    .aria-label = Fechar busca
+close = Fechar
+    .aria-label = Fechar
 
 # -----------------------------------
 #           Tempo & Datas
 # -----------------------------------
-month-january = Janeiro
-month-february = Fevereiro
-month-march = Março
-month-april = Abril
-month-may = Maio
-month-june = Junho
-month-july = Julho
-month-august = Agosto
-month-september = Setembro
-month-october = Outubro
-month-november = Novembro
-month-december = Dezembro
-
-# Abreviação dos meses
-month-january-short = Jan
-month-february-short = Fev
-month-march-short = Mar
-month-april-short = Abr
-month-may-short = Mai
-month-june-short = Jun
-month-july-short = Jul
-month-august-short = Ago
-month-september-short = Set
-month-october-short = Out
-month-november-short = Nov
-month-december-short = Dez
+january = Janeiro
+    .short = Jan
+february = Fevereiro
+    .short = Fev
+march = Março
+    .short = Mar
+april = Abril
+    .short = Abr
+may = Maio
+    .short = Mai
+june = Junho
+    .short = Jun
+july = Julho
+    .short = Jul
+august = Agosto
+    .short = Ago
+september = Setembro
+    .short = Set
+october = Outubro
+    .short = Out
+november = Novembro
+    .short = Nov
+december = Dezembro
+    .short = Dez
 
 # Abreviação dias da semana (Seg/Qui/Dom para o gráfico estilo GitHub)
-weekday-mon = Seg
-weekday-thu = Qui
-weekday-sun = Dom
+weekday =
+    .mon = Seg
+    .thu = Qui
+    .sun = Dom
 
 # Formatos de data/hora (Chrono format)
-datetime-full-format = %d de %B de %Y às %H:%M
-datetime-short-current-year-format = %d de %b
-datetime-short-with-year-format = %d %b %Y
+datetime =
+    .full = %d de %B de %Y às %H:%M
+    .short-current-year = %d de %b
+    .short-with-year = %d %b %Y
 
 # Unidades de tempo: h=horas, m=minutos, d=dias
-units-h = h
-units-m = m
-units-d = d
+units =
+    .h = h
+    .m = m
+    .d = d
 today = Hoje
 of-the-year = do ano
 of = de

@@ -11,15 +11,15 @@ use std::path::Path;
 
 /// Format a duration in seconds to a human-readable string (e.g., "2d 5h 30m")
 pub(crate) fn format_duration(seconds: i64, translations: &crate::i18n::Translations) -> String {
-    if seconds <= 0 { return format!("0{}", translations.get("units-m")); }
+    if seconds <= 0 { return format!("0{}", translations.get("units.m")); }
     let total_minutes = seconds / 60;
     let days = total_minutes / (24 * 60);
     let hours = (total_minutes % (24 * 60)) / 60;
     let mins = total_minutes % 60;
     let mut parts: Vec<String> = Vec::new();
-    if days > 0 { parts.push(format!("{}{}", days, translations.get("units-d"))); }
-    if hours > 0 { parts.push(format!("{}{}", hours, translations.get("units-h"))); }
-    if mins > 0 || parts.is_empty() { parts.push(format!("{}{}", mins, translations.get("units-m"))); }
+    if days > 0 { parts.push(format!("{}{}", days, translations.get("units.d"))); }
+    if hours > 0 { parts.push(format!("{}{}", hours, translations.get("units.h"))); }
+    if mins > 0 || parts.is_empty() { parts.push(format!("{}{}", mins, translations.get("units.m"))); }
     parts.join(" ")
 }
 
@@ -31,9 +31,9 @@ pub(crate) fn format_day_month(iso: &str, translations: &crate::i18n::Translatio
         
         // Get appropriate format string from translations
         let format_key = if date.year() == current_year {
-            "datetime-short-current-year-format"
+            "datetime.short-current-year"
         } else {
-            "datetime-short-with-year-format"
+            "datetime.short-with-year"
         };
         let format_str = translations.get(format_key);
         

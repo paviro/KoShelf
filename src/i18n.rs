@@ -398,10 +398,27 @@ pub fn list_supported_languages() -> String {
     output
 }
 
+/// Helper function to extract a simple string value from a Fluent pattern.
+fn extract_pattern_string(pattern: &ast::Pattern<&str>) -> String {
+    let mut value = String::new();
+    for elem in &pattern.elements {
+        match elem {
+            ast::PatternElement::TextElement { value: v } => value.push_str(v),
+            ast::PatternElement::Placeable { expression } => {
+                if let ast::Expression::Inline(ast::InlineExpression::VariableReference { id }) = expression {
+                    value.push_str(&format!("{{ ${} }}", id.name));
+                }
+            }
+        }
+    }
+    value
+}
+
 /// FTL parser using `fluent-syntax` crate.
 /// Supports a subset of Fluent syntax used in this project:
 /// - Simple messages
 /// - Plural selectors
+/// - Attributes (e.g., `share.recap-label`, `january.short`)
 /// - Comments (ignored)
 fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
     let resource = parser::parse(content)
@@ -411,86 +428,69 @@ fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
 
     for entry in resource.body {
         // Handle both Messages (key = value) and Terms (-key = value)
-        let (key, pattern) = match entry {
+        let (key, maybe_pattern, attributes) = match entry {
             ast::Entry::Message(msg) => {
                 let key = msg.id.name.to_string();
-                match msg.value {
-                    Some(p) => (key, p),
-                    None => continue,
-                }
+                (key, msg.value, msg.attributes)
             }
             ast::Entry::Term(term) => {
                 let key = format!("-{}", term.id.name);
-                (key, term.value)
+                (key, Some(term.value), term.attributes)
             }
             _ => continue,
         };
 
-        let mut is_plural = false;
-        
-        // Check for single select expression (plural)
-        if pattern.elements.len() == 1 {
-            if let ast::PatternElement::Placeable { expression } = &pattern.elements[0] {
-                if let ast::Expression::Select { variants, .. } = expression {
-                        let mut plural_variants = HashMap::new();
-                        let mut found_default = false;
+        // Process the main value if present
+        if let Some(pattern) = maybe_pattern {
+            let mut is_plural = false;
+            
+            // Check for single select expression (plural)
+            if pattern.elements.len() == 1 {
+                if let ast::PatternElement::Placeable { expression } = &pattern.elements[0] {
+                    if let ast::Expression::Select { variants, .. } = expression {
+                            let mut plural_variants = HashMap::new();
+                            let mut found_default = false;
 
-                        for variant in variants {
-                            let variant_key = match &variant.key {
-                                ast::VariantKey::Identifier { name } => Some(*name),
-                                ast::VariantKey::NumberLiteral { .. } => None, // Ignore numeric
-                            };
+                            for variant in variants {
+                                let variant_key = match &variant.key {
+                                    ast::VariantKey::Identifier { name } => Some(*name),
+                                    ast::VariantKey::NumberLiteral { .. } => None, // Ignore numeric
+                                };
 
-                            if let Some(v_key) = variant_key {
-                                if let Some(category) = PluralCategory::from_str(v_key) {
-                                    // Extract string value from pattern elements
-                                    let mut value = String::new();
-                                    for elem in &variant.value.elements {
-                                        match elem {
-                                            ast::PatternElement::TextElement { value: v } => value.push_str(v),
-                                            ast::PatternElement::Placeable { expression } => {
-                                                // Re-construct placeable {$var}
-                                                if let ast::Expression::Inline(ast::InlineExpression::VariableReference { id }) = expression {
-                                                    value.push_str(&format!("{{ ${} }}", id.name));
-                                                }
-                                            }
+                                if let Some(v_key) = variant_key {
+                                    if let Some(category) = PluralCategory::from_str(v_key) {
+                                        let value = extract_pattern_string(&variant.value);
+                                        plural_variants.insert(category, value);
+                                        if variant.default {
+                                            found_default = true;
                                         }
-                                    }
-                                    
-                                    plural_variants.insert(category, value);
-                                    if variant.default {
-                                        found_default = true;
                                     }
                                 }
                             }
-                        }
-                        
-                        // Just warn if missing default, matching previous behavior
-                        // In valid Fluent, default is required, but we might encounter older files
-                        if !found_default && !plural_variants.contains_key(&PluralCategory::Other) {
-                        eprintln!("Warning: plural key '{}' missing required *[other] default variant", key);
-                        }
+                            
+                            // Just warn if missing default, matching previous behavior
+                            // In valid Fluent, default is required, but we might encounter older files
+                            if !found_default && !plural_variants.contains_key(&PluralCategory::Other) {
+                            eprintln!("Warning: plural key '{}' missing required *[other] default variant", key);
+                            }
 
-                        map.insert(key.clone(), TranslationValue::Plural(plural_variants));
-                        is_plural = true;
-                }
-            }
-        }
-
-        if !is_plural {
-            // Extract simple string (concatenating elements)
-            let mut value = String::new();
-            for elem in &pattern.elements {
-                match elem {
-                    ast::PatternElement::TextElement { value: v } => value.push_str(v),
-                    ast::PatternElement::Placeable { expression } => {
-                        if let ast::Expression::Inline(ast::InlineExpression::VariableReference { id }) = expression {
-                                value.push_str(&format!("{{ ${} }}", id.name));
-                        }
+                            map.insert(key.clone(), TranslationValue::Plural(plural_variants));
+                            is_plural = true;
                     }
                 }
             }
-            map.insert(key, TranslationValue::Simple(value));
+
+            if !is_plural {
+                let value = extract_pattern_string(&pattern);
+                map.insert(key.clone(), TranslationValue::Simple(value));
+            }
+        }
+        
+        // Process attributes (e.g., share.recap-label, january.short)
+        for attr in attributes {
+            let attr_key = format!("{}.{}", key, attr.id.name);
+            let value = extract_pattern_string(&attr.value);
+            map.insert(attr_key, TranslationValue::Simple(value));
         }
     }
 

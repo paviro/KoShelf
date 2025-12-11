@@ -68,12 +68,12 @@ export class SectionToggle {
             // Show the section initially
             container.classList.remove('hidden');
             chevron.style.transform = 'rotate(0deg)';
-            buttonText.textContent = translation.get('hide');
+            buttonText.textContent = translation.get('toggle.hide');
         } else {
             // Hide the section initially
             container.classList.add('hidden');
             chevron.style.transform = 'rotate(-90deg)';
-            buttonText.textContent = translation.get('show');
+            buttonText.textContent = translation.get('toggle.show');
         }
     }
 
@@ -98,7 +98,7 @@ export class SectionToggle {
         const { container, chevron, buttonText } = sectionData;
         container.classList.remove('hidden');
         chevron.style.transform = 'rotate(0deg)';
-        buttonText.textContent = translation.get('hide');
+        buttonText.textContent = translation.get('toggle.hide');
     }
 
     hide(sectionName: string): void {
@@ -108,7 +108,7 @@ export class SectionToggle {
         const { container, chevron, buttonText } = sectionData;
         container.classList.add('hidden');
         chevron.style.transform = 'rotate(-90deg)';
-        buttonText.textContent = translation.get('show');
+        buttonText.textContent = translation.get('toggle.show');
     }
 
     isVisible(sectionName: string): boolean {

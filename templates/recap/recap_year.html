@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <div class="flex items-center space-x-1">
                     {% if prev_year.is_some() %}
-                    <a href="/recap/{{ prev_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("aria-previous-year") }}">
+                    <a href="/recap/{{ prev_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("previous-year.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
@@ -41,7 +41,7 @@
                     </span>
                     {% endif %}
                     {% if next_year.is_some() %}
-                    <a href="/recap/{{ next_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("aria-next-year") }}">
+                    <a href="/recap/{{ next_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("next-year.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -90,14 +90,14 @@
                 </div>
                 
                 <!-- Sort Button -->
-                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("aria-toggle-sort-order") }}" aria-label="{{ translation.get("aria-toggle-sort-order") }}">
+                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("sort-order.aria-label-toggle") }}" aria-label="{{ translation.get("sort-order.aria-label-toggle") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
                     </svg>
                 </button>
                 
                 <!-- Share/Download Button -->
-                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("download-recap-image") }}" aria-label="{{ translation.get("download-recap-image") }}">
+                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("download.recap-label") }}" aria-label="{{ translation.get("download.recap-label") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"></path>
                     </svg>
@@ -111,8 +111,8 @@
         <div id="shareModalCard" class="bg-gray-100 dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-700/50 transform transition-all duration-300 scale-95 opacity-0">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
-                <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">{{ translation.get("download-recap-image") }}</h3>
-                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors" aria-label="{{ translation.get("aria-close") }}">
+                <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">{{ translation.get("download.recap-label") }}</h3>
+                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors" aria-label="{{ translation.get("close.aria-label") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -271,10 +271,10 @@
                                         <div class="flex items-baseline gap-1">
                                             {% if summary.total_time_days > 0 %}
                                             <span class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">{{ summary.total_time_days }}</span>
-                                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("days_label", summary.total_time_days) }}</span><span class="md:hidden">{{ translation.get("units-d") }}</span></span>
+                                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("days_label", summary.total_time_days) }}</span><span class="md:hidden">{{ translation.get("units.d") }}</span></span>
                                             {% endif %}
                                             <span class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">{{ summary.total_time_hours }}</span>
-                                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.total_time_hours) }}</span><span class="md:hidden">{{ translation.get("units-h") }}</span></span>
+                                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.total_time_hours) }}</span><span class="md:hidden">{{ translation.get("units.h") }}</span></span>
                                         </div>
                                         <span class="text-[10px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">{{ translation.get("total-read-time") }}</span>
                                     </div>
@@ -290,8 +290,8 @@
                                         </svg>
                                     </div>
                                     <div class="flex flex-col min-w-0">
-                                        <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.longest_streak }} <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("days_label", summary.longest_streak) }}</span><span class="md:hidden">{{ translation.get("units-d") }}</span></span></span>
-                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("longest-streak") }}</span>
+                                        <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.longest_streak }} <span class="text-xs font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("days_label", summary.longest_streak) }}</span><span class="md:hidden">{{ translation.get("units.d") }}</span></span></span>
+                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("streak.longest") }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -307,7 +307,7 @@
                                     </div>
                                     <div class="flex flex-col min-w-0">
                                         {% let best_month = summary.best_month_name.as_ref().unwrap().to_lowercase() %}
-                                        <span class="text-base font-bold text-gray-900 dark:text-white leading-none truncate">{{ translation.get(format!("month-{}", best_month).as_str()) }}</span>
+                                        <span class="text-base font-bold text-gray-900 dark:text-white leading-none truncate">{{ translation.get(format!("{}", best_month).as_str()) }}</span>
                                         <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("best-month") }}</span>
                                     </div>
                                 </div>
@@ -326,14 +326,14 @@
                                         <div class="flex items-baseline gap-1">
                                             {% if summary.average_session_hours > 0 %}
                                             <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.average_session_hours }}</span>
-                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.average_session_hours) }}</span><span class="md:hidden">{{ translation.get("units-h") }}</span></span>
+                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.average_session_hours) }}</span><span class="md:hidden">{{ translation.get("units.h") }}</span></span>
                                             {% endif %}
                                             {% if summary.average_session_hours == 0 || summary.average_session_minutes > 0 %}
                                             <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.average_session_minutes }}</span>
-                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("minutes_label", summary.average_session_minutes) }}</span><span class="md:hidden">{{ translation.get("units-m") }}</span></span>
+                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("minutes_label", summary.average_session_minutes) }}</span><span class="md:hidden">{{ translation.get("units.m") }}</span></span>
                                             {% endif %}
                                         </div>
-                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("average-session") }}</span>
+                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("session.average") }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -350,14 +350,14 @@
                                         <div class="flex items-baseline gap-1">
                                             {% if summary.longest_session_hours > 0 %}
                                             <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.longest_session_hours }}</span>
-                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.longest_session_hours) }}</span><span class="md:hidden">{{ translation.get("units-h") }}</span></span>
+                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("hours_label", summary.longest_session_hours) }}</span><span class="md:hidden">{{ translation.get("units.h") }}</span></span>
                                             {% endif %}
                                             {% if summary.longest_session_hours == 0 || summary.longest_session_minutes > 0 %}
                                             <span class="text-lg font-bold text-gray-900 dark:text-white leading-none">{{ summary.longest_session_minutes }}</span>
-                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("minutes_label", summary.longest_session_minutes) }}</span><span class="md:hidden">{{ translation.get("units-m") }}</span></span>
+                                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400"><span class="hidden md:inline">{{ translation.get_with_num("minutes_label", summary.longest_session_minutes) }}</span><span class="md:hidden">{{ translation.get("units.m") }}</span></span>
                                             {% endif %}
                                         </div>
-                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("longest-session") }}</span>
+                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("session.longest") }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -371,7 +371,7 @@
                     <span class="recap-dot bg-gray-400 dark:bg-dark-400"></span>
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                         {% let month_label = month.month_label.to_lowercase() %}
-                        <h3 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get(format!("month-{}", month_label).as_str()) }}</h3>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get(format!("{}", month_label).as_str()) }}</h3>
                         <div class="flex items-center gap-2">
                             <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-400/5 dark:from-blue-500/20 dark:to-blue-400/10 border border-blue-200/50 dark:border-blue-700/30 text-blue-700 dark:text-blue-300 text-sm">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

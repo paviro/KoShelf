@@ -24,9 +24,9 @@
                         {% let hours = reading_stats.total_read_time / 3600 %}
                         {% let minutes = (reading_stats.total_read_time % 3600) / 60 %}
                         {% if hours > 0 %}
-                            {{ hours }}{{ translation.get("units-h") }} {{ minutes }}{{ translation.get("units-m") }}
+                            {{ hours }}{{ translation.get("units.h") }} {{ minutes }}{{ translation.get("units.m") }}
                         {% else %}
-                            {{ minutes }}{{ translation.get("units-m") }}
+                            {{ minutes }}{{ translation.get("units.m") }}
                         {% endif %}
                     </div>
                     <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("total-read-time") }}</div>
@@ -81,9 +81,9 @@
                         {% let hours = reading_stats.longest_read_time_in_day / 3600 %}
                         {% let minutes = (reading_stats.longest_read_time_in_day % 3600) / 60 %}
                         {% if hours > 0 %}
-                            {{ hours }}{{ translation.get("units-h") }} {{ minutes }}{{ translation.get("units-m") }}
+                            {{ hours }}{{ translation.get("units.h") }} {{ minutes }}{{ translation.get("units.m") }}
                         {% else %}
-                            {{ minutes }}{{ translation.get("units-m") }}
+                            {{ minutes }}{{ translation.get("units.m") }}
                         {% endif %}
                     </div>
                     <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("longest-daily-reading") }}</div>
@@ -107,15 +107,15 @@
                             {% if minutes >= 60 %}
                                 {% let hours = minutes / 60 %}
                                 {% let remaining_mins = minutes % 60 %}
-                                {{ hours }}{{ translation.get("units-h") }} {{ remaining_mins }}{{ translation.get("units-m") }}
+                                {{ hours }}{{ translation.get("units.h") }} {{ remaining_mins }}{{ translation.get("units.m") }}
                             {% else %}
-                                {{ minutes }}{{ translation.get("units-m") }}
+                                {{ minutes }}{{ translation.get("units.m") }}
                             {% endif %}
                         {% when None %}
                             --
                         {% endmatch %}
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("longest-session") }}</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("session.longest") }}</div>
                 </div>
             </div>
         </div>
@@ -136,15 +136,15 @@
                             {% if minutes >= 60 %}
                                 {% let hours = minutes / 60 %}
                                 {% let remaining_mins = minutes % 60 %}
-                                {{ hours }}{{ translation.get("units-h") }} {{ remaining_mins }}{{ translation.get("units-m") }}
+                                {{ hours }}{{ translation.get("units.h") }} {{ remaining_mins }}{{ translation.get("units.m") }}
                             {% else %}
-                                {{ minutes }}{{ translation.get("units-m") }}
+                                {{ minutes }}{{ translation.get("units.m") }}
                             {% endif %}
                         {% when None %}
                             --
                         {% endmatch %}
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("average-session") }}</div>
+                    <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("session.average") }}</div>
                 </div>
             </div>
         </div>
