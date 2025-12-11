@@ -285,9 +285,9 @@ class DateFormatter {
     // Format date as "D Month" (e.g. "17 March")
     static formatDateNice(dateObj: Date): string {
         const monthKeys = [
-            'month-january', 'month-february', 'month-march', 'month-april',
-            'month-may', 'month-june', 'month-july', 'month-august',
-            'month-september', 'month-october', 'month-november', 'month-december'
+            'january', 'february', 'march', 'april',
+            'may', 'june', 'july', 'august',
+            'september', 'october', 'november', 'december'
         ];
         return `${dateObj.getDate()} ${translation.get(monthKeys[dateObj.getMonth()])}`;
     }
@@ -305,9 +305,9 @@ class DateFormatter {
         const endYear = endDate.getFullYear();
 
         const monthKeys = [
-            'month-january-short', 'month-february-short', 'month-march-short', 'month-april-short',
-            'month-may-short', 'month-june-short', 'month-july-short', 'month-august-short',
-            'month-september-short', 'month-october-short', 'month-november-short', 'month-december-short'
+            'january.short', 'february.short', 'march.short', 'april.short',
+            'may.short', 'june.short', 'july.short', 'august.short',
+            'september.short', 'october.short', 'november.short', 'december.short'
         ];
         const months = monthKeys.map(k => translation.get(k));
 

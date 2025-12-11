@@ -152,21 +152,10 @@ fn test_unused_translation_keys() {
             a
         });
 
-    // Keys that are constructed dynamically (e.g., format!("{}", month_label))
-    // and won't be found by literal string matching
-    let dynamic_keys: HashSet<&str> = [
-        "january", "february", "march", "april", "may", "june",
-        "july", "august", "september", "october", "november", "december",
-    ].into_iter().collect();
-
     // Check which EN keys are unused
     let mut unused_list: Vec<_> = en_keys
         .into_iter()
         .filter(|k| {
-            // Skip dynamically constructed keys
-            if dynamic_keys.contains(k.as_str()) {
-                return false;
-            }
             // A key is used if we found "key", "key_one", or "key_other"
             !found_tokens.contains(k) 
             && !found_tokens.contains(&format!("{}_one", k)) 
