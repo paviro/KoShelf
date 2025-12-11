@@ -399,14 +399,39 @@ pub fn list_supported_languages() -> String {
 }
 
 /// Helper function to extract a simple string value from a Fluent pattern.
+/// Message references are stored as `{@ref:key}` placeholders for later resolution.
 fn extract_pattern_string(pattern: &ast::Pattern<&str>) -> String {
     let mut value = String::new();
     for elem in &pattern.elements {
         match elem {
             ast::PatternElement::TextElement { value: v } => value.push_str(v),
             ast::PatternElement::Placeable { expression } => {
-                if let ast::Expression::Inline(ast::InlineExpression::VariableReference { id }) = expression {
-                    value.push_str(&format!("{{ ${} }}", id.name));
+                match expression {
+                    ast::Expression::Inline(inline) => {
+                        match inline {
+                            ast::InlineExpression::VariableReference { id } => {
+                                value.push_str(&format!("{{ ${} }}", id.name));
+                            }
+                            ast::InlineExpression::MessageReference { id, attribute } => {
+                                // Store as placeholder for later resolution
+                                let ref_key = match attribute {
+                                    Some(attr) => format!("{}.{}", id.name, attr.name),
+                                    None => id.name.to_string(),
+                                };
+                                value.push_str(&format!("{{@ref:{}}}", ref_key));
+                            }
+                            ast::InlineExpression::TermReference { id, attribute, .. } => {
+                                // Terms are prefixed with - in our map
+                                let ref_key = match attribute {
+                                    Some(attr) => format!("-{}.{}", id.name, attr.name),
+                                    None => format!("-{}", id.name),
+                                };
+                                value.push_str(&format!("{{@ref:{}}}", ref_key));
+                            }
+                            _ => {} // Ignore other inline expressions
+                        }
+                    }
+                    _ => {} // Ignore select expressions here (handled separately for plurals)
                 }
             }
         }
@@ -494,7 +519,86 @@ fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
         }
     }
 
+    // Second pass: resolve message references
+    resolve_message_references(&mut map);
+
     Ok(map)
+}
+
+/// Resolve message references in the translation map.
+/// References are stored as `{@ref:key}` placeholders during parsing.
+/// This function replaces them with the actual values from the map.
+fn resolve_message_references(map: &mut HashMap<String, TranslationValue>) {
+    use regex::Regex;
+    
+    // Regex to find reference placeholders: {@ref:key} or {@ref:key.attr}
+    let ref_regex = Regex::new(r"\{@ref:([^}]+)\}").unwrap();
+    
+    // We need to iterate multiple times in case of chained references (A -> B -> C)
+    // Use a simple iteration limit to prevent infinite loops from circular references
+    const MAX_ITERATIONS: usize = 10;
+    
+    for _ in 0..MAX_ITERATIONS {
+        let mut any_resolved = false;
+        
+        // Collect all current values as a lookup (clone to avoid borrow issues)
+        let lookup: HashMap<String, String> = map.iter()
+            .filter_map(|(k, v)| {
+                match v {
+                    TranslationValue::Simple(s) => Some((k.clone(), s.clone())),
+                    TranslationValue::Plural(variants) => {
+                        // For plurals, use `other` as the reference value
+                        variants.get(&PluralCategory::Other).map(|s| (k.clone(), s.clone()))
+                    }
+                }
+            })
+            .collect();
+        
+        // Process each entry
+        for value in map.values_mut() {
+            match value {
+                TranslationValue::Simple(s) => {
+                    if ref_regex.is_match(s) {
+                        let resolved = ref_regex.replace_all(s, |caps: &regex::Captures| {
+                            let ref_key = &caps[1];
+                            lookup.get(ref_key).cloned().unwrap_or_else(|| {
+                                eprintln!("Warning: unresolved message reference: {}", ref_key);
+                                format!("[missing: {}]", ref_key)
+                            })
+                        }).to_string();
+                        
+                        if *s != resolved {
+                            any_resolved = true;
+                            *s = resolved;
+                        }
+                    }
+                }
+                TranslationValue::Plural(variants) => {
+                    for variant_value in variants.values_mut() {
+                        if ref_regex.is_match(variant_value) {
+                            let resolved = ref_regex.replace_all(variant_value, |caps: &regex::Captures| {
+                                let ref_key = &caps[1];
+                                lookup.get(ref_key).cloned().unwrap_or_else(|| {
+                                    eprintln!("Warning: unresolved message reference: {}", ref_key);
+                                    format!("[missing: {}]", ref_key)
+                                })
+                            }).to_string();
+                            
+                            if *variant_value != resolved {
+                                any_resolved = true;
+                                *variant_value = resolved;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If nothing was resolved this iteration, we're done
+        if !any_resolved {
+            break;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -513,7 +617,7 @@ mod tests {
 
     #[test]
     fn test_parse_plural() {
-        // Note: fluent-syntax is strict about indentation and default variants
+        // Test inline plural format
         let ftl = r#"
 key = { $count ->
     [one] 1 Thing
@@ -525,6 +629,23 @@ key = { $count ->
             TranslationValue::Plural(variants) => {
                 assert_eq!(variants.get(&PluralCategory::One).unwrap(), "1 Thing");
                 assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "Many Things");
+            }
+            _ => panic!("Expected plural"),
+        }
+        
+        // Test plural block starting on the next line after =
+        let ftl2 = r#"
+pages =
+    { $count ->
+        [one] { $count } page
+       *[other] { $count } pages
+    }
+"#;
+        let map2 = parse_ftl(ftl2).unwrap();
+        match map2.get("pages").unwrap() {
+            TranslationValue::Plural(variants) => {
+                assert_eq!(variants.get(&PluralCategory::One).unwrap(), "{ $count } page");
+                assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "{ $count } pages");
             }
             _ => panic!("Expected plural"),
         }
@@ -607,23 +728,52 @@ long-message =
         }
     }
     
+    
     #[test]
-    fn test_parse_plural_on_next_line() {
-        // Plural block starting on the line after =
+    fn test_message_references() {
+        // Test simple message reference
         let ftl = r#"
-pages =
-    { $count ->
-        [one] { $count } page
-       *[other] { $count } pages
-    }
+brand-name = KoShelf
+welcome = Welcome to { brand-name }!
 "#;
         let map = parse_ftl(ftl).unwrap();
-        match map.get("pages").unwrap() {
-            TranslationValue::Plural(variants) => {
-                assert_eq!(variants.get(&PluralCategory::One).unwrap(), "{ $count } page");
-                assert_eq!(variants.get(&PluralCategory::Other).unwrap(), "{ $count } pages");
-            }
-            _ => panic!("Expected plural"),
-        }
+        assert_eq!(map.get("welcome").unwrap().as_simple().unwrap(), "Welcome to KoShelf!");
+        
+        // Test term reference (prefixed with -)
+        let ftl2 = r#"
+-brand-name = KoShelf
+about = Learn more about { -brand-name }
+"#;
+        let map2 = parse_ftl(ftl2).unwrap();
+        assert_eq!(map2.get("about").unwrap().as_simple().unwrap(), "Learn more about KoShelf");
+        
+        // Test chained references (A -> B -> C)
+        let ftl3 = r#"
+base = Hello
+middle = { base } World
+final = { middle }!
+"#;
+        let map3 = parse_ftl(ftl3).unwrap();
+        assert_eq!(map3.get("final").unwrap().as_simple().unwrap(), "Hello World!");
+    }
+    
+    #[test]
+    fn test_message_reference_attribute() {
+        // Test attribute references (e.g., { sort-order.toggle })
+        let ftl = r#"
+sort-order =
+    .toggle = Toggle sort order
+    .newest = { sort-order.toggle } - Newest First
+    .oldest = { sort-order.toggle } - Oldest First
+"#;
+        let map = parse_ftl(ftl).unwrap();
+        assert_eq!(
+            map.get("sort-order.newest").unwrap().as_simple().unwrap(),
+            "Toggle sort order - Newest First"
+        );
+        assert_eq!(
+            map.get("sort-order.oldest").unwrap().as_simple().unwrap(),
+            "Toggle sort order - Oldest First"
+        );
     }
 }
