@@ -5,6 +5,12 @@ use std::io::Read;
 use zip::ZipArchive;
 use std::fs::File;
 use log::{debug, warn};
+use std::collections::{HashMap, HashSet};
+use ammonia::Builder;
+use quick_xml::Reader;
+use quick_xml::events::Event;
+use quick_xml::escape::unescape;
+use std::borrow::Cow;
 
 pub struct EpubParser;
 
@@ -48,7 +54,6 @@ impl EpubParser {
 
        // Step 4.5: Resolve cover path relative to OPF directory
        let resolved_cover_path = if let Some(ref cover_path) = cover_path {
-           use std::path::Path;
            let opf_parent = Path::new(&opf_path).parent();
            let joined = if let Some(parent) = opf_parent {
                parent.join(cover_path)
@@ -85,8 +90,6 @@ impl EpubParser {
     }
 
     fn find_opf_path(container_xml: &str) -> Result<String> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
         let mut reader = Reader::from_str(container_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -97,7 +100,7 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"full-path" {
-                                return Ok(String::from_utf8_lossy(&attr.value).to_string());
+                                return Ok(attr.unescape_value()?.into_owned());
                             }
                         }
                     }
@@ -112,10 +115,6 @@ impl EpubParser {
     }
 
     fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
-        use std::collections::HashMap;
-
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -145,28 +144,38 @@ impl EpubParser {
                     } else if in_metadata {
                         match local_name.as_ref() {
                             b"title" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    title = Some(text.xml_content().unwrap_or_default().to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    title = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
                                 }
                             }
                             b"creator" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    authors.push(text.xml_content().unwrap_or_default().to_string());
+                                if let Ok(text_content) = reader.read_text(e.name()) {
+                                    authors.push(unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
                                 }
                             }
                             b"description" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    description = Some(text.xml_content().unwrap_or_default().to_string());
+                                match reader.read_text(e.name()) {
+                                    Ok(raw_text) => {
+                                        let cleaned = Self::clean_html(&raw_text);
+
+                                        let trimmed = cleaned.trim();
+                                        if !trimmed.is_empty() {
+                                            description = Some(trimmed.to_string());
+                                        }
+                                    }
+                                    Err(e) => {
+                                        debug!("Error reading description: {:?}", e);
+                                    }
                                 }
                             }
                             b"publisher" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    publisher = Some(text.xml_content().unwrap_or_default().to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    publisher = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
                                 }
                             }
                             b"language" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    language = Some(text.xml_content().unwrap_or_default().to_string());
+                                if let Ok(text) = reader.read_text(e.name()) {
+                                    language = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
                                 }
                             }
                             b"identifier" => {
@@ -174,11 +183,11 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     if key == b"opf:scheme" || key == b"scheme" {
-                                        scheme = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                        scheme = Some(attr.unescape_value()?.into_owned());
                                     }
                                 }
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    let value = text.xml_content().unwrap_or_default().to_string();
+                                if let Ok(text_content) = reader.read_text(e.name()) {
+                                    let value = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
                                     let (final_scheme, final_value) = if let Some(s) = scheme {
                                         (s, value.clone())
                                     } else if let Some(colon_pos) = value.find(':') {
@@ -192,8 +201,8 @@ impl EpubParser {
                                 }
                             }
                             b"subject" => {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    let subject = text.xml_content().unwrap_or_default().to_string();
+                                if let Ok(text_content) = reader.read_text(e.name()) {
+                                    let subject = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
                                     if !subject.is_empty() {
                                         subjects.push(subject);
                                     }
@@ -210,11 +219,11 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     match key {
-                                        b"property" => property = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"id" => id = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"refines" => refines = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                        b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                        b"property" => property = Some(attr.unescape_value()?.into_owned()),
+                                        b"id" => id = Some(attr.unescape_value()?.into_owned()),
+                                        b"refines" => refines = Some(attr.unescape_value()?.into_owned()),
+                                        b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
+                                        b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
                                         _ => {}
                                     }
                                 }
@@ -226,15 +235,15 @@ impl EpubParser {
                                 }
 
                                 if let Some(prop) = property {
-                                    if prop == "belongs-to-collection"
-                                        && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
-                                        && let Some(i) = id {
-                                        epub3_collections.insert(i, text.xml_content().unwrap_or_default().to_string());
-                                    } else if prop == "group-position"
-                                        && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
-                                        && let Some(r) = refines {
-                                        let clean_refines = r.trim_start_matches('#');
-                                        epub3_indices.insert(clean_refines.to_string(), text.xml_content().unwrap_or_default().to_string());
+                                    if prop == "belongs-to-collection" {
+                                        if let (Ok(text_content), Some(i)) = (reader.read_text(e.name()), id) {
+                                            epub3_collections.insert(i, unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
+                                        }
+                                    } else if prop == "group-position" {
+                                        if let (Ok(text_content), Some(r)) = (reader.read_text(e.name()), refines) {
+                                            let clean_refines = r.trim_start_matches('#');
+                                            epub3_indices.insert(clean_refines.to_string(), unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
+                                        }
                                     }
                                 }
                             }
@@ -250,8 +259,8 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             match key {
-                                b"name" => name_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
-                                b"content" => content_attr = Some(String::from_utf8_lossy(&attr.value).to_string()),
+                                b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
+                                b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
                                 _ => {}
                             }
                         }
@@ -315,9 +324,6 @@ impl EpubParser {
     }
 
     fn find_cover_path(opf_xml: &str, cover_id: &Option<String>) -> Result<(Option<String>, Option<String>)> {
-        use quick_xml::Reader;
-        use quick_xml::events::Event;
-        
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -334,13 +340,13 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"id" {
-                                id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                id = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"href" {
-                                href = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                href = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"media-type" {
-                                media_type = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                media_type = Some(attr.unescape_value()?.into_owned());
                             } else if key == b"properties" {
-                                properties = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                properties = Some(attr.unescape_value()?.into_owned());
                             }
                         }
                         
@@ -367,5 +373,18 @@ impl EpubParser {
             buf.clear();
         }
         Ok((None, None))
+    }
+    
+    fn clean_html(input: &str) -> String {
+        // Unescape XML entities so that ammonia sees actual HTML tags
+        let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
+
+        Builder::new()
+            .tags(vec![
+                "b", "i", "em", "strong", "p", "br",
+                "ul", "ol", "li", "blockquote", "a"
+            ].into_iter().collect::<HashSet<_>>())
+            .clean(&decoded)
+            .to_string()
     }
 }
