@@ -54,7 +54,7 @@
                 <div id="mobileFilterControls" class="flex items-center space-x-2">
                     <!-- Dropdown Filter Button -->
                     <div class="relative" id="filterDropdownWrapper">
-                        <button id="filterDropdownButton" class="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button">
+                        <button id="filterDropdownButton" class="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button" aria-label="{{ translation.get("filter.aria-label") }}">
                             <span id="selectedFilterLabel" class="hidden sm:inline font-medium">{{ translation.get("filter.all") }}</span>
                             <span id="selectedFilterLabelMobile" class="sm:hidden font-medium">{{ translation.get("filter.all") }}</span>
                             <svg class="w-4 h-4 text-primary-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">

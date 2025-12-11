@@ -38,6 +38,7 @@ view-details = Ver Detalhes
 # -----------------------------------
 search-placeholder = Buscar livro, autor, série...
 filter =
+    .aria-label = Filtrar livros
     .all = Todos
     .reading = Lendo
     .completed = Concluídos
@@ -165,10 +166,10 @@ previous-year =
     .aria-label = Ano anterior
 next-year =
     .aria-label = Próximo ano
-sort-order = 
+sort-order =
     .aria-label-toggle = Alternar ordem
-sort-newest-first = Atual: Mais Recentes Primeiro
-sort-oldest-first = Atual: Mais Antigos Primeiro
+    .newest-first = { sort-order.aria-label-toggle } - Atual: Mais Recentes Primeiro
+    .oldest-first = { sort-order.aria-label-toggle } - Atual: Mais Antigos Primeiro
 previous-month = 
     .aria-label = Mês anterior
 next-month = 
@@ -179,6 +180,10 @@ close-search =
     .aria-label = Fechar busca
 close = Fechar
     .aria-label = Fechar
+go-back =
+    .aria-label = Voltar
+reload =
+    .aria-label = Recarregar página
 
 # -----------------------------------
 #           Tempo & Datas
