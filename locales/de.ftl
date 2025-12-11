@@ -11,6 +11,11 @@
 #
 # NEW KEYS: Always add new translation keys to en.ftl first, then other bases.
 
+# Machine-readable metadata (used by --list-languages)
+-lang-code = de
+-lang-name = Deutsch
+-lang-dialect = de_DE
+
 # -----------------------------------
 #           Navigation & Shared
 # -----------------------------------
@@ -102,9 +107,9 @@ longest-session = Längste Sitzung
 average-session = Ø Sitzung
 # Suffix for average session duration (e.g. '/avg session')
 avg-session-suffix = /Ø Sitzung
-current-streak = Aktuelle Serie
-longest-streak = Längste Serie
-reading-streak = Lese-Serie
+current-streak = Aktueller Streak
+longest-streak = Längster Streak
+reading-streak = Lesestreak
 days-read = Gelesene Tage
 weekly-reading-time = Wöchentliche Lesezeit
 weekly-pages-read = Wöchentliche Seiten

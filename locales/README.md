@@ -33,9 +33,9 @@ cp en.ftl <lang>.ftl   # e.g., cp en.ftl fr.ftl
 
 Translate all keys. The base file must be **complete**—every key from `en.ftl` should exist.
 
-### 2. Update Comments
+### 2. Add Required Metadata
 
-Update the header comment to document which dialect this base represents:
+Every base language file **must** include machine-readable metadata (used by `--list-languages`):
 
 ```ftl
 # ===========================================
@@ -43,7 +43,18 @@ Update the header comment to document which dialect this base represents:
 # ===========================================
 # This is the base translation file for French, using Metropolitan French (fr_FR).
 # Regional variants (e.g., fr_CA.ftl) should only override keys that differ.
+
+# Machine-readable metadata (used by --list-languages)
+-lang-code = fr
+-lang-name = Français    # Native language name
+-lang-dialect = fr_FR
 ```
+
+| Key | Purpose |
+|-----|---------|
+| `-lang-code` | ISO 639-1 base language code (e.g., `fr`, `de`) |
+| `-lang-name` | Native name of the language |
+| `-lang-dialect` | Full locale code for date formatting (e.g., `fr_FR`, `de_AT`) |
 
 ### 3. Adding Regional Variants (Optional)
 
