@@ -170,10 +170,10 @@
                                 </svg>
                             </div>
                             <div>
-                                <div class="text-base md:text-lg font-bold text-gray-900 dark:text-white uppercase">
+                                <div class="text-base md:text-lg font-bold text-gray-900 dark:text-white">
                                     {% match book.language() %}
                                     {% when Some with (lang) %}
-                                        {{ lang }}
+                                        {{ translation.language_display_name(lang) }}
                                     {% when None %}
                                         --
                                     {% endmatch %}
