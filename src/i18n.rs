@@ -14,6 +14,10 @@ use include_dir::{include_dir, Dir};
 use intl_pluralrules::{PluralRules, PluralRuleType};
 use unic_langid::LanguageIdentifier;
 
+// ICU4X for localized language display names
+use icu_displaynames::{DisplayNamesOptions, LanguageDisplayNames};
+use icu_locid::{locale, Locale};
+
 /// Embedded locales directory
 static LOCALES: Dir = include_dir!("$CARGO_MANIFEST_DIR/locales");
 
@@ -283,6 +287,35 @@ impl Translations {
     /// Falls back to `en_US` if the locale code is not recognized by chrono.
     pub fn locale(&self) -> chrono::Locale {
         chrono::Locale::from_str(&self.language).unwrap_or(chrono::Locale::en_US)
+    }
+    
+    pub fn language_display_name(&self, lang_code: &str) -> String {
+        // Use unic-langid to parse/normalize (handles "en_GB" -> "en-GB", case sensitivity, etc.)
+        let lang_id: LanguageIdentifier = match lang_code.parse() {
+            Ok(l) => l,
+            Err(_) => return lang_code.to_uppercase(),
+        };
+        
+        // Convert to ICU Locale
+        let target_locale: Locale = match lang_id.to_string().parse() {
+            Ok(l) => l,
+            Err(_) => return lang_code.to_uppercase(),
+        };
+        
+        // Get the UI locale for display (e.g., to show names in German when UI is German)
+        let ui_locale: Locale = {
+            // Convert our locale format (de_DE) to ICU format (de-DE)
+            let bcp47 = self.language.replace('_', "-");
+            bcp47.parse().unwrap_or(locale!("en"))
+        };
+        
+        let options: DisplayNamesOptions = Default::default();
+        
+        // Only Get Language Name (e.g., "English"), ignoring region
+        match LanguageDisplayNames::try_new(&ui_locale.into(), options) {
+            Ok(formatter) => formatter.of(target_locale.id.language).map(|s| s.to_string()),
+            Err(_) => None,
+        }.unwrap_or_else(|| lang_code.to_uppercase())
     }
 }
 
