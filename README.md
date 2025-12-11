@@ -216,6 +216,7 @@ KoShelf can operate in several modes:
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
   > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--books-path` directory. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
+- `-l, --language`: Language for UI translations (e.g., "en", "de"). Default: "en"
 - `--github`: Print GitHub repository URL
 
 ### Example
@@ -247,6 +248,9 @@ KoShelf can operate in several modes:
 
 # Using docsettings (metadata stored in central folder by path)
 ./koshelf -b ~/Books -o ~/my-reading-site --docsettings-path ~/KOReaderSettings/docsettings
+
+# Generate site with German UI language
+./koshelf -b ~/Books -o ~/my-reading-site --language de
 ```
 
 ## KoReader Setup
@@ -422,6 +426,7 @@ site/
     │   ├── icon-192.png
     │   └── icon-512.png
     └── json/               # Data files used by the frontend (for dynamic loading)
+        ├── locales.json        # UI translations for the selected language
         ├── calendar/           # Calendar data split by month
         │   ├── available_months.json 
         │   ├── 2024-01.json   

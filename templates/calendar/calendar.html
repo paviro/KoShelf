@@ -32,12 +32,12 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Navigation Buttons -->
                 <div class="flex items-center space-x-1">
-                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("aria-previous-month") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </button>
-                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center">
+                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("aria-next-month") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -46,7 +46,7 @@
                 
                 <!-- Today Button -->
                 <button id="todayBtn" class="px-3 md:px-4 py-2 h-10 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm md:text-base transition-colors duration-200 flex items-center justify-center">
-                    Today
+                    {{ translation.get("today") }}
                 </button>
             </div>
         </div>
@@ -68,7 +68,7 @@
                         </div>
                         <div>
                             <div id="monthlyBooks" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0</div>
-                            <div class="text-sm text-gray-500 dark:text-dark-400">Books</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("books") }}</div>
                         </div>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
                         </div>
                         <div>
                             <div id="monthlyPages" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0</div>
-                            <div class="text-sm text-gray-500 dark:text-dark-400">Pages Read</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("total-pages-read") }}</div>
                         </div>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
                         </div>
                         <div>
                             <div id="monthlyTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0h</div>
-                            <div class="text-sm text-gray-500 dark:text-dark-400">Reading Time</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("total-read-time") }}</div>
                         </div>
                     </div>
                 </div>
@@ -113,7 +113,7 @@
                         </div>
                         <div>
                             <div id="monthlyDaysPercentage" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">0%</div>
-                            <div class="text-sm text-gray-500 dark:text-dark-400">Days Read</div>
+                            <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("days-read") }}</div>
                         </div>
                     </div>
                 </div>

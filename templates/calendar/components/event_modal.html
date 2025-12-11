@@ -2,7 +2,7 @@
     <div class="bg-white dark:bg-gradient-to-br dark:from-dark-800 dark:to-dark-900 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-95 opacity-0" id="modalCard">
         <!-- Header with close button -->
         <div class="relative p-6 pb-4">
-            <button id="closeModal" class="absolute top-4 right-4 text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 rounded-full p-2 transition-all duration-200 z-20">
+            <button id="closeModal" class="absolute top-4 right-4 text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 rounded-full p-2 transition-all duration-200 z-20" aria-label="{{ translation.get("aria-close") }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -31,7 +31,7 @@
                         <svg class="w-4 h-4 mr-2 text-primary-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
-                        <span class="truncate">by <span id="modalAuthor" class="text-gray-900 dark:text-white font-medium"></span></span>
+                        <span class="truncate">{{ translation.get("by") }} <span id="modalAuthor" class="text-gray-900 dark:text-white font-medium"></span></span>
                     </div>
                 </div>
             </div>
@@ -49,7 +49,7 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">Reading Time</div>
+                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">{{ translation.get("reading-time") }}</div>
                             <div id="modalReadTime" class="text-gray-900 dark:text-white font-semibold"></div>
                         </div>
                     </div>
@@ -64,7 +64,7 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">Pages Read</div>
+                            <div class="text-xs text-gray-500 dark:text-dark-400 uppercase tracking-wide font-medium">{{ translation.get("pages-read") }}</div>
                             <div id="modalPagesRead" class="text-gray-900 dark:text-white font-semibold"></div>
                         </div>
                     </div>
@@ -81,7 +81,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                         </svg>
-                        View Details
+                        {{ translation.get("view-details") }}
                     </span>
                 </button>
             </div>

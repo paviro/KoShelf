@@ -3,6 +3,8 @@
  * Handles loading and displaying reading activity heatmap with year selection
  */
 
+import { translation } from './i18n.js';
+
 interface ActivityEntry {
     date: string;
     pages_read: number;
@@ -31,6 +33,9 @@ class ActivityHeatmap {
         if (this.isInitialized) return;
 
         try {
+            // Load translations
+            await translation.init();
+
             // Get available years from the template (no need to load from JSON)
             this.getAvailableYearsFromTemplate();
 
@@ -325,7 +330,7 @@ class ActivityHeatmap {
 
         // Set tooltip (reading time focused)
         const readLabel = DateUtils.formatDuration(activityObj.read);
-        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} pages`);
+        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} ${translation.get('pages-label')}`);
 
         // Add hover functionality
         this.addCellHoverEffects(cell);

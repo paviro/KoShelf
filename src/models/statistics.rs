@@ -70,35 +70,39 @@ impl StreakInfo {
     }
 
     /// Format the date range for display
-    pub fn date_range_display(&self) -> Option<String> {
+    pub fn date_range_display(&self, translations: &crate::i18n::Translations) -> Option<String> {
         match (&self.start_date, &self.end_date) {
             (Some(start), Some(end)) => {
                 if start == end {
-                    Self::format_date_display(start).to_string().into()
+                    Self::format_date_display(start, translations).to_string().into()
                 } else {
                     Some(format!(
                         "{} - {}",
-                        Self::format_date_display(start),
-                        Self::format_date_display(end)
+                        Self::format_date_display(start, translations),
+                        Self::format_date_display(end, translations)
                     ))
                 }
             }
-            (Some(start), None) => Some(format!("{} - now", Self::format_date_display(start))),
+            (Some(start), None) => Some(format!("{} - now", Self::format_date_display(start, translations))),
             _ => None,
         }
     }
 
     /// Format a date string for display (convert from YYYY-MM-DD to more readable format)
-    fn format_date_display(date_str: &str) -> String {
+    pub fn format_date_display(date_str: &str, translations: &crate::i18n::Translations) -> String {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
             let current_year = Utc::now().year();
-            let date_year = date.year();
-
-            if date_year == current_year {
-                date.format("%b %d").to_string()
+            let locale = translations.locale();
+            
+            // Get appropriate format string from translations
+            let format_key = if date.year() == current_year {
+                "datetime-short-current-year-format"
             } else {
-                date.format("%b %d %Y").to_string()
-            }
+                "datetime-short-with-year-format"
+            };
+            let format_str = translations.get(format_key);
+            
+            date.format_localized(&format_str, locale).to_string()
         } else {
             date_str.to_string()
         }

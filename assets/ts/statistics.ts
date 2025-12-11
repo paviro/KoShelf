@@ -3,6 +3,8 @@
  * Handles loading and displaying reading statistics
  */
 
+import { translation } from './i18n.js';
+
 interface WeekData {
     read_time: number;
     pages_read: number;
@@ -282,12 +284,12 @@ class DateFormatter {
 
     // Format date as "D Month" (e.g. "17 March")
     static formatDateNice(dateObj: Date): string {
-        const months = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
+        const monthKeys = [
+            'month-january', 'month-february', 'month-march', 'month-april',
+            'month-may', 'month-june', 'month-july', 'month-august',
+            'month-september', 'month-october', 'month-november', 'month-december'
         ];
-
-        return `${dateObj.getDate()} ${months[dateObj.getMonth()]}`;
+        return `${dateObj.getDate()} ${translation.get(monthKeys[dateObj.getMonth()])}`;
     }
 
     // Format a date range nicely (e.g. "17-23 March" or "28 Feb - 5 March")
@@ -302,10 +304,12 @@ class DateFormatter {
         const startYear = startDate.getFullYear();
         const endYear = endDate.getFullYear();
 
-        const months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        const monthKeys = [
+            'month-january-short', 'month-february-short', 'month-march-short', 'month-april-short',
+            'month-may-short', 'month-june-short', 'month-july-short', 'month-august-short',
+            'month-september-short', 'month-october-short', 'month-november-short', 'month-december-short'
         ];
+        const months = monthKeys.map(k => translation.get(k));
 
         // If same month
         if (startMonth === endMonth && startYear === endYear) {
@@ -345,10 +349,15 @@ class DataFormatter {
 const statisticsManager = new StatisticsManager();
 
 // Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => statisticsManager.init());
-} else {
+async function initStats(): Promise<void> {
+    await translation.init();
     statisticsManager.init();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initStats());
+} else {
+    initStats();
 }
 
 // Export for module use

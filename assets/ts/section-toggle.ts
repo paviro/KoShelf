@@ -1,6 +1,8 @@
 // Section Toggle Module
 // Handles collapsible sections with data-driven configuration
 
+import { translation } from './i18n.js';
+
 interface SectionData {
     section: HTMLElement;
     button: HTMLButtonElement;
@@ -17,7 +19,10 @@ export class SectionToggle {
         this.init();
     }
 
-    private init(): void {
+    private async init(): Promise<void> {
+        // Load translations
+        await translation.init();
+
         // Find all sections with data-name attributes
         const toggleSections = document.querySelectorAll<HTMLElement>('section[data-name]');
 
@@ -63,12 +68,12 @@ export class SectionToggle {
             // Show the section initially
             container.classList.remove('hidden');
             chevron.style.transform = 'rotate(0deg)';
-            buttonText.textContent = 'Hide';
+            buttonText.textContent = translation.get('hide');
         } else {
             // Hide the section initially
             container.classList.add('hidden');
             chevron.style.transform = 'rotate(-90deg)';
-            buttonText.textContent = 'Show';
+            buttonText.textContent = translation.get('show');
         }
     }
 
@@ -93,7 +98,7 @@ export class SectionToggle {
         const { container, chevron, buttonText } = sectionData;
         container.classList.remove('hidden');
         chevron.style.transform = 'rotate(0deg)';
-        buttonText.textContent = 'Hide';
+        buttonText.textContent = translation.get('hide');
     }
 
     hide(sectionName: string): void {
@@ -103,7 +108,7 @@ export class SectionToggle {
         const { container, chevron, buttonText } = sectionData;
         container.classList.add('hidden');
         chevron.style.transform = 'rotate(-90deg)';
-        buttonText.textContent = 'Show';
+        buttonText.textContent = translation.get('show');
     }
 
     isVisible(sectionName: string): boolean {
