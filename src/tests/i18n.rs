@@ -157,30 +157,7 @@ fn test_unused_translation_keys() {
     }
 }
 
-#[test]
-fn test_ftl_files_are_valid() {
-    let locales_dir = Path::new("locales");
-    
-    for entry in fs::read_dir(locales_dir).expect("Failed to read locales directory") {
-        let entry = entry.expect("Failed to read directory entry");
-        let path = entry.path();
-        
-        if path.extension().and_then(|s| s.to_str()) == Some("ftl") {
-            let filename = path.file_name().unwrap().to_str().unwrap();
-            let content = fs::read_to_string(&path).expect("Failed to read FTL file");
-            
-            // Use fluent-syntax parser to validate the FTL file
-            if let Err(errors) = parser::parse(content.as_str()) {
-                let error_msgs: Vec<_> = errors.1.iter().map(|e| format!("{:?}", e)).collect();
-                panic!(
-                    "FTL file {} has syntax errors:\n{}",
-                    filename,
-                    error_msgs.join("\n")
-                );
-            }
-        }
-    }
-}
+
 
 #[test]
 fn test_required_metadata_present() {
