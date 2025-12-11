@@ -13,7 +13,7 @@
 
 # Machine-readable metadata (used by --list-languages)
 -lang-code = en
--lang-name = English
+-lang-name = English (United States)
 -lang-dialect = en_US
 
 # -----------------------------------
