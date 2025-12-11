@@ -40,9 +40,15 @@ search-placeholder = Search book, author, series...
 filter =
     .aria-label = Filter books
     .all = All
+    .all-aria = { filter.aria-label } - Current: { filter.all }
     .reading = Reading
+    .reading-aria = { filter.aria-label } - Current: { filter.reading }
     .completed = Completed
+    .completed-aria = { filter.aria-label } - Current: { filter.completed }
     .unread = Unread
+    .unread-aria = { filter.aria-label } - Current: { filter.unread }
+    .on-hold = On Hold
+    .on-hold-aria = { filter.aria-label } - Current: { filter.on-hold }
 no-books-found = No Books Found
 no-books-match = No books match your current search or filter criteria.
 try-adjusting = Try adjusting your search or filter criteria
@@ -182,8 +188,6 @@ close = Close
     .aria-label = Close
 go-back =
     .aria-label = Go back
-reload =
-    .aria-label = Reload page
 
 # -----------------------------------
 #           Time & Dates

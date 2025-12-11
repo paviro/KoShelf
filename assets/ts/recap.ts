@@ -61,7 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (svg) {
                 svg.innerHTML = isNewestFirst ? iconNewest : iconOldest;
             }
-            sortToggle.title = isNewestFirst ? translation.get('sort-order.newest-first') : translation.get('sort-order.oldest-first');
+            const label = isNewestFirst ? translation.get('sort-order.newest-first') : translation.get('sort-order.oldest-first');
+            sortToggle.title = label;
+            sortToggle.setAttribute('aria-label', label);
         };
 
         // Function to flip the DOM order

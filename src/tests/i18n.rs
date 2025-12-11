@@ -152,14 +152,37 @@ fn test_unused_translation_keys() {
             a
         });
 
+    // Also extract keys used via message references in FTL files (e.g., { key.attr })
+    // This regex matches: { message-id } or { message-id.attr }
+    let ref_re = Regex::new(r#"\{\s*([-a-zA-Z0-9]+(?:\.[-a-zA-Z0-9]+)?)\s*\}"#).expect("Invalid Regex");
+    let ftl_referenced_keys: HashSet<String> = WalkDir::new("locales")
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("ftl"))
+        .map(|e| {
+            let content = fs::read_to_string(e.path()).unwrap_or_default();
+            let mut found = HashSet::new();
+            for cap in ref_re.captures_iter(&content) {
+                if let Some(m) = cap.get(1) {
+                    found.insert(m.as_str().to_string());
+                }
+            }
+            found
+        })
+        .fold(HashSet::new(), |mut a, b| {
+            a.extend(b);
+            a
+        });
+
     // Check which EN keys are unused
     let mut unused_list: Vec<_> = en_keys
         .into_iter()
         .filter(|k| {
-            // A key is used if we found "key", "key_one", or "key_other"
+            // A key is used if we found "key", "key_one", "key_other", or it's referenced in FTL
             !found_tokens.contains(k) 
             && !found_tokens.contains(&format!("{}_one", k)) 
             && !found_tokens.contains(&format!("{}_other", k))
+            && !ftl_referenced_keys.contains(k)
         })
         .collect();
 

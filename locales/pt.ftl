@@ -40,9 +40,15 @@ search-placeholder = Buscar livro, autor, série...
 filter =
     .aria-label = Filtrar livros
     .all = Todos
+    .all-aria = { filter.aria-label } - Atual: { filter.all }
     .reading = Lendo
+    .reading-aria = { filter.aria-label } - Atual: { filter.reading }
     .completed = Concluídos
+    .completed-aria = { filter.aria-label } - Atual: { filter.completed }
     .unread = Não lidos
+    .unread-aria = { filter.aria-label } - Atual: { filter.unread }
+    .on-hold = Em Espera
+    .on-hold-aria = { filter.aria-label } - Atual: { filter.on-hold }
 no-books-found = Nenhum livro encontrado
 no-books-match = Nenhum livro corresponde aos seus critérios de busca ou filtro.
 try-adjusting = Tente ajustar sua busca ou filtros
@@ -182,8 +188,6 @@ close = Fechar
     .aria-label = Fechar
 go-back =
     .aria-label = Voltar
-reload =
-    .aria-label = Recarregar página
 
 # -----------------------------------
 #           Tempo & Datas
