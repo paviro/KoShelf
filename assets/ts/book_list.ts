@@ -1,6 +1,7 @@
 // KoInsight - Reading Tracker Interface
 import { LazyImageLoader } from './lazy-loading.js';
 import { SectionToggle } from './section-toggle.js';
+import { translation } from './i18n.js';
 
 declare global {
     interface Window {
@@ -17,7 +18,9 @@ interface BookCard extends HTMLElement {
     };
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load translations for dynamic aria-label updates
+    await translation.init();
     const searchInput = document.getElementById('searchInput') as HTMLInputElement | null;
     const mobileSearchInput = document.getElementById('mobileSearchInput') as HTMLInputElement | null;
     const filterButtons = document.querySelectorAll<HTMLElement>('[data-filter]');
@@ -293,8 +296,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target as HTMLElement;
         if (target.matches('button[data-filter]')) {
             const filterText = target.textContent;
+            const filterType = target.dataset.filter || 'all';
             if (selectedFilterLabel && filterText) selectedFilterLabel.textContent = filterText;
             if (selectedFilterLabelMobile && filterText) selectedFilterLabelMobile.textContent = filterText;
+
+            // Update aria-label and title based on filter type
+            const filterAriaMap: Record<string, string> = {
+                'all': 'filter.all-aria',
+                'reading': 'filter.reading-aria',
+                'completed': 'filter.completed-aria',
+                'abandoned': 'filter.on-hold-aria',
+                'unread': 'filter.unread-aria'
+            };
+            const ariaKey = filterAriaMap[filterType] || 'filter.all-aria';
+            const ariaLabel = translation.get(ariaKey);
+            if (filterDropdownButton) {
+                filterDropdownButton.title = ariaLabel;
+                filterDropdownButton.setAttribute('aria-label', ariaLabel);
+            }
+
             filterDropdownMenu.classList.add('hidden');
         }
     });

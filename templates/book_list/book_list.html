@@ -37,14 +37,14 @@
                 </div>
 
                 <!-- Mobile search button (hidden when search is active) -->
-                <button id="mobileSearchButton" class="sm:hidden p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors" type="button" aria-label="{{ translation.get("search.aria-label") }}">
+                <button id="mobileSearchButton" class="sm:hidden p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors" type="button" title="{{ translation.get("search.aria-label") }}" aria-label="{{ translation.get("search.aria-label") }}">
                     <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                 </button>
 
                 <!-- Mobile search close button (hidden by default, shown when search is active) -->
-                <button id="mobileSearchClose" class="sm:hidden p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors hidden" type="button" aria-label="{{ translation.get("close-search.aria-label") }}">
+                <button id="mobileSearchClose" class="sm:hidden p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors hidden" type="button" title="{{ translation.get("close-search.aria-label") }}" aria-label="{{ translation.get("close-search.aria-label") }}">
                     <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -54,7 +54,7 @@
                 <div id="mobileFilterControls" class="flex items-center space-x-2">
                     <!-- Dropdown Filter Button -->
                     <div class="relative" id="filterDropdownWrapper">
-                        <button id="filterDropdownButton" class="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button" aria-label="{{ translation.get("filter.aria-label") }}">
+                        <button id="filterDropdownButton" class="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button" title="{{ translation.get("filter.all-aria") }}" aria-label="{{ translation.get("filter.all-aria") }}">
                             <span id="selectedFilterLabel" class="hidden sm:inline font-medium">{{ translation.get("filter.all") }}</span>
                             <span id="selectedFilterLabelMobile" class="sm:hidden font-medium">{{ translation.get("filter.all") }}</span>
                             <svg class="w-4 h-4 text-primary-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">

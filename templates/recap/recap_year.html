@@ -28,7 +28,7 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <div class="flex items-center space-x-1">
                     {% if prev_year.is_some() %}
-                    <a href="/recap/{{ prev_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("previous-year.aria-label") }}">
+                    <a href="/recap/{{ prev_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("previous-year.aria-label") }}" aria-label="{{ translation.get("previous-year.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
@@ -41,7 +41,7 @@
                     </span>
                     {% endif %}
                     {% if next_year.is_some() %}
-                    <a href="/recap/{{ next_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" aria-label="{{ translation.get("next-year.aria-label") }}">
+                    <a href="/recap/{{ next_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("next-year.aria-label") }}" aria-label="{{ translation.get("next-year.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -90,7 +90,7 @@
                 </div>
                 
                 <!-- Sort Button -->
-                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("sort-order.aria-label-toggle") }}" aria-label="{{ translation.get("sort-order.aria-label-toggle") }}">
+                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("sort-order.newest-first") }}" aria-label="{{ translation.get("sort-order.newest-first") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
                     </svg>
@@ -112,7 +112,7 @@
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
                 <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">{{ translation.get("download.recap-label") }}</h3>
-                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors" aria-label="{{ translation.get("close.aria-label") }}">
+                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors" title="{{ translation.get("close.aria-label") }}" aria-label="{{ translation.get("close.aria-label") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
