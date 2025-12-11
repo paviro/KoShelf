@@ -20,10 +20,23 @@ fn extract_ftl_keys(content: &str) -> HashSet<String> {
     for entry in resource.body {
         match entry {
             ast::Entry::Message(msg) => {
-                keys.insert(msg.id.name.to_string());
+                let key = msg.id.name.to_string();
+                // If it has a value, insert the base key
+                if msg.value.is_some() {
+                    keys.insert(key.clone());
+                }
+                
+                // Insert attribute keys
+                for attr in msg.attributes {
+                    keys.insert(format!("{}.{}", key, attr.id.name));
+                }
             }
             ast::Entry::Term(term) => {
-                keys.insert(format!("-{}", term.id.name));
+                let key = format!("-{}", term.id.name);
+                keys.insert(key.clone());
+                for attr in term.attributes {
+                    keys.insert(format!("{}.{}", key, attr.id.name));
+                }
             }
             _ => {}
         }
@@ -114,8 +127,8 @@ fn test_unused_translation_keys() {
         .collect();
 
     // Compile regex once
-    // Matches quoted strings that look like FTL keys: "key", 'key', "key-name", 'key_name'
-    let re = Regex::new(r#"["']([-a-zA-Z0-9_]+)["']"#).expect("Invalid Regex");
+    // Matches quoted strings that look like FTL keys: "key", 'key', "key-name", 'key_name', "key.attribute"
+    let re = Regex::new(r#"["']([-a-zA-Z0-9_.]+)["']"#).expect("Invalid Regex");
 
     // Process files in parallel to find all potential key usages
     let found_tokens: HashSet<String> = source_files
@@ -139,10 +152,21 @@ fn test_unused_translation_keys() {
             a
         });
 
+    // Keys that are constructed dynamically (e.g., format!("{}", month_label))
+    // and won't be found by literal string matching
+    let dynamic_keys: HashSet<&str> = [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december",
+    ].into_iter().collect();
+
     // Check which EN keys are unused
     let mut unused_list: Vec<_> = en_keys
         .into_iter()
         .filter(|k| {
+            // Skip dynamically constructed keys
+            if dynamic_keys.contains(k.as_str()) {
+                return false;
+            }
             // A key is used if we found "key", "key_one", or "key_other"
             !found_tokens.contains(k) 
             && !found_tokens.contains(&format!("{}_one", k)) 
@@ -156,8 +180,6 @@ fn test_unused_translation_keys() {
         panic!("Found unused translation keys: {:?}", unused_list);
     }
 }
-
-
 
 #[test]
 fn test_required_metadata_present() {

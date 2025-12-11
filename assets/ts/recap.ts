@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (useWebShare) {
         // Update modal title
         if (shareModalTitle) {
-            shareModalTitle.textContent = translation.get('share-recap-image');
+            shareModalTitle.textContent = translation.get('share.recap-label');
         }
         // Update button texts
         document.querySelectorAll('.share-btn-text').forEach(span => {
@@ -132,8 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         // Update header button title/aria-label
         if (shareBtn) {
-            shareBtn.title = translation.get('share-recap-image');
-            shareBtn.setAttribute('aria-label', translation.get('share-recap-image'));
+            shareBtn.title = translation.get('share.recap-label');
+            shareBtn.setAttribute('aria-label', translation.get('share.recap-label'));
         }
     }
 
