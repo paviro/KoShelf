@@ -345,9 +345,9 @@ My actual setup:
 
 This way, every time Syncthing pulls updates from my e-reader, the website automatically updates with my latest reading progress, new highlights, and updated statistics.
 
-### Koreader Syncthing Docker Setup
+### User-Contributed Setups
 
-see [Koreader Syncthing Docker Setup](Koreader_Syncthing_Docker_Setup.md)
+See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contributed guides on how to sync your devices with KoShelf.
 
 ## Supported Data
 
