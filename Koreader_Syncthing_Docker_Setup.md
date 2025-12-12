@@ -81,7 +81,7 @@ Now if wifi is on and syncthing enabled on the ereader it will sync the folders 
 
 ## KoShelf
 
-runing the image with the following docker-compose.yml please use the path used above (with the added setting for the koreader path and env variables to the needs
+runing the [koshelf-docker](https://github.com/DevTigro/koshelf-docker) image with the following docker-compose.yml please use the path used above (with the added setting for the koreader path and env variables to the needs
 ```
 ---
 services:
