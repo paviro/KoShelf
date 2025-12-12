@@ -53,6 +53,11 @@ impl BookFormat {
             Self::Fb2 => "metadata.fb2.lua",
         }
     }
+
+    /// Check if a filename is a KOReader metadata file for any supported format
+    pub fn is_metadata_file(filename: &str) -> bool {
+        matches!(filename, "metadata.epub.lua" | "metadata.fb2.lua")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

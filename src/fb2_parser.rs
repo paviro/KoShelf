@@ -9,6 +9,7 @@ use quick_xml::events::Event;
 use quick_xml::escape::unescape;
 use std::borrow::Cow;
 use base64::{Engine as _, engine::general_purpose};
+use zip::ZipArchive;
 
 pub struct Fb2Parser;
 
@@ -19,10 +20,9 @@ impl Fb2Parser {
     
     pub async fn parse(&self, fb2_path: &Path) -> Result<BookInfo> {
         debug!("Opening FB2: {:?}", fb2_path);
-        let mut file = File::open(fb2_path)
-            .with_context(|| format!("Failed to open FB2 file: {:?}", fb2_path))?;
-        let mut xml_content = String::new();
-        file.read_to_string(&mut xml_content)?;
+        
+        // Read the FB2 content, handling both plain .fb2 and .fb2.zip
+        let xml_content = Self::read_fb2_content(fb2_path)?;
 
         // Parse FB2 XML
         let (fb2_info, cover_href) = Self::parse_fb2_metadata(&xml_content)?;
@@ -39,6 +39,43 @@ impl Fb2Parser {
             cover_mime_type,
             ..fb2_info
         })
+    }
+
+    /// Read FB2 content, handling both plain .fb2 and .fb2.zip files
+    fn read_fb2_content(path: &Path) -> Result<String> {
+        let filename = path.file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        
+        if filename.ends_with(".fb2.zip") {
+            // Extract FB2 from zip archive
+            let file = File::open(path)
+                .with_context(|| format!("Failed to open FB2 zip file: {:?}", path))?;
+            let mut archive = ZipArchive::new(file)
+                .with_context(|| format!("Failed to read FB2 zip archive: {:?}", path))?;
+            
+            // Find the .fb2 file inside the archive
+            for i in 0..archive.len() {
+                let mut entry = archive.by_index(i)?;
+                let entry_name = entry.name().to_lowercase();
+                if entry_name.ends_with(".fb2") {
+                    let mut content = String::new();
+                    entry.read_to_string(&mut content)?;
+                    debug!("Extracted FB2 from zip: {} ({} bytes)", entry.name(), content.len());
+                    return Ok(content);
+                }
+            }
+            
+            Err(anyhow!("No .fb2 file found inside zip archive: {:?}", path))
+        } else {
+            // Plain .fb2 file
+            let mut file = File::open(path)
+                .with_context(|| format!("Failed to open FB2 file: {:?}", path))?;
+            let mut content = String::new();
+            file.read_to_string(&mut content)?;
+            Ok(content)
+        }
     }
 
     fn parse_fb2_metadata(fb2_xml: &str) -> Result<(BookInfo, Option<String>)> {

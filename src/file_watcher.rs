@@ -1,6 +1,7 @@
 use crate::config::SiteConfig;
 use crate::site_generator::SiteGenerator;
 use crate::book_scanner::MetadataLocation;
+use crate::models::BookFormat;
 use crate::version_notifier::SharedVersionNotifier;
 use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -171,30 +172,32 @@ impl FileWatcher {
     
     fn event_affects_relevant_files(&self, event: &Event) -> bool {
         event.paths.iter().any(|path| {
-		let extension = path
-			.extension()
-			.and_then(|s| s.to_str())
-			.map(|ext| ext.to_ascii_lowercase());
             let filename = path.file_name().and_then(|s| s.to_str());
             
-            // Check for EPUB and FB2 files and metadata files
-		if extension.as_deref() == Some("epub") 
-                || extension.as_deref() == Some("fb2")
-                || filename == Some("metadata.epub.lua")
-                || filename == Some("metadata.fb2.lua") {
+            // Check for book files using BookFormat (handles .epub, .fb2, .fb2.zip)
+            if BookFormat::from_path(path).is_some() {
                 return true;
+            }
+            
+            // Check for metadata files
+            if let Some(filename) = filename {
+                if BookFormat::is_metadata_file(filename) {
+                    return true;
+                }
             }
             
             // Check for .sdr directories (KoReader metadata folders)
-            if let Some(filename) = filename
-                && filename.ends_with(".sdr") {
-                return true;
+            if let Some(filename) = filename {
+                if filename.ends_with(".sdr") {
+                    return true;
+                }
             }
             
             // Check for statistics database files
-            if let Some(ref stats_path) = self.statistics_db_path
-                && path == stats_path {
-                return true;
+            if let Some(ref stats_path) = self.statistics_db_path {
+                if path == stats_path {
+                    return true;
+                }
             }
             
             false
@@ -204,85 +207,36 @@ impl FileWatcher {
     fn log_file_event(&self, event: &Event) {
         for path in &event.paths {
             let filename = path.file_name().and_then(|s| s.to_str());
+            let action = match &event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) => "modified",
+                EventKind::Remove(_) => "removed",
+                _ => continue,
+            };
             
-            match &event.kind {
-                EventKind::Create(_) | EventKind::Modify(_) => {
-					// Check EPUB files
-					if path
-						.extension()
-						.and_then(|s| s.to_str())
-						.map(|ext| ext.eq_ignore_ascii_case("epub"))
-						.unwrap_or(false)
-					{
-                        info!("EPUB file modified: {:?}", path);
-                    }
-                    
-                    // Check FB2 files
-					if path
-						.extension()
-						.and_then(|s| s.to_str())
-						.map(|ext| ext.eq_ignore_ascii_case("fb2"))
-						.unwrap_or(false)
-					{
-                        info!("FB2 file modified: {:?}", path);
-                    }
-                    
-                    // Check metadata files
-                    if filename == Some("metadata.epub.lua") || filename == Some("metadata.fb2.lua") {
-                        info!("Metadata file modified: {:?}", path);
-                    }
-                    
-                    // Check .sdr directories
-                    if let Some(filename) = filename
-                        && filename.ends_with(".sdr") {
-                        info!("KoReader metadata directory modified: {:?}", path);
-                    }
-                    
-                    // Check statistics database
-                    if let Some(ref stats_path) = self.statistics_db_path
-                        && path == stats_path {
-                        info!("Statistics database modified: {:?}", path);
-                    }
+            // Check for book files using BookFormat
+            if let Some(format) = BookFormat::from_path(path) {
+                info!("{:?} file {}: {:?}", format, action, path);
+            }
+            
+            // Check metadata files
+            if let Some(filename) = filename {
+                if BookFormat::is_metadata_file(filename) {
+                    info!("Metadata file {}: {:?}", action, path);
                 }
-                EventKind::Remove(_) => {
-					// Check EPUB files
-					if path
-						.extension()
-						.and_then(|s| s.to_str())
-						.map(|ext| ext.eq_ignore_ascii_case("epub"))
-						.unwrap_or(false)
-					{
-                        info!("EPUB file removed: {:?}", path);
-                    }
-                    
-                    // Check FB2 files
-					if path
-						.extension()
-						.and_then(|s| s.to_str())
-						.map(|ext| ext.eq_ignore_ascii_case("fb2"))
-						.unwrap_or(false)
-					{
-                        info!("FB2 file removed: {:?}", path);
-                    }
-                    
-                    // Check metadata files
-                    if filename == Some("metadata.epub.lua") || filename == Some("metadata.fb2.lua") {
-                        info!("Metadata file removed: {:?}", path);
-                    }
-                    
-                    // Check .sdr directories  
-                    if let Some(filename) = filename
-                        && filename.ends_with(".sdr") {
-                        info!("KoReader metadata directory removed: {:?}", path);
-                    }
-                    
-                    // Check statistics database
-                    if let Some(ref stats_path) = self.statistics_db_path
-                        && path == stats_path {
-                        info!("Statistics database removed: {:?}", path);
-                    }
+            }
+            
+            // Check .sdr directories
+            if let Some(filename) = filename {
+                if filename.ends_with(".sdr") {
+                    info!("KoReader metadata directory {}: {:?}", action, path);
                 }
-                _ => {}
+            }
+            
+            // Check statistics database
+            if let Some(ref stats_path) = self.statistics_db_path {
+                if path == stats_path {
+                    info!("Statistics database {}: {:?}", action, path);
+                }
             }
         }
     }
