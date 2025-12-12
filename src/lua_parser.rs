@@ -79,7 +79,7 @@ impl LuaParser {
             pageno: self.get_optional_u32(&table, "pageno")?,
             pos0: self.get_optional_string(&table, "pos0")?,
             pos1: self.get_optional_string(&table, "pos1")?,
-            text: self.get_required_string(&table, "text")?,
+            text: self.get_optional_string(&table, "text")?,
             note: self.get_optional_string(&table, "note")?,
         })
     }
@@ -150,18 +150,6 @@ impl LuaParser {
                 Ok(None)
             }
             Err(_) => Ok(None),
-        }
-    }
-    
-    fn get_required_string(&self, table: &Table, key: &str) -> Result<String> {
-        match table.get(key) {
-            Ok(Value::String(s)) => match s.to_str() {
-                Ok(string_val) => Ok(string_val.to_string()),
-                Err(e) => Err(anyhow!("Failed to convert string for key '{}': {}", key, e)),
-            },
-            Ok(Value::Nil) => Err(anyhow!("Required field '{}' is nil", key)),
-            Ok(_) => Err(anyhow!("Expected string for key '{}', got different type", key)),
-            Err(e) => Err(anyhow!("Failed to get required field '{}': {}", key, e)),
         }
     }
     

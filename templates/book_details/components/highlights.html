@@ -72,12 +72,16 @@
                 <!-- Annotation Content -->
                 <div class="p-6">
                     <!-- Quote -->
+                    {% match annotation.text %}
+                    {% when Some with (text) %}
                     <div class="relative">
                         <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-amber-600 rounded-full"></div>
                         <blockquote class="text-gray-900 dark:text-white text-lg leading-relaxed pl-6 font-light">
-                            {{ annotation.text }}
+                            {{ text }}
                         </blockquote>
                     </div>
+                    {% when None %}
+                    {% endmatch %}
                     
                     <!-- Personal Notes -->
                     {% match annotation.note %}

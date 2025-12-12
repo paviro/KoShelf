@@ -1,12 +1,12 @@
-use crate::models::{EpubInfo, Identifier};
+use crate::models::{BookInfo, Identifier};
+use crate::utils::sanitize_html;
 use anyhow::{Result, Context, anyhow};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::Read;
 use zip::ZipArchive;
 use std::fs::File;
 use log::{debug, warn};
-use std::collections::{HashMap, HashSet};
-use ammonia::Builder;
+use std::collections::HashMap;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::escape::unescape;
@@ -19,7 +19,16 @@ impl EpubParser {
         Self
     }
     
-    pub async fn parse(&self, epub_path: &Path) -> Result<EpubInfo> {
+    pub async fn parse(&self, epub_path: &Path) -> Result<BookInfo> {
+        let path = epub_path.to_path_buf();
+        
+        // Run blocking I/O and parsing on the blocking threadpool
+        tokio::task::spawn_blocking(move || Self::parse_sync(&path))
+            .await
+            .with_context(|| "Task join error")?
+    }
+    
+    fn parse_sync(epub_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening EPUB: {:?}", epub_path);
         let file = File::open(epub_path).with_context(|| format!("Failed to open EPUB file: {:?}", epub_path))?;
         let mut zip = ZipArchive::new(file).with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;
@@ -46,7 +55,7 @@ impl EpubParser {
         };
 
         // Step 3: Parse OPF metadata
-        let (epub_info, cover_id) = Self::parse_opf_metadata(&opf_xml)?;
+        let (book_info, cover_id) = Self::parse_opf_metadata(&opf_xml)?;
 
        // Step 4: Find cover image path and MIME type in manifest
        let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
@@ -82,10 +91,10 @@ impl EpubParser {
            None
        };
         
-        Ok(EpubInfo {
+        Ok(BookInfo {
             cover_data,
             cover_mime_type,
-            ..epub_info
+            ..book_info
         })
     }
 
@@ -114,7 +123,7 @@ impl EpubParser {
         Err(anyhow!("No rootfile/full-path found in container.xml"))
     }
 
-    fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
+    fn parse_opf_metadata(opf_xml: &str) -> Result<(BookInfo, Option<String>)> {
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -156,7 +165,7 @@ impl EpubParser {
                             b"description" => {
                                 match reader.read_text(e.name()) {
                                     Ok(raw_text) => {
-                                        let cleaned = Self::clean_html(&raw_text);
+                                        let cleaned = sanitize_html(&raw_text);
 
                                         let trimmed = cleaned.trim();
                                         if !trimmed.is_empty() {
@@ -307,7 +316,7 @@ impl EpubParser {
         };
 
         let cover_id = meta_cover_id;
-        let info = EpubInfo {
+        let info = BookInfo {
             title: title.unwrap_or_else(|| "Unknown Title".to_string()),
             authors,
             description,
@@ -373,19 +382,5 @@ impl EpubParser {
             buf.clear();
         }
         Ok((None, None))
-    }
-    
-    fn clean_html(input: &str) -> String {
-        // Unescape XML entities so that ammonia sees actual HTML tags
-        let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
-
-        Builder::new()
-            .tags(vec![
-                "p", "br", "h1", "h2", "h3", "h4", "h5", "h6",
-                "ul", "ol", "li", "strong", "em", "b", "i",
-                "blockquote", "pre", "code", "div", "span", "a"
-            ].into_iter().collect::<HashSet<_>>())
-            .clean(&decoded)
-            .to_string()
     }
 }
