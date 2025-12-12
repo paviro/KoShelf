@@ -17,7 +17,7 @@
 -lang-dialect = pt_BR
 
 # -----------------------------------
-#           Navegação & Compartilhado
+#           Navigation & Shared
 # -----------------------------------
 books = Livros
 statistics = Estatísticas
@@ -29,12 +29,12 @@ reload = Recarregar
 new-version-available = Nova versão disponível
 tap-to-reload = Toque para recarregar
 reading-companion = Companheiro de Leitura
-# Usado no rodapé/barra lateral para hora de atualização
+# Used in footer/sidebar for update time
 last-updated = Última atualização
 view-details = Ver Detalhes
 
 # -----------------------------------
-#        Lista de Livros & Biblioteca
+#        Book List & Library
 # -----------------------------------
 search-placeholder = Buscar livro, autor, série...
 filter =
@@ -71,7 +71,7 @@ by = por
 book-overview = Visão Geral
 
 # -----------------------------------
-#            Detalhes do Livro
+#            Book Details
 # -----------------------------------
 description = Descrição
 publisher = Editora
@@ -110,7 +110,7 @@ pages-label = { $count ->
 }
 
 # -----------------------------------
-#       Estatísticas & Progresso
+#       Statistics & Progress
 # -----------------------------------
 reading-statistics = Estatísticas de Leitura
 overall-statistics = Estatísticas Gerais
@@ -118,7 +118,7 @@ weekly-statistics = Estatísticas Semanais
 total-read-time = Tempo Total de Leitura
 total-pages-read = Total de Páginas Lidas
 pages-per-hour = Páginas/Hora
-# Abreviação para Páginas Por Hora
+# Abbreviation for Pages Per Hour
 pph-abbreviation = pph
 reading-sessions-label = { $count ->
     [one] Sessão de Leitura
@@ -127,7 +127,7 @@ reading-sessions-label = { $count ->
 session =
     .longest = Sessão Mais Longa
     .average = Sessão Média
-# Sufixo para duração média da sessão (ex: '/sessão média')
+# Suffix for average session duration (e.g. '/avg session')
 avg-session-suffix = /sessão média
 streak =
     .current = Sequência Atual
@@ -154,7 +154,7 @@ units-sessions = { $count ->
 }
 
 # -----------------------------------
-#               Retrospectiva
+#               Recap
 # -----------------------------------
 my-reading-recap = Minha Retrospectiva KoShelf
 share = Compartilhar
@@ -181,7 +181,7 @@ period = Período
 sessions = Sessões
 yearly-summary = Resumo Anual { $count }
 
-# Navegação e ordenação
+# Navigation and sorting
 previous-year =
     .aria-label = Ano anterior
 next-year =
@@ -204,7 +204,7 @@ go-back =
     .aria-label = Voltar
 
 # -----------------------------------
-#           Tempo & Datas
+#           Time & Dates
 # -----------------------------------
 january = Janeiro
     .short = Jan
@@ -231,19 +231,19 @@ november = Novembro
 december = Dezembro
     .short = Dez
 
-# Abreviação dias da semana (Seg/Qui/Dom para o gráfico estilo GitHub)
+# Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = Seg
     .thu = Qui
     .sun = Dom
 
-# Formatos de data/hora (Chrono format)
+# Chrono date/time format strings (use %B for full month, %b for short, etc.)
 datetime =
     .full = %d de %B de %Y às %H:%M
     .short-current-year = %d de %b
     .short-with-year = %d %b %Y
 
-# Unidades de tempo: h=horas, m=minutos, d=dias
+# Time units: h=hours, m=minutes, d=days
 units =
     .h = h
     .m = m
@@ -253,7 +253,7 @@ of-the-year = do ano
 of = de
 last = Último
 
-# Rótulos de unidades de tempo
+# Time unit labels (standalone word forms for displaying after numbers)
 days_label = { $count ->
     [one] dia
    *[other] dias
