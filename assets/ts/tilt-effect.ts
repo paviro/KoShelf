@@ -7,33 +7,33 @@
 export interface TiltOptions {
     /** CSS selector for elements to apply tilt effect */
     selector: string;
-    /** Maximum rotation in degrees (default: 4) */
+    /** Maximum rotation in degrees */
     maxRotation?: number;
-    /** Transition duration in ms (default: 150) */
+    /** Transition duration in ms */
     transitionDuration?: number;
-    /** Perspective depth in pixels (default: 800) */
+    /** Perspective depth in pixels */
     perspective?: number;
-    /** Scale factor on hover (default: 1.02) */
+    /** Scale factor on hover */
     hoverScale?: number;
-    /** Vertical lift on hover in px (default: 4) */
+    /** Vertical lift on hover in px */
     hoverLift?: number;
-    /** Shadow blur radius in px (default: 20) */
+    /** Shadow blur radius in px */
     shadowBlur?: number;
-    /** Shadow opacity 0-1 (default: 0.18) */
+    /** Shadow opacity 0-1 */
     shadowOpacity?: number;
-    /** Enable floating overlays parallax (default: false) */
+    /** Enable floating overlays parallax */
     enableOverlays?: boolean;
-    /** Overlay float distance in px (default: 10) */
+    /** Overlay float distance in px */
     overlayFloatZ?: number;
-    /** Overlay scale factor (default: 1.05) */
+    /** Overlay scale factor */
     overlayScale?: number;
-    /** Overlay parallax multiplier (default: 0.3) */
+    /** Overlay parallax multiplier */
     parallaxMultiplier?: number;
-    /** Selector for overlay container to enable 3D (default: null) */
+    /** Selector for overlay container to enable 3D */
     overlayContainer?: string;
-    /** Selector for badge overlays (default: '[class*="absolute"][class*="top-"]') */
+    /** Selector for badge overlays */
     badgeSelector?: string;
-    /** Selector for progress bar (default: '.book-progress-bar') */
+    /** Selector for progress bar */
     progressBarSelector?: string;
 }
 
@@ -43,8 +43,8 @@ const DEFAULT_OPTIONS: Required<Omit<TiltOptions, 'selector'>> = {
     perspective: 800,
     hoverScale: 1.02,
     hoverLift: 4,
-    shadowBlur: 25,
-    shadowOpacity: 0.12,
+    shadowBlur: 15,
+    shadowOpacity: 0.20,
     enableOverlays: false,
     overlayFloatZ: 10,
     overlayScale: 1.05,
@@ -95,6 +95,11 @@ export function initTilt(options: TiltOptions): void {
         }
 
         element.addEventListener('mouseenter', () => {
+            // Start transition for shadow fade-in (shadow will be applied on first mousemove)
+            element.style.transition = `transform ${opts.transitionDuration}ms ease-out, filter ${opts.transitionDuration}ms ease-out`;
+            // Apply initial subtle shadow that will transition to the dynamic one
+            element.style.filter = `drop-shadow(0px 8px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity * 0.5}))`;
+
             if (opts.enableOverlays && badgeOverlays) {
                 badgeOverlays.forEach(overlay => {
                     overlay.style.transition = `transform ${opts.transitionDuration}ms ease-out`;
@@ -183,8 +188,8 @@ export function initRecapCoverTilt(): void {
         maxRotation: 3,
         hoverScale: 1.02,
         hoverLift: 3,
-        shadowBlur: 18,
-        shadowOpacity: 0.07,
+        shadowBlur: 20,
+        shadowOpacity: 0.15,
         enableOverlays: false,
     });
 }
