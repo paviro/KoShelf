@@ -42,7 +42,7 @@
 
 {% when None -%}
 {% endmatch -%}
-{% match book.epub_info.sanitized_description() -%}
+{% match book.epub_info.description -%}
 {% when Some with (description) -%}
 ## Description
 

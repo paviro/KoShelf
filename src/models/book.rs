@@ -5,42 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use super::koreader_metadata::KoReaderMetadata;
 
-/// Sanitizes HTML content to only allow safe tags while removing styles and dangerous elements
-pub fn sanitize_html(html: &str) -> String {
-    use ammonia::Builder;
-
-    let allowed_tags: &[&str] = &[
-        "p",
-        "br",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "ul",
-        "ol",
-        "li",
-        "strong",
-        "em",
-        "b",
-        "i",
-        "blockquote",
-        "pre",
-        "code",
-        "div",
-        "span",
-    ];
-
-    let empty_attrs: &[&str] = &[];
-
-    Builder::default()
-        .add_tags(allowed_tags)
-        .add_generic_attributes(empty_attrs) // Remove all attributes including style
-        .clean(html)
-        .to_string()
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Identifier {
     pub scheme: String,
@@ -326,12 +290,6 @@ pub struct EpubInfo {
     pub series_number: Option<String>,
     pub cover_data: Option<Vec<u8>>,
     pub cover_mime_type: Option<String>,
-}
-
-impl EpubInfo {
-    pub fn sanitized_description(&self) -> Option<String> {
-        self.description.as_ref().map(|desc| sanitize_html(desc))
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
