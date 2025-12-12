@@ -322,10 +322,6 @@ KOReaderSettings/
 ./koshelf --books-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
 ```
 
-### Supported Formats
-
-- ePUB
-
 ### Typical Deployment Setup
 
 Although there are many ways to use this tool here is how I use it:
@@ -351,6 +347,22 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 
 ## Supported Data
 
+### Supported Formats
+- ePUB
+- fb2 / fb2.zip
+- CBZ / CBR
+
+### From FB2 Files
+- Book title
+- Authors
+- Description (sanitized HTML)
+- Cover image
+- Language
+- Publisher
+- Series information (name and number)
+- Identifiers (ISBN)
+- Subjects/Genres
+
 ### From EPUB Files
 - Book title
 - Authors
@@ -361,6 +373,16 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Series information (name and number)
 - Identifiers (ISBN, ASIN, Goodreads, DOI, etc.)
 - Subjects/Genres
+
+### From Comic Files (CBZ/CBR)
+- Book title (from metadata or filename)
+- Series information (Series and Number)
+- Authors (writers, artists, editors, etc.)
+- Description (Summary)
+- Publisher
+- Language
+- Genres
+- Cover image (first image in archive)
 
 ### From KoReader Metadata
 - Reading status (reading/complete)
