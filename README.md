@@ -345,6 +345,10 @@ My actual setup:
 
 This way, every time Syncthing pulls updates from my e-reader, the website automatically updates with my latest reading progress, new highlights, and updated statistics.
 
+### Koreader Syncthing Docker Setup
+
+see [Koreader Syncthing Docker Setup](Koreader_Syncthing_Docker_Setup.md)
+
 ## Supported Data
 
 ### From EPUB Files
