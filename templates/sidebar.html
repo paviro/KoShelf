@@ -18,7 +18,7 @@
     <nav class="flex-1 px-4 py-6 space-y-3">
         {% for nav_item in navbar_items %}
         <a onclick="if (typeof smartBack === 'function' && ('{{ nav_item.label }}' === 'Books' || '{{ nav_item.label }}' === 'Calendar')) { smartBack('{{ nav_item.href }}'); }" href="{{ nav_item.href }}" class="sidebar-item-modern {% if nav_item.is_active %}sidebar-item-modern-active{% endif %} group">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 {% if nav_item.is_active %}bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg border-2 border-primary-400/50{% else %}bg-gray-100 dark:bg-dark-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/40 group-hover:shadow-md group-hover:border-2 group-hover:border-primary-300/50 dark:group-hover:border-primary-500/50{% endif %}">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ease-out border-2 border-transparent {% if nav_item.is_active %}bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg !border-primary-400/50{% else %}bg-gray-100 dark:bg-dark-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/40 group-hover:border-primary-200 dark:group-hover:border-primary-600/50 group-hover:-translate-y-0.5{% endif %}">
                 <svg class="w-4 h-4 transition-colors duration-200 {% if nav_item.is_active %}text-white{% else %}text-gray-700 dark:text-dark-200 group-hover:text-primary-600 dark:group-hover:text-primary-300{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ nav_item.icon_svg }}"></path>
                 </svg>
