@@ -222,36 +222,62 @@ impl Translations {
     /// Looks up key in FTL.
     /// If Simple: return value with substitution.
     /// If Plural: select CLDR plural category based on count and language.
-    /// 
+    ///
     /// The selector logic works as follows:
     /// 1. First, try exact numeric match (e.g., [0], [1], [2] variants)
     /// 2. Then, try CLDR plural category for the language (zero, one, two, few, many)
     /// 3. Finally, fall back to 'other' (required default)
-    pub fn get_with_num<T: std::fmt::Display>(&self, key: &str, count: T) -> String {
+    pub fn get_with_num<T: std::fmt::Display + Copy>(&self, key: &str, count: T) -> String {
+        self.resolve_value(key, count, 0)
+    }
+
+    /// Internal recursive resolver for values.
+    /// Handles message references ({@ref:key}) by recursively looking them up
+    /// and passing the *same* count variable to them.
+    fn resolve_value<T: std::fmt::Display + Copy>(&self, key: &str, count: T, depth: usize) -> String {
+        // Prevent infinite recursion
+        if depth > 10 {
+            return format!("[recursion limit: {}]", key);
+        }
+
         let count_str = count.to_string();
         let num: f64 = count_str.parse().unwrap_or(0.0);
         let num_int = num as i64;
-        
-        let replace_placeholders = |template: &str| -> String {
-            // Standard Fluent placeholder format: {$var}
-            // Also accept common variant with spaces: { $var }
-            template.replace("{$count}", &count_str)
-                   .replace("{ $count }", &count_str)
-        };
-        
-        match self.lookup_value(key) {
+
+        // 1. Lookup the raw value (Simple or Plural)
+        let raw_template = match self.lookup_value(key) {
             Some(TranslationValue::Plural(variants)) => {
                 // Select the appropriate variant using CLDR rules
                 let category = self.select_plural_category(num_int);
-                let template = variants.get(&category)
+                variants.get(&category)
                     .or_else(|| variants.get(&PluralCategory::Other))
                     .map(|s| s.as_str())
-                    .unwrap_or(key);
-                replace_placeholders(template)
+                    .unwrap_or(key)
             }
-            Some(TranslationValue::Simple(s)) => replace_placeholders(s),
-            None => key.to_string(),
+            Some(TranslationValue::Simple(s)) => s.as_str(),
+            None => return key.to_string(),
+        };
+
+        // 2. Resolve any nested message references {@ref:key}
+        // This is where usage like `{ book-label }` inside `books-finished` gets resolved.
+        // Importantly, we pass `count` down to the referenced message.
+        use regex::Regex;
+        // Compile regex once? For now simple instantiation is fine for this scale.
+        // Ideally checking for "{@ref:" first avoids regex if not needed.
+        let mut resolved_string = raw_template.to_string();
+        
+        if resolved_string.contains("{@ref:") {
+             let ref_regex = Regex::new(r"\{@ref:([^}]+)\}").unwrap();
+             resolved_string = ref_regex.replace_all(&resolved_string, |caps: &regex::Captures| {
+                 let ref_key = &caps[1];
+                 self.resolve_value(ref_key, count, depth + 1)
+             }).to_string();
         }
+
+        // 3. Replace {$count} placeholders
+        resolved_string
+            .replace("{$count}", &count_str)
+            .replace("{ $count }", &count_str)
     }
     
     /// Select the CLDR plural category for a number based on the current language.
@@ -519,86 +545,7 @@ fn parse_ftl(content: &str) -> Result<HashMap<String, TranslationValue>> {
         }
     }
 
-    // Second pass: resolve message references
-    resolve_message_references(&mut map);
-
     Ok(map)
-}
-
-/// Resolve message references in the translation map.
-/// References are stored as `{@ref:key}` placeholders during parsing.
-/// This function replaces them with the actual values from the map.
-fn resolve_message_references(map: &mut HashMap<String, TranslationValue>) {
-    use regex::Regex;
-    
-    // Regex to find reference placeholders: {@ref:key} or {@ref:key.attr}
-    let ref_regex = Regex::new(r"\{@ref:([^}]+)\}").unwrap();
-    
-    // We need to iterate multiple times in case of chained references (A -> B -> C)
-    // Use a simple iteration limit to prevent infinite loops from circular references
-    const MAX_ITERATIONS: usize = 10;
-    
-    for _ in 0..MAX_ITERATIONS {
-        let mut any_resolved = false;
-        
-        // Collect all current values as a lookup (clone to avoid borrow issues)
-        let lookup: HashMap<String, String> = map.iter()
-            .filter_map(|(k, v)| {
-                match v {
-                    TranslationValue::Simple(s) => Some((k.clone(), s.clone())),
-                    TranslationValue::Plural(variants) => {
-                        // For plurals, use `other` as the reference value
-                        variants.get(&PluralCategory::Other).map(|s| (k.clone(), s.clone()))
-                    }
-                }
-            })
-            .collect();
-        
-        // Process each entry
-        for value in map.values_mut() {
-            match value {
-                TranslationValue::Simple(s) => {
-                    if ref_regex.is_match(s) {
-                        let resolved = ref_regex.replace_all(s, |caps: &regex::Captures| {
-                            let ref_key = &caps[1];
-                            lookup.get(ref_key).cloned().unwrap_or_else(|| {
-                                eprintln!("Warning: unresolved message reference: {}", ref_key);
-                                format!("[missing: {}]", ref_key)
-                            })
-                        }).to_string();
-                        
-                        if *s != resolved {
-                            any_resolved = true;
-                            *s = resolved;
-                        }
-                    }
-                }
-                TranslationValue::Plural(variants) => {
-                    for variant_value in variants.values_mut() {
-                        if ref_regex.is_match(variant_value) {
-                            let resolved = ref_regex.replace_all(variant_value, |caps: &regex::Captures| {
-                                let ref_key = &caps[1];
-                                lookup.get(ref_key).cloned().unwrap_or_else(|| {
-                                    eprintln!("Warning: unresolved message reference: {}", ref_key);
-                                    format!("[missing: {}]", ref_key)
-                                })
-                            }).to_string();
-                            
-                            if *variant_value != resolved {
-                                any_resolved = true;
-                                *variant_value = resolved;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If nothing was resolved this iteration, we're done
-        if !any_resolved {
-            break;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -775,5 +722,34 @@ sort-order =
             map.get("sort-order.oldest").unwrap().as_simple().unwrap(),
             "Toggle sort order - Oldest First"
         );
+    }
+    #[test]
+    fn test_nested_plural_propagation() {
+        let ftl = r#"
+book-label = { $count ->
+    [one] Book
+   *[other] Books
+}
+books-finished = { $count ->
+    [one] { book-label } Finished
+   *[other] { book-label } Finished
+}
+"#;
+        let map = parse_ftl(ftl).unwrap();
+        let t = Translations {
+            language: "en".to_string(),
+            translations: map,
+            fallback: HashMap::new(),
+        };
+
+        // Case 1: Singular (count = 1)
+        // book-label(1) -> "Book"
+        // books-finished(1) -> "{ book-label } Finished" -> "Book Finished"
+        assert_eq!(t.get_with_num("books-finished", 1), "Book Finished");
+
+        // Case 2: Plural (count = 5)
+        // book-label(5) -> "Books"
+        // books-finished(5) -> "{ book-label } Finished" -> "Books Finished"
+        assert_eq!(t.get_with_num("books-finished", 5), "Books Finished");
     }
 }

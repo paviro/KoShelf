@@ -50,33 +50,57 @@ export const translation = {
      * @returns The translated string, or the key itself if not found
      */
     get(key: string, count?: number): string {
-        if (!data) return key;
+        return this._resolveValue(key, count, 0);
+    },
 
-        // If count is provided, use CLDR plural rules
+    /**
+     * Internal recursive resolver for values.
+     * Handles message references ({@ref:key}) by recursively looking them up
+     * and passing the *same* count variable to them.
+     */
+    _resolveValue(key: string, count: number | undefined, depth: number): string {
+        if (!data) return key;
+        // Prevent infinite recursion
+        if (depth > 10) {
+            return `[recursion limit: ${key}]`;
+        }
+
+        let val: string | undefined;
+
+        // 1. Lookup the raw value (Simple or Plural)
         if (count !== undefined) {
             const pluralRules = new Intl.PluralRules(currentLanguage);
-            const category = pluralRules.select(count); // Returns: 'zero', 'one', 'two', 'few', 'many', or 'other'
-            const pluralKey = `${key}_${category}`;
-            const val = data[pluralKey];
-            if (val) {
-                // Replace both Fluent placeholder formats: {$count} and { $count }
-                return val.replace(/\{\s*\$count\s*\}/g, String(count));
-            }
-            // Fall back to 'other' if specific category not found
-            const otherVal = data[`${key}_other`];
-            if (otherVal) {
-                return otherVal.replace(/\{\s*\$count\s*\}/g, String(count));
+            const category = pluralRules.select(count);
+            val = data[`${key}_${category}`];
+
+            if (!val) {
+                // Fallback to 'other'
+                val = data[`${key}_other`];
             }
         }
 
-        // Fall back to non-pluralized key, or 'other' variant if base is missing
-        const val = data[key] || data[`${key}_other`];
+        // Fallback to simple key if no plural found or no count provided
+        // or check if the simple key exists directly
+        if (!val) {
+            val = data[key] || data[`${key}_other`];
+        }
+
         if (!val) return key;
 
-        // Still replace { $count } if present and count was provided
-        return count !== undefined
-            ? val.replace(/\{\s*\$count\s*\}/g, String(count))
-            : val;
+        // 2. Resolve any nested message references {@ref:key}
+        // This regex must match the format produced by the Rust backend
+        if (val.includes('{@ref:')) {
+            val = val.replace(/\{@ref:([^}]+)\}/g, (_match, refKey) => {
+                return this._resolveValue(refKey, count, depth + 1);
+            });
+        }
+
+        // 3. Replace {$count} placeholders
+        if (count !== undefined) {
+            return val.replace(/\{\s*\$count\s*\}/g, String(count));
+        }
+
+        return val;
     },
 
     /**
