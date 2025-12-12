@@ -238,7 +238,6 @@ fn test_all_locales_loadable_and_functional() {
     use crate::i18n::Translations;
     
     // Dynamically discover and test all FTL files
-    // This validates our custom parse_ftl parser handles all translation patterns
     let locales_dir = Path::new("locales");
     
     for entry in fs::read_dir(locales_dir).expect("Failed to read locales directory") {
@@ -250,11 +249,6 @@ fn test_all_locales_loadable_and_functional() {
         }
         
         let filename = path.file_name().unwrap().to_str().unwrap();
-        
-        // Skip regional variants (they need their base file)
-        if is_regional_variant(filename) {
-            continue;
-        }
         
         // Read the file to extract the -lang-dialect metadata
         let content = fs::read_to_string(&path).expect("Failed to read FTL file");
@@ -271,16 +265,22 @@ fn test_all_locales_loadable_and_functional() {
         let translations = Translations::load(&dialect)
             .unwrap_or_else(|e| panic!("Locale {} (from {}) failed to load: {}", dialect, filename, e));
         
-        // Verify metadata keys are present (parsed correctly)
-        // This confirms the parser loaded the file and extracted keys
-        let lang_code = translations.get("-lang-code");
+        let books = translations.get("books");
         assert!(
-            lang_code != "-lang-code",
-            "{} missing '-lang-code' metadata",
+            books != "books",
+            "{} failed to resolve 'books' key",
+            filename
+        );
+
+        // Verify that the loaded translations struct has the correct language code set
+        // (normalized to underscores)
+        assert_eq!(
+            translations.language(),
+            dialect.replace("-", "_"),
+            "{} Translations struct has incorrect language code",
             filename
         );
         
-        // Ensure language is correctly set
         assert!(!translations.to_json_string().is_empty());
     }
 }

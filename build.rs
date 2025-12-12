@@ -160,6 +160,7 @@ fn compile_typescript(out_dir: &str) {
     
     let mut args = vec![
         "esbuild".to_string(),
+        "--bundle".to_string(),
         "--format=esm".to_string(),
         "--target=es2020".to_string(),
         "--minify".to_string(),

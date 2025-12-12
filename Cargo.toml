@@ -56,12 +56,13 @@ md5 = "0.8.0"
 regex = "1.12.2"
 resvg = "0.45.1"
 include_dir = "0.7.4"
-intl_pluralrules = "7.0"
 unic-langid = "0.9"
 # ICU4X for localized language display names
 icu_displaynames = "0.11"
 icu_locid = "1.4"
-fluent-syntax = "0.11"
+fluent = "0.16"
+fluent-bundle = "0.15"
+intl-memoizer = "0.5"
 
 [build-dependencies]
 ureq = "3.1.4"
@@ -69,6 +70,7 @@ ureq = "3.1.4"
 [dev-dependencies]
 ureq = { version = "3.1.4", features = ["json"] }
 rayon = "1.11.0"
+fluent-syntax = "0.11"
 
 [profile.release]
 opt-level = 3
