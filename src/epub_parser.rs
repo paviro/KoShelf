@@ -381,8 +381,9 @@ impl EpubParser {
 
         Builder::new()
             .tags(vec![
-                "b", "i", "em", "strong", "p", "br",
-                "ul", "ol", "li", "blockquote", "a"
+                "p", "br", "h1", "h2", "h3", "h4", "h5", "h6",
+                "ul", "ol", "li", "strong", "em", "b", "i",
+                "blockquote", "pre", "code", "div", "span", "a"
             ].into_iter().collect::<HashSet<_>>())
             .clean(&decoded)
             .to_string()

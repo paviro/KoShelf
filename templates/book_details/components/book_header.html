@@ -164,7 +164,7 @@
                 </div>
 
                 <!-- Description -->
-                {% match book.epub_info.sanitized_description() %}
+                {% match book.epub_info.description %}
                 {% when Some with (description) %}
                 <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">

@@ -158,7 +158,7 @@ impl SiteGenerator {
                     "series": book.series_display(),
                     "language": book.language(),
                     "publisher": book.publisher(),
-                    "description": book.epub_info.sanitized_description(),
+                    "description": book.epub_info.description,
                     "rating": book.rating(),
                     "review_note": book.review_note(),
                     "status": book.status().to_string(),
