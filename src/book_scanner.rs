@@ -6,6 +6,7 @@ use log::{debug, info, warn};
 use crate::models::{Book, BookFormat};
 use crate::epub_parser::EpubParser;
 use crate::fb2_parser::Fb2Parser;
+use crate::comic_parser::ComicParser;
 use crate::lua_parser::LuaParser;
 use crate::utils::generate_book_id;
 use crate::partial_md5::calculate_partial_md5;
@@ -160,6 +161,7 @@ pub async fn scan_books(
     info!("Scanning books in directory: {:?}", books_path);
     let epub_parser = EpubParser::new();
     let fb2_parser = Fb2Parser::new();
+    let comic_parser = ComicParser::new();
     let lua_parser = LuaParser::new();
     
     // Pre-build metadata indices for external storage modes
@@ -205,6 +207,15 @@ pub async fn scan_books(
                     Ok(info) => info,
                     Err(e) => {
                         log::warn!("Failed to parse fb2 {:?}: {}", path, e);
+                        continue;
+                    }
+                }
+            }
+            BookFormat::Cbz | BookFormat::Cbr => {
+                match comic_parser.parse(path).await {
+                    Ok(info) => info,
+                    Err(e) => {
+                        log::warn!("Failed to parse comic {:?}: {}", path, e);
                         continue;
                     }
                 }

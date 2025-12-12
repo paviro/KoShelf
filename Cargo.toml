@@ -21,8 +21,10 @@ walkdir = "2.5.0"
 notify = "8.0.0"
 # Temporary directories
 tempfile = "3.20.0" 
-# EPUB parsing
+# EPUB and .fb2.zip parsing
 zip = "6"
+# CBR/RAR archive extraction
+unrar = "0.5"
 # Image processing
 image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
 webp = "0.3.1"
