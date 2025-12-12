@@ -32,6 +32,7 @@ impl BookFormat {
             "epub" => Some(Self::Epub),
             "fb2" => Some(Self::Fb2),
             "cbz" => Some(Self::Cbz),
+            #[cfg(not(windows))]
             "cbr" => Some(Self::Cbr),
             _ => None,
         }

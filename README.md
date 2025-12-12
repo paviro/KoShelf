@@ -350,7 +350,8 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 ### Supported Formats
 - ePUB
 - fb2 / fb2.zip
-- CBZ / CBR
+- CBZ
+- CBR (not supported on Windows - use the linux build under [WSL](https://learn.microsoft.com/de-de/windows/wsl/install) if you need it)
 
 ### From FB2 Files
 - Book title
@@ -375,6 +376,7 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Subjects/Genres
 
 ### From Comic Files (CBZ/CBR)
+Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Book title (from metadata or filename)
 - Series information (Series and Number)
 - Authors (writers, artists, editors, etc.)
