@@ -88,6 +88,7 @@ export function initTilt(options: TiltOptions): void {
             // Prepare overlays
             badgeOverlays?.forEach(overlay => {
                 overlay.style.willChange = 'transform';
+                overlay.style.backfaceVisibility = 'hidden';
             });
             if (progressBar) {
                 progressBar.style.willChange = 'transform';
@@ -96,9 +97,9 @@ export function initTilt(options: TiltOptions): void {
 
         element.addEventListener('mouseenter', () => {
             // Start transition for shadow fade-in (shadow will be applied on first mousemove)
-            element.style.transition = `transform ${opts.transitionDuration}ms ease-out, filter ${opts.transitionDuration}ms ease-out`;
+            element.style.transition = `transform ${opts.transitionDuration}ms ease-out, box-shadow ${opts.transitionDuration}ms ease-out`;
             // Apply initial subtle shadow that will transition to the dynamic one
-            element.style.filter = `drop-shadow(0px 8px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity * 0.5}))`;
+            element.style.boxShadow = `0px 8px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity * 0.5})`;
 
             if (opts.enableOverlays && badgeOverlays) {
                 badgeOverlays.forEach(overlay => {
@@ -128,9 +129,9 @@ export function initTilt(options: TiltOptions): void {
             const shadowY = rotateX * 1.5 + 8;
 
             // Apply 3D rotation, scale, and lift
-            element.style.transition = `transform ${opts.transitionDuration}ms ease-out, filter ${opts.transitionDuration}ms ease-out`;
+            element.style.transition = `transform ${opts.transitionDuration}ms ease-out, box-shadow ${opts.transitionDuration}ms ease-out`;
             element.style.transform = `perspective(${opts.perspective}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${opts.hoverScale}) translateY(-${opts.hoverLift}px)`;
-            element.style.filter = `drop-shadow(${shadowX}px ${shadowY}px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity}))`;
+            element.style.boxShadow = `${shadowX}px ${shadowY}px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity})`;
 
             // Apply parallax to overlays
             if (opts.enableOverlays) {
@@ -149,9 +150,9 @@ export function initTilt(options: TiltOptions): void {
 
         element.addEventListener('mouseleave', () => {
             // Reset element transform and shadow
-            element.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out, filter ${opts.transitionDuration * 2}ms ease-out`;
+            element.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out, box-shadow ${opts.transitionDuration * 2}ms ease-out`;
             element.style.transform = '';
-            element.style.filter = '';
+            element.style.boxShadow = '';
 
             // Reset overlays
             if (opts.enableOverlays) {
