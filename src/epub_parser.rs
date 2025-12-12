@@ -1,12 +1,12 @@
 use crate::models::{BookInfo, Identifier};
+use crate::utils::sanitize_html;
 use anyhow::{Result, Context, anyhow};
 use std::path::{Path, PathBuf};
 use std::io::Read;
 use zip::ZipArchive;
 use std::fs::File;
 use log::{debug, warn};
-use std::collections::{HashMap, HashSet};
-use ammonia::Builder;
+use std::collections::HashMap;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::escape::unescape;
@@ -165,7 +165,7 @@ impl EpubParser {
                             b"description" => {
                                 match reader.read_text(e.name()) {
                                     Ok(raw_text) => {
-                                        let cleaned = Self::clean_html(&raw_text);
+                                        let cleaned = sanitize_html(&raw_text);
 
                                         let trimmed = cleaned.trim();
                                         if !trimmed.is_empty() {
@@ -382,19 +382,5 @@ impl EpubParser {
             buf.clear();
         }
         Ok((None, None))
-    }
-    
-    fn clean_html(input: &str) -> String {
-        // Unescape XML entities so that ammonia sees actual HTML tags
-        let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
-
-        Builder::new()
-            .tags(vec![
-                "p", "br", "h1", "h2", "h3", "h4", "h5", "h6",
-                "ul", "ol", "li", "strong", "em", "b", "i",
-                "blockquote", "pre", "code", "div", "span", "a"
-            ].into_iter().collect::<HashSet<_>>())
-            .clean(&decoded)
-            .to_string()
     }
 }

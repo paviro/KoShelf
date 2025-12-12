@@ -1,4 +1,5 @@
 use crate::models::{BookInfo, Identifier};
+use crate::utils::sanitize_html;
 use anyhow::{Result, Context, anyhow};
 use std::path::{Path, PathBuf};
 use std::fs::File;
@@ -155,7 +156,7 @@ impl Fb2Parser {
                         b"annotation" if in_title_info => {
                             // Read the entire annotation content (may contain nested XML)
                             if let Ok(text) = reader.read_text(e.name()) {
-                                let cleaned = Self::clean_annotation(&text);
+                                let cleaned = sanitize_html(&text);
                                 if !cleaned.trim().is_empty() {
                                     description = Some(cleaned);
                                 }
@@ -352,22 +353,5 @@ impl Fb2Parser {
         }
 
         Ok((None, None))
-    }
-
-    /// Clean annotation text, removing XML tags but preserving text content
-    fn clean_annotation(input: &str) -> String {
-        let decoded = unescape(input).unwrap_or(Cow::Borrowed(input));
-        // Simple tag stripping - FB2 annotations can contain <p>, <emphasis>, etc.
-        let mut result = String::new();
-        let mut in_tag = false;
-        for ch in decoded.chars() {
-            match ch {
-                '<' => in_tag = true,
-                '>' => in_tag = false,
-                _ if !in_tag => result.push(ch),
-                _ => {}
-            }
-        }
-        result.trim().to_string()
     }
 }
