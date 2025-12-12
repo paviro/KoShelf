@@ -287,7 +287,7 @@
     left: 12px;
     top: -100px;
     /* extend upward to touch header */
-    bottom: -50px;
+    bottom: -120px;
     /* extend below the last event toward page bottom */
     width: 2px;
     background: theme(colors.gray.200);
