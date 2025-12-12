@@ -152,6 +152,9 @@ impl SiteGenerator {
         // Generate book covers
         self.generate_covers(&books).await?;
 
+        // Clean up stale book directories (for deleted books)
+        self.cleanup_stale_books(&books)?;
+
         // Generate individual book pages
         self.generate_book_pages(&books, &mut stats_data, recap_latest_href.clone()).await?;
         

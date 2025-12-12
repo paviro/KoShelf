@@ -6,8 +6,9 @@ use crate::statistics::BookStatistics;
 use crate::templates::{IndexTemplate, BookTemplate, BookMarkdownTemplate};
 use anyhow::Result;
 use askama::Template;
-use log::info;
+use log::{info, warn};
 use std::fs;
+use std::collections::HashSet;
 
 impl SiteGenerator {
     pub(crate) async fn generate_book_list(&self, books: &[Book], recap_latest_href: Option<String>) -> Result<()> {
@@ -189,6 +190,43 @@ impl SiteGenerator {
             let json_path = book_dir.join("details.json");
             self.cache_manifest.register_file(&json_path, &self.output_dir, json_str.as_bytes());
             fs::write(json_path, json_str)?;
+        }
+        
+        Ok(())
+    }
+
+    /// Clean up book directories for books that no longer exist in the library
+    pub(crate) fn cleanup_stale_books(&self, books: &[Book]) -> Result<()> {
+        let books_dir = self.books_dir();
+        
+        // If books directory doesn't exist, nothing to clean up
+        if !books_dir.exists() {
+            return Ok(());
+        }
+
+        // Build set of current book IDs
+        let current_ids: HashSet<String> = books.iter().map(|b| b.id.clone()).collect();
+        
+        // Iterate over existing book directories
+        let entries = fs::read_dir(&books_dir)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            
+            // Skip if not a directory or if it's list.json
+            if !path.is_dir() {
+                continue;
+            }
+            
+            // Get directory name (book ID)
+            if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                // If this book ID is not in current books, remove the directory
+                if !current_ids.contains(dir_name) {
+                    info!("Removing stale book directory: {:?}", path);
+                    if let Err(e) = fs::remove_dir_all(&path) {
+                        warn!("Failed to remove stale book directory {:?}: {}", path, e);
+                    }
+                }
+            }
         }
         
         Ok(())
