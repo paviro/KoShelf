@@ -22,6 +22,7 @@ pub use cache_manifest::CacheManifestBuilder;
 use crate::config::SiteConfig;
 use crate::statistics_parser::StatisticsParser;
 use crate::statistics::StatisticsCalculator;
+use crate::models::BookStatus;
 use crate::book_scanner::scan_books;
 use crate::i18n::Translations;
 use anyhow::Result;
@@ -84,11 +85,26 @@ impl SiteGenerator {
         
         // Scan books if books_path is provided
         // Also returns the set of MD5 hashes for all books (for statistics filtering)
-        let (books, library_md5s) = if let Some(ref books_path) = self.books_path {
+        let (all_books, library_md5s) = if let Some(ref books_path) = self.books_path {
             scan_books(books_path, &self.metadata_location).await?
         } else {
             (Vec::new(), std::collections::HashSet::new())
         };
+        
+        // Filter books based on include_unread setting
+        // Books without KoReader metadata (unread) should only be included if include_unread is true
+        let books: Vec<_> = all_books
+            .into_iter()
+            .filter(|book| {
+                // Always include books with KoReader metadata
+                if book.koreader_metadata.is_some() {
+                    return true;
+                }
+                // For books without metadata, only include if include_unread is true
+                // and the book has Unknown status (which is the case for unread books)
+                self.include_unread && book.status() == BookStatus::Unknown
+            })
+            .collect();
         
         // After loading statistics if path is provided
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
