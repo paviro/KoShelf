@@ -505,7 +505,7 @@
                                             </svg>
                                         </div>
                                         <div>
-                                            <div class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get("pages-label") }}</div>
+                                            <div class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ translation.get_with_num("pages-label", item.pages_read) }}</div>
                                             <div class="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{{ item.pages_read }}</div>
                                         </div>
                                     </div>

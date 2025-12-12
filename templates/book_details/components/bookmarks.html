@@ -1,6 +1,4 @@
 <!-- Bookmarks Section -->
-{% match book.koreader_metadata %}
-{% when Some with (metadata) %}
 {% if book.bookmark_count() > 0 %}
 <section data-name="bookmarks" data-default-visible="true">
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
@@ -17,7 +15,7 @@
     <!-- Collapsible Bookmarks Content -->
     <div id="bookmarksContainer" class="mb-8">
         <div class="space-y-6">
-            {% for annotation in metadata.annotations %}
+            {% for annotation in book.annotations() %}
             {% if annotation.is_bookmark() %}
             <div class="bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
                 <!-- Bookmark Header -->
@@ -122,8 +120,4 @@
         </div>
     </div>
 </section>
-
-
 {% endif %}
-{% when None %}
-{% endmatch %}

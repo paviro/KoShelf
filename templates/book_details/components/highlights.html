@@ -1,6 +1,4 @@
 <!-- Highlights & Quotes Section -->
-{% match book.koreader_metadata %}
-{% when Some with (metadata) %}
 {% if book.highlight_count() > 0 %}
 <section data-name="highlights" data-default-visible="true">
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
@@ -17,7 +15,7 @@
     <!-- Collapsible Highlights Content -->
     <div id="highlightsContainer" class="mb-8">
         <div class="space-y-6">
-            {% for annotation in metadata.annotations %}
+            {% for annotation in book.annotations() %}
             {% if annotation.is_highlight() %}
             <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
                 <!-- Annotation Header -->
@@ -110,8 +108,4 @@
         </div>
     </div>
 </section>
-
-
 {% endif %}
-{% when None %}
-{% endmatch %}
