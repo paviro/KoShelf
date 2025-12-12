@@ -1,6 +1,6 @@
 use crate::models::{BookInfo, Identifier};
 use anyhow::{Result, Context, anyhow};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::Read;
 use zip::ZipArchive;
 use std::fs::File;
@@ -20,6 +20,15 @@ impl EpubParser {
     }
     
     pub async fn parse(&self, epub_path: &Path) -> Result<BookInfo> {
+        let path = epub_path.to_path_buf();
+        
+        // Run blocking I/O and parsing on the blocking threadpool
+        tokio::task::spawn_blocking(move || Self::parse_sync(&path))
+            .await
+            .with_context(|| "Task join error")?
+    }
+    
+    fn parse_sync(epub_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening EPUB: {:?}", epub_path);
         let file = File::open(epub_path).with_context(|| format!("Failed to open EPUB file: {:?}", epub_path))?;
         let mut zip = ZipArchive::new(file).with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;

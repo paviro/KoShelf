@@ -1,6 +1,6 @@
 use crate::models::{BookInfo, Identifier};
 use anyhow::{Result, Context, anyhow};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::Read;
 use log::{debug, warn};
@@ -19,6 +19,15 @@ impl Fb2Parser {
     }
     
     pub async fn parse(&self, fb2_path: &Path) -> Result<BookInfo> {
+        let path = fb2_path.to_path_buf();
+        
+        // Run blocking I/O and parsing on the blocking threadpool
+        tokio::task::spawn_blocking(move || Self::parse_sync(&path))
+            .await
+            .with_context(|| "Task join error")?
+    }
+    
+    fn parse_sync(fb2_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening FB2: {:?}", fb2_path);
         
         // Read the FB2 content, handling both plain .fb2 and .fb2.zip
