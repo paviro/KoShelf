@@ -398,16 +398,16 @@
                             <div class="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-stretch flex items-center justify-center">
                                 {% if item.book_cover.is_some() %}
                                     {% if item.book_path.is_some() %}
-                                        <a href="{{ item.book_path.as_ref().unwrap() }}" class="block">
-                                            <img class="w-full h-auto object-contain rounded-md recap-cover-max hover:scale-[1.02] transition-transform duration-300" src="{{ item.book_cover.as_ref().unwrap() }}" alt="Cover of {{ item.title }}" loading="lazy">
+                                        <a href="{{ item.book_path.as_ref().unwrap() }}" class="block recap-cover-tilt rounded-md">
+                                            <img class="w-full h-auto object-contain rounded-md recap-cover-max" src="{{ item.book_cover.as_ref().unwrap() }}" alt="Cover of {{ item.title }}" loading="lazy">
                                         </a>
                                     {% else %}
                                         <img class="w-full h-auto object-contain rounded-md recap-cover-max" src="{{ item.book_cover.as_ref().unwrap() }}" alt="Cover of {{ item.title }}" loading="lazy">
                                     {% endif %}
                                 {% else %}
                                     {% if item.book_path.is_some() %}
-                                        <a href="{{ item.book_path.as_ref().unwrap() }}" class="block w-full h-auto group">
-                                            <div class="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max group-hover:scale-[1.02] transition-transform duration-300">
+                                        <a href="{{ item.book_path.as_ref().unwrap() }}" class="block w-full h-auto recap-cover-tilt rounded-md">
+                                            <div class="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max">
                                                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                                 </svg>

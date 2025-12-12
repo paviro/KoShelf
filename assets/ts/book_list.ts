@@ -2,6 +2,7 @@
 import { LazyImageLoader } from './lazy-loading.js';
 import { SectionToggle } from './section-toggle.js';
 import { translation } from './i18n.js';
+import { initBookCardTilt } from './tilt-effect.js';
 
 declare global {
     interface Window {
@@ -38,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize section toggles
     const sectionToggle = new SectionToggle();
+
+    // Initialize 3D tilt effect on book cards
+    initBookCardTilt();
 
     // Make it globally available for debugging or external control
     window.bookListSections = sectionToggle;
