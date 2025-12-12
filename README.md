@@ -350,8 +350,20 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 ### Supported Formats
 - ePUB
 - fb2 / fb2.zip
+- mobi (unencrypted)
 - CBZ
 - CBR (not supported on Windows - use the linux build under [WSL](https://learn.microsoft.com/de-de/windows/wsl/install) if you need it)
+
+### From EPUB Files
+- Book title
+- Authors
+- Description (sanitized HTML)
+- Cover image
+- Language
+- Publisher
+- Series information (name and number)
+- Identifiers (ISBN, ASIN, Goodreads, DOI, etc.)
+- Subjects/Genres
 
 ### From FB2 Files
 - Book title
@@ -364,15 +376,14 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Identifiers (ISBN)
 - Subjects/Genres
 
-### From EPUB Files
+### From MOBI Files (unencrypted)
 - Book title
 - Authors
-- Description (sanitized HTML)
+- Description
 - Cover image
 - Language
 - Publisher
-- Series information (name and number)
-- Identifiers (ISBN, ASIN, Goodreads, DOI, etc.)
+- Identifiers (ISBN, ASIN)
 - Subjects/Genres
 
 ### From Comic Files (CBZ/CBR)
