@@ -62,8 +62,8 @@ book-label = { $count ->
    *[other] Livres
 }
 books-finished = { $count ->
-    [one] Livre terminé
-   *[other] Livres terminés
+    [one] { book-label } terminé
+   *[other] { book-label } terminés
 }
 unknown-book = Livre inconnu
 unknown-author = Auteur inconnu
