@@ -24,7 +24,7 @@ tempfile = "3.20.0"
 # EPUB and .fb2.zip parsing
 zip = "6"
 # Image processing
-image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
+image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
 webp = "0.3.1"
 # Lua parsing (use LuaJIT to match KoReader's runtime)
 mlua = { version = "0.11.5", features = ["luajit", "vendored"] }

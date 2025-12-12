@@ -11,6 +11,7 @@ use super::koreader_metadata::KoReaderMetadata;
 pub enum BookFormat {
     Epub,
     Fb2,
+    Mobi,
     Cbz,
     Cbr,
 }
@@ -31,6 +32,7 @@ impl BookFormat {
         match ext.as_str() {
             "epub" => Some(Self::Epub),
             "fb2" => Some(Self::Fb2),
+            "mobi" => Some(Self::Mobi),
             "cbz" => Some(Self::Cbz),
             #[cfg(not(windows))]
             "cbr" => Some(Self::Cbr),
@@ -43,6 +45,7 @@ impl BookFormat {
         match self {
             Self::Epub => "metadata.epub.lua",
             Self::Fb2 => "metadata.fb2.lua",
+            Self::Mobi => "metadata.mobi.lua",
             Self::Cbz => "metadata.cbz.lua",
             Self::Cbr => "metadata.cbr.lua",
         }
@@ -50,7 +53,14 @@ impl BookFormat {
 
     /// Check if a filename is a KOReader metadata file for any supported format
     pub fn is_metadata_file(filename: &str) -> bool {
-        matches!(filename, "metadata.epub.lua" | "metadata.fb2.lua" | "metadata.cbz.lua" | "metadata.cbr.lua")
+        matches!(
+            filename,
+            "metadata.epub.lua"
+                | "metadata.fb2.lua"
+                | "metadata.mobi.lua"
+                | "metadata.cbz.lua"
+                | "metadata.cbr.lua"
+        )
     }
 }
 
