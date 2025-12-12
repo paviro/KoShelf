@@ -177,8 +177,11 @@ impl FileWatcher {
 			.map(|ext| ext.to_ascii_lowercase());
             let filename = path.file_name().and_then(|s| s.to_str());
             
-            // Check for EPUB files and metadata files
-		if extension.as_deref() == Some("epub") || filename == Some("metadata.epub.lua") {
+            // Check for EPUB and FB2 files and metadata files
+		if extension.as_deref() == Some("epub") 
+                || extension.as_deref() == Some("fb2")
+                || filename == Some("metadata.epub.lua")
+                || filename == Some("metadata.fb2.lua") {
                 return true;
             }
             
@@ -214,8 +217,18 @@ impl FileWatcher {
                         info!("EPUB file modified: {:?}", path);
                     }
                     
+                    // Check FB2 files
+					if path
+						.extension()
+						.and_then(|s| s.to_str())
+						.map(|ext| ext.eq_ignore_ascii_case("fb2"))
+						.unwrap_or(false)
+					{
+                        info!("FB2 file modified: {:?}", path);
+                    }
+                    
                     // Check metadata files
-                    if filename == Some("metadata.epub.lua") {
+                    if filename == Some("metadata.epub.lua") || filename == Some("metadata.fb2.lua") {
                         info!("Metadata file modified: {:?}", path);
                     }
                     
@@ -242,8 +255,18 @@ impl FileWatcher {
                         info!("EPUB file removed: {:?}", path);
                     }
                     
+                    // Check FB2 files
+					if path
+						.extension()
+						.and_then(|s| s.to_str())
+						.map(|ext| ext.eq_ignore_ascii_case("fb2"))
+						.unwrap_or(false)
+					{
+                        info!("FB2 file removed: {:?}", path);
+                    }
+                    
                     // Check metadata files
-                    if filename == Some("metadata.epub.lua") {
+                    if filename == Some("metadata.epub.lua") || filename == Some("metadata.fb2.lua") {
                         info!("Metadata file removed: {:?}", path);
                     }
                     

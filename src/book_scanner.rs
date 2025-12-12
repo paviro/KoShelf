@@ -5,6 +5,7 @@ use log::{debug, info, warn};
 
 use crate::models::Book;
 use crate::epub_parser::EpubParser;
+use crate::fb2_parser::Fb2Parser;
 use crate::lua_parser::LuaParser;
 use crate::utils::generate_book_id;
 use crate::partial_md5::calculate_partial_md5;
@@ -48,9 +49,11 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
             // Extract the book filename from the sdr directory name
             // e.g., "MyBook.sdr" -> "MyBook.epub"
             
-            // Check for metadata.epub.lua inside the .sdr folder
-            let metadata_path = path.join("metadata.epub.lua");
-            if metadata_path.exists() {
+            // Check for metadata files inside the .sdr folder (try both epub and fb2)
+            let epub_metadata_path = path.join("metadata.epub.lua");
+            let fb2_metadata_path = path.join("metadata.fb2.lua");
+            
+            if epub_metadata_path.exists() {
                 let book_filename = format!("{}.epub", book_stem);
                 
                 match index.entry(book_filename.clone()) {
@@ -59,7 +62,19 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
                     }
                     std::collections::hash_map::Entry::Vacant(entry) => {
                         debug!("Found docsettings metadata for: {}", book_filename);
-                        entry.insert(metadata_path);
+                        entry.insert(epub_metadata_path);
+                    }
+                }
+            } else if fb2_metadata_path.exists() {
+                let book_filename = format!("{}.fb2", book_stem);
+                
+                match index.entry(book_filename.clone()) {
+                    std::collections::hash_map::Entry::Occupied(_) => {
+                        duplicates.push(book_filename);
+                    }
+                    std::collections::hash_map::Entry::Vacant(entry) => {
+                        debug!("Found docsettings metadata for: {}", book_filename);
+                        entry.insert(fb2_metadata_path);
                     }
                 }
             }
@@ -144,6 +159,7 @@ pub async fn scan_books(
 ) -> Result<(Vec<Book>, HashSet<String>)> {
     info!("Scanning books in directory: {:?}", books_path);
     let epub_parser = EpubParser::new();
+    let fb2_parser = Fb2Parser::new();
     let lua_parser = LuaParser::new();
     
     // Pre-build metadata indices for external storage modes
@@ -160,116 +176,149 @@ pub async fn scan_books(
     let mut books = Vec::new();
     let mut library_md5s = HashSet::new();
     
-    // Walk through all epub files
+    // Walk through all book files (epub and fb2)
     for entry in walkdir::WalkDir::new(books_path) {
         let entry = entry?;
         let path = entry.path();
         
-        if path
+        let file_ext = path
             .extension()
             .and_then(|s| s.to_str())
-            .map(|ext| ext.eq_ignore_ascii_case("epub"))
-            .unwrap_or(false)
-        {
-            debug!("Processing: {:?}", path);
-            
-            // Parse epub
-            let epub_info = match epub_parser.parse(path).await {
+            .map(|ext| ext.to_lowercase());
+        
+        let is_epub = file_ext.as_ref().map(|ext| ext == "epub").unwrap_or(false);
+        let is_fb2 = file_ext.as_ref().map(|ext| ext == "fb2").unwrap_or(false);
+        
+        if !is_epub && !is_fb2 {
+            continue;
+        }
+        
+        debug!("Processing: {:?}", path);
+        
+        // Parse book based on format
+        let epub_info = if is_epub {
+            match epub_parser.parse(path).await {
                 Ok(info) => info,
                 Err(e) => {
                     log::warn!("Failed to parse epub {:?}: {}", path, e);
                     continue;
                 }
-            };
-            
-            // Track the MD5 for this book (for statistics filtering)
-            // We may already have it from hashdocsettings lookup, or will get it from metadata
-            let mut book_md5: Option<String> = None;
-            
-            // Find metadata based on the configured location
-            let metadata_path = match metadata_location {
-                MetadataLocation::InBookFolder => {
-                    // Default: look for .sdr directory next to the book
-                    let epub_stem = path.file_stem().unwrap().to_str().unwrap();
-                    let sdr_path = path.parent().unwrap().join(format!("{}.sdr", epub_stem));
-                    let metadata_file = sdr_path.join("metadata.epub.lua");
-                    if metadata_file.exists() {
-                        Some(metadata_file)
-                    } else {
-                        None
-                    }
+            }
+        } else {
+            // FB2 format
+            match fb2_parser.parse(path).await {
+                Ok(info) => info,
+                Err(e) => {
+                    log::warn!("Failed to parse fb2 {:?}: {}", path, e);
+                    continue;
                 }
-                MetadataLocation::DocSettings(_) => {
-                    // Look up by filename in the pre-built index
-                    if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                        docsettings_index
-                            .as_ref()
-                            .and_then(|idx| idx.get(filename).cloned())
+            }
+        };
+        
+        // Track the MD5 for this book (for statistics filtering)
+        // We may already have it from hashdocsettings lookup, or will get it from metadata
+        let mut book_md5: Option<String> = None;
+        
+        // Find metadata based on the configured location
+        let metadata_path = match metadata_location {
+            MetadataLocation::InBookFolder => {
+                // Default: look for .sdr directory next to the book
+                let book_stem = path.file_stem().unwrap().to_str().unwrap();
+                let sdr_path = path.parent().unwrap().join(format!("{}.sdr", book_stem));
+                // Try format-specific metadata first, then fall back to epub.lua
+                let metadata_file = if is_fb2 {
+                    let fb2_metadata = sdr_path.join("metadata.fb2.lua");
+                    if fb2_metadata.exists() {
+                        Some(fb2_metadata)
                     } else {
-                        None
-                    }
-                }
-                MetadataLocation::HashDocSettings(_) => {
-                    // Calculate partial MD5 and look up in the pre-built index
-                    match calculate_partial_md5(path) {
-                        Ok(hash) => {
-                            debug!("Calculated partial MD5 for {:?}: {}", path, hash);
-                            // Store the calculated MD5 for later use
-                            book_md5 = Some(hash.clone());
-                            hashdocsettings_index
-                                .as_ref()
-                                .and_then(|idx| idx.get(&hash.to_lowercase()).cloned())
-                        }
-                        Err(e) => {
-                            warn!("Failed to calculate partial MD5 for {:?}: {}", path, e);
+                        // Fall back to epub.lua for compatibility
+                        let epub_metadata = sdr_path.join("metadata.epub.lua");
+                        if epub_metadata.exists() {
+                            Some(epub_metadata)
+                        } else {
                             None
                         }
                     }
+                } else {
+                    let epub_metadata = sdr_path.join("metadata.epub.lua");
+                    if epub_metadata.exists() {
+                        Some(epub_metadata)
+                    } else {
+                        None
+                    }
+                };
+                metadata_file
+            },
+            MetadataLocation::DocSettings(_) => {
+                // Look up by filename in the pre-built index
+                if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                    docsettings_index
+                        .as_ref()
+                        .and_then(|idx| idx.get(filename).cloned())
+                } else {
+                    None
                 }
-            };
-            
-            let koreader_metadata = if let Some(metadata_path) = metadata_path {
-                match lua_parser.parse(&metadata_path).await {
-                    Ok(metadata) => {
-                        debug!("Found metadata at: {:?}", metadata_path);
-                        Some(metadata)
+            },
+            MetadataLocation::HashDocSettings(_) => {
+                // Calculate partial MD5 and look up in the pre-built index
+                match calculate_partial_md5(path) {
+                    Ok(hash) => {
+                        debug!("Calculated partial MD5 for {:?}: {}", path, hash);
+                        // Store the calculated MD5 for later use
+                        book_md5 = Some(hash.clone());
+                        hashdocsettings_index
+                            .as_ref()
+                            .and_then(|idx| idx.get(&hash.to_lowercase()).cloned())
                     }
                     Err(e) => {
-                        log::warn!("Failed to parse metadata {:?}: {}", metadata_path, e);
+                        warn!("Failed to calculate partial MD5 for {:?}: {}", path, e);
                         None
                     }
                 }
-            } else {
-                None
-            };
-            
-            // Collect MD5 for statistics filtering:
-            // 1. Prefer MD5 from metadata (stable even if file is updated)
-            // 2. Use calculated MD5 from hashdocsettings lookup if available
-            // 3. Fall back to calculating MD5 for books without metadata
-            if let Some(ref metadata) = koreader_metadata {
-                if let Some(ref md5) = metadata.partial_md5_checksum {
-                    library_md5s.insert(md5.clone());
-                } else if let Some(ref md5) = book_md5 {
-                    library_md5s.insert(md5.clone());
-                } else if let Ok(md5) = calculate_partial_md5(path) {
-                    library_md5s.insert(md5);
+            }
+        };
+        
+        let koreader_metadata = if let Some(metadata_path) = metadata_path {
+            match lua_parser.parse(&metadata_path).await {
+                Ok(metadata) => {
+                    debug!("Found metadata at: {:?}", metadata_path);
+                    Some(metadata)
                 }
+                Err(e) => {
+                    log::warn!("Failed to parse metadata {:?}: {}", metadata_path, e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        
+        // Collect MD5 for statistics filtering:
+        // 1. Prefer MD5 from metadata (stable even if file is updated)
+        // 2. Use calculated MD5 from hashdocsettings lookup if available
+        // 3. Fall back to calculating MD5 for books without metadata
+        if let Some(ref metadata) = koreader_metadata {
+            if let Some(ref md5) = metadata.partial_md5_checksum {
+                library_md5s.insert(md5.clone());
             } else if let Some(ref md5) = book_md5 {
                 library_md5s.insert(md5.clone());
             } else if let Ok(md5) = calculate_partial_md5(path) {
                 library_md5s.insert(md5);
             }
-            
-            let book = Book {
-                id: generate_book_id(&epub_info.title),
-                epub_info,
-                koreader_metadata,
-                epub_path: path.to_path_buf(),
-            };
-            
-            books.push(book);
+        } else if let Some(ref md5) = book_md5 {
+            library_md5s.insert(md5.clone());
+        } else if let Ok(md5) = calculate_partial_md5(path) {
+            library_md5s.insert(md5);
         }
+        
+        let book = Book {
+            id: generate_book_id(&epub_info.title),
+            epub_info,
+            koreader_metadata,
+            epub_path: path.to_path_buf(),
+        };
+        
+        books.push(book);
     }
     
     info!("Found {} books!", books.len());
