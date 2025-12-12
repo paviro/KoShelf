@@ -24,20 +24,17 @@
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="aspect-[2/3] w-full flex items-center justify-center text-5xl md:text-6xl text-gray-400 dark:text-dark-400" style="display: none;">📖</div>
                         
-                        <!-- Progress Bar for Reading Books -->
+                        <!-- Progress Bar for Reading/On Hold Books -->
                         {% match book.status() %}
-                        {% when BookStatus::Reading %}
-                        {% when BookStatus::Abandoned %}
+                        {% when BookStatus::Reading | BookStatus::Abandoned %}
                         <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
-                        {% when BookStatus::Complete %}
-                        {% when BookStatus::Unknown %}
+                        {% when _ %}
                         {% endmatch %}
                     </div>
                     
                     <!-- Status Indicator -->
                     {% match book.status() %}
-                    {% when BookStatus::Reading %}
-                    {% when BookStatus::Abandoned %}
+                    {% when BookStatus::Reading | BookStatus::Abandoned %}
                     <div class="@container bg-primary-50 dark:bg-dark-800/50 border border-primary-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
                         <div class="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
                             <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
