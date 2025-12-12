@@ -87,11 +87,26 @@ impl Translations {
     /// Generate JSON for frontend.
     /// Returns { "language": "...", "resources": [ "content1", "content2" ] }
     /// Frontend will use these to create its own Bundle.
+    /// Comments and blank lines are stripped to reduce payload size.
     pub fn to_json_string(&self) -> String {
         let bcp47_language = self.language.replace('_', "-");
+        // Strip comments and blank lines from FTL content
+        let stripped_resources: Vec<String> = self.resources_content
+            .iter()
+            .map(|content| {
+                content
+                    .lines()
+                    .filter(|line| {
+                        let trimmed = line.trim();
+                        !trimmed.is_empty() && !trimmed.starts_with('#')
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .collect();
         let output = serde_json::json!({
             "language": bcp47_language,
-            "resources": self.resources_content
+            "resources": stripped_resources
         });
         serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string())
     }
