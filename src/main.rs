@@ -7,6 +7,7 @@ use log::info;
 mod models;
 mod config;
 mod epub_parser;
+mod fb2_parser;
 mod lua_parser;
 mod site_generator;
 mod templates;

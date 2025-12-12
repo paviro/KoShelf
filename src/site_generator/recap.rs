@@ -49,8 +49,8 @@ impl SiteGenerator {
 
                     // Enrich from Book when possible
                     let (title, authors, rating, review_note, series_display, book_path, book_cover) = if let Some(book) = md5_to_book.get(&sb.md5) {
-                        let title = book.epub_info.title.clone();
-                        let authors = book.epub_info.authors.clone();
+                        let title = book.book_info.title.clone();
+                        let authors = book.book_info.authors.clone();
                         let rating = book.rating();
                         let review_note = book.review_note().cloned();
                         let series_display = book.series_display();

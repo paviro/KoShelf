@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.epub_info.title }} - {{ site_title }}</title>
+    <title>{{ book.book_info.title }} - {{ site_title }}</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#6366f1">
@@ -26,18 +26,18 @@
                 </button>
                 <div class="h-8 w-px bg-gray-200 dark:bg-dark-700 mx-3 md:mx-6"></div>
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.epub_info.title }}</h1>
-                    {% if !book.epub_info.authors.is_empty() %}
-                    <p class="text-xs text-gray-500 dark:text-dark-300 truncate">{{ translation.get("by") }} {{ book.epub_info.authors[0] }}</p>
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.book_info.title }}</h1>
+                    {% if !book.book_info.authors.is_empty() %}
+                    <p class="text-xs text-gray-500 dark:text-dark-300 truncate">{{ translation.get("by") }} {{ book.book_info.authors[0] }}</p>
                     {% endif %}
                 </div>
             </div>
             
             <!-- Desktop Title -->
             <div class="hidden lg:block min-w-0 flex-1">
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.epub_info.title }}</h1>
-                {% if !book.epub_info.authors.is_empty() %}
-                <p class="text-sm text-gray-500 dark:text-dark-300 truncate">{{ translation.get("by") }} {{ book.epub_info.authors[0] }}</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white truncate">{{ book.book_info.title }}</h1>
+                {% if !book.book_info.authors.is_empty() %}
+                <p class="text-sm text-gray-500 dark:text-dark-300 truncate">{{ translation.get("by") }} {{ book.book_info.authors[0] }}</p>
                 {% endif %}
             </div>
         </div>
