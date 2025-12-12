@@ -153,6 +153,13 @@ impl Book {
             .unwrap_or(0)
     }
 
+    pub fn annotations(&self) -> &[super::koreader_metadata::Annotation] {
+        self.koreader_metadata
+            .as_ref()
+            .map(|m| m.annotations.as_slice())
+            .unwrap_or(&[])
+    }
+
     pub fn annotation_count(&self) -> usize {
         self.koreader_metadata
             .as_ref()

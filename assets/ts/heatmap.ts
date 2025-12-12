@@ -330,7 +330,7 @@ class ActivityHeatmap {
 
         // Set tooltip (reading time focused)
         const readLabel = DateUtils.formatDuration(activityObj.read);
-        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} ${translation.get('pages-label')}`);
+        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} ${translation.get('pages-label', activityObj.pages)}`);
 
         // Add hover functionality
         this.addCellHoverEffects(cell);
