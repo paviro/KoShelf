@@ -20,12 +20,12 @@
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 md:gap-6 mb-6 md:mb-8" id="{{ section_name }}Container">
         {% for book in books %}
-        <div class="book-card group shadow-lg dark:shadow-none" data-status="{{ section_name }}" data-title="{{ book.epub_info.title }}" data-author="{% if !book.epub_info.authors.is_empty() %}{{ book.epub_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
+        <div class="book-card group shadow-lg dark:shadow-none" data-status="{{ section_name }}" data-title="{{ book.book_info.title }}" data-author="{% if !book.book_info.authors.is_empty() %}{{ book.book_info.authors[0] }}{% endif %}" data-series="{% match book.series_display() %}{% when Some with (series) %}{{ series }}{% when None %}{% endmatch %}">
             <a href="/books/{{ book.id }}/" class="block">
                 <div class="aspect-book bg-gray-200 dark:bg-dark-700 relative overflow-hidden">
                     <img src="/assets/covers/{{ book.id }}.webp"
                          data-src="/assets/covers/{{ book.id }}.webp" 
-                         alt="{{ book.epub_info.title }}" 
+                         alt="{{ book.book_info.title }}" 
                          class="w-full h-full object-cover lazy-image transition-opacity duration-500 ease-out"
                          loading="lazy"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

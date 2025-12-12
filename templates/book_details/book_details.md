@@ -1,9 +1,9 @@
 {# Book Markdown Export Template #}
 
-# {{ book.epub_info.title }}
+# {{ book.book_info.title }}
 
-{% if !book.epub_info.authors.is_empty() -%}
-**Authors:** {{ book.epub_info.authors | join(", ") }}
+{% if !book.book_info.authors.is_empty() -%}
+**Authors:** {{ book.book_info.authors | join(", ") }}
 
 {% endif -%}
 {% match book_stats -%}
@@ -42,7 +42,7 @@
 
 {% when None -%}
 {% endmatch -%}
-{% match book.epub_info.description -%}
+{% match book.book_info.description -%}
 {% when Some with (description) -%}
 ## Description
 

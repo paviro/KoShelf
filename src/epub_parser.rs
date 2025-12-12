@@ -1,4 +1,4 @@
-use crate::models::{EpubInfo, Identifier};
+use crate::models::{BookInfo, Identifier};
 use anyhow::{Result, Context, anyhow};
 use std::path::Path;
 use std::io::Read;
@@ -19,7 +19,7 @@ impl EpubParser {
         Self
     }
     
-    pub async fn parse(&self, epub_path: &Path) -> Result<EpubInfo> {
+    pub async fn parse(&self, epub_path: &Path) -> Result<BookInfo> {
         debug!("Opening EPUB: {:?}", epub_path);
         let file = File::open(epub_path).with_context(|| format!("Failed to open EPUB file: {:?}", epub_path))?;
         let mut zip = ZipArchive::new(file).with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;
@@ -46,7 +46,7 @@ impl EpubParser {
         };
 
         // Step 3: Parse OPF metadata
-        let (epub_info, cover_id) = Self::parse_opf_metadata(&opf_xml)?;
+        let (book_info, cover_id) = Self::parse_opf_metadata(&opf_xml)?;
 
        // Step 4: Find cover image path and MIME type in manifest
        let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
@@ -82,10 +82,10 @@ impl EpubParser {
            None
        };
         
-        Ok(EpubInfo {
+        Ok(BookInfo {
             cover_data,
             cover_mime_type,
-            ..epub_info
+            ..book_info
         })
     }
 
@@ -114,7 +114,7 @@ impl EpubParser {
         Err(anyhow!("No rootfile/full-path found in container.xml"))
     }
 
-    fn parse_opf_metadata(opf_xml: &str) -> Result<(EpubInfo, Option<String>)> {
+    fn parse_opf_metadata(opf_xml: &str) -> Result<(BookInfo, Option<String>)> {
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -307,7 +307,7 @@ impl EpubParser {
         };
 
         let cover_id = meta_cover_id;
-        let info = EpubInfo {
+        let info = BookInfo {
             title: title.unwrap_or_else(|| "Unknown Title".to_string()),
             authors,
             description,

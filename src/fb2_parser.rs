@@ -1,4 +1,4 @@
-use crate::models::{EpubInfo, Identifier};
+use crate::models::{BookInfo, Identifier};
 use anyhow::{Result, Context, anyhow};
 use std::path::Path;
 use std::fs::File;
@@ -17,7 +17,7 @@ impl Fb2Parser {
         Self
     }
     
-    pub async fn parse(&self, fb2_path: &Path) -> Result<EpubInfo> {
+    pub async fn parse(&self, fb2_path: &Path) -> Result<BookInfo> {
         debug!("Opening FB2: {:?}", fb2_path);
         let mut file = File::open(fb2_path)
             .with_context(|| format!("Failed to open FB2 file: {:?}", fb2_path))?;
@@ -34,14 +34,14 @@ impl Fb2Parser {
             (None, None)
         };
 
-        Ok(EpubInfo {
+        Ok(BookInfo {
             cover_data,
             cover_mime_type,
             ..fb2_info
         })
     }
 
-    fn parse_fb2_metadata(fb2_xml: &str) -> Result<(EpubInfo, Option<String>)> {
+    fn parse_fb2_metadata(fb2_xml: &str) -> Result<(BookInfo, Option<String>)> {
         let mut reader = Reader::from_str(fb2_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
@@ -311,7 +311,7 @@ impl Fb2Parser {
             Vec::new()
         };
 
-        let info = EpubInfo {
+        let info = BookInfo {
             title: title.unwrap_or_else(|| "Unknown Title".to_string()),
             authors: final_authors,
             description,

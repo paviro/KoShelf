@@ -289,9 +289,9 @@ pub async fn scan_books(
         
         let book = Book {
             id: generate_book_id(&book_info.title),
-            epub_info: book_info,
+            book_info: book_info,
             koreader_metadata,
-            epub_path: path.to_path_buf(),
+            file_path: path.to_path_buf(),
         };
         
         books.push(book);

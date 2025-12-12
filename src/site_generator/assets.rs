@@ -145,15 +145,15 @@ impl SiteGenerator {
         let mut all_cover_paths = Vec::new();
         
         for book in books {
-            if let Some(ref cover_data) = book.epub_info.cover_data {
+            if let Some(ref cover_data) = book.book_info.cover_data {
                 let cover_path = self.covers_dir().join(format!("{}.webp", book.id));
-                let epub_path = book.epub_path.clone();
+                let file_path = book.file_path.clone();
                 let cover_data = cover_data.clone();
                 
                 // Track all covers for manifest registration
                 all_cover_paths.push(cover_path.clone());
 
-                let should_generate = match (fs::metadata(&epub_path), fs::metadata(&cover_path)) {
+                let should_generate = match (fs::metadata(&file_path), fs::metadata(&cover_path)) {
                     (Ok(epub_meta), Ok(cover_meta)) => {
                         let epub_time = epub_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
                         let cover_time = cover_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);

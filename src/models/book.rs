@@ -116,9 +116,9 @@ impl Identifier {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Book {
     pub id: String,
-    pub epub_info: EpubInfo,
+    pub book_info: BookInfo,
     pub koreader_metadata: Option<KoReaderMetadata>,
-    pub epub_path: PathBuf,
+    pub file_path: PathBuf,
 }
 
 impl Book {
@@ -210,7 +210,7 @@ impl Book {
 
     /// Get language, preferring EPUB metadata over KoReader metadata
     pub fn language(&self) -> Option<&String> {
-        self.epub_info.language.as_ref().or_else(|| {
+        self.book_info.language.as_ref().or_else(|| {
             self.koreader_metadata
                 .as_ref()
                 .and_then(|m| m.text_lang.as_ref())
@@ -219,7 +219,7 @@ impl Book {
 
     /// Get publisher from EPUB metadata
     pub fn publisher(&self) -> Option<&String> {
-        self.epub_info.publisher.as_ref()
+        self.book_info.publisher.as_ref()
     }
 
     /// Get identifiers normalized for display and linking.
@@ -238,7 +238,7 @@ impl Book {
         }
 
         // 2) Add all other identifiers as-is (skip raw Hardcover family)
-        for id in &self.epub_info.identifiers {
+        for id in &self.book_info.identifiers {
             let scheme_lc = id.scheme.to_lowercase();
             if scheme_lc == "hardcover"
                 || scheme_lc == "hardcover-slug"
@@ -261,15 +261,15 @@ impl Book {
 
     /// Get subjects/genres from EPUB metadata
     pub fn subjects(&self) -> &Vec<String> {
-        &self.epub_info.subjects
+        &self.book_info.subjects
     }
 
     /// Get a formatted display string for subjects/genres
     pub fn subjects_display(&self) -> Option<String> {
-        if self.epub_info.subjects.is_empty() {
+        if self.book_info.subjects.is_empty() {
             None
         } else {
-            Some(self.epub_info.subjects.join(", "))
+            Some(self.book_info.subjects.join(", "))
         }
     }
 
@@ -281,7 +281,7 @@ impl Book {
 
         // Find Hardcover slug from either scheme
         let slug = self
-            .epub_info
+            .book_info
             .identifiers
             .iter()
             .find(|id| {
@@ -294,7 +294,7 @@ impl Book {
             // Normalized hardcover slug
             out.push(Identifier::new("hardcover".to_string(), slug_val.clone()));
             // Normalized hardcover editions
-            for id in &self.epub_info.identifiers {
+            for id in &self.book_info.identifiers {
                 if id.scheme.eq_ignore_ascii_case("hardcover-edition") {
                     out.push(Identifier::new(
                         "hardcover-edition".to_string(),
@@ -309,12 +309,12 @@ impl Book {
 
     /// Get series information from EPUB metadata
     pub fn series(&self) -> Option<&String> {
-        self.epub_info.series.as_ref()
+        self.book_info.series.as_ref()
     }
 
     /// Get series number from EPUB metadata
     pub fn series_number(&self) -> Option<&String> {
-        self.epub_info.series_number.as_ref()
+        self.book_info.series_number.as_ref()
     }
 
     /// Get formatted series display (e.g., "Series Name #1")
@@ -328,7 +328,7 @@ impl Book {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EpubInfo {
+pub struct BookInfo {
     pub title: String,
     pub authors: Vec<String>,
     pub description: Option<String>,

@@ -36,10 +36,10 @@ impl SiteGenerator {
         }
         
         // Sort by title
-        reading_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
-        completed_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
-        abandoned_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
-        unread_books.sort_by(|a, b| a.epub_info.title.cmp(&b.epub_info.title));
+        reading_books.sort_by(|a, b| a.book_info.title.cmp(&b.book_info.title));
+        completed_books.sort_by(|a, b| a.book_info.title.cmp(&b.book_info.title));
+        abandoned_books.sort_by(|a, b| a.book_info.title.cmp(&b.book_info.title));
+        unread_books.sort_by(|a, b| a.book_info.title.cmp(&b.book_info.title));
         
         // ------------------------------------------------------------------
         // Generate books manifest JSON categorized by reading status.
@@ -53,8 +53,8 @@ impl SiteGenerator {
         let to_manifest_entry = |b: &Book| {
             json!({
                 "id": b.id.clone(),
-                "title": b.epub_info.title.clone(),
-                "authors": b.epub_info.authors.clone(),
+                "title": b.book_info.title.clone(),
+                "authors": b.book_info.authors.clone(),
                 "json_path": format!("/books/{}/details.json", b.id),
                 "html_path":  format!("/books/{}/index.html",  b.id),
             })
@@ -153,12 +153,12 @@ impl SiteGenerator {
             // Generate JSON export / not used by the frontend code - only for the user's convenience
             let json_data = serde_json::json!({
                 "book": {
-                    "title": book.epub_info.title,
-                    "authors": book.epub_info.authors,
+                    "title": book.book_info.title,
+                    "authors": book.book_info.authors,
                     "series": book.series_display(),
                     "language": book.language(),
                     "publisher": book.publisher(),
-                    "description": book.epub_info.description,
+                    "description": book.book_info.description,
                     "rating": book.rating(),
                     "review_note": book.review_note(),
                     "status": book.status().to_string(),
