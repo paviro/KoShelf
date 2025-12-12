@@ -82,7 +82,15 @@ book-identifiers = Identifiants du livre
 my-review = Ma critique
 my-note = Ma note
 highlights = Surlignages
+highlights-label = { $count ->
+    [one] Surlignage
+   *[other] Surlignages
+}
 notes = Notes
+notes-label = { $count ->
+    [one] Note
+   *[other] Notes
+}
 bookmarks = Signets
 page = Page
 page-bookmark = Signet de page
@@ -96,7 +104,10 @@ pages = { $count ->
     [one] { $count } page
    *[other] { $count } pages
 }
-pages-label = Pages
+pages-label = { $count ->
+    [one] Page
+   *[other] Pages
+}
 
 # -----------------------------------
 #       Statistics & Progress
@@ -109,7 +120,10 @@ total-pages-read = Total des pages lues
 pages-per-hour = Pages/heure
 # Abbreviation for Pages Per Hour
 pph-abbreviation = p/h
-reading-sessions = Sessions de lecture
+reading-sessions-label = { $count ->
+    [one] Session de lecture
+   *[other] Sessions de lecture
+}
 session =
     .longest = Session la plus longue
     .average = Session moyenne

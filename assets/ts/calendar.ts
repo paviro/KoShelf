@@ -536,11 +536,13 @@ function updateMonthlyStats(currentDate: Date): void {
     }
 
     const booksEl = document.getElementById('monthlyBooks');
+    const booksLabelEl = document.getElementById('monthlyBooksLabel');
     const pagesEl = document.getElementById('monthlyPages');
     const timeEl = document.getElementById('monthlyTime');
     const daysPercentageEl = document.getElementById('monthlyDaysPercentage');
 
     if (booksEl) booksEl.textContent = String(booksRead);
+    if (booksLabelEl) booksLabelEl.textContent = translation.get('book-label', { count: booksRead });
     if (pagesEl) pagesEl.textContent = Number(pagesRead).toLocaleString();
     if (timeEl) timeEl.textContent = formatDuration(timeRead);
     if (daysPercentageEl) daysPercentageEl.textContent = `${daysPct}%`;
