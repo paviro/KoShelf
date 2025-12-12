@@ -70,7 +70,7 @@ dependencies = [
     "build-arm64-gnu",
     "build-x86-gnu",
     "build-x86-musl",
-    "build-windows-gnu",
+    #"build-windows-gnu",
     "build-macos-intel",
     "build-macos-silicon",
     "build-macos-universal"
@@ -236,7 +236,7 @@ dependencies = [
     "package-arm64-gnu",
     "package-x86-gnu", 
     "package-x86-musl",
-    "package-windows-gnu",
+    #"package-windows-gnu",
     "package-macos-intel",
     "package-macos-silicon",
     "package-macos-universal"
