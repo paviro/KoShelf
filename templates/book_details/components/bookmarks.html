@@ -76,25 +76,28 @@
                     </div>
                 </div>
                 
-                <!-- Bookmark Content -->
+                <!-- Bookmark Content (only show if there's text or a note) -->
+                {% if annotation.text.is_some() || annotation.note.is_some() %}
                 <div class="p-6">
                     <!-- Text if available -->
-                    {% if annotation.text != "" %}
+                    {% match annotation.text %}
+                    {% when Some with (text) %}
                     <div class="relative">
                         <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-full"></div>
                         <div class="pl-6 mb-1">
                             <span class="text-sm text-yellow-600 dark:text-yellow-300 uppercase tracking-wider font-semibold">{{ translation.get("bookmark-anchor") }}:</span>
                         </div>
                         <div class="text-gray-900 dark:text-white text-lg leading-relaxed pl-6 font-light">
-                            {{ annotation.text }}
+                            {{ text }}
                         </div>
                     </div>
-                    {% endif %}
+                    {% when None %}
+                    {% endmatch %}
                     
                     <!-- Personal Notes -->
                     {% match annotation.note %}
                     {% when Some with (note) %}
-                    <div class="mt-6">
+                    <div class="{% if annotation.text.is_some() %}mt-6{% endif %}">
                         <div class="flex items-center mb-3">
                             <div class="h-px bg-gray-200 dark:bg-dark-700 flex-grow mr-3"></div>
                             <div class="flex items-center space-x-2">
@@ -114,6 +117,7 @@
                     {% when None %}
                     {% endmatch %}
                 </div>
+                {% endif %}
             </div>
             {% endif %}
             {% endfor %}
