@@ -289,6 +289,7 @@ impl Fb2Parser {
             subjects,
             series,
             series_number,
+            pages: None,
             cover_data: None,
             cover_mime_type: None,
         };

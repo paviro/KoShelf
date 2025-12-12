@@ -54,8 +54,28 @@ impl EpubParser {
             opf_xml
         };
 
-        // Step 3: Parse OPF metadata
-        let (book_info, cover_id) = Self::parse_opf_metadata(&opf_xml)?;
+        // Step 3: Parse OPF metadata (returns BookInfo with schema:numberOfPages if present, and nav_path)
+        let (mut book_info, cover_id, nav_path) = Self::parse_opf_metadata(&opf_xml)?;
+
+        // Step 3.5: If no page count from metadata, try parsing page-list from nav document
+        if book_info.pages.is_none() {
+            if let Some(ref nav_rel_path) = nav_path {
+                // Resolve nav path relative to OPF directory
+                let opf_parent = Path::new(&opf_path).parent();
+                let resolved_nav_path = if let Some(parent) = opf_parent {
+                    parent.join(nav_rel_path).to_string_lossy().replace('\\', "/")
+                } else {
+                    nav_rel_path.clone()
+                };
+                
+                if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
+                    let mut nav_xml = String::new();
+                    if nav_file.read_to_string(&mut nav_xml).is_ok() {
+                        book_info.pages = Self::parse_page_list(&nav_xml);
+                    }
+                }
+            }
+        }
 
        // Step 4: Find cover image path and MIME type in manifest
        let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
@@ -123,11 +143,13 @@ impl EpubParser {
         Err(anyhow!("No rootfile/full-path found in container.xml"))
     }
 
-    fn parse_opf_metadata(opf_xml: &str) -> Result<(BookInfo, Option<String>)> {
+    /// Parse OPF metadata - returns (BookInfo, cover_id, nav_path)
+    fn parse_opf_metadata(opf_xml: &str) -> Result<(BookInfo, Option<String>, Option<String>)> {
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
         let mut in_metadata = false;
+        let mut in_manifest = false;
         let mut title = None;
         let mut authors = Vec::new();
         let mut description = None;
@@ -139,6 +161,8 @@ impl EpubParser {
         let mut meta_cover_id: Option<String> = None;
         let mut cal_series: Option<String> = None;
         let mut cal_series_number: Option<String> = None;
+        let mut number_of_pages: Option<u32> = None;
+        let mut nav_path: Option<String> = None;
         
         // EPUB3 collection tracking
         let mut epub3_collections: HashMap<String, String> = HashMap::new(); // id -> name
@@ -150,6 +174,8 @@ impl EpubParser {
                     let local_name = e.local_name();
                     if local_name.as_ref() == b"metadata" {
                         in_metadata = true;
+                    } else if local_name.as_ref() == b"manifest" {
+                        in_manifest = true;
                     } else if in_metadata {
                         match local_name.as_ref() {
                             b"title" => {
@@ -253,6 +279,12 @@ impl EpubParser {
                                             let clean_refines = r.trim_start_matches('#');
                                             epub3_indices.insert(clean_refines.to_string(), unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
                                         }
+                                    } else if prop == "schema:numberOfPages" {
+                                        if let Ok(text_content) = reader.read_text(e.name()) {
+                                            if let Ok(pages) = text_content.trim().parse::<u32>() {
+                                                number_of_pages = Some(pages);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -282,11 +314,34 @@ impl EpubParser {
                                 cal_series_number = Some(c); 
                             }
                         }
+                    } else if in_manifest && local_name.as_ref() == b"item" {
+                        // Look for nav document in manifest
+                        let mut href = None;
+                        let mut properties = None;
+                        for attr in e.attributes().flatten() {
+                            let key = attr.key.as_ref();
+                            if key == b"href" {
+                                if let Ok(h) = attr.unescape_value() {
+                                    href = Some(h.into_owned());
+                                }
+                            } else if key == b"properties" {
+                                if let Ok(p) = attr.unescape_value() {
+                                    properties = Some(p.into_owned());
+                                }
+                            }
+                        }
+                        if let (Some(h), Some(p)) = (href, properties) {
+                            if p.contains("nav") {
+                                nav_path = Some(h);
+                            }
+                        }
                     }
                 }
                 Ok(Event::End(ref e)) => {
                     if e.local_name().as_ref() == b"metadata" {
                         in_metadata = false;
+                    } else if e.local_name().as_ref() == b"manifest" {
+                        in_manifest = false;
                     }
                 }
                 Ok(Event::Eof) => break,
@@ -326,10 +381,11 @@ impl EpubParser {
             subjects,
             series,
             series_number,
+            pages: number_of_pages,
             cover_data: None,
             cover_mime_type: None,
         };
-        Ok((info, cover_id))
+        Ok((info, cover_id, nav_path))
     }
 
     fn find_cover_path(opf_xml: &str, cover_id: &Option<String>) -> Result<(Option<String>, Option<String>)> {
@@ -382,5 +438,59 @@ impl EpubParser {
             buf.clear();
         }
         Ok((None, None))
+    }
+
+    /// Parse page-list from EPUB3 navigation document to get page count
+    /// The page-list is a nav element with epub:type="page-list" containing anchor elements
+    fn parse_page_list(nav_xml: &str) -> Option<u32> {
+        let mut reader = Reader::from_str(nav_xml);
+        reader.config_mut().trim_text(true);
+        let mut buf = Vec::new();
+        
+        let mut in_page_list = false;
+        let mut page_count = 0u32;
+        
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
+                    let local_name = e.local_name();
+                    
+                    // Check for nav with epub:type="page-list"
+                    if local_name.as_ref() == b"nav" {
+                        for attr in e.attributes().flatten() {
+                            // Look for epub:type attribute (either with or without namespace prefix)
+                            let key = attr.key.as_ref();
+                            if key == b"epub:type" || key.ends_with(b":type") || key == b"type" {
+                                if let Ok(val) = attr.unescape_value() {
+                                    if val.contains("page-list") {
+                                        in_page_list = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Count anchor elements in page-list (each represents a page)
+                    if in_page_list && local_name.as_ref() == b"a" {
+                        page_count += 1;
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    if e.local_name().as_ref() == b"nav" {
+                        in_page_list = false;
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+        
+        if page_count > 0 {
+            Some(page_count)
+        } else {
+            None
+        }
     }
 }

@@ -205,7 +205,11 @@ impl Book {
     }
 
     pub fn doc_pages(&self) -> Option<u32> {
-        self.koreader_metadata.as_ref()?.doc_pages
+        // Prefer KOReader metadata pages, fall back to format-extracted pages
+        self.koreader_metadata
+            .as_ref()
+            .and_then(|m| m.doc_pages)
+            .or(self.book_info.pages)
     }
 
     pub fn note_count(&self) -> usize {
@@ -347,6 +351,7 @@ pub struct BookInfo {
     pub subjects: Vec<String>,        // Genres/subjects/tags
     pub series: Option<String>,
     pub series_number: Option<String>,
+    pub pages: Option<u32>,           // Page count from format (EPUB page-list, comic images)
     pub cover_data: Option<Vec<u8>>,
     pub cover_mime_type: Option<String>,
 }

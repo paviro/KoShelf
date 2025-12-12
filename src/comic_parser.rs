@@ -50,6 +50,14 @@ impl ComicParser {
         let file = File::open(cbz_path).with_context(|| format!("Failed to open CBZ file: {:?}", cbz_path))?;
         let mut zip = ZipArchive::new(file).with_context(|| format!("Failed to read CBZ as zip: {:?}", cbz_path))?;
         
+        // Count image files for page count
+        let image_count = zip.file_names()
+            .filter(|name| {
+                let lower_name = name.to_lowercase();
+                IMAGE_EXTENSIONS.iter().any(|ext| lower_name.ends_with(ext))
+            })
+            .count();
+        
         // Try to find and parse ComicInfo.xml
         let mut book_info = if let Ok(mut comic_info_file) = zip.by_name("ComicInfo.xml") {
             let mut xml_content = String::new();
@@ -59,6 +67,11 @@ impl ComicParser {
             // Fallback: extract title from filename
             Self::book_info_from_filename(cbz_path)
         };
+        
+        // Set page count from image count
+        if image_count > 0 {
+            book_info.pages = Some(image_count as u32);
+        }
         
         // Find and extract cover image (first image file when sorted)
         let (cover_data, cover_mime_type) = Self::extract_cover_from_cbz(&mut zip)?;
@@ -138,6 +151,11 @@ impl ComicParser {
         } else {
             Self::book_info_from_filename(cbr_path)
         };
+        
+        // Set page count from image count
+        if !image_files.is_empty() {
+            book_info.pages = Some(image_files.len() as u32);
+        }
         
         // Sort image files to find the correct cover (alphabetical first)
         image_files.sort();
@@ -293,6 +311,7 @@ impl ComicParser {
             subjects,
             series,
             series_number: number,
+            pages: None,
             cover_data: None,
             cover_mime_type: None,
         })
@@ -315,6 +334,7 @@ impl ComicParser {
             subjects: Vec::new(),
             series: None,
             series_number: None,
+            pages: None,
             cover_data: None,
             cover_mime_type: None,
         }
