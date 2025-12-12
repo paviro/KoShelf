@@ -59,7 +59,7 @@
                     </div>
                     <div>
                         <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ stats.session_count }}</div>
-                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("reading-sessions") }}</div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get_with_num("reading-sessions-label", stats.session_count) }}</div>
                     </div>
                 </div>
             </div>

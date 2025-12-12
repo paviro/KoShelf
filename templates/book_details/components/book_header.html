@@ -99,20 +99,14 @@
                                 </svg>
                             </div>
                             <div>
+                                {% let pages = book.doc_pages() %}
                                 <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                    {% match book.koreader_metadata %}
-                                    {% when Some with (metadata) %}
-                                        {% match metadata.doc_pages %}
-                                        {% when Some with (pages) %}
-                                            {{ pages }}
-                                        {% when None %}
-                                            ?
-                                        {% endmatch %}
-                                    {% when None %}
-                                        ?
-                                    {% endmatch %}
+                                    {% match pages %}
+                                    {% when Some with (p) %}{{ p }}{% when None %}?{% endmatch %}
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("pages-label") }}</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">
+                                    {{ translation.get_with_num("pages-label", pages.unwrap_or(0)) }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -125,8 +119,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ book.highlight_count() }}</div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("highlights") }}</div>
+                                {% let highlight_count = book.highlight_count() %}
+                                <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ highlight_count }}</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get_with_num("highlights-label", highlight_count) }}</div>
                             </div>
                         </div>
                     </div>
@@ -139,25 +134,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                    {% match book.koreader_metadata %}
-                                    {% when Some with (metadata) %}
-                                        {% match metadata.stats %}
-                                        {% when Some with (stats) %}
-                                            {% match stats.notes %}
-                                            {% when Some with (notes) %}
-                                                {{ notes }}
-                                            {% when None %}
-                                                0
-                                            {% endmatch %}
-                                        {% when None %}
-                                            0
-                                        {% endmatch %}
-                                    {% when None %}
-                                        0
-                                    {% endmatch %}
-                                </div>
-                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get("notes") }}</div>
+                                {% let note_count = book.note_count() %}
+                                <div class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ note_count }}</div>
+                                <div class="text-sm text-gray-500 dark:text-dark-400">{{ translation.get_with_num("notes-label", note_count) }}</div>
                             </div>
                         </div>
                     </div>

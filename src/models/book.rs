@@ -174,6 +174,19 @@ impl Book {
             .unwrap_or(0)
     }
 
+    pub fn doc_pages(&self) -> Option<u32> {
+        self.koreader_metadata.as_ref()?.doc_pages
+    }
+
+    pub fn note_count(&self) -> usize {
+        self.koreader_metadata
+            .as_ref()
+            .and_then(|m| m.stats.as_ref())
+            .and_then(|s| s.notes)
+            .map(|n| n as usize)
+            .unwrap_or(0)
+    }
+
     /// Get language, preferring EPUB metadata over KoReader metadata
     pub fn language(&self) -> Option<&String> {
         self.epub_info.language.as_ref().or_else(|| {
