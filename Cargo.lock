@@ -1886,6 +1886,7 @@ dependencies = [
  "anyhow",
  "askama",
  "axum",
+ "base64",
  "chrono",
  "chrono-tz",
  "clap",

@@ -1,9 +1,59 @@
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use super::koreader_metadata::KoReaderMetadata;
+
+/// Supported ebook formats
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BookFormat {
+    Epub,
+    Fb2,
+}
+
+impl BookFormat {
+    /// Try to detect format from a file path's extension
+    /// Handles compound extensions like .fb2.zip
+    pub fn from_path(path: &Path) -> Option<Self> {
+        let filename = path.file_name()?.to_str()?.to_lowercase();
+        
+        // Check for compound extensions first (e.g., .fb2.zip)
+        if filename.ends_with(".fb2.zip") {
+            return Some(Self::Fb2);
+        }
+        
+        // Then check simple extensions
+        let ext = path.extension()?.to_str()?.to_lowercase();
+        match ext.as_str() {
+            "epub" => Some(Self::Epub),
+            "fb2" => Some(Self::Fb2),
+            _ => None,
+        }
+    }
+
+    /// Get all supported file extensions (for display/documentation)
+    pub fn supported_extensions() -> &'static [&'static str] {
+        &["epub", "fb2", "fb2.zip"]
+    }
+
+    /// Get the file extension for this format
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Epub => "epub",
+            Self::Fb2 => "fb2",
+        }
+    }
+
+    /// Get the KOReader metadata filename for this format
+    pub fn metadata_filename(&self) -> &'static str {
+        match self {
+            Self::Epub => "metadata.epub.lua",
+            Self::Fb2 => "metadata.fb2.lua",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Identifier {

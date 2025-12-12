@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{Result, bail};
 use log::{debug, info, warn};
 
-use crate::models::Book;
+use crate::models::{Book, BookFormat};
 use crate::epub_parser::EpubParser;
 use crate::fb2_parser::Fb2Parser;
 use crate::lua_parser::LuaParser;
@@ -181,36 +181,32 @@ pub async fn scan_books(
         let entry = entry?;
         let path = entry.path();
         
-        let file_ext = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|ext| ext.to_lowercase());
+        // Detect book format from extension
+        let format = match BookFormat::from_path(path) {
+            Some(f) => f,
+            None => continue, // Skip unsupported formats
+        };
         
-        let is_epub = file_ext.as_ref().map(|ext| ext == "epub").unwrap_or(false);
-        let is_fb2 = file_ext.as_ref().map(|ext| ext == "fb2").unwrap_or(false);
-        
-        if !is_epub && !is_fb2 {
-            continue;
-        }
-        
-        debug!("Processing: {:?}", path);
+        debug!("Processing {:?}: {:?}", format, path);
         
         // Parse book based on format
-        let epub_info = if is_epub {
-            match epub_parser.parse(path).await {
-                Ok(info) => info,
-                Err(e) => {
-                    log::warn!("Failed to parse epub {:?}: {}", path, e);
-                    continue;
+        let book_info = match format {
+            BookFormat::Epub => {
+                match epub_parser.parse(path).await {
+                    Ok(info) => info,
+                    Err(e) => {
+                        log::warn!("Failed to parse epub {:?}: {}", path, e);
+                        continue;
+                    }
                 }
             }
-        } else {
-            // FB2 format
-            match fb2_parser.parse(path).await {
-                Ok(info) => info,
-                Err(e) => {
-                    log::warn!("Failed to parse fb2 {:?}: {}", path, e);
-                    continue;
+            BookFormat::Fb2 => {
+                match fb2_parser.parse(path).await {
+                    Ok(info) => info,
+                    Err(e) => {
+                        log::warn!("Failed to parse fb2 {:?}: {}", path, e);
+                        continue;
+                    }
                 }
             }
         };
@@ -225,29 +221,9 @@ pub async fn scan_books(
                 // Default: look for .sdr directory next to the book
                 let book_stem = path.file_stem().unwrap().to_str().unwrap();
                 let sdr_path = path.parent().unwrap().join(format!("{}.sdr", book_stem));
-                // Try format-specific metadata first, then fall back to epub.lua
-                let metadata_file = if is_fb2 {
-                    let fb2_metadata = sdr_path.join("metadata.fb2.lua");
-                    if fb2_metadata.exists() {
-                        Some(fb2_metadata)
-                    } else {
-                        // Fall back to epub.lua for compatibility
-                        let epub_metadata = sdr_path.join("metadata.epub.lua");
-                        if epub_metadata.exists() {
-                            Some(epub_metadata)
-                        } else {
-                            None
-                        }
-                    }
-                } else {
-                    let epub_metadata = sdr_path.join("metadata.epub.lua");
-                    if epub_metadata.exists() {
-                        Some(epub_metadata)
-                    } else {
-                        None
-                    }
-                };
-                metadata_file
+                // KOReader creates format-specific metadata files based on the book extension
+                let metadata_file = sdr_path.join(format.metadata_filename());
+                metadata_file.exists().then_some(metadata_file)
             },
             MetadataLocation::DocSettings(_) => {
                 // Look up by filename in the pre-built index
@@ -312,8 +288,8 @@ pub async fn scan_books(
         }
         
         let book = Book {
-            id: generate_book_id(&epub_info.title),
-            epub_info,
+            id: generate_book_id(&book_info.title),
+            epub_info: book_info,
             koreader_metadata,
             epub_path: path.to_path_buf(),
         };
