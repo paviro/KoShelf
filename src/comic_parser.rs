@@ -25,6 +25,13 @@ impl ComicParser {
         let is_cbr = path.extension()
             .map(|e| e.to_str().unwrap_or("").to_lowercase() == "cbr")
             .unwrap_or(false);
+
+        // Windows builds intentionally don't support CBR/RAR archives (unrar doesn't compile reliably).
+        if is_cbr && cfg!(windows) {
+            return Err(anyhow!(
+                "CBR (.cbr) is not supported on Windows builds; please convert to CBZ (.cbz) or use the linux subsystem for windows."
+            ));
+        }
         
         tokio::task::spawn_blocking(move || {
             if is_cbr {
@@ -62,7 +69,7 @@ impl ComicParser {
     }
     
     /// Parse a CBR (RAR-based) comic archive
-    /// Parse a CBR (RAR-based) comic archive
+    #[cfg(not(windows))]
     fn parse_cbr_sync(cbr_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening CBR: {:?}", cbr_path);
         
@@ -162,7 +169,7 @@ impl ComicParser {
                                 .map_err(|e| anyhow!("Failed to extract cover image: {:?}", e))?;
                                 
                             if let Ok(data) = std::fs::read(&extract_path) {
-                                let mime = Self::mime_type_from_path(&extract_path);
+                                let mime = Self::mime_type_from_extension(&extract_path.to_string_lossy());
                                 book_info.cover_data = Some(data);
                                 book_info.cover_mime_type = mime;
                             }
@@ -187,6 +194,14 @@ impl ComicParser {
         }
         
         Ok(book_info)
+    }
+
+    /// Parse a CBR (RAR-based) comic archive (unsupported on Windows).
+    #[cfg(windows)]
+    fn parse_cbr_sync(_cbr_path: &PathBuf) -> Result<BookInfo> {
+        Err(anyhow!(
+            "CBR (.cbr) is not supported on Windows builds; please convert to CBZ (.cbz)."
+        ))
     }
     
     /// Parse ComicInfo.xml metadata
@@ -345,11 +360,6 @@ impl ComicParser {
         } else {
             None
         }
-    }
-    
-    /// Get MIME type from path
-    fn mime_type_from_path(path: &Path) -> Option<String> {
-        path.to_str().and_then(Self::mime_type_from_extension)
     }
 }
 
