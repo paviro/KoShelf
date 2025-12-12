@@ -33,19 +33,6 @@ impl BookFormat {
         }
     }
 
-    /// Get all supported file extensions (for display/documentation)
-    pub fn supported_extensions() -> &'static [&'static str] {
-        &["epub", "fb2", "fb2.zip"]
-    }
-
-    /// Get the file extension for this format
-    pub fn extension(&self) -> &'static str {
-        match self {
-            Self::Epub => "epub",
-            Self::Fb2 => "fb2",
-        }
-    }
-
     /// Get the KOReader metadata filename for this format
     pub fn metadata_filename(&self) -> &'static str {
         match self {
