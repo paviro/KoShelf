@@ -1,11 +1,15 @@
 import { StorageManager } from './storage-manager.js';
 import { showModal, setupModalCloseHandlers } from './modal-utils.js';
 import { translation } from './i18n.js';
+import { initRecapCoverTilt } from './tilt-effect.js';
 
 // Recap interactions: year dropdown + navigation
 document.addEventListener('DOMContentLoaded', async () => {
     // Load translations
     await translation.init();
+
+    // Initialize 3D tilt effect on recap covers
+    initRecapCoverTilt();
 
     const wrapper = document.getElementById('yearSelectorWrapper');
     const options = document.getElementById('yearOptions');
