@@ -25,16 +25,16 @@
             </div>
         </div>
         
-        <div class="week-stats grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <div class="week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             <!-- Weekly Read Time Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500/20 to-primary-400/10 dark:from-primary-500/30 dark:to-primary-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekReadTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ reading_stats.weeks[0].read_time / 3600 }}{{ translation.get("units.h") }} {{ (reading_stats.weeks[0].read_time % 3600) / 60 }}{{ translation.get("units.m") }}
@@ -48,14 +48,14 @@
             </div>
             
             <!-- Weekly Pages Read Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-indigo-400/10 dark:from-indigo-500/30 dark:to-indigo-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekPagesRead" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ reading_stats.weeks[0].pages_read }}
@@ -69,14 +69,14 @@
             </div>
             
             <!-- Average Pages Per Day Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-400/10 dark:from-amber-500/30 dark:to-amber-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekAvgPagesPerDay" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ (reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 / 10 }}.{{ ((reading_stats.weeks[0].avg_pages_per_day * 10.0) as i64 % 10) }}
@@ -90,14 +90,14 @@
             </div>
             
             <!-- Average Reading Time Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-green-400/10 dark:from-green-500/30 dark:to-green-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekAvgReadTimePerDay" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                             {{ (reading_stats.weeks[0].avg_read_time_per_day / 60.0) as i64 }}{{ translation.get("units.m") }}
@@ -111,14 +111,14 @@
             </div>
             
             <!-- Longest Session Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-400/10 dark:from-pink-500/30 dark:to-pink-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekLongestSession" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                                 {% match reading_stats.weeks[0].longest_session_duration %}
@@ -144,14 +144,14 @@
             </div>
             
             <!-- Average Session Card -->
-            <div class="bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                <div class="flex items-center space-x-3 h-full">
+            <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
+                <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-400/10 dark:from-purple-500/30 dark:to-purple-400/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <div>
+                    <div class="text-center @[140px]:text-left">
                         <div id="weekAverageSession" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {% if reading_stats.weeks.len() > 0 %}
                                 {% match reading_stats.weeks[0].average_session_duration %}
