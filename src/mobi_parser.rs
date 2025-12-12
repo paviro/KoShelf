@@ -198,6 +198,7 @@ impl MobiParser {
             subjects,
             series: None,
             series_number: None,
+            pages: None,
             cover_data,
             cover_mime_type: cover_mime_type.map(|m| m.to_string()),
         })
@@ -214,6 +215,7 @@ impl MobiParser {
             subjects: Vec::new(),
             series: None,
             series_number: None,
+            pages: None,
             cover_data: None,
             cover_mime_type: None,
         }
