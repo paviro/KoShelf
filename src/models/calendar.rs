@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::ContentType;
+
 /// Calendar event representing a book reading session (optimized structure)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarEvent {
@@ -18,6 +20,7 @@ pub struct CalendarEvent {
 pub struct CalendarBook {
     pub title: String,
     pub authors: Vec<String>,
+    pub content_type: ContentType,
     pub color: String, // Color for the event
     #[serde(skip_serializing_if = "Option::is_none")]
     pub book_path: Option<String>, // Relative path to the book detail page, if available
@@ -30,7 +33,12 @@ pub struct CalendarBook {
 pub struct CalendarMonthData {
     pub events: Vec<CalendarEvent>,
     pub books: BTreeMap<String, CalendarBook>,
+    /// Pre-calculated monthly statistics across all content types
     pub stats: MonthlyStats,
+    /// Pre-calculated monthly statistics for books only
+    pub stats_books: MonthlyStats,
+    /// Pre-calculated monthly statistics for comics only
+    pub stats_comics: MonthlyStats,
 }
 
 /// Map of "YYYY-MM" to its monthly calendar data payload
@@ -60,6 +68,7 @@ impl CalendarBook {
     pub fn new(
         title: String,
         authors: Vec<String>,
+        content_type: ContentType,
         book_path: Option<String>,
         book_cover: Option<String>,
     ) -> Self {
@@ -69,6 +78,7 @@ impl CalendarBook {
         Self {
             title,
             authors,
+            content_type,
             color,
             book_path,
             book_cover,

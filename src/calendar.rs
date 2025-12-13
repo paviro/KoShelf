@@ -26,8 +26,9 @@ impl CalendarGenerator {
         let mut calendar_events = Vec::new();
         let mut calendar_books: BTreeMap<String, CalendarBook> = BTreeMap::new();
 
-        // Build a lookup map from partial MD5 checksum to the corresponding book detail path and cover path
-        let md5_to_book_info: HashMap<String, (String, String)> = books
+        // Build a lookup map from partial MD5 checksum to the corresponding book detail path,
+        // cover path, and content type.
+        let md5_to_book_info: HashMap<String, (String, String, ContentType)> = books
             .iter()
             .filter_map(|b| {
                 b.koreader_metadata
@@ -37,8 +38,12 @@ impl CalendarGenerator {
                         (
                             md5.clone(),
                             (
-                                format!("/books/{}/", b.id),
+                                match b.content_type() {
+                                    ContentType::Book => format!("/books/{}/", b.id),
+                                    ContentType::Comic => format!("/comics/{}/", b.id),
+                                },
                                 format!("/assets/covers/{}.webp", b.id),
+                                b.content_type(),
                             ),
                         )
                     })
@@ -62,13 +67,17 @@ impl CalendarGenerator {
             // Create the book metadata entry if we haven't already
             if !calendar_books.contains_key(&calendar_book_id) {
                 let authors = Self::parse_authors(&stat_book.authors);
-                let (book_path, book_cover) = md5_to_book_info
+                let (book_path, book_cover, content_type_from_library) = md5_to_book_info
                     .get(&stat_book.md5)
-                    .map(|(path, cover)| (Some(path.clone()), Some(cover.clone())))
-                    .unwrap_or((None, None));
+                    .map(|(path, cover, ct)| (Some(path.clone()), Some(cover.clone()), Some(*ct)))
+                    .unwrap_or((None, None, None));
+
+                let content_type = content_type_from_library
+                    .or(stat_book.content_type)
+                    .unwrap_or(ContentType::Book);
 
                 let calendar_book =
-                    CalendarBook::new(stat_book.title.clone(), authors, book_path, book_cover);
+                    CalendarBook::new(stat_book.title.clone(), authors, content_type, book_path, book_cover);
                 calendar_books.insert(calendar_book_id.clone(), calendar_book);
             }
 
@@ -127,6 +136,14 @@ impl CalendarGenerator {
 
         // Pre-compute monthly statistics once.
         let monthly_stats_map = Self::build_monthly_stats(stats_data, time_config);
+        let monthly_stats_books_map = Self::build_monthly_stats(
+            &stats_data.filtered_by_content_type(ContentType::Book),
+            time_config,
+        );
+        let monthly_stats_comics_map = Self::build_monthly_stats(
+            &stats_data.filtered_by_content_type(ContentType::Comic),
+            time_config,
+        );
 
         let mut months_map: std::collections::BTreeMap<String, CalendarMonthData> =
             std::collections::BTreeMap::new();
@@ -163,6 +180,14 @@ impl CalendarGenerator {
                             events: Vec::new(),
                             books: std::collections::BTreeMap::new(),
                             stats: monthly_stats_map
+                                .get(&year_month)
+                                .cloned()
+                                .unwrap_or(zero_stats.clone()),
+                            stats_books: monthly_stats_books_map
+                                .get(&year_month)
+                                .cloned()
+                                .unwrap_or(zero_stats.clone()),
+                            stats_comics: monthly_stats_comics_map
                                 .get(&year_month)
                                 .cloned()
                                 .unwrap_or(zero_stats.clone()),

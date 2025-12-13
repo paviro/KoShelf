@@ -4,6 +4,9 @@
 import { showModal, hideModal, setupModalCloseHandlers } from './modal-utils.js';
 import { translation } from './i18n.js';
 
+type ContentFilter = 'all' | 'book' | 'comic';
+type ContentType = 'book' | 'comic';
+
 // Type declarations for EventCalendar library
 declare const EventCalendar: {
     create(el: HTMLElement, options: EventCalendarOptions): EventCalendarInstance;
@@ -74,6 +77,7 @@ interface EventExtendedProps {
     book_path?: string;
     book_cover?: string;
     color?: string;
+    content_type: ContentType;
     md5: string;
 }
 
@@ -91,17 +95,22 @@ interface BookInfo {
     book_path?: string;
     book_cover?: string;
     color?: string;
+    content_type?: ContentType;
+}
+
+interface MonthlyStats {
+    books_read: number;
+    pages_read: number;
+    time_read: number;
+    days_read_pct: number;
 }
 
 interface MonthData {
     events: RawEvent[];
     books: Record<string, BookInfo>;
-    stats?: {
-        books_read: number;
-        pages_read: number;
-        time_read: number;
-        days_read_pct: number;
-    };
+    stats?: MonthlyStats;
+    stats_books?: MonthlyStats;
+    stats_comics?: MonthlyStats;
 }
 
 let calendar: EventCalendarInstance | null = null;
@@ -110,6 +119,17 @@ let currentBooks: Record<string, BookInfo> = {};
 const monthlyDataCache = new Map<string, MonthData>(); // Cache for monthly data: month -> {events, books}
 let availableMonths: string[] = []; // List of months that have data
 let currentDisplayedMonth: string | null = null;
+let currentContentFilter: ContentFilter = loadInitialFilter();
+
+function loadInitialFilter(): ContentFilter {
+    try {
+        const saved = localStorage.getItem('koshelf_calendar_filter');
+        if (saved === 'all' || saved === 'book' || saved === 'comic') return saved;
+    } catch {
+        // ignore
+    }
+    return 'all';
+}
 
 // Exported entry point
 export async function initializeCalendar(): Promise<void> {
@@ -134,7 +154,7 @@ export async function initializeCalendar(): Promise<void> {
             currentDisplayedMonth = currentMonth;
             refreshAggregatedData();
 
-            initializeEventCalendar(currentEvents);
+            initializeEventCalendar(getFilteredRawEvents(currentEvents));
 
             // Populate statistics widgets for the initial month
             updateMonthlyStats(now);
@@ -185,30 +205,7 @@ async function updateDisplayedMonth(targetMonth: string): Promise<void> {
 
         // Update calendar events with all cached data
         if (calendar) {
-            const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
-                const book = currentBooks[ev.book_id] || {};
-                return {
-                    id: ev.book_id,
-                    title: book.title || translation.get('unknown-book'),
-                    start: ev.start,
-                    end: ev.end || ev.start,
-                    allDay: true,
-                    backgroundColor: book.color || getEventColor(ev),
-                    borderColor: book.color || getEventColor(ev),
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        ...ev,
-                        book_title: book.title || translation.get('unknown-book'),
-                        authors: book.authors || [],
-                        book_path: book.book_path,
-                        book_cover: book.book_cover,
-                        color: book.color,
-                        md5: ev.book_id
-                    }
-                };
-            });
-
-            calendar.setOption('events', mapEvents(currentEvents));
+            renderCalendarEvents();
 
             // Update monthly statistics now that we have fresh data
             const [yr, mo] = targetMonth.split('-');
@@ -278,30 +275,6 @@ function initializeEventCalendar(events: RawEvent[]): void {
         }
     }
 
-    // Transform raw JSON events into EventCalendar compatible structure
-    const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
-        const book = currentBooks[ev.book_id] || {};
-        return {
-            id: ev.book_id,
-            title: book.title || translation.get('unknown-book'),
-            start: ev.start,
-            end: ev.end || ev.start,
-            allDay: true,
-            backgroundColor: book.color || getEventColor(ev),
-            borderColor: book.color || getEventColor(ev),
-            textColor: '#ffffff',
-            extendedProps: {
-                ...ev,
-                book_title: book.title || translation.get('unknown-book'),
-                authors: book.authors || [],
-                book_path: book.book_path,
-                book_cover: book.book_cover,
-                color: book.color,
-                md5: ev.book_id
-            }
-        };
-    });
-
     calendar = EventCalendar.create(calendarEl, {
         view: 'dayGridMonth',
         headerToolbar: false,
@@ -333,6 +306,89 @@ function initializeEventCalendar(events: RawEvent[]): void {
             setTimeout(() => scrollCurrentDayIntoView(), 100);
         }
     });
+
+    // Set initial visual state of filter buttons
+    syncFilterButtons();
+}
+
+function getEventContentType(ev: RawEvent): ContentType {
+    const book = currentBooks[ev.book_id];
+    return book?.content_type === 'comic' ? 'comic' : 'book';
+}
+
+function getFilteredRawEvents(evts: RawEvent[]): RawEvent[] {
+    if (currentContentFilter === 'all') return evts;
+    return evts.filter(ev => getEventContentType(ev) === currentContentFilter);
+}
+
+function mapEvents(evts: RawEvent[]): CalendarEvent[] {
+    return evts.map(ev => {
+        const book = currentBooks[ev.book_id] || {};
+        const content_type: ContentType = (book.content_type === 'comic' ? 'comic' : 'book');
+        return {
+            id: ev.book_id,
+            title: book.title || translation.get('unknown-book'),
+            start: ev.start,
+            end: ev.end || ev.start,
+            allDay: true,
+            backgroundColor: book.color || getEventColor(ev),
+            borderColor: book.color || getEventColor(ev),
+            textColor: '#ffffff',
+            extendedProps: {
+                ...ev,
+                book_title: book.title || translation.get('unknown-book'),
+                authors: book.authors || [],
+                book_path: book.book_path,
+                book_cover: book.book_cover,
+                color: book.color,
+                content_type,
+                md5: ev.book_id
+            }
+        };
+    });
+}
+
+function renderCalendarEvents(): void {
+    if (!calendar) return;
+    calendar.setOption('events', mapEvents(getFilteredRawEvents(currentEvents)));
+}
+
+function setContentFilter(filter: ContentFilter): void {
+    currentContentFilter = filter;
+    try {
+        localStorage.setItem('koshelf_calendar_filter', filter);
+    } catch {
+        // ignore
+    }
+
+    syncFilterButtons();
+    renderCalendarEvents();
+
+    // Close dropdown if open
+    const dropdown = document.getElementById('calendarFilterDropdown') as HTMLDetailsElement | null;
+    if (dropdown) dropdown.open = false;
+
+    // Refresh stats for the currently displayed month (if we know it)
+    if (currentDisplayedMonth) {
+        const [yr, mo] = currentDisplayedMonth.split('-');
+        const statsDate = new Date(Number(yr), Number(mo) - 1, 1);
+        updateMonthlyStats(statsDate);
+    } else {
+        updateMonthlyStats(new Date());
+    }
+}
+
+function syncFilterButtons(): void {
+    const labelEl = document.getElementById('calendarFilterLabel');
+    if (labelEl) {
+        if (currentContentFilter === 'book') {
+            labelEl.textContent = translation.get('books');
+        } else if (currentContentFilter === 'comic') {
+            labelEl.textContent = translation.get('comics');
+        } else {
+            labelEl.textContent = translation.get('filter.all');
+        }
+    }
 }
 
 // Update the calendar title directly with the provided title string
@@ -442,36 +498,24 @@ function hideEventModal(): void {
 }
 
 function setupEventHandlers(): void {
+    // Filter buttons
+    document.querySelectorAll<HTMLElement>('.calendar-filter-btn').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const next = ((el as HTMLElement).dataset.calendarFilter || 'all') as ContentFilter;
+            setContentFilter(next);
+        });
+    });
+
     // Today
     const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
     todayBtn?.addEventListener('click', () => {
-        if (calendar && !todayBtn.disabled) {
-            calendar.setOption('events', []); // Workaround to trigger date change
-            const now = new Date();
-            const mapEvents = (evts: RawEvent[]): CalendarEvent[] => evts.map(ev => {
-                const book = currentBooks[ev.book_id] || {};
-                return {
-                    id: ev.book_id,
-                    title: book.title || translation.get('unknown-book'),
-                    start: ev.start,
-                    end: ev.end || ev.start,
-                    allDay: true,
-                    backgroundColor: book.color || getEventColor(ev),
-                    borderColor: book.color || getEventColor(ev),
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        ...ev,
-                        book_title: book.title || translation.get('unknown-book'),
-                        authors: book.authors || [],
-                        book_path: book.book_path,
-                        book_cover: book.book_cover,
-                        color: book.color,
-                        md5: ev.book_id
-                    }
-                };
-            });
-            calendar.setOption('events', mapEvents(currentEvents));
-        }
+        if (!calendar || !todayBtn || todayBtn.disabled) return;
+
+        // EventCalendar doesn't provide a stable public "go to today" API in this build.
+        // Re-creating the instance reliably resets the view to the current month/day.
+        initializeEventCalendar(getFilteredRawEvents(currentEvents));
+        setTimeout(() => scrollCurrentDayIntoView(), 100);
     });
 
     // Set initial state of Today button
@@ -531,8 +575,16 @@ function updateMonthlyStats(currentDate: Date): void {
     let timeRead = 0;
     let daysPct = 0;
 
-    if (monthData?.stats) {
-        ({ books_read: booksRead, pages_read: pagesRead, time_read: timeRead, days_read_pct: daysPct } = monthData.stats);
+    const pickStats = (): MonthlyStats | undefined => {
+        if (!monthData) return undefined;
+        if (currentContentFilter === 'book') return monthData.stats_books || monthData.stats;
+        if (currentContentFilter === 'comic') return monthData.stats_comics || monthData.stats;
+        return monthData.stats;
+    };
+
+    const stats = pickStats();
+    if (stats) {
+        ({ books_read: booksRead, pages_read: pagesRead, time_read: timeRead, days_read_pct: daysPct } = stats);
     }
 
     const booksEl = document.getElementById('monthlyBooks');
@@ -542,7 +594,13 @@ function updateMonthlyStats(currentDate: Date): void {
     const daysPercentageEl = document.getElementById('monthlyDaysPercentage');
 
     if (booksEl) booksEl.textContent = String(booksRead);
-    if (booksLabelEl) booksLabelEl.textContent = translation.get('book-label', { count: booksRead });
+    if (booksLabelEl) {
+        if (currentContentFilter === 'comic') {
+            booksLabelEl.textContent = translation.get('comic-label', { count: booksRead });
+        } else {
+            booksLabelEl.textContent = translation.get('book-label', { count: booksRead });
+        }
+    }
     if (pagesEl) pagesEl.textContent = Number(pagesRead).toLocaleString();
     if (timeEl) timeEl.textContent = formatDuration(timeRead);
     if (daysPercentageEl) daysPercentageEl.textContent = `${daysPct}%`;
