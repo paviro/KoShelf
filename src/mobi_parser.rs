@@ -122,14 +122,13 @@ impl MobiParser {
             }
 
             // Language: EXTH 524 (often values like "en", "en-US", "de", etc.)
-            if language.is_none() {
-                if let Some(lang_raw) = exth.get_string(524) {
+            if language.is_none()
+                && let Some(lang_raw) = exth.get_string(524) {
                     let lang = Self::normalize_language_tag(&lang_raw);
                     if !lang.is_empty() {
                         language = Some(lang);
                     }
                 }
-            }
 
             // ASIN: commonly seen as EXTH 113 or 504 depending on producer/tooling.
             if let Some(asin) = exth.get_string(113).or_else(|| exth.get_string(504)) {
@@ -142,8 +141,8 @@ impl MobiParser {
             // Cover extraction: EXTH 201 is commonly the cover image record index/offset.
             // Different producers interpret this slightly differently, so we try a couple
             // candidate mappings and validate by image magic bytes.
-            if cover_data.is_none() && !record_ranges.is_empty() {
-                if let Some(cover_rec) = exth.get_u32(201).map(|v| v as usize) {
+            if cover_data.is_none() && !record_ranges.is_empty()
+                && let Some(cover_rec) = exth.get_u32(201).map(|v| v as usize) {
                     let mut candidates: Vec<usize> = Vec::new();
                     candidates.push(cover_rec);
                     candidates.push(cover_rec.saturating_add(1));
@@ -168,7 +167,6 @@ impl MobiParser {
                         }
                     }
                 }
-            }
         }
 
         // If we didn't get a cover via EXTH 201, do a best-effort fallback:
@@ -187,7 +185,7 @@ impl MobiParser {
 
         // Fallback title sources
         let final_title = title
-            .or_else(|| title_from_full_name)
+            .or(title_from_full_name)
             .unwrap_or_else(|| fallback_title.clone());
 
         if authors.is_empty() {

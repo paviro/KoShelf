@@ -159,7 +159,7 @@ fn compile_typescript(out_dir: &str) {
         .filter_map(|e| e.ok())
         .filter(|e| {
             let path = e.path();
-            path.extension().map_or(false, |ext| ext == "ts") && path.is_file()
+            path.extension().is_some_and(|ext| ext == "ts") && path.is_file()
         })
         .map(|e| e.path().to_string_lossy().to_string())
         .collect();

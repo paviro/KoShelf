@@ -373,14 +373,13 @@ impl ComicParser {
             .min()
             .map(|s| s.to_string());
 
-        if let Some(first_image) = cover_file_name {
-            if let Ok(mut file) = zip.by_name(&first_image) {
+        if let Some(first_image) = cover_file_name
+            && let Ok(mut file) = zip.by_name(&first_image) {
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf)?;
                 let mime = Self::mime_type_from_extension(&first_image);
                 return Ok((Some(buf), mime));
             }
-        }
 
         Ok((None, None))
     }

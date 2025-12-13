@@ -321,7 +321,7 @@ pub async fn scan_library(
 
             let book = LibraryItem {
                 id: generate_book_id(&book_info.title),
-                book_info: book_info,
+                book_info,
                 koreader_metadata,
                 file_path: path.to_path_buf(),
                 format,
