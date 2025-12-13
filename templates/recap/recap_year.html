@@ -26,35 +26,6 @@
 
             <!-- Year Controls -->
             <div class="flex items-center space-x-2 md:space-x-4">
-                <div class="flex items-center space-x-1">
-                    {% if prev_year.is_some() %}
-                    <a href="/recap/{{ prev_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("previous-year.aria-label") }}" aria-label="{{ translation.get("previous-year.aria-label") }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </a>
-                    {% else %}
-                    <span class="px-3 md:px-4 py-2 h-10 bg-gray-100 dark:bg-dark-800 text-gray-400 dark:text-dark-400 rounded-lg flex items-center justify-center cursor-not-allowed" title="{{ translation.get("previous-year.aria-label") }}" aria-label="{{ translation.get("previous-year.aria-label") }}" aria-disabled="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </span>
-                    {% endif %}
-                    {% if next_year.is_some() %}
-                    <a href="/recap/{{ next_year.as_ref().unwrap() }}/" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("next-year.aria-label") }}" aria-label="{{ translation.get("next-year.aria-label") }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </a>
-                    {% else %}
-                    <span class="px-3 md:px-4 py-2 h-10 bg-gray-100 dark:bg-dark-800 text-gray-400 dark:text-dark-400 rounded-lg flex items-center justify-center cursor-not-allowed" title="{{ translation.get("next-year.aria-label") }}" aria-label="{{ translation.get("next-year.aria-label") }}" aria-disabled="true">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </span>
-                    {% endif %}
-                </div>
-
                 <!-- Year Selector (shared styling with statistics) -->
                 <div class="relative w-full max-w-32 sm:max-w-36 lg:max-w-40">
                     <div id="yearSelectorWrapper" class="flex items-center justify-between bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg px-3 sm:px-4 py-2 cursor-pointer hover:border-primary-500 transition-all duration-200 shadow w-full text-sm md:text-base">
@@ -88,6 +59,20 @@
                         {% endfor %}
                     </div>
                 </div>
+                
+                <!-- Share/Download Button -->
+                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("download.recap-label") }}" aria-label="{{ translation.get("download.recap-label") }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"></path>
+                    </svg>
+                </button>
+
+                <!-- Sort Button -->
+                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("sort-order.newest-first") }}" aria-label="{{ translation.get("sort-order.newest-first") }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
+                    </svg>
+                </button>
 
                 {% if show_type_filter %}
                 <!-- Scope Selector -->
@@ -109,20 +94,6 @@
                     </div>
                 </details>
                 {% endif %}
-                
-                <!-- Sort Button -->
-                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("sort-order.newest-first") }}" aria-label="{{ translation.get("sort-order.newest-first") }}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
-                    </svg>
-                </button>
-                
-                <!-- Share/Download Button -->
-                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700 hover:border-primary-500 transition-colors shadow-sm" title="{{ translation.get("download.recap-label") }}" aria-label="{{ translation.get("download.recap-label") }}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"></path>
-                    </svg>
-                </button>
             </div>
         </div>
     </header>

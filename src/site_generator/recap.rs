@@ -181,8 +181,6 @@ impl SiteGenerator {
                 show_type_filter,
                 year: None,
                 available_years: Vec::new(),
-                prev_year: None,
-                next_year: None,
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap("recap", None, nav),
@@ -218,7 +216,7 @@ impl SiteGenerator {
         // (No recap JSON exports needed anymore; we render per-scope pages instead.)
 
         // Render each year page (All + Books + Comics)
-        for (idx, year) in years.iter().enumerate() {
+        for year in years.iter() {
             let months_map = year_month_items.get(year).cloned().unwrap_or_default();
             // Build MonthRecap BTreeMap sorted by month descending (Dec..Jan)
             let mut monthly: BTreeMap<String, MonthRecap> = BTreeMap::new();
@@ -295,14 +293,6 @@ impl SiteGenerator {
                     );
                 }
             }
-
-            // Determine prev/next year for controls
-            let prev_year = years.get(idx + 1).cloned();
-            let next_year = if idx > 0 {
-                years.get(idx - 1).cloned()
-            } else {
-                None
-            };
 
             // Convert monthly map to a vector in chronological order
             let monthly_vec: Vec<MonthRecap> = monthly.into_values().collect();
@@ -476,8 +466,6 @@ impl SiteGenerator {
                 show_type_filter,
                 year: *year,
                 available_years: years.clone(),
-                prev_year,
-                next_year,
                 monthly: monthly_vec.clone(),
                 summary: summary.clone(),
                 version: self.get_version(),
@@ -510,8 +498,6 @@ impl SiteGenerator {
                         show_type_filter,
                         year: Some(*year),
                         available_years: years.clone(),
-                        prev_year,
-                        next_year,
                         version: self.get_version(),
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
@@ -530,8 +516,6 @@ impl SiteGenerator {
                         show_type_filter,
                         year: *year,
                         available_years: years.clone(),
-                        prev_year,
-                        next_year,
                         monthly: monthly_vec_books.clone(),
                         summary: summary_books.clone(),
                         version: self.get_version(),
@@ -558,8 +542,6 @@ impl SiteGenerator {
                         show_type_filter,
                         year: Some(*year),
                         available_years: years.clone(),
-                        prev_year,
-                        next_year,
                         version: self.get_version(),
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
@@ -578,8 +560,6 @@ impl SiteGenerator {
                         show_type_filter,
                         year: *year,
                         available_years: years.clone(),
-                        prev_year,
-                        next_year,
                         monthly: monthly_vec_comics.clone(),
                         summary: summary_comics.clone(),
                         version: self.get_version(),
