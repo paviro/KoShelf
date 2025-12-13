@@ -23,7 +23,7 @@ impl SiteGenerator {
         if render_to_root {
             info!("Generating statistics page at root index...");
         } else {
-            info!("Generating statistics pages (all/books/comics)...");
+            info!("Generating statistics page (all)...");
         }
 
         // Calculate reading stats for ALL content
@@ -89,6 +89,7 @@ impl SiteGenerator {
             self.write_minify_html(stats_dir.join("index.html"), &html_all)?;
 
             // /statistics/books/
+            info!("Generating statistics page (books)...");
             let stats_books_dir = stats_dir.join("books");
             fs::create_dir_all(&stats_books_dir)?;
             let template_books = StatsTemplate {
@@ -110,6 +111,7 @@ impl SiteGenerator {
             self.write_minify_html(stats_books_dir.join("index.html"), &html_books)?;
 
             // /statistics/comics/
+            info!("Generating statistics page (comics)...");
             let stats_comics_dir = stats_dir.join("comics");
             fs::create_dir_all(&stats_comics_dir)?;
             let template_comics = StatsTemplate {

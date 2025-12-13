@@ -152,12 +152,6 @@ impl SiteGenerator {
         let has_books = !books.is_empty();
         let has_comics = !comics.is_empty();
 
-        info!(
-            "Library contains {} books and {} comics",
-            books.len(),
-            comics.len()
-        );
-
         // After loading statistics if path is provided
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {

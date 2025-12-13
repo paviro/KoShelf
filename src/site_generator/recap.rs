@@ -487,6 +487,7 @@ impl SiteGenerator {
                 translation: self.t(),
             };
 
+            info!("Generating recap page ({}, all)...", year);
             let html = template_all.render()?;
             let year_dir = self.recap_dir().join(format!("{}", year));
             fs::create_dir_all(&year_dir)?;
@@ -494,6 +495,7 @@ impl SiteGenerator {
             self.write_minify_html(path, &html)?;
 
             // /recap/<year>/books/
+            info!("Generating recap page ({}, books)...", year);
             let books_dir = year_dir.join("books");
             fs::create_dir_all(&books_dir)?;
             if monthly_vec_books.is_empty() {
@@ -539,6 +541,7 @@ impl SiteGenerator {
             }
 
             // /recap/<year>/comics/
+            info!("Generating recap page ({}, comics)...", year);
             let comics_dir = year_dir.join("comics");
             fs::create_dir_all(&comics_dir)?;
             if monthly_vec_comics.is_empty() {
@@ -604,6 +607,7 @@ impl SiteGenerator {
                 .unwrap_or(SystemTime::UNIX_EPOCH);
 
             // Generate all three formats in parallel using spawn_blocking (only if needed)
+            info!("Generating share images for {}...", year);
             let share_image_paths: Vec<std::path::PathBuf> = [
                 crate::share_image::ShareFormat::Story,
                 crate::share_image::ShareFormat::Square,
