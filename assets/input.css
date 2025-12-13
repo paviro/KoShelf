@@ -249,13 +249,35 @@
 
   /* Calendar container specific styles */
   .calendar-container {
-    @apply w-full overflow-x-auto;
+    @apply w-full overflow-x-auto flex flex-col flex-1;
+    /* flex-1 makes it fill remaining space in the flex parent */
   }
 
   .calendar-container .ec {
     @apply min-w-[700px];
     border: none;
     background-color: transparent;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ensure day-grid elements use flex to cascade height down */
+  .calendar-container .ec.ec-day-grid .ec-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .calendar-container .ec.ec-day-grid .ec-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .calendar-container .ec.ec-day-grid .ec-days {
+    flex: 1 1 0%;
+    min-height: 0;
   }
 
   .calendar-container .ec .ec-header,
