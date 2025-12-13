@@ -608,13 +608,16 @@ impl SiteGenerator {
 
             // Generate all three formats in parallel using spawn_blocking (only if needed)
             info!("Generating share images for {}...", year);
+            let assets_recap_dir = self.output_dir.join("assets").join("recap");
+            fs::create_dir_all(&assets_recap_dir)?;
+
             let share_image_paths: Vec<std::path::PathBuf> = [
                 crate::share_image::ShareFormat::Story,
                 crate::share_image::ShareFormat::Square,
                 crate::share_image::ShareFormat::Banner,
             ]
             .into_iter()
-            .map(|format| year_dir.join(format.filename()))
+            .map(|format| assets_recap_dir.join(format!("{}_{}", year, format.filename())))
             .collect();
 
             let share_tasks: Vec<_> = [
@@ -624,7 +627,7 @@ impl SiteGenerator {
             ]
             .into_iter()
             .filter_map(|format| {
-                let output_path = year_dir.join(format.filename());
+                let output_path = assets_recap_dir.join(format!("{}_{}", year, format.filename()));
 
                 // Check if share image needs regeneration
                 let should_generate = match fs::metadata(&output_path) {
