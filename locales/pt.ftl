@@ -190,6 +190,13 @@ more = Mais
 period = Período
 sessions = Sessões
 yearly-summary = Resumo Anual { $count }
+# TODO: Translate the following strings
+recap-empty =
+    .nothing-here = Nothing here yet
+    .try-switching = Try switching scope or year above.
+    .finish-reading = Finish reading in KoReader to see your recap.
+    .info-question = Why isn't my recap showing up?
+    .info-answer = KoShelf uses reading statistics to detect completions, which allows tracking re-reads. Simply marking a book as "finished" without reading data will not make it appear here.
 
 # Navigation and sorting
 sort-order =

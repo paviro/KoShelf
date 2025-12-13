@@ -190,6 +190,12 @@ more = Mehr
 period = Zeitraum
 sessions = Sitzungen
 yearly-summary = Jahreszusammenfassung { $count }
+recap-empty =
+    .nothing-here = Hier gibt es noch nichts
+    .try-switching = Versuche, den Bereich oder das Jahr oben zu wechseln.
+    .finish-reading = Beende ein Buch in KoReader, um deinen Rückblick zu sehen.
+    .info-question = Warum wird mein Rückblick nicht angezeigt?
+    .info-answer = KoShelf verwendet Lesestatistiken zur Erkennung von abgeschlossenen Büchern und Comics, was das Nachverfolgen von Wiederholungslektüren ermöglicht. Ein Buch einfach als „beendet" zu markieren, ohne Lesedaten zu haben, lässt es hier nicht erscheinen.
 
 # Navigation and sorting
 sort-order =

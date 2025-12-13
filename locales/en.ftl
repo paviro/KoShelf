@@ -190,6 +190,12 @@ more = More
 period = Period
 sessions = Sessions
 yearly-summary = Yearly Summary { $count }
+recap-empty =
+    .nothing-here = Nothing here yet
+    .try-switching = Try switching scope or year above.
+    .finish-reading = Finish reading in KoReader to see your recap.
+    .info-question = Why isn't my recap showing up?
+    .info-answer = KoShelf uses reading statistics to detect book and comic completions, which allows tracking re-reads. Simply marking a book as "finished" without reading data will not make it appear here.
 
 # Navigation and sorting
 sort-order =

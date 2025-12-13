@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recap {{ year }} - {{ site_title }}</title>
+    <title>{{ translation.get("recap") }} {{ year }} - {{ site_title }}</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#6366f1">
@@ -18,7 +18,7 @@
         <div class="flex items-center justify-between h-full">
             <!-- Mobile title -->
             <div class="lg:hidden flex items-center">
-                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">Recap</h1>
+                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ translation.get("recap") }}</h1>
             </div>
 
             <!-- Desktop title -->
