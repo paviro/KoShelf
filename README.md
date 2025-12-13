@@ -47,7 +47,7 @@
 
 ## Features
 
-- 📚 **Book Library Overview**: Displays your currently reading, completed and unread books (EPUBs only!)
+- 📚 **Library Overview (Books + Comics)**: Displays your currently reading, completed, and unread items (ebooks + comics)
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page with elegant formatting
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
@@ -144,7 +144,7 @@ cd ~/Downloads  # macOS/Linux
 cd C:\Users\YourName\Downloads  # Windows
 
 # Run KoShelf with your books folder
-./koshelf --books-path /path/to/your/books --output ./my-library-site
+./koshelf --library-path /path/to/your/library --output ./my-library-site
 ```
 
 **Pro tip:** On most terminals, you can drag and drop the downloaded binary file directly into the terminal window. This will automatically insert the full file path, allowing you to immediately add your arguments and run the command.
@@ -156,7 +156,7 @@ If you plan to use KoShelf frequently and use Linux or macOS, you can move the b
 sudo mv koshelf /usr/local/bin/
 
 # Now you can run it from anywhere
-koshelf --books-path ~/Books --output ~/my-library-site
+koshelf --library-path ~/Books --output ~/my-library-site
 ```
 
 ### From Source
@@ -187,7 +187,7 @@ The binary will be available at `target/release/koshelf`.
 ### Basic Usage
 
 ```bash
-./koshelf --books-path /path/to/your/books --output ./my-library-site
+./koshelf --library-path /path/to/your/library --output ./my-library-site
 ```
 
 ### Operation Modes
@@ -200,7 +200,7 @@ KoShelf can operate in several modes:
 
 ### Command Line Options
 
-- `-b, --books-path`: Path to your folder containing EPUB files and KoReader metadata (optional if `--statistics-db` is provided)
+- `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
 - `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--books-path`, mutually exclusive with `--hashdocsettings-path`)
 - `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--books-path`, mutually exclusive with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--books-path` is provided)
@@ -208,7 +208,7 @@ KoShelf can operate in several modes:
 - `-p, --port`: Port for web server mode (default: 3000)
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
 - `-t, --title`: Site title (default: "KoShelf")
-- `--include-unread`: Include unread books (EPUBs without KoReader metadata)
+- `--include-unread`: Include unread items (files without KoReader metadata)
 - `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
@@ -216,41 +216,45 @@ KoShelf can operate in several modes:
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
   > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--books-path` directory. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
-- `-l, --language`: Language for UI translations. Supported: `de`, `en`, `fr`, `pt`. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
+- `-l, --language`: Language for UI translations. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
+- `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
 
 ### Example
 
 ```bash
-# Generate site from Books folder
-./koshelf -b ~/Books -o ~/my-reading-site -t "My Reading Journey"
+# Generate site from a library folder
+./koshelf -i ~/Library -o ~/my-reading-site -t "My Reading Journey"
 
-# Generate site with statistics and unread books included
-./koshelf -b ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
+# Generate site from multiple folders (e.g., books + comics)
+./koshelf -i ~/Books -i ~/Comics -o ~/my-reading-site
+
+# Generate site with statistics and unread items included
+./koshelf -i ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
 # Start web server with live file watching and statistics
-./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -p 8080
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -p 8080
 
 # Generate static site with file watching and statistics
-./koshelf --books-path ~/Books -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
+./koshelf --library-path ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
 
 # Generate site with custom heatmap color scaling (2 hours = highest intensity)
-./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 2h
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 2h
 
 # Generate site with custom heatmap color scaling (1.5 hours = highest intensity)
-./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
 
 # Generate site with explicit timezone and non-midnight day start (good for night owls)
-./koshelf -b ~/Books -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --timezone Australia/Sydney --day-start-time 03:00
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --timezone Australia/Sydney --day-start-time 03:00
 
 # Using hashdocsettings (metadata stored by content hash)
-./koshelf -b ~/Books -o ~/my-reading-site --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+./koshelf -i ~/Books -o ~/my-reading-site --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
 
 # Using docsettings (metadata stored in central folder by path)
-./koshelf -b ~/Books -o ~/my-reading-site --docsettings-path ~/KOReaderSettings/docsettings
+./koshelf -i ~/Books -o ~/my-reading-site --docsettings-path ~/KOReaderSettings/docsettings
 
 # Generate site with German UI language
-./koshelf -b ~/Books -o ~/my-reading-site --language de_DE
+./koshelf -i ~/Library -o ~/my-reading-site --language de_DE
 ```
 
 ## KoReader Setup
@@ -274,7 +278,7 @@ Books/
 └── ...
 ```
 
-This is the simplest setup - just point `--books-path` to your books folder.
+This is the simplest setup - just point `--library-path` to your books folder.
 
 #### 2. Hashdocsettings
 
@@ -296,7 +300,7 @@ KOReaderSettings/
 
 **Usage:**
 ```bash
-./koshelf --books-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+./koshelf --library-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
 ```
 
 #### 3. Docsettings
@@ -319,7 +323,7 @@ KOReaderSettings/
 
 **Usage:**
 ```bash
-./koshelf --books-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
+./koshelf --library-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
 ```
 
 ### Typical Deployment Setup
@@ -334,7 +338,7 @@ Although there are many ways to use this tool here is how I use it:
 My actual setup:
 ```bash
 # My server command - runs continuously with file watching and statistics
-./koshelf --books-path ~/syncthing/Books \
+./koshelf --library-path ~/syncthing/Books \
          --statistics-db ~/syncthing/KOReaderSettings/statistics.sqlite3 \
          --port 3000
 ```
@@ -418,7 +422,7 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 
 ```
 site/
-├── index.html              # Main library page
+├── index.html              # Main library page (books list if any books exist; otherwise comics list)
 ├── manifest.json           # PWA Manifest
 ├── service-worker.js       # PWA Service Worker
 ├── cache-manifest.json     # PWA Smart Cache Manifest
@@ -427,12 +431,17 @@ site/
 │   ├── index.html          # Empty state / Recap landing
 │   ├── 2024/
 │   │   ├── index.html      # Yearly recap page
-│   │   ├── share_story.webp # Social media share image (Story format)
-│   │   ├── share_square.webp # Social media share image (Square format)
-│   │   └── share_banner.webp # Social media share image (Banner format)
+│   │   ├── books/
+│   │   │   └── index.html  # Yearly recap page (books only; only generated when both books+comics exist)
+│   │   └── comics/
+│   │       └── index.html  # Yearly recap page (comics only; only generated when both books+comics exist)
 │   └── ...
 ├── statistics/
-│   └── index.html          # Reading statistics dashboard
+│   ├── index.html          # Reading statistics dashboard
+│   ├── books/
+│   │   └── index.html      # Reading statistics dashboard (books only; only generated when both books+comics exist)
+│   └── comics/
+│       └── index.html      # Reading statistics dashboard (comics only; only generated when both books+comics exist)
 ├── calendar/
 │   └── index.html          # Reading calendar view
 ├── books/                  # Individual book pages
@@ -442,10 +451,25 @@ site/
 │   │   ├── details.md      # Markdown export (human-readable)
 │   │   └── details.json    # JSON export (machine-readable)
 │   └── ...
+├── comics/                 # Comics list + individual comic pages
+│   ├── index.html          # Comics list page (only when books also exist; otherwise list is at /index.html)
+│   ├── list.json           # Manifest of all comics (convenience only; not used by frontend)
+│   ├── comic-id1/
+│   │   ├── index.html      # Comic detail page with annotations
+│   │   ├── details.md      # Markdown export (human-readable)
+│   │   └── details.json    # JSON export (machine-readable)
+│   └── ...
 └── assets/
-    ├── covers/             # Optimized book covers
+    ├── covers/             # Optimized cover images
     │   ├── book-id1.webp
     │   └── ...
+    ├── recap/              # Social media share images (generated per year)
+    │   ├── 2024_share_story.webp
+    │   ├── 2024_share_story.svg
+    │   ├── 2024_share_square.webp
+    │   ├── 2024_share_square.svg
+    │   ├── 2024_share_banner.webp
+    │   └── 2024_share_banner.svg
     ├── css/
     │   ├── style.css       # Compiled Tailwind CSS
     │   └── event-calendar.min.css # Event calendar library styles
@@ -471,9 +495,18 @@ site/
         │   ├── 2024-01.json   
         │   └── ...            
         └── statistics/         # Statistics data
-            ├── week_0.json     
-            ├── ...
-            └── daily_activity_2024.json
+            ├── all/            # Always generated when stats are enabled
+            │   ├── week_0.json
+            │   ├── ...
+            │   └── daily_activity_2024.json
+            ├── books/          # Only generated when both books+comics exist
+            │   ├── week_0.json
+            │   ├── ...
+            │   └── daily_activity_2024.json
+            └── comics/         # Only generated when both books+comics exist
+                ├── week_0.json
+                ├── ...
+                └── daily_activity_2024.json
 ```
 
 ## Credits
