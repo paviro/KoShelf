@@ -30,25 +30,6 @@
             
             <!-- Calendar Controls -->
             <div class="flex items-center space-x-2 md:space-x-4">
-                {% if show_type_filter %}
-                <!-- Scope Selector (match Statistics dropdown styling) -->
-                <div class="flex items-center">
-                    <details id="calendarFilterDropdown" class="relative">
-                        <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
-                            <span class="font-medium" id="calendarFilterLabel">{{ translation.get("filter.all") }}</span>
-                            <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
-                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="all">{{ translation.get("filter.all") }}</a>
-                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="book">{{ translation.get("books") }}</a>
-                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="comic">{{ translation.get("comics") }}</a>
-                        </div>
-                    </details>
-                </div>
-                {% endif %}
-
                 <!-- Navigation Buttons -->
                 <div class="flex items-center space-x-1">
                     <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("previous-month.aria-label") }}" aria-label="{{ translation.get("previous-month.aria-label") }}">
@@ -67,6 +48,25 @@
                 <button id="todayBtn" class="px-3 md:px-4 py-2 h-10 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm md:text-base transition-colors duration-200 flex items-center justify-center">
                     {{ translation.get("today") }}
                 </button>
+
+                {% if show_type_filter %}
+                <!-- Scope Selector (match Statistics dropdown styling) -->
+                <div class="flex items-center">
+                    <details id="calendarFilterDropdown" class="relative">
+                        <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                            <span class="font-medium" id="calendarFilterLabel">{{ translation.get("filter.all") }}</span>
+                            <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="all">{{ translation.get("filter.all") }}</a>
+                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="book">{{ translation.get("books") }}</a>
+                            <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="comic">{{ translation.get("comics") }}</a>
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
             </div>
         </div>
     </header>
