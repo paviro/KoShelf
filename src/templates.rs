@@ -110,6 +110,20 @@ pub struct StatsTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "statistics/statistics_empty.html", whitespace = "minimize")]
+pub struct StatsEmptyTemplate {
+    pub site_title: String,
+    /// "all" | "books" | "comics"
+    pub stats_scope: String,
+    /// Whether we should show the Books/Comics filter UI (only when both exist).
+    pub show_type_filter: bool,
+    pub version: String,
+    pub last_updated: String,
+    pub navbar_items: Vec<NavItem>,
+    pub translation: Rc<Translations>,
+}
+
+#[derive(Template)]
 #[template(path = "calendar/calendar.html", whitespace = "minimize")]
 pub struct CalendarTemplate {
     pub site_title: String,

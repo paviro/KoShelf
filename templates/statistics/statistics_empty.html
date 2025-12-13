@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ translation.get("reading-statistics") }} - {{ site_title }}</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
+      data-section-toggle-scope="statistics"
+      data-section-toggle-kind="{{ stats_scope }}">
+    {% include "sidebar.html" %}
+
+    <div class="min-h-full lg:ml-64">
+        <header class="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-850/95 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
+            <div class="flex items-center justify-between h-full">
+                <!-- Mobile title -->
+                <div class="lg:hidden flex items-center">
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ translation.get("reading-statistics") }}</h1>
+                </div>
+    
+                <!-- Desktop title -->
+                <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("reading-statistics") }}</h2>
+
+                {% if show_type_filter %}
+                <!-- Scope selector -->
+                <div class="flex items-center">
+                    <details class="relative">
+                        <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                            <span class="font-medium">
+                                {% if stats_scope == "books" %}{{ translation.get("books") }}
+                                {% else if stats_scope == "comics" %}{{ translation.get("comics") }}
+                                {% else %}{{ translation.get("filter.all") }}{% endif %}
+                            </span>
+                            <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/">{{ translation.get("filter.all") }}</a>
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/books/">{{ translation.get("books") }}</a>
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/comics/">{{ translation.get("comics") }}</a>
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="pt-[88px] md:pt-24 pb-28 lg:pb-6 px-4 md:px-6">
+            <div id="dynamicEmptyState" class="flex flex-col items-center justify-center text-center w-full min-h-[calc(100vh_-_12.5rem)] md:min-h-[calc(100vh_-_13rem)] lg:min-h-[calc(100vh_-_7.5rem)] py-8">
+                <!-- Centered Content Wrapper -->
+                <div class="flex flex-col items-center justify-center -mt-8">
+                    <div class="relative mb-8">
+                        <!-- Gradient Background Circle (Green for Statistics theme) -->
+                        <div class="absolute inset-0 w-32 h-32 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full blur-2xl"></div>
+                        <!-- Icon Container -->
+                        <div class="relative w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                        {{ translation.get("stats-empty.nothing-here") }}
+                    </h3>
+                    <p class="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed">
+                        {{ translation.get("stats-empty.start-reading") }}
+                    </p>
+                </div>
+
+                <!-- Info Box -->
+                <div class="max-w-md mx-auto mt-8 w-full">
+                    <details class="group bg-white dark:bg-dark-800/40 border border-gray-200/60 dark:border-dark-700/60 rounded-lg overflow-hidden transition-all duration-300 open:shadow-sm">
+                        <summary class="flex items-center justify-between p-4 cursor-pointer select-none text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>{{ translation.get("stats-empty.info-question") }}</span>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200 group-open:rotate-180 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="px-4 pb-4 pt-4 text-left text-sm text-gray-500 dark:text-gray-400 ml-8 leading-relaxed">
+                            <p>
+                                {{ translation.get("stats-empty.info-answer") }}
+                            </p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    {% include "bottom_navbar.html" %}
+
+    <script type="module" src="/assets/js/pwa.js"></script>
+    <script type="module" src="/assets/js/filter-restore.js"></script>
+</body>
+</html>
