@@ -20,6 +20,7 @@ impl SiteGenerator {
         recap_latest_href: Option<String>,
         nav: NavContext,
     ) -> Result<()> {
+        let show_type_filter = nav.has_books && nav.has_comics;
         if render_to_root {
             info!("Generating statistics page at root index...");
         } else {
@@ -37,22 +38,37 @@ impl SiteGenerator {
             .await?;
         self.export_week_stats_to_dir(&reading_stats_all.weeks, &all_dir)?;
 
-        // Also export separate JSON outputs for books and comics
-        let books_data = stats_data.filtered_by_content_type(ContentType::Book);
-        let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
+        // Only export/render per-type views when we actually have both types in the site.
+        // If only one type exists, the "all" view is the only meaningful one.
+        let (reading_stats_books, available_years_books, reading_stats_comics, available_years_comics) =
+            if show_type_filter {
+                // Also export separate JSON outputs for books and comics
+                let books_data = stats_data.filtered_by_content_type(ContentType::Book);
+                let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
 
-        let (reading_stats_books, available_years_books) = self
-            .export_stats_bundle(&books_data, ContentType::Book)
-            .await?;
+                let (reading_stats_books, available_years_books) = self
+                    .export_stats_bundle(&books_data, ContentType::Book)
+                    .await?;
 
-        let (reading_stats_comics, available_years_comics) = self
-            .export_stats_bundle(&comics_data, ContentType::Comic)
-            .await?;
+                let (reading_stats_comics, available_years_comics) = self
+                    .export_stats_bundle(&comics_data, ContentType::Comic)
+                    .await?;
+
+                (
+                    Some(reading_stats_books),
+                    Some(available_years_books),
+                    Some(reading_stats_comics),
+                    Some(available_years_comics),
+                )
+            } else {
+                (None, None, None, None)
+            };
 
         if render_to_root {
             let template = StatsTemplate {
                 site_title: self.site_title.clone(),
                 stats_scope: "all".to_string(),
+                show_type_filter,
                 stats_json_base_path: "/assets/json/statistics/all".to_string(),
                 reading_stats: reading_stats_all.clone(),
                 available_years,
@@ -73,6 +89,7 @@ impl SiteGenerator {
             let template_all = StatsTemplate {
                 site_title: self.site_title.clone(),
                 stats_scope: "all".to_string(),
+                show_type_filter,
                 stats_json_base_path: "/assets/json/statistics/all".to_string(),
                 reading_stats: reading_stats_all.clone(),
                 available_years,
@@ -88,49 +105,53 @@ impl SiteGenerator {
             let html_all = template_all.render()?;
             self.write_minify_html(stats_dir.join("index.html"), &html_all)?;
 
-            // /statistics/books/
-            info!("Generating statistics page (books)...");
-            let stats_books_dir = stats_dir.join("books");
-            fs::create_dir_all(&stats_books_dir)?;
-            let template_books = StatsTemplate {
-                site_title: self.site_title.clone(),
-                stats_scope: "books".to_string(),
-                stats_json_base_path: "/assets/json/statistics/books".to_string(),
-                reading_stats: reading_stats_books,
-                available_years: available_years_books,
-                version: self.get_version(),
-                last_updated: self.get_last_updated(),
-                navbar_items: self.create_navbar_items_with_recap(
-                    "statistics",
-                    recap_latest_href.as_deref(),
-                    nav,
-                ),
-                translation: self.t(),
-            };
-            let html_books = template_books.render()?;
-            self.write_minify_html(stats_books_dir.join("index.html"), &html_books)?;
+            if show_type_filter {
+                // /statistics/books/
+                info!("Generating statistics page (books)...");
+                let stats_books_dir = stats_dir.join("books");
+                fs::create_dir_all(&stats_books_dir)?;
+                let template_books = StatsTemplate {
+                    site_title: self.site_title.clone(),
+                    stats_scope: "books".to_string(),
+                    show_type_filter,
+                    stats_json_base_path: "/assets/json/statistics/books".to_string(),
+                    reading_stats: reading_stats_books.expect("books stats must exist"),
+                    available_years: available_years_books.expect("books years must exist"),
+                    version: self.get_version(),
+                    last_updated: self.get_last_updated(),
+                    navbar_items: self.create_navbar_items_with_recap(
+                        "statistics",
+                        recap_latest_href.as_deref(),
+                        nav,
+                    ),
+                    translation: self.t(),
+                };
+                let html_books = template_books.render()?;
+                self.write_minify_html(stats_books_dir.join("index.html"), &html_books)?;
 
-            // /statistics/comics/
-            info!("Generating statistics page (comics)...");
-            let stats_comics_dir = stats_dir.join("comics");
-            fs::create_dir_all(&stats_comics_dir)?;
-            let template_comics = StatsTemplate {
-                site_title: self.site_title.clone(),
-                stats_scope: "comics".to_string(),
-                stats_json_base_path: "/assets/json/statistics/comics".to_string(),
-                reading_stats: reading_stats_comics,
-                available_years: available_years_comics,
-                version: self.get_version(),
-                last_updated: self.get_last_updated(),
-                navbar_items: self.create_navbar_items_with_recap(
-                    "statistics",
-                    recap_latest_href.as_deref(),
-                    nav,
-                ),
-                translation: self.t(),
-            };
-            let html_comics = template_comics.render()?;
-            self.write_minify_html(stats_comics_dir.join("index.html"), &html_comics)?;
+                // /statistics/comics/
+                info!("Generating statistics page (comics)...");
+                let stats_comics_dir = stats_dir.join("comics");
+                fs::create_dir_all(&stats_comics_dir)?;
+                let template_comics = StatsTemplate {
+                    site_title: self.site_title.clone(),
+                    stats_scope: "comics".to_string(),
+                    show_type_filter,
+                    stats_json_base_path: "/assets/json/statistics/comics".to_string(),
+                    reading_stats: reading_stats_comics.expect("comics stats must exist"),
+                    available_years: available_years_comics.expect("comics years must exist"),
+                    version: self.get_version(),
+                    last_updated: self.get_last_updated(),
+                    navbar_items: self.create_navbar_items_with_recap(
+                        "statistics",
+                        recap_latest_href.as_deref(),
+                        nav,
+                    ),
+                    translation: self.t(),
+                };
+                let html_comics = template_comics.render()?;
+                self.write_minify_html(stats_comics_dir.join("index.html"), &html_comics)?;
+            }
         }
 
         Ok(())

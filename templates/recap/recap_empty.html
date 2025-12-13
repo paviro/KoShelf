@@ -82,6 +82,7 @@
                     </div>
                     {% endif %}
 
+                    {% if show_type_filter %}
                     <!-- Scope selector -->
                     <details class="relative">
                         <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
@@ -100,6 +101,7 @@
                             <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year.as_ref().unwrap() }}/comics/">{{ translation.get("comics") }}</a>
                         </div>
                     </details>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>

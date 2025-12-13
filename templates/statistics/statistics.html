@@ -28,6 +28,7 @@
             <!-- Desktop Page Title -->
             <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("reading-statistics") }}</h2>
 
+            {% if show_type_filter %}
             <!-- Scope Selector -->
             <div class="flex items-center">
                 <details class="relative">
@@ -48,6 +49,7 @@
                     </div>
                 </details>
             </div>
+            {% endif %}
         </div>
     </header>
     
