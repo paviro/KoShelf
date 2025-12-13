@@ -67,10 +67,13 @@ export function initTilt(options: TiltOptions): void {
     const elements = document.querySelectorAll<HTMLElement>(opts.selector);
 
     elements.forEach(element => {
-        // Set up element for 3D transforms
+        // Set up element for 3D transforms with Safari-specific optimizations
         element.style.transformStyle = 'preserve-3d';
         element.style.transformOrigin = 'center center';
-        element.style.willChange = 'transform';
+        element.style.willChange = 'transform, box-shadow';
+        // Force GPU layer for Safari - prevents choppy animations
+        element.style.backfaceVisibility = 'hidden';
+        element.style.transform = 'translateZ(0)';
 
         // Find overlays if enabled
         let overlayContainer: HTMLElement | null = null;
@@ -81,19 +84,27 @@ export function initTilt(options: TiltOptions): void {
             overlayContainer = element.querySelector<HTMLElement>(opts.overlayContainer);
             if (overlayContainer) {
                 overlayContainer.style.transformStyle = 'preserve-3d';
+                overlayContainer.style.backfaceVisibility = 'hidden';
             }
             badgeOverlays = element.querySelectorAll<HTMLElement>(opts.badgeSelector);
             progressBar = element.querySelector<HTMLElement>(opts.progressBarSelector);
 
-            // Prepare overlays
+            // Prepare overlays with Safari optimizations
             badgeOverlays?.forEach(overlay => {
                 overlay.style.willChange = 'transform';
                 overlay.style.backfaceVisibility = 'hidden';
+                overlay.style.transform = 'translateZ(0)';
             });
             if (progressBar) {
                 progressBar.style.willChange = 'transform';
+                progressBar.style.backfaceVisibility = 'hidden';
+                progressBar.style.transform = 'translateZ(0)';
             }
         }
+
+        // Track animation frame for throttling
+        let rafId: number | null = null;
+        let pendingMouseEvent: MouseEvent | null = null;
 
         element.addEventListener('mouseenter', () => {
             // Start transition for shadow fade-in (shadow will be applied on first mousemove)
@@ -113,7 +124,11 @@ export function initTilt(options: TiltOptions): void {
             }
         });
 
-        element.addEventListener('mousemove', (e: MouseEvent) => {
+        // Throttled update function using requestAnimationFrame
+        const updateTransform = () => {
+            if (!pendingMouseEvent) return;
+
+            const e = pendingMouseEvent;
             const rect = element.getBoundingClientRect();
 
             // Calculate cursor position relative to element center (0 to 1)
@@ -130,7 +145,7 @@ export function initTilt(options: TiltOptions): void {
 
             // Apply 3D rotation, scale, and lift
             element.style.transition = `transform ${opts.transitionDuration}ms ease-out, box-shadow ${opts.transitionDuration}ms ease-out`;
-            element.style.transform = `perspective(${opts.perspective}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${opts.hoverScale}) translateY(-${opts.hoverLift}px)`;
+            element.style.transform = `perspective(${opts.perspective}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${opts.hoverScale}) translateY(-${opts.hoverLift}px) translateZ(0)`;
             element.style.boxShadow = `${shadowX}px ${shadowY}px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity})`;
 
             // Apply parallax to overlays
@@ -146,24 +161,42 @@ export function initTilt(options: TiltOptions): void {
                     progressBar.style.transform = `translateZ(${opts.overlayFloatZ}px) translateX(${parallaxX}px)`;
                 }
             }
+
+            pendingMouseEvent = null;
+            rafId = null;
+        };
+
+        element.addEventListener('mousemove', (e: MouseEvent) => {
+            // Store the latest event and schedule update on next animation frame
+            pendingMouseEvent = e;
+            if (!rafId) {
+                rafId = requestAnimationFrame(updateTransform);
+            }
         });
 
         element.addEventListener('mouseleave', () => {
-            // Reset element transform and shadow
+            // Cancel any pending animation frame
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+                pendingMouseEvent = null;
+            }
+
+            // Reset element transform and shadow (keep translateZ for GPU layer)
             element.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out, box-shadow ${opts.transitionDuration * 2}ms ease-out`;
-            element.style.transform = '';
+            element.style.transform = 'translateZ(0)';
             element.style.boxShadow = '';
 
             // Reset overlays
             if (opts.enableOverlays) {
                 badgeOverlays?.forEach(overlay => {
                     overlay.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out`;
-                    overlay.style.transform = '';
+                    overlay.style.transform = 'translateZ(0)';
                 });
 
                 if (progressBar) {
                     progressBar.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out`;
-                    progressBar.style.transform = '';
+                    progressBar.style.transform = 'translateZ(0)';
                 }
             }
         });
