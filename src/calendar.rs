@@ -1,4 +1,5 @@
 use crate::models::*;
+use crate::partial_md5::calculate_partial_md5;
 use crate::time_config::TimeConfig;
 use chrono::Datelike;
 /// Provides utilities for generating calendar-related data (events, monthly payloads, stats).
@@ -28,25 +29,32 @@ impl CalendarGenerator {
 
         // Build a lookup map from partial MD5 checksum to the corresponding book detail path,
         // cover path, and content type.
+        //
+        // Prefer MD5 from KOReader metadata, but fall back to calculating a compatible partial MD5
+        // from the file. This enables calendar → detail linking even for items without metadata.
         let md5_to_book_info: HashMap<String, (String, String, ContentType)> = books
             .iter()
             .filter_map(|b| {
-                b.koreader_metadata
+                let md5 = b
+                    .koreader_metadata
                     .as_ref()
                     .and_then(|m| m.partial_md5_checksum.as_ref())
-                    .map(|md5| {
+                    .cloned()
+                    .or_else(|| calculate_partial_md5(&b.file_path).ok());
+
+                md5.map(|md5| {
+                    (
+                        md5.to_lowercase(),
                         (
-                            md5.clone(),
-                            (
-                                match b.content_type() {
-                                    ContentType::Book => format!("/books/{}/", b.id),
-                                    ContentType::Comic => format!("/comics/{}/", b.id),
-                                },
-                                format!("/assets/covers/{}.webp", b.id),
-                                b.content_type(),
-                            ),
-                        )
-                    })
+                            match b.content_type() {
+                                ContentType::Book => format!("/books/{}/", b.id),
+                                ContentType::Comic => format!("/comics/{}/", b.id),
+                            },
+                            format!("/assets/covers/{}.webp", b.id),
+                            b.content_type(),
+                        ),
+                    )
+                })
             })
             .collect();
 
@@ -68,7 +76,7 @@ impl CalendarGenerator {
             if !calendar_books.contains_key(&calendar_book_id) {
                 let authors = Self::parse_authors(&stat_book.authors);
                 let (book_path, book_cover, content_type_from_library) = md5_to_book_info
-                    .get(&stat_book.md5)
+                    .get(&stat_book.md5.to_lowercase())
                     .map(|(path, cover, ct)| (Some(path.clone()), Some(cover.clone()), Some(*ct)))
                     .unwrap_or((None, None, None));
 
