@@ -134,6 +134,12 @@ impl SiteGenerator {
                 self.js_dir().join("modal-utils.js"),
                 modal_utils_content.as_bytes(),
             )?;
+
+            let filter_restore_content = include_str!(concat!(env!("OUT_DIR"), "/filter-restore.js"));
+            self.write_asset(
+                self.js_dir().join("filter-restore.js"),
+                filter_restore_content.as_bytes(),
+            )?;
         }
 
         // Storage utility - always needed as pwa.js depends on it

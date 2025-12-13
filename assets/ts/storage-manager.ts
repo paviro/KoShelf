@@ -10,6 +10,8 @@ export class StorageManager {
 
     static readonly KEYS = {
         RECAP_SORT_ORDER: 'recap_sort_newest_first',
+        RECAP_SCOPE: 'recap_scope',
+        STATS_SCOPE: 'stats_scope',
         // UI state
         BOOK_LIST_SECTION_STATE_BOOKS: 'book_list_section_state_books',
         BOOK_LIST_SECTION_STATE_COMICS: 'book_list_section_state_comics',
