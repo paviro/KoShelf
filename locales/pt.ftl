@@ -221,6 +221,7 @@ close = Fechar
     .aria-label = Fechar
 go-back =
     .aria-label = Voltar
+select-month = Selecionar mês
 
 # -----------------------------------
 #           Time & Dates

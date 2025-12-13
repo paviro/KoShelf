@@ -243,6 +243,7 @@ close = Закрити
     .aria-label = Закрити
 go-back =
     .aria-label = Назад
+select-month = Вибрати місяць
 
 # -----------------------------------
 #           Time & Dates
