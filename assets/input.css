@@ -393,14 +393,28 @@
 
   .recap-timeline:before {
     content: "";
-    position: absolute;
-    left: 12px;
-    top: -100px;
-    /* extend upward to touch header */
-    bottom: -120px;
-    /* extend below the last event toward page bottom */
+    position: fixed;
+    left: calc(1rem + 12px);
+    /* px-4 (1rem) + 12px offset */
+    top: 0;
+    bottom: 0;
     width: 2px;
     background: theme(colors.gray.200);
+    z-index: 0;
+  }
+
+  @screen md {
+    .recap-timeline:before {
+      left: calc(1.5rem + 12px);
+      /* md:px-6 (1.5rem) + 12px offset */
+    }
+  }
+
+  @screen lg {
+    .recap-timeline:before {
+      left: calc(16rem + 1.5rem + 12px);
+      /* lg:ml-64 (16rem) + md:px-6 (1.5rem) + 12px offset */
+    }
   }
 
   .dark .recap-timeline:before {
