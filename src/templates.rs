@@ -9,6 +9,8 @@ pub struct NavItem {
     pub href: String,
     pub icon_svg: String,
     pub is_active: bool,
+    /// Optional HTML id attribute for JS interception (e.g., "nav-statistics")
+    pub id: Option<String>,
 }
 
 #[derive(Template)]
@@ -26,6 +28,7 @@ pub struct IndexTemplate {
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
     pub translation: Rc<Translations>,
+    pub has_statistics: bool,
 }
 
 #[derive(Template)]
@@ -75,6 +78,7 @@ pub struct BookTemplate {
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
     pub translation: Rc<Translations>,
+    pub has_statistics: bool,
 }
 
 #[derive(Template)]

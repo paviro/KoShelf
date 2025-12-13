@@ -114,6 +114,7 @@ impl SiteGenerator {
         render_to_root: bool,
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
         info!(
             "Generating {} list page...",
@@ -144,6 +145,7 @@ impl SiteGenerator {
                 nav,
             ),
             translation: self.t(),
+            has_statistics,
         };
 
         let html = template.render()?;
@@ -164,6 +166,7 @@ impl SiteGenerator {
         stats_data: &mut Option<StatisticsData>,
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
         info!(
             "Generating {} detail pages...",
@@ -210,6 +213,7 @@ impl SiteGenerator {
                     nav,
                 ),
                 translation: self.t(),
+                has_statistics,
             };
 
             let html = template.render()?;
@@ -441,8 +445,9 @@ impl SiteGenerator {
         books: &[LibraryItem],
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
-        self.generate_content_list(ContentType::Book, books, true, recap_latest_href, nav)
+        self.generate_content_list(ContentType::Book, books, true, recap_latest_href, nav, has_statistics)
             .await
     }
 
@@ -452,6 +457,7 @@ impl SiteGenerator {
         render_to_root: bool,
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
         self.generate_content_list(
             ContentType::Comic,
@@ -459,6 +465,7 @@ impl SiteGenerator {
             render_to_root,
             recap_latest_href,
             nav,
+            has_statistics,
         )
         .await
     }
@@ -469,8 +476,9 @@ impl SiteGenerator {
         stats_data: &mut Option<StatisticsData>,
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
-        self.generate_content_pages(ContentType::Book, books, stats_data, recap_latest_href, nav)
+        self.generate_content_pages(ContentType::Book, books, stats_data, recap_latest_href, nav, has_statistics)
             .await
     }
 
@@ -480,6 +488,7 @@ impl SiteGenerator {
         stats_data: &mut Option<StatisticsData>,
         recap_latest_href: Option<String>,
         nav: NavContext,
+        has_statistics: bool,
     ) -> Result<()> {
         self.generate_content_pages(
             ContentType::Comic,
@@ -487,6 +496,7 @@ impl SiteGenerator {
             stats_data,
             recap_latest_href,
             nav,
+            has_statistics,
         )
         .await
     }

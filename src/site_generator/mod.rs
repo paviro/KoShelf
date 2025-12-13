@@ -255,11 +255,12 @@ impl SiteGenerator {
         self.cleanup_stale_covers(&all_items)?;
 
         // Generate individual book pages
-        self.generate_book_pages(&books, &mut stats_data, recap_latest_href.clone(), nav)
+        let has_statistics = stats_data.is_some();
+        self.generate_book_pages(&books, &mut stats_data, recap_latest_href.clone(), nav, has_statistics)
             .await?;
 
         // Generate individual comic pages (always at /comics/<id>/)
-        self.generate_comic_pages(&comics, &mut stats_data, recap_latest_href.clone(), nav)
+        self.generate_comic_pages(&comics, &mut stats_data, recap_latest_href.clone(), nav, has_statistics)
             .await?;
 
         // Generate list pages with conditional routing:
@@ -268,13 +269,13 @@ impl SiteGenerator {
         // - If comics exist AND no books: comic list at /
         if has_books {
             // Generate book list page at index.html
-            self.generate_book_list(&books, recap_latest_href.clone(), nav)
+            self.generate_book_list(&books, recap_latest_href.clone(), nav, has_statistics)
                 .await?;
         }
 
         if has_comics {
             // Generate comic list - at root if no books, otherwise at /comics/
-            self.generate_comic_list(&comics, !has_books, recap_latest_href.clone(), nav)
+            self.generate_comic_list(&comics, !has_books, recap_latest_href.clone(), nav, has_statistics)
                 .await?;
         }
 
