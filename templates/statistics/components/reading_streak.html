@@ -106,15 +106,15 @@
             <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-end bg-gradient-to-br from-gray-50 to-gray-100/80 dark:from-dark-700/60 dark:to-dark-800/80 border border-gray-200/80 dark:border-dark-600/40 rounded-r-xl border-l-0 p-3 md:p-4 lg:p-6 xl:p-6">
                 <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
                     <div class="flex items-baseline justify-center lg:justify-end mb-2 lg:mb-0 lg:mr-2">
-                        <span class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-gray-700 dark:text-white drop-shadow-sm leading-none">{{ reading_stats.longest_streak.days }}</span>
-                        <span class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-600 dark:text-dark-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.longest_streak.days) }}</span>
+                        <span id="longestStreakDays" class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-gray-700 dark:text-white drop-shadow-sm leading-none">{{ reading_stats.longest_streak.days }}</span>
+                        <span id="longestStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-600 dark:text-dark-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.longest_streak.days) }}</span>
                     </div>
                     <div class="flex items-center lg:ml-6">
                         <div>
                             <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-gray-700 dark:text-dark-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">{{ translation.get("streak.longest") }}</div>
                             {% match reading_stats.longest_streak.date_range_display(translation) %}
                             {% when Some with (date_range) %}
-                                <div class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-gray-600/90 dark:text-dark-300">{{ date_range }}</div>
+                                <div id="longestStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-gray-600/90 dark:text-dark-300">{{ date_range }}</div>
                             {% when None %}
                             {% endmatch %}
                         </div>

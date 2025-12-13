@@ -1,9 +1,9 @@
 use crate::models::*;
-use anyhow::{Result, Context, anyhow};
-use std::path::Path;
-use std::fs;
-use mlua::{Lua, Value, Table};
+use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
+use mlua::{Lua, Table, Value};
+use std::fs;
+use std::path::Path;
 
 pub struct LuaParser {
     lua: Lua,
@@ -11,27 +11,28 @@ pub struct LuaParser {
 
 impl LuaParser {
     pub fn new() -> Self {
-        Self {
-            lua: Lua::new(),
-        }
+        Self { lua: Lua::new() }
     }
-    
+
     pub async fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
         debug!("Parsing Lua metadata: {:?}", lua_path);
-        
+
         let content = fs::read_to_string(lua_path)
             .with_context(|| format!("Failed to read Lua file: {:?}", lua_path))?;
-        
+
         // Execute the Lua code which returns a table
-        let value: Value = self.lua.load(&content).eval()
+        let value: Value = self
+            .lua
+            .load(&content)
+            .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
-        
+
         match value {
             Value::Table(table) => self.parse_metadata_table(table),
             _ => Err(anyhow!("Expected Lua file to return a table")),
         }
     }
-    
+
     fn parse_metadata_table(&self, table: Table) -> Result<KoReaderMetadata> {
         let annotations = self.parse_annotations(&table)?;
         let doc_pages = self.get_optional_u32(&table, "doc_pages")?;
@@ -42,7 +43,7 @@ impl LuaParser {
         let stats = self.parse_stats(&table)?;
         let summary = self.parse_summary(&table)?;
         let text_lang = self.get_optional_string(&table, "text_lang")?;
-        
+
         Ok(KoReaderMetadata {
             annotations,
             doc_pages,
@@ -55,10 +56,10 @@ impl LuaParser {
             text_lang,
         })
     }
-    
+
     fn parse_annotations(&self, table: &Table) -> Result<Vec<Annotation>> {
         let mut annotations = Vec::new();
-        
+
         if let Ok(Value::Table(annotations_table)) = table.get("annotations") {
             // Lua arrays are 1-indexed
             let mut index = 1;
@@ -68,10 +69,10 @@ impl LuaParser {
                 index += 1;
             }
         }
-        
+
         Ok(annotations)
     }
-    
+
     fn parse_annotation(&self, table: Table) -> Result<Annotation> {
         Ok(Annotation {
             chapter: self.get_optional_string(&table, "chapter")?,
@@ -83,7 +84,7 @@ impl LuaParser {
             note: self.get_optional_string(&table, "note")?,
         })
     }
-    
+
     fn parse_doc_props(&self, table: &Table) -> Result<Option<DocProps>> {
         if let Ok(Value::Table(props_table)) = table.get("doc_props") {
             Ok(Some(DocProps {
@@ -98,7 +99,7 @@ impl LuaParser {
             Ok(None)
         }
     }
-    
+
     fn parse_stats(&self, table: &Table) -> Result<Option<Stats>> {
         if let Ok(Value::Table(stats_table)) = table.get("stats") {
             Ok(Some(Stats {
@@ -114,13 +115,14 @@ impl LuaParser {
             Ok(None)
         }
     }
-    
+
     fn parse_summary(&self, table: &Table) -> Result<Option<Summary>> {
         if let Ok(Value::Table(summary_table)) = table.get("summary") {
             let modified = self.get_optional_string(&summary_table, "modified")?;
             let note = self.get_optional_string(&summary_table, "note")?;
             let rating = self.get_optional_u32(&summary_table, "rating")?;
-            let status = self.get_optional_string(&summary_table, "status")?
+            let status = self
+                .get_optional_string(&summary_table, "status")?
                 .map(|s| match s.as_str() {
                     "reading" => BookStatus::Reading,
                     "complete" => BookStatus::Complete,
@@ -128,13 +130,18 @@ impl LuaParser {
                     _ => BookStatus::Unknown,
                 })
                 .unwrap_or(BookStatus::Unknown);
-            
-            Ok(Some(Summary { modified, note, rating, status }))
+
+            Ok(Some(Summary {
+                modified,
+                note,
+                rating,
+                status,
+            }))
         } else {
             Ok(None)
         }
     }
-    
+
     fn get_optional_string(&self, table: &Table, key: &str) -> Result<Option<String>> {
         match table.get(key) {
             Ok(Value::String(s)) => match s.to_str() {
@@ -152,7 +159,7 @@ impl LuaParser {
             Err(_) => Ok(None),
         }
     }
-    
+
     fn get_optional_u32(&self, table: &Table, key: &str) -> Result<Option<u32>> {
         match table.get(key) {
             Ok(Value::Integer(i)) => Ok(Some(i as u32)),
@@ -165,7 +172,7 @@ impl LuaParser {
             Err(_) => Ok(None),
         }
     }
-    
+
     fn get_optional_f64(&self, table: &Table, key: &str) -> Result<Option<f64>> {
         match table.get(key) {
             Ok(Value::Integer(i)) => Ok(Some(i as f64)),
@@ -178,4 +185,4 @@ impl LuaParser {
             Err(_) => Ok(None),
         }
     }
-} 
+}

@@ -77,7 +77,7 @@ impl ReadCompletion {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
             let current_year = Utc::now().year();
             let locale = translations.locale();
-            
+
             // Get appropriate format_string from translations
             let format_key = if date.year() == current_year {
                 "datetime.short-current-year"
@@ -85,7 +85,7 @@ impl ReadCompletion {
                 "datetime.short-with-year"
             };
             let format_str = translations.get(format_key);
-            
+
             date.format_localized(&format_str, locale).to_string()
         } else {
             date_str.to_string()

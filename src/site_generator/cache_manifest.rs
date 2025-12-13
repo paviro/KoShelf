@@ -42,7 +42,7 @@ impl CacheManifestBuilder {
     }
 
     /// Register a file in the manifest.
-    /// 
+    ///
     /// - `url_path`: The URL path (e.g., "/books/my-book/")
     /// - `content`: The file content to hash
     pub fn register(&self, url_path: &str, content: &[u8]) {
@@ -52,7 +52,7 @@ impl CacheManifestBuilder {
     }
 
     /// Register a file by its filesystem path, computing the URL path from the output directory.
-    /// 
+    ///
     /// - `file_path`: Absolute path to the file
     /// - `output_dir`: The output directory root
     /// - `content`: The file content to hash
@@ -68,11 +68,11 @@ impl CacheManifestBuilder {
         if let Ok(relative) = file_path.strip_prefix(output_dir) {
             let mut url_path = String::from("/");
             url_path.push_str(&relative.to_string_lossy().replace('\\', "/"));
-            
+
             if url_path.ends_with("/index.html") {
                 url_path = url_path.strip_suffix("index.html").unwrap().to_string();
             }
-            
+
             self.register(&url_path, content);
         }
     }

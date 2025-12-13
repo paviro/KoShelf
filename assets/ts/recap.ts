@@ -1,7 +1,7 @@
-import { StorageManager } from './storage-manager.js';
 import { showModal, setupModalCloseHandlers } from './modal-utils.js';
 import { translation } from './i18n.js';
 import { initRecapCoverTilt } from './tilt-effect.js';
+import { StorageManager } from './storage-manager.js';
 
 // Recap interactions: year dropdown + navigation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -32,13 +32,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Navigate when selecting a year
+        // Navigate when selecting a year (keep current scope)
+        const scope = document.body.getAttribute('data-recap-scope') || 'all';
+        const scopePath = scope === 'all' ? '' : `${scope}/`;
         document.querySelectorAll<HTMLElement>('.year-option').forEach((opt) => {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const y = opt.getAttribute('data-year');
                 if (y) {
-                    window.location.href = `/recap/${y}/`;
+                    window.location.href = `/recap/${y}/${scopePath}`;
                 }
             });
         });

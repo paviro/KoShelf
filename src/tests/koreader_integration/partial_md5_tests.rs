@@ -197,4 +197,3 @@ fn test_partial_md5_epub() {
         "Rust partialMD5 should match KoReader's Lua implementation for EPUB"
     );
 }
-

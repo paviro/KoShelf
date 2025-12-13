@@ -13,9 +13,11 @@ fn test_parse_koreader_generated_metadata() {
 
     let lua = Lua::new();
 
-    let dump_source =
-        std::fs::read_to_string(&dump_lua_path).expect("Failed to read dump.lua");
-    let dump_fn: mlua::Function = lua.load(&dump_source).eval().expect("Failed to load dump.lua");
+    let dump_source = std::fs::read_to_string(&dump_lua_path).expect("Failed to read dump.lua");
+    let dump_fn: mlua::Function = lua
+        .load(&dump_source)
+        .eval()
+        .expect("Failed to load dump.lua");
 
     // Create test data as a Lua table
     let test_table: mlua::Table = lua
@@ -111,4 +113,3 @@ fn test_parse_koreader_generated_metadata() {
     );
     assert!(annotation.is_highlight());
 }
-

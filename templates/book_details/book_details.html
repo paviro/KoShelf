@@ -10,7 +10,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans">
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
+      data-section-toggle-scope="book-details"
+      data-section-toggle-kind="{% if book.is_comic() %}comics{% else %}books{% endif %}">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
     
@@ -55,8 +57,13 @@
                     </svg>
                 </button>
                 <div id="shareDropdownMenu" class="hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
-                    <a href="/books/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
-                    <a href="/books/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>
+                    {% if book.is_comic() %}
+                        <a href="/comics/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
+                        <a href="/comics/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>
+                    {% else %}
+                        <a href="/books/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
+                        <a href="/books/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -74,11 +81,13 @@
             <!-- Review Note -->
             {% include "book_details/components/review_note.html" %}
 
-            <!-- Highlights & Quotes Section -->
-            {% include "book_details/components/highlights.html" %}
-            
-            <!-- Bookmarks Section -->
-            {% include "book_details/components/bookmarks.html" %}
+            {% if !book.is_comic() %}
+                <!-- Highlights & Quotes Section -->
+                {% include "book_details/components/highlights.html" %}
+                
+                <!-- Bookmarks Section -->
+                {% include "book_details/components/bookmarks.html" %}
+            {% endif %}
 
             <!-- Additional Information -->
             {% include "book_details/components/additional_info.html" %}

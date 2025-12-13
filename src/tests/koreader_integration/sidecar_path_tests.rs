@@ -133,8 +133,7 @@ fn test_sidecar_paths_against_koreader() {
         )
     });
 
-    let (get_sidecar_dir, get_sidecar_filename) =
-        load_koreader_docsettings(&lua, &docsettings_src);
+    let (get_sidecar_dir, get_sidecar_filename) = load_koreader_docsettings(&lua, &docsettings_src);
 
     let test_cases = vec![
         ("../../foo.pdf", "../../foo.sdr", "metadata.pdf.lua"),
@@ -169,4 +168,3 @@ fn test_sidecar_paths_against_koreader() {
         );
     }
 }
-

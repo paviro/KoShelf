@@ -1,16 +1,16 @@
 use crate::models::{BookInfo, Identifier};
 use crate::utils::sanitize_html;
-use anyhow::{Result, Context, anyhow};
-use std::path::{Path, PathBuf};
-use std::io::Read;
-use zip::ZipArchive;
-use std::fs::File;
+use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
-use std::collections::HashMap;
 use quick_xml::Reader;
-use quick_xml::events::Event;
 use quick_xml::escape::unescape;
+use quick_xml::events::Event;
 use std::borrow::Cow;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use zip::ZipArchive;
 
 pub struct EpubParser;
 
@@ -18,25 +18,28 @@ impl EpubParser {
     pub fn new() -> Self {
         Self
     }
-    
+
     pub async fn parse(&self, epub_path: &Path) -> Result<BookInfo> {
         let path = epub_path.to_path_buf();
-        
+
         // Run blocking I/O and parsing on the blocking threadpool
         tokio::task::spawn_blocking(move || Self::parse_sync(&path))
             .await
             .with_context(|| "Task join error")?
     }
-    
+
     fn parse_sync(epub_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening EPUB: {:?}", epub_path);
-        let file = File::open(epub_path).with_context(|| format!("Failed to open EPUB file: {:?}", epub_path))?;
-        let mut zip = ZipArchive::new(file).with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;
+        let file = File::open(epub_path)
+            .with_context(|| format!("Failed to open EPUB file: {:?}", epub_path))?;
+        let mut zip = ZipArchive::new(file)
+            .with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;
 
         // Step 1: Find the OPF file path from META-INF/container.xml
         let opf_path = {
             let mut container_xml = String::new();
-            let mut container_file = zip.by_name("META-INF/container.xml")
+            let mut container_file = zip
+                .by_name("META-INF/container.xml")
                 .with_context(|| "META-INF/container.xml not found in EPUB")?;
             container_file.read_to_string(&mut container_xml)?;
             Self::find_opf_path(&container_xml)?
@@ -47,7 +50,8 @@ impl EpubParser {
         let opf_xml = {
             let mut opf_xml = String::new();
             {
-                let mut opf_file = zip.by_name(&opf_path)
+                let mut opf_file = zip
+                    .by_name(&opf_path)
                     .with_context(|| format!("OPF file '{}' not found in EPUB", opf_path))?;
                 opf_file.read_to_string(&mut opf_xml)?;
             }
@@ -63,11 +67,14 @@ impl EpubParser {
                 // Resolve nav path relative to OPF directory
                 let opf_parent = Path::new(&opf_path).parent();
                 let resolved_nav_path = if let Some(parent) = opf_parent {
-                    parent.join(nav_rel_path).to_string_lossy().replace('\\', "/")
+                    parent
+                        .join(nav_rel_path)
+                        .to_string_lossy()
+                        .replace('\\', "/")
                 } else {
                     nav_rel_path.clone()
                 };
-                
+
                 if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
                     let mut nav_xml = String::new();
                     if nav_file.read_to_string(&mut nav_xml).is_ok() {
@@ -77,40 +84,43 @@ impl EpubParser {
             }
         }
 
-       // Step 4: Find cover image path and MIME type in manifest
-       let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
-       debug!("Cover image path: {:?}, MIME type: {:?}", cover_path, cover_mime_type);
+        // Step 4: Find cover image path and MIME type in manifest
+        let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
+        debug!(
+            "Cover image path: {:?}, MIME type: {:?}",
+            cover_path, cover_mime_type
+        );
 
-       // Step 4.5: Resolve cover path relative to OPF directory
-       let resolved_cover_path = if let Some(ref cover_path) = cover_path {
-           let opf_parent = Path::new(&opf_path).parent();
-           let joined = if let Some(parent) = opf_parent {
-               parent.join(cover_path)
-           } else {
-               Path::new(cover_path).to_path_buf()
-           };
-           Some(joined.to_string_lossy().replace('\\', "/"))
-       } else {
-           None
-       };
+        // Step 4.5: Resolve cover path relative to OPF directory
+        let resolved_cover_path = if let Some(ref cover_path) = cover_path {
+            let opf_parent = Path::new(&opf_path).parent();
+            let joined = if let Some(parent) = opf_parent {
+                parent.join(cover_path)
+            } else {
+                Path::new(cover_path).to_path_buf()
+            };
+            Some(joined.to_string_lossy().replace('\\', "/"))
+        } else {
+            None
+        };
 
-       // Step 5: Extract cover image bytes
-       let cover_data = if let Some(ref cover_path) = resolved_cover_path {
-           match zip.by_name(cover_path) {
-               Ok(mut cover_file) => {
-                   let mut buf = Vec::new();
-                   cover_file.read_to_end(&mut buf)?;
-                   Some(buf)
-               },
-               Err(e) => {
-                   warn!("Cover image file '{}' not found: {}", cover_path, e);
-                   None
-               }
-           }
-       } else {
-           None
-       };
-        
+        // Step 5: Extract cover image bytes
+        let cover_data = if let Some(ref cover_path) = resolved_cover_path {
+            match zip.by_name(cover_path) {
+                Ok(mut cover_file) => {
+                    let mut buf = Vec::new();
+                    cover_file.read_to_end(&mut buf)?;
+                    Some(buf)
+                }
+                Err(e) => {
+                    warn!("Cover image file '{}' not found: {}", cover_path, e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         Ok(BookInfo {
             cover_data,
             cover_mime_type,
@@ -157,13 +167,13 @@ impl EpubParser {
         let mut language = None;
         let mut identifiers = Vec::new();
         let mut subjects = Vec::new();
-        
+
         let mut meta_cover_id: Option<String> = None;
         let mut cal_series: Option<String> = None;
         let mut cal_series_number: Option<String> = None;
         let mut number_of_pages: Option<u32> = None;
         let mut nav_path: Option<String> = None;
-        
+
         // EPUB3 collection tracking
         let mut epub3_collections: HashMap<String, String> = HashMap::new(); // id -> name
         let mut epub3_indices: HashMap<String, String> = HashMap::new(); // refines (#id) -> index
@@ -180,37 +190,51 @@ impl EpubParser {
                         match local_name.as_ref() {
                             b"title" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    title = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                    title = Some(
+                                        unescape(&text)
+                                            .unwrap_or(Cow::Borrowed(&text))
+                                            .into_owned(),
+                                    );
                                 }
                             }
                             b"creator" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    authors.push(unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
+                                    authors.push(
+                                        unescape(&text_content)
+                                            .unwrap_or(Cow::Borrowed(&text_content))
+                                            .into_owned(),
+                                    );
                                 }
                             }
-                            b"description" => {
-                                match reader.read_text(e.name()) {
-                                    Ok(raw_text) => {
-                                        let cleaned = sanitize_html(&raw_text);
+                            b"description" => match reader.read_text(e.name()) {
+                                Ok(raw_text) => {
+                                    let cleaned = sanitize_html(&raw_text);
 
-                                        let trimmed = cleaned.trim();
-                                        if !trimmed.is_empty() {
-                                            description = Some(trimmed.to_string());
-                                        }
-                                    }
-                                    Err(e) => {
-                                        debug!("Error reading description: {:?}", e);
+                                    let trimmed = cleaned.trim();
+                                    if !trimmed.is_empty() {
+                                        description = Some(trimmed.to_string());
                                     }
                                 }
-                            }
+                                Err(e) => {
+                                    debug!("Error reading description: {:?}", e);
+                                }
+                            },
                             b"publisher" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    publisher = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                    publisher = Some(
+                                        unescape(&text)
+                                            .unwrap_or(Cow::Borrowed(&text))
+                                            .into_owned(),
+                                    );
                                 }
                             }
                             b"language" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    language = Some(unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned());
+                                    language = Some(
+                                        unescape(&text)
+                                            .unwrap_or(Cow::Borrowed(&text))
+                                            .into_owned(),
+                                    );
                                 }
                             }
                             b"identifier" => {
@@ -222,7 +246,9 @@ impl EpubParser {
                                     }
                                 }
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let value = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
+                                    let value = unescape(&text_content)
+                                        .unwrap_or(Cow::Borrowed(&text_content))
+                                        .into_owned();
                                     let (final_scheme, final_value) = if let Some(s) = scheme {
                                         (s, value.clone())
                                     } else if let Some(colon_pos) = value.find(':') {
@@ -237,7 +263,9 @@ impl EpubParser {
                             }
                             b"subject" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let subject = unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned();
+                                    let subject = unescape(&text_content)
+                                        .unwrap_or(Cow::Borrowed(&text_content))
+                                        .into_owned();
                                     if !subject.is_empty() {
                                         subjects.push(subject);
                                     }
@@ -247,37 +275,65 @@ impl EpubParser {
                                 let mut property = None;
                                 let mut id = None;
                                 let mut refines = None;
-                                
+
                                 let mut name_attr = None;
                                 let mut content_attr = None;
 
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     match key {
-                                        b"property" => property = Some(attr.unescape_value()?.into_owned()),
+                                        b"property" => {
+                                            property = Some(attr.unescape_value()?.into_owned())
+                                        }
                                         b"id" => id = Some(attr.unescape_value()?.into_owned()),
-                                        b"refines" => refines = Some(attr.unescape_value()?.into_owned()),
-                                        b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
-                                        b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
+                                        b"refines" => {
+                                            refines = Some(attr.unescape_value()?.into_owned())
+                                        }
+                                        b"name" => {
+                                            name_attr = Some(attr.unescape_value()?.into_owned())
+                                        }
+                                        b"content" => {
+                                            content_attr = Some(attr.unescape_value()?.into_owned())
+                                        }
                                         _ => {}
                                     }
                                 }
 
                                 if let (Some(n), Some(c)) = (&name_attr, &content_attr) {
-                                    if n == "cover" { meta_cover_id = Some(c.clone()); }
-                                    if n == "calibre:series" { cal_series = Some(c.clone()); }
-                                    if n == "calibre:series_index" { cal_series_number = Some(c.clone()); }
+                                    if n == "cover" {
+                                        meta_cover_id = Some(c.clone());
+                                    }
+                                    if n == "calibre:series" {
+                                        cal_series = Some(c.clone());
+                                    }
+                                    if n == "calibre:series_index" {
+                                        cal_series_number = Some(c.clone());
+                                    }
                                 }
 
                                 if let Some(prop) = property {
                                     if prop == "belongs-to-collection" {
-                                        if let (Ok(text_content), Some(i)) = (reader.read_text(e.name()), id) {
-                                            epub3_collections.insert(i, unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
+                                        if let (Ok(text_content), Some(i)) =
+                                            (reader.read_text(e.name()), id)
+                                        {
+                                            epub3_collections.insert(
+                                                i,
+                                                unescape(&text_content)
+                                                    .unwrap_or(Cow::Borrowed(&text_content))
+                                                    .into_owned(),
+                                            );
                                         }
                                     } else if prop == "group-position" {
-                                        if let (Ok(text_content), Some(r)) = (reader.read_text(e.name()), refines) {
+                                        if let (Ok(text_content), Some(r)) =
+                                            (reader.read_text(e.name()), refines)
+                                        {
                                             let clean_refines = r.trim_start_matches('#');
-                                            epub3_indices.insert(clean_refines.to_string(), unescape(&text_content).unwrap_or(Cow::Borrowed(&text_content)).into_owned());
+                                            epub3_indices.insert(
+                                                clean_refines.to_string(),
+                                                unescape(&text_content)
+                                                    .unwrap_or(Cow::Borrowed(&text_content))
+                                                    .into_owned(),
+                                            );
                                         }
                                     } else if prop == "schema:numberOfPages" {
                                         if let Ok(text_content) = reader.read_text(e.name()) {
@@ -301,17 +357,19 @@ impl EpubParser {
                             let key = attr.key.as_ref();
                             match key {
                                 b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
-                                b"content" => content_attr = Some(attr.unescape_value()?.into_owned()),
+                                b"content" => {
+                                    content_attr = Some(attr.unescape_value()?.into_owned())
+                                }
                                 _ => {}
                             }
                         }
                         if let (Some(n), Some(c)) = (name_attr, content_attr) {
-                            if n == "cover" { 
-                                meta_cover_id = Some(c); 
-                            } else if n == "calibre:series" { 
-                                cal_series = Some(c); 
-                            } else if n == "calibre:series_index" { 
-                                cal_series_number = Some(c); 
+                            if n == "cover" {
+                                meta_cover_id = Some(c);
+                            } else if n == "calibre:series" {
+                                cal_series = Some(c);
+                            } else if n == "calibre:series_index" {
+                                cal_series_number = Some(c);
                             }
                         }
                     } else if in_manifest && local_name.as_ref() == b"item" {
@@ -388,11 +446,14 @@ impl EpubParser {
         Ok((info, cover_id, nav_path))
     }
 
-    fn find_cover_path(opf_xml: &str, cover_id: &Option<String>) -> Result<(Option<String>, Option<String>)> {
+    fn find_cover_path(
+        opf_xml: &str,
+        cover_id: &Option<String>,
+    ) -> Result<(Option<String>, Option<String>)> {
         let mut reader = Reader::from_str(opf_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
-        
+
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) => {
@@ -401,7 +462,7 @@ impl EpubParser {
                         let mut href = None;
                         let mut media_type = None;
                         let mut properties = None;
-                        
+
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"id" {
@@ -414,18 +475,21 @@ impl EpubParser {
                                 properties = Some(attr.unescape_value()?.into_owned());
                             }
                         }
-                        
+
                         if let (Some(href), Some(media_type)) = (href, media_type)
-                            && media_type.starts_with("image/") {
+                            && media_type.starts_with("image/")
+                        {
                             // Check if this is the cover using EPUB 3.0 properties
                             if let Some(props) = &properties
-                                && props.contains("cover-image") {
+                                && props.contains("cover-image")
+                            {
                                 return Ok((Some(href), Some(media_type)));
                             }
-                            
+
                             // Check if this matches the cover_id from meta tags (EPUB 2.0 style)
                             if let (Some(cover_id), Some(id)) = (cover_id, &id)
-                                && id == cover_id {
+                                && id == cover_id
+                            {
                                 return Ok((Some(href), Some(media_type)));
                             }
                         }
@@ -446,15 +510,15 @@ impl EpubParser {
         let mut reader = Reader::from_str(nav_xml);
         reader.config_mut().trim_text(true);
         let mut buf = Vec::new();
-        
+
         let mut in_page_list = false;
         let mut page_count = 0u32;
-        
+
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
                     let local_name = e.local_name();
-                    
+
                     // Check for nav with epub:type="page-list"
                     if local_name.as_ref() == b"nav" {
                         for attr in e.attributes().flatten() {
@@ -469,7 +533,7 @@ impl EpubParser {
                             }
                         }
                     }
-                    
+
                     // Count anchor elements in page-list (each represents a page)
                     if in_page_list && local_name.as_ref() == b"a" {
                         page_count += 1;
@@ -486,7 +550,7 @@ impl EpubParser {
             }
             buf.clear();
         }
-        
+
         if page_count > 0 {
             Some(page_count)
         } else {

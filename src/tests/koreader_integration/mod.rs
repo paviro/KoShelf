@@ -192,7 +192,7 @@ fn fetch_latest_release_tag() -> Result<String, String> {
     }
 }
 
+mod full_integration_tests;
 mod partial_md5_tests;
 mod sidecar_path_tests;
-mod full_integration_tests;
 mod statistics_db_tests;

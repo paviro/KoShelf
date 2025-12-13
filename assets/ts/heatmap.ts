@@ -27,6 +27,7 @@ class ActivityHeatmap {
     private currentYear: number | null = null;
     private isInitialized = false;
     private resizeObserver: ResizeObserver | null = null;
+    private basePath = '/assets/json/statistics';
 
     // Initialize the heatmap module
     async init(): Promise<void> {
@@ -36,7 +37,11 @@ class ActivityHeatmap {
             // Load translations
             await translation.init();
 
-            // Get available years from the template (no need to load from JSON)
+            // JSON base path comes from server-rendered page scope
+            const base = document.body.getAttribute('data-stats-json-base');
+            if (base) this.basePath = base;
+
+            // Get available years from the template-rendered year options
             this.getAvailableYearsFromTemplate();
 
             // Initialize year selector
@@ -72,7 +77,7 @@ class ActivityHeatmap {
     // Load activity data for a specific year
     private async loadYearData(year: number): Promise<void> {
         try {
-            const response = await fetch(`/assets/json/statistics/daily_activity_${year}.json`);
+            const response = await fetch(`${this.basePath}/daily_activity_${year}.json`);
             if (!response.ok) {
                 throw new Error(`Failed to load activity data for ${year}`);
             }
@@ -90,6 +95,8 @@ class ActivityHeatmap {
             this.activityConfig = { max_scale_seconds: null };
         }
     }
+
+    // (No filtering here; years are already scoped by the server-rendered page.)
 
     // Initialize year selector functionality
     private initializeYearSelector(): void {

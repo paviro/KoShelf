@@ -2,6 +2,7 @@
 // Handles collapsible sections with data-driven configuration
 
 import { translation } from './i18n.js';
+import { StorageManager } from './storage-manager.js';
 
 interface SectionData {
     section: HTMLElement;
@@ -12,8 +13,20 @@ interface SectionData {
     defaultVisible: boolean;
 }
 
+type PersistedSectionState = Record<string, boolean>;
+
+interface ToggleOptions {
+    /**
+     * Whether to persist the change (only applies when persistence is enabled for the page).
+     * Defaults to true.
+     */
+    persist?: boolean;
+}
+
 export class SectionToggle {
     private sections = new Map<string, SectionData>();
+    private persistenceKey: (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS] | null = null;
+    private persistedState: PersistedSectionState | null = null;
 
     constructor() {
         this.init();
@@ -22,6 +35,12 @@ export class SectionToggle {
     private async init(): Promise<void> {
         // Load translations
         await translation.init();
+
+        // Enable persistence only for pages that opt in (e.g. book/comic list)
+        this.persistenceKey = this.resolvePersistenceKey();
+        this.persistedState = this.persistenceKey
+            ? (StorageManager.get<PersistedSectionState>(this.persistenceKey, {}) ?? {})
+            : null;
 
         // Find all sections with data-name attributes
         const toggleSections = document.querySelectorAll<HTMLElement>('section[data-name]');
@@ -52,10 +71,47 @@ export class SectionToggle {
 
                 // Add click event listener
                 button.addEventListener('click', () => {
-                    this.toggle(sectionName);
+                    this.toggle(sectionName, { persist: true });
                 });
             }
         });
+    }
+
+    private resolvePersistenceKey():
+        | (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS]
+        | null {
+        const scope = document.body?.dataset.sectionToggleScope;
+        const kind = document.body?.dataset.sectionToggleKind;
+
+        // We cannot rely on the URL because comics may be served at "/" or "/comics/".
+        // Templates provide a stable signal via data attributes.
+        if (scope === 'book-list') {
+            if (kind === 'comics') return StorageManager.KEYS.BOOK_LIST_SECTION_STATE_COMICS;
+            if (kind === 'books') return StorageManager.KEYS.BOOK_LIST_SECTION_STATE_BOOKS;
+            return null;
+        }
+
+        // Persist the same state across all detail pages (not per-book/per-comic).
+        if (scope === 'book-details') {
+            if (kind === 'comics') return StorageManager.KEYS.BOOK_DETAILS_SECTION_STATE_COMICS;
+            if (kind === 'books') return StorageManager.KEYS.BOOK_DETAILS_SECTION_STATE_BOOKS;
+            return null;
+        }
+
+        // Statistics can be scoped (all/books/comics); keep state separate per scope.
+        if (scope === 'statistics') {
+            if (kind === 'books') return StorageManager.KEYS.STATISTICS_SECTION_STATE_BOOKS;
+            if (kind === 'comics') return StorageManager.KEYS.STATISTICS_SECTION_STATE_COMICS;
+            if (kind === 'all') return StorageManager.KEYS.STATISTICS_SECTION_STATE_ALL;
+            return null;
+        }
+
+        return null;
+    }
+
+    private savePersistedState(): void {
+        if (!this.persistenceKey || !this.persistedState) return;
+        StorageManager.set(this.persistenceKey, this.persistedState);
     }
 
     private setInitialState(sectionName: string): void {
@@ -63,8 +119,13 @@ export class SectionToggle {
         if (!sectionData) return;
 
         const { container, chevron, buttonText, defaultVisible } = sectionData;
+        const persistedVisible =
+            this.persistedState && Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
+                ? this.persistedState[sectionName]
+                : null;
+        const visible = persistedVisible === null ? defaultVisible : persistedVisible;
 
-        if (defaultVisible) {
+        if (visible) {
             // Show the section initially
             container.classList.remove('hidden');
             chevron.style.transform = 'rotate(0deg)';
@@ -77,7 +138,7 @@ export class SectionToggle {
         }
     }
 
-    toggle(sectionName: string): void {
+    toggle(sectionName: string, options: ToggleOptions = {}): void {
         const sectionData = this.sections.get(sectionName);
         if (!sectionData) return;
 
@@ -85,13 +146,13 @@ export class SectionToggle {
         const isHidden = container.classList.contains('hidden');
 
         if (isHidden) {
-            this.show(sectionName);
+            this.show(sectionName, options);
         } else {
-            this.hide(sectionName);
+            this.hide(sectionName, options);
         }
     }
 
-    show(sectionName: string): void {
+    show(sectionName: string, options: ToggleOptions = {}): void {
         const sectionData = this.sections.get(sectionName);
         if (!sectionData) return;
 
@@ -99,9 +160,15 @@ export class SectionToggle {
         container.classList.remove('hidden');
         chevron.style.transform = 'rotate(0deg)';
         buttonText.textContent = translation.get('toggle.hide');
+
+        const shouldPersist = options.persist ?? true;
+        if (shouldPersist && this.persistedState) {
+            this.persistedState[sectionName] = true;
+            this.savePersistedState();
+        }
     }
 
-    hide(sectionName: string): void {
+    hide(sectionName: string, options: ToggleOptions = {}): void {
         const sectionData = this.sections.get(sectionName);
         if (!sectionData) return;
 
@@ -109,6 +176,12 @@ export class SectionToggle {
         container.classList.add('hidden');
         chevron.style.transform = 'rotate(-90deg)';
         buttonText.textContent = translation.get('toggle.show');
+
+        const shouldPersist = options.persist ?? true;
+        if (shouldPersist && this.persistedState) {
+            this.persistedState[sectionName] = false;
+            this.savePersistedState();
+        }
     }
 
     isVisible(sectionName: string): boolean {
@@ -132,5 +205,24 @@ export class SectionToggle {
 
     getSectionNames(): string[] {
         return Array.from(this.sections.keys());
+    }
+
+    /**
+     * Re-apply either the persisted visibility (if available) or the template default.
+     * Useful after temporary UI changes (e.g. search auto-expansion).
+     */
+    restorePersistedOrDefault(): void {
+        this.sections.forEach((sectionData, sectionName) => {
+            const persistedVisible =
+                this.persistedState && Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
+                    ? this.persistedState[sectionName]
+                    : null;
+            const visible = persistedVisible === null ? sectionData.defaultVisible : persistedVisible;
+            if (visible) {
+                this.show(sectionName, { persist: false });
+            } else {
+                this.hide(sectionName, { persist: false });
+            }
+        });
     }
 }

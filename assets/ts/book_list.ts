@@ -61,35 +61,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Trigger the search
         setTimeout(() => {
-            filterBooks(searchQuery.toLowerCase().trim(), currentFilter);
+            handleSearchInput(searchQuery);
         }, 100);
     }
 
-    let preSearchSectionState: Record<string, boolean> | null = null;
     let lastSearchTerm = '';
 
     // Unified search handler
     function handleSearchInput(value: string): void {
         const searchTerm = value.toLowerCase().trim();
-        // Save state only on first non-empty search
-        if (searchTerm && !lastSearchTerm) {
-            preSearchSectionState = {};
-            sectionToggle.getSectionNames().forEach(name => {
-                preSearchSectionState![name] = sectionToggle.isVisible(name);
-            });
-        }
-        // Restore state when search is cleared
+        // Restore persisted/default state when search is cleared
         if (!searchTerm && lastSearchTerm) {
-            if (preSearchSectionState) {
-                sectionToggle.getSectionNames().forEach(name => {
-                    if (preSearchSectionState![name]) {
-                        sectionToggle.show(name);
-                    } else {
-                        sectionToggle.hide(name);
-                    }
-                });
-            }
-            preSearchSectionState = null;
+            sectionToggle.restorePersistedOrDefault();
         }
         lastSearchTerm = searchTerm;
         filterBooks(searchTerm, currentFilter);
@@ -103,9 +86,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     child => (child as HTMLElement).style.display !== 'none'
                 );
                 if (hasVisible) {
-                    sectionToggle.show(name);
+                    sectionToggle.show(name, { persist: false });
                 } else {
-                    sectionToggle.hide(name);
+                    sectionToggle.hide(name, { persist: false });
                 }
             });
         }

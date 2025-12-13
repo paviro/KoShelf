@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use super::ContentType;
+
 /// Recap view item for a single completed book entry enriched with optional Book data
 #[derive(Debug, Clone, Serialize)]
 pub struct RecapItem {
@@ -23,6 +25,8 @@ pub struct RecapItem {
     pub book_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub book_cover: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<ContentType>,
     pub star_display: [bool; 5],
 }
 

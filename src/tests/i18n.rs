@@ -1,11 +1,11 @@
 use fluent_syntax::ast;
 use fluent_syntax::parser;
+use rayon::prelude::*;
+use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
-use rayon::prelude::*;
-use regex::Regex;
 
 const EN_FTL: &str = include_str!("../../locales/en.ftl");
 
@@ -25,7 +25,7 @@ fn extract_ftl_keys(content: &str) -> HashSet<String> {
                 if msg.value.is_some() {
                     keys.insert(key.clone());
                 }
-                
+
                 // Insert attribute keys
                 for attr in msg.attributes {
                     keys.insert(format!("{}.{}", key, attr.id.name));
@@ -59,13 +59,13 @@ fn test_missing_translation_keys() {
     for entry in fs::read_dir(locales_dir).expect("Failed to read locales directory") {
         let entry = entry.expect("Failed to read directory entry");
         let path = entry.path();
-        
+
         if path.extension().and_then(|s| s.to_str()) == Some("ftl") {
             let filename = path.file_name().unwrap().to_str().unwrap();
             if filename == "en.ftl" {
                 continue;
             }
-            
+
             let content = fs::read_to_string(&path).expect("Failed to read locale file");
             let locale_keys = extract_ftl_keys(&content);
 
@@ -85,7 +85,7 @@ fn test_missing_translation_keys() {
                 // Base language files: must have all keys from en.ftl
                 let missing_keys: Vec<_> = en_keys.difference(&locale_keys).collect();
                 let extra_keys: Vec<_> = locale_keys.difference(&en_keys).collect();
-                
+
                 if !missing_keys.is_empty() {
                     panic!(
                         "Base language file {} is missing keys: {:?}",
@@ -106,7 +106,7 @@ fn test_missing_translation_keys() {
 #[test]
 fn test_unused_translation_keys() {
     let en_keys = extract_ftl_keys(EN_FTL);
-    
+
     // Collect all source files first
     let source_files: Vec<_> = WalkDir::new(".")
         .into_iter()
@@ -114,14 +114,15 @@ fn test_unused_translation_keys() {
         .filter(|e| {
             let path = e.path();
             let s = path.to_string_lossy();
-            
+
             // Skip target, .git, and non-files
             if s.contains("target") || s.contains(".git") || !path.is_file() {
                 return false;
             }
-            
+
             // Only check relevant extensions
-            ["rs", "ts", "html", "js"].contains(&path.extension().and_then(|s| s.to_str()).unwrap_or(""))
+            ["rs", "ts", "html", "js"]
+                .contains(&path.extension().and_then(|s| s.to_str()).unwrap_or(""))
         })
         .map(|e| e.path().to_owned())
         .collect();
@@ -138,7 +139,7 @@ fn test_unused_translation_keys() {
                 Ok(c) => c,
                 Err(_) => return HashSet::new(),
             };
-            
+
             let mut found = HashSet::new();
             for cap in re.captures_iter(&content) {
                 if let Some(m) = cap.get(1) {
@@ -154,7 +155,8 @@ fn test_unused_translation_keys() {
 
     // Also extract keys used via message references in FTL files (e.g., { key.attr })
     // This regex matches: { message-id } or { message-id.attr }
-    let ref_re = Regex::new(r#"\{\s*([-a-zA-Z0-9]+(?:\.[-a-zA-Z0-9]+)?)\s*\}"#).expect("Invalid Regex");
+    let ref_re =
+        Regex::new(r#"\{\s*([-a-zA-Z0-9]+(?:\.[-a-zA-Z0-9]+)?)\s*\}"#).expect("Invalid Regex");
     let ftl_referenced_keys: HashSet<String> = WalkDir::new("locales")
         .into_iter()
         .filter_map(|e| e.ok())
@@ -179,15 +181,15 @@ fn test_unused_translation_keys() {
         .into_iter()
         .filter(|k| {
             // A key is used if we found "key", "key_one", "key_other", or it's referenced in FTL
-            !found_tokens.contains(k) 
-            && !found_tokens.contains(&format!("{}_one", k)) 
-            && !found_tokens.contains(&format!("{}_other", k))
-            && !ftl_referenced_keys.contains(k)
+            !found_tokens.contains(k)
+                && !found_tokens.contains(&format!("{}_one", k))
+                && !found_tokens.contains(&format!("{}_other", k))
+                && !ftl_referenced_keys.contains(k)
         })
         .collect();
 
     unused_list.sort();
-    
+
     if !unused_list.is_empty() {
         panic!("Found unused translation keys: {:?}", unused_list);
     }
@@ -196,29 +198,29 @@ fn test_unused_translation_keys() {
 #[test]
 fn test_required_metadata_present() {
     let locales_dir = Path::new("locales");
-    
+
     for entry in fs::read_dir(locales_dir).expect("Failed to read locales directory") {
         let entry = entry.expect("Failed to read directory entry");
         let path = entry.path();
-        
+
         if path.extension().and_then(|s| s.to_str()) == Some("ftl") {
             let filename = path.file_name().unwrap().to_str().unwrap();
-            
+
             // Only check base language files (not regional variants like de_AT.ftl)
             if is_regional_variant(filename) {
                 continue;
             }
-            
+
             let content = fs::read_to_string(&path).expect("Failed to read FTL file");
             let keys = extract_ftl_keys(&content);
-            
+
             let mut missing_metadata: Vec<&str> = Vec::new();
             for required_key in REQUIRED_METADATA {
                 if !keys.contains(*required_key) {
                     missing_metadata.push(required_key);
                 }
             }
-            
+
             if !missing_metadata.is_empty() {
                 panic!(
                     "Base language file {} is missing required metadata keys: {:?}\n\
@@ -236,23 +238,24 @@ fn test_required_metadata_present() {
 #[test]
 fn test_all_locales_loadable_and_functional() {
     use crate::i18n::Translations;
-    
+
     // Dynamically discover and test all FTL files
     let locales_dir = Path::new("locales");
-    
+
     for entry in fs::read_dir(locales_dir).expect("Failed to read locales directory") {
         let entry = entry.expect("Failed to read directory entry");
         let path = entry.path();
-        
+
         if path.extension().and_then(|s| s.to_str()) != Some("ftl") {
             continue;
         }
-        
+
         let filename = path.file_name().unwrap().to_str().unwrap();
-        
+
         // Read the file to extract the -lang-dialect metadata
         let content = fs::read_to_string(&path).expect("Failed to read FTL file");
-        let dialect = content.lines()
+        let dialect = content
+            .lines()
             .find(|line| line.trim().starts_with("-lang-dialect"))
             .and_then(|line| line.split_once('='))
             .map(|(_, v)| v.trim().to_string())
@@ -261,10 +264,14 @@ fn test_all_locales_loadable_and_functional() {
                 let lang = filename.trim_end_matches(".ftl");
                 format!("{}_{}", lang, lang.to_uppercase())
             });
-        
-        let translations = Translations::load(&dialect)
-            .unwrap_or_else(|e| panic!("Locale {} (from {}) failed to load: {}", dialect, filename, e));
-        
+
+        let translations = Translations::load(&dialect).unwrap_or_else(|e| {
+            panic!(
+                "Locale {} (from {}) failed to load: {}",
+                dialect, filename, e
+            )
+        });
+
         let books = translations.get("books");
         assert!(
             books != "books",
@@ -280,7 +287,7 @@ fn test_all_locales_loadable_and_functional() {
             "{} Translations struct has incorrect language code",
             filename
         );
-        
+
         assert!(!translations.to_json_string().is_empty());
     }
 }

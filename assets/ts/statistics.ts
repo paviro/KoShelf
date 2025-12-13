@@ -18,6 +18,7 @@ class StatisticsManager {
     private loadingIndicator: HTMLElement | null = null;
     private weekStats: HTMLElement | null = null;
     private isInitialized = false;
+    private statsJsonBasePath = '/assets/json/statistics';
 
     // Initialize the statistics module
     init(): void {
@@ -26,6 +27,10 @@ class StatisticsManager {
         // Cache DOM elements
         this.loadingIndicator = document.getElementById('statsLoadingIndicator');
         this.weekStats = document.querySelector('.week-stats');
+
+        // JSON base path comes from server-rendered page scope
+        const base = document.body.getAttribute('data-stats-json-base');
+        if (base) this.statsJsonBasePath = base;
 
         // Format all week date displays
         this.formatWeekDateDisplays();
@@ -181,7 +186,7 @@ class StatisticsManager {
             // Wait for transition out to complete before fetching
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            const response = await fetch(`/assets/json/statistics/week_${weekIndex}.json`);
+            const response = await fetch(`${this.statsJsonBasePath}/week_${weekIndex}.json`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

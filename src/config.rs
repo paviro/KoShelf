@@ -1,6 +1,6 @@
 //! Site configuration module - bundles generator/watcher configuration.
 
-use crate::book_scanner::MetadataLocation;
+use crate::library_scanner::MetadataLocation;
 use crate::time_config::TimeConfig;
 use std::path::PathBuf;
 
@@ -13,8 +13,8 @@ pub struct SiteConfig {
     pub site_title: String,
     /// Whether to include unread books
     pub include_unread: bool,
-    /// Path to the books directory (optional)
-    pub books_path: Option<PathBuf>,
+    /// Paths to library directories (books and/or comics)
+    pub library_paths: Vec<PathBuf>,
     /// Where to look for KoReader metadata
     pub metadata_location: MetadataLocation,
     /// Path to the statistics database (optional)
