@@ -196,6 +196,11 @@ recap-empty =
     .finish-reading = Beende ein Buch in KoReader, um deinen Rückblick zu sehen.
     .info-question = Warum wird mein Rückblick nicht angezeigt?
     .info-answer = KoShelf verwendet Lesestatistiken zur Erkennung von abgeschlossenen Büchern und Comics, was das Nachverfolgen von Wiederholungslektüren ermöglicht. Ein Buch einfach als „beendet" zu markieren, ohne Lesedaten zu haben, lässt es hier nicht erscheinen.
+stats-empty =
+    .nothing-here = Hier gibt es noch nichts
+    .start-reading = Beginne mit KoReader zu lesen, um deine Statistiken hier zu sehen.
+    .info-question = Wie funktioniert die Leseerfassung?
+    .info-answer = KoReader erfasst automatisch deine Lesesitzungen, einschließlich der verbrachten Zeit und gelesenen Seiten. Synchronisiere deine Statistik-Datenbank mit KoShelf, um deine Aktivitäten hier visualisiert zu sehen.
 
 # Navigation and sorting
 sort-order =

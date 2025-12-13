@@ -221,6 +221,12 @@ recap-empty =
     .finish-reading = Finish reading in KoReader to see your recap.
     .info-question = Why isn't my recap showing up?
     .info-answer = KoShelf uses reading statistics to detect completions, which allows tracking re-reads. Simply marking a book as "finished" without reading data will not make it appear here.
+# TODO: Translate the following strings
+stats-empty =
+    .nothing-here = Nothing here yet
+    .start-reading = Start reading with KoReader to see your statistics here.
+    .info-question = How does reading tracking work?
+    .info-answer = KoReader automatically tracks your reading sessions, including time spent and pages read. Sync your statistics database to KoShelf to see your activity visualized here.
 
 # Navigation and sorting
 sort-order =

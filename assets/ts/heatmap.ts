@@ -67,11 +67,6 @@ class ActivityHeatmap {
         this.availableYears = Array.from(yearOptions).map(option =>
             parseInt(option.getAttribute('data-year') || '0')
         ).filter(year => year > 0);
-
-        // Fallback to current year if no options are available
-        if (this.availableYears.length === 0) {
-            this.availableYears = [new Date().getFullYear()];
-        }
     }
 
     // Load activity data for a specific year
