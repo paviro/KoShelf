@@ -11,6 +11,42 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Dropdown Anchor Positioning */
+  .dropdown-trigger {
+    anchor-name: --dropdown-anchor;
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    margin-top: 0.5rem;
+
+    /* Fallback for browsers without anchor support */
+    top: 100%;
+    left: 0;
+
+    /* Anchor Positioning */
+    position-anchor: --dropdown-anchor;
+    top: anchor(bottom);
+    left: anchor(left);
+    position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block;
+  }
+
+  /* Right-aligned dropdown variant */
+  .dropdown-menu-right {
+    position: absolute;
+    margin-top: 0.5rem;
+
+    /* Fallback for browsers without anchor support */
+    top: 100%;
+    right: 0;
+
+    /* Anchor Positioning */
+    position-anchor: --dropdown-anchor;
+    top: anchor(bottom);
+    right: anchor(right);
+    position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block;
+  }
 }
 
 @layer base {

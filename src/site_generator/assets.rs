@@ -149,6 +149,13 @@ impl SiteGenerator {
             storage_js_content.as_bytes(),
         )?;
 
+        // Global dropdown handler
+        let dropdown_js_content = include_str!(concat!(env!("OUT_DIR"), "/dropdown.js"));
+        self.write_asset(
+            self.js_dir().join("dropdown.js"),
+            dropdown_js_content.as_bytes(),
+        )?;
+
         // i18n helper - always needed for translation.get() on frontend
         let i18n_js_content = include_str!(concat!(env!("OUT_DIR"), "/i18n.js"));
         self.write_asset(self.js_dir().join("i18n.js"), i18n_js_content.as_bytes())?;
