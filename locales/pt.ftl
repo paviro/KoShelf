@@ -192,10 +192,6 @@ sessions = Sessões
 yearly-summary = Resumo Anual { $count }
 
 # Navigation and sorting
-previous-year =
-    .aria-label = Ano anterior
-next-year =
-    .aria-label = Próximo ano
 sort-order =
     .aria-label-toggle = Alternar ordem
     .newest-first = { sort-order.aria-label-toggle } - Atual: Mais Recentes Primeiro

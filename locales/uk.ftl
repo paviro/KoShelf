@@ -216,10 +216,6 @@ sessions = Сесії
 yearly-summary = Підсумок року { $count }
 
 # Navigation and sorting
-previous-year =
-    .aria-label = Попередній рік
-next-year =
-    .aria-label = Наступний рік
 sort-order =
     .aria-label-toggle = Перемкнути порядок сортування
     .newest-first = { sort-order.aria-label-toggle } - Поточний: Спочатку нові
