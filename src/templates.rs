@@ -34,6 +34,8 @@ pub struct RecapTemplate {
     pub site_title: String,
     /// "all" | "books" | "comics"
     pub recap_scope: String,
+    /// Whether we should show the Books/Comics filter UI (only when both exist).
+    pub show_type_filter: bool,
     pub year: i32,
     pub available_years: Vec<i32>,
     pub prev_year: Option<i32>,
@@ -52,6 +54,8 @@ pub struct RecapEmptyTemplate {
     pub site_title: String,
     /// "all" | "books" | "comics"
     pub recap_scope: String,
+    /// Whether we should show the Books/Comics filter UI (only when both exist).
+    pub show_type_filter: bool,
     /// When present, show year + scope pickers and prev/next navigation.
     pub year: Option<i32>,
     pub available_years: Vec<i32>,
@@ -93,6 +97,8 @@ pub struct StatsTemplate {
     pub site_title: String,
     /// "all" | "books" | "comics"
     pub stats_scope: String,
+    /// Whether we should show the Books/Comics filter UI (only when both exist).
+    pub show_type_filter: bool,
     /// Base path for stats JSON (e.g. "/assets/json/statistics", "/assets/json/statistics/books")
     pub stats_json_base_path: String,
     pub reading_stats: ReadingStats,
@@ -107,6 +113,8 @@ pub struct StatsTemplate {
 #[template(path = "calendar/calendar.html", whitespace = "minimize")]
 pub struct CalendarTemplate {
     pub site_title: String,
+    /// Whether we should show the Books/Comics filter UI (only when both exist).
+    pub show_type_filter: bool,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,

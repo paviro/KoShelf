@@ -24,6 +24,7 @@ impl SiteGenerator {
         nav: NavContext,
     ) -> Result<()> {
         info!("Generating recap pages...");
+        let show_type_filter = nav.has_books && nav.has_comics;
 
         // Build md5 -> &LibraryItem map for cover/link enrichment
         let mut md5_to_book: HashMap<String, &LibraryItem> = HashMap::new();
@@ -177,6 +178,7 @@ impl SiteGenerator {
             let template = RecapEmptyTemplate {
                 site_title: self.site_title.clone(),
                 recap_scope: "all".to_string(),
+                show_type_filter,
                 year: None,
                 available_years: Vec::new(),
                 prev_year: None,
@@ -471,6 +473,7 @@ impl SiteGenerator {
             let template_all = RecapTemplate {
                 site_title: self.site_title.clone(),
                 recap_scope: "all".to_string(),
+                show_type_filter,
                 year: *year,
                 available_years: years.clone(),
                 prev_year,
@@ -494,96 +497,103 @@ impl SiteGenerator {
             let path = year_dir.join("index.html");
             self.write_minify_html(path, &html)?;
 
-            // /recap/<year>/books/
-            info!("Generating recap page ({}, books)...", year);
-            let books_dir = year_dir.join("books");
-            fs::create_dir_all(&books_dir)?;
-            if monthly_vec_books.is_empty() {
-                let t = RecapEmptyTemplate {
-                    site_title: self.site_title.clone(),
-                    recap_scope: "books".to_string(),
-                    year: Some(*year),
-                    available_years: years.clone(),
-                    prev_year,
-                    next_year,
-                    version: self.get_version(),
-                    last_updated: self.get_last_updated(),
-                    navbar_items: self.create_navbar_items_with_recap(
-                        "recap",
-                        Some(latest_href.as_str()),
-                        nav,
-                    ),
-                    translation: self.t(),
-                };
-                let html = t.render()?;
-                self.write_minify_html(books_dir.join("index.html"), &html)?;
-            } else {
-                let t = RecapTemplate {
-                    site_title: self.site_title.clone(),
-                    recap_scope: "books".to_string(),
-                    year: *year,
-                    available_years: years.clone(),
-                    prev_year,
-                    next_year,
-                    monthly: monthly_vec_books.clone(),
-                    summary: summary_books.clone(),
-                    version: self.get_version(),
-                    last_updated: self.get_last_updated(),
-                    navbar_items: self.create_navbar_items_with_recap(
-                        "recap",
-                        Some(latest_href.as_str()),
-                        nav,
-                    ),
-                    translation: self.t(),
-                };
-                let html = t.render()?;
-                self.write_minify_html(books_dir.join("index.html"), &html)?;
-            }
+            // Only create per-type recap pages when we actually have both types in the site.
+            if show_type_filter {
+                // /recap/<year>/books/
+                info!("Generating recap page ({}, books)...", year);
+                let books_dir = year_dir.join("books");
+                fs::create_dir_all(&books_dir)?;
+                if monthly_vec_books.is_empty() {
+                    let t = RecapEmptyTemplate {
+                        site_title: self.site_title.clone(),
+                        recap_scope: "books".to_string(),
+                        show_type_filter,
+                        year: Some(*year),
+                        available_years: years.clone(),
+                        prev_year,
+                        next_year,
+                        version: self.get_version(),
+                        last_updated: self.get_last_updated(),
+                        navbar_items: self.create_navbar_items_with_recap(
+                            "recap",
+                            Some(latest_href.as_str()),
+                            nav,
+                        ),
+                        translation: self.t(),
+                    };
+                    let html = t.render()?;
+                    self.write_minify_html(books_dir.join("index.html"), &html)?;
+                } else {
+                    let t = RecapTemplate {
+                        site_title: self.site_title.clone(),
+                        recap_scope: "books".to_string(),
+                        show_type_filter,
+                        year: *year,
+                        available_years: years.clone(),
+                        prev_year,
+                        next_year,
+                        monthly: monthly_vec_books.clone(),
+                        summary: summary_books.clone(),
+                        version: self.get_version(),
+                        last_updated: self.get_last_updated(),
+                        navbar_items: self.create_navbar_items_with_recap(
+                            "recap",
+                            Some(latest_href.as_str()),
+                            nav,
+                        ),
+                        translation: self.t(),
+                    };
+                    let html = t.render()?;
+                    self.write_minify_html(books_dir.join("index.html"), &html)?;
+                }
 
-            // /recap/<year>/comics/
-            info!("Generating recap page ({}, comics)...", year);
-            let comics_dir = year_dir.join("comics");
-            fs::create_dir_all(&comics_dir)?;
-            if monthly_vec_comics.is_empty() {
-                let t = RecapEmptyTemplate {
-                    site_title: self.site_title.clone(),
-                    recap_scope: "comics".to_string(),
-                    year: Some(*year),
-                    available_years: years.clone(),
-                    prev_year,
-                    next_year,
-                    version: self.get_version(),
-                    last_updated: self.get_last_updated(),
-                    navbar_items: self.create_navbar_items_with_recap(
-                        "recap",
-                        Some(latest_href.as_str()),
-                        nav,
-                    ),
-                    translation: self.t(),
-                };
-                let html = t.render()?;
-                self.write_minify_html(comics_dir.join("index.html"), &html)?;
-            } else {
-                let t = RecapTemplate {
-                    site_title: self.site_title.clone(),
-                    recap_scope: "comics".to_string(),
-                    year: *year,
-                    available_years: years.clone(),
-                    prev_year,
-                    next_year,
-                    monthly: monthly_vec_comics.clone(),
-                    summary: summary_comics.clone(),
-                    version: self.get_version(),
-                    last_updated: self.get_last_updated(),
-                    navbar_items: self.create_navbar_items_with_recap(
-                        "recap",
-                        Some(latest_href.as_str()),
-                        nav,
-                    ),
-                    translation: self.t(),
-                };
-                let html = t.render()?;
-                self.write_minify_html(comics_dir.join("index.html"), &html)?;
+                // /recap/<year>/comics/
+                info!("Generating recap page ({}, comics)...", year);
+                let comics_dir = year_dir.join("comics");
+                fs::create_dir_all(&comics_dir)?;
+                if monthly_vec_comics.is_empty() {
+                    let t = RecapEmptyTemplate {
+                        site_title: self.site_title.clone(),
+                        recap_scope: "comics".to_string(),
+                        show_type_filter,
+                        year: Some(*year),
+                        available_years: years.clone(),
+                        prev_year,
+                        next_year,
+                        version: self.get_version(),
+                        last_updated: self.get_last_updated(),
+                        navbar_items: self.create_navbar_items_with_recap(
+                            "recap",
+                            Some(latest_href.as_str()),
+                            nav,
+                        ),
+                        translation: self.t(),
+                    };
+                    let html = t.render()?;
+                    self.write_minify_html(comics_dir.join("index.html"), &html)?;
+                } else {
+                    let t = RecapTemplate {
+                        site_title: self.site_title.clone(),
+                        recap_scope: "comics".to_string(),
+                        show_type_filter,
+                        year: *year,
+                        available_years: years.clone(),
+                        prev_year,
+                        next_year,
+                        monthly: monthly_vec_comics.clone(),
+                        summary: summary_comics.clone(),
+                        version: self.get_version(),
+                        last_updated: self.get_last_updated(),
+                        navbar_items: self.create_navbar_items_with_recap(
+                            "recap",
+                            Some(latest_href.as_str()),
+                            nav,
+                        ),
+                        translation: self.t(),
+                    };
+                    let html = t.render()?;
+                    self.write_minify_html(comics_dir.join("index.html"), &html)?;
+                }
             }
 
             // Generate share images for social media

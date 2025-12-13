@@ -30,6 +30,7 @@
             
             <!-- Calendar Controls -->
             <div class="flex items-center space-x-2 md:space-x-4">
+                {% if show_type_filter %}
                 <!-- Scope Selector (match Statistics dropdown styling) -->
                 <div class="flex items-center">
                     <details id="calendarFilterDropdown" class="relative">
@@ -46,6 +47,7 @@
                         </div>
                     </details>
                 </div>
+                {% endif %}
 
                 <!-- Navigation Buttons -->
                 <div class="flex items-center space-x-1">

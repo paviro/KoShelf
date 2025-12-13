@@ -52,6 +52,7 @@ impl SiteGenerator {
         // Create the template
         let template = CalendarTemplate {
             site_title: self.site_title.clone(),
+            show_type_filter: nav.has_books && nav.has_comics,
             version: self.get_version(),
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items_with_recap(
