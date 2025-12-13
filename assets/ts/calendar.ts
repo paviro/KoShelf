@@ -380,6 +380,8 @@ function setContentFilter(filter: ContentFilter): void {
 
 function syncFilterButtons(): void {
     const labelEl = document.getElementById('calendarFilterLabel');
+    const filterIcon = document.getElementById('calendarFilterIcon');
+
     if (labelEl) {
         if (currentContentFilter === 'book') {
             labelEl.textContent = translation.get('books');
@@ -387,6 +389,17 @@ function syncFilterButtons(): void {
             labelEl.textContent = translation.get('comics');
         } else {
             labelEl.textContent = translation.get('filter.all');
+        }
+    }
+
+    // Update filter icon color (gray when all, primary when filtered)
+    if (filterIcon) {
+        if (currentContentFilter === 'all') {
+            filterIcon.classList.remove('text-primary-500');
+            filterIcon.classList.add('text-gray-600', 'dark:text-gray-300');
+        } else {
+            filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
+            filterIcon.classList.add('text-primary-500');
         }
     }
 }

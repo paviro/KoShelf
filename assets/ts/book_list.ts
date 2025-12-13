@@ -273,7 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterDropdownButton = document.getElementById('filterDropdownButton');
     const filterDropdownMenu = document.getElementById('filterDropdownMenu');
     const selectedFilterLabel = document.getElementById('selectedFilterLabel');
-    const selectedFilterLabelMobile = document.getElementById('selectedFilterLabelMobile');
 
     filterDropdownButton?.addEventListener('click', () => {
         filterDropdownMenu?.classList.toggle('hidden');
@@ -285,7 +284,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const filterText = target.textContent;
             const filterType = target.dataset.filter || 'all';
             if (selectedFilterLabel && filterText) selectedFilterLabel.textContent = filterText;
-            if (selectedFilterLabelMobile && filterText) selectedFilterLabelMobile.textContent = filterText;
+
+            // Update filter icon color (gray when all, primary when filtered)
+            const filterIcon = document.getElementById('filterIcon');
+            if (filterIcon) {
+                if (filterType === 'all') {
+                    filterIcon.classList.remove('text-primary-500');
+                    filterIcon.classList.add('text-gray-600', 'dark:text-gray-300');
+                } else {
+                    filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
+                    filterIcon.classList.add('text-primary-500');
+                }
+            }
 
             // Update aria-label and title based on filter type
             const filterAriaMap: Record<string, string> = {
@@ -306,13 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        const target = e.target as Node;
-        if (!filterDropdownButton?.contains(target) && !filterDropdownMenu?.contains(target)) {
-            filterDropdownMenu?.classList.add('hidden');
-        }
-    });
+
 
     // Mobile search inline toggle logic
     mobileSearchButton?.addEventListener('click', () => {
