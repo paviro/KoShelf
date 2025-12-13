@@ -4,6 +4,7 @@
  */
 
 import { translation } from './i18n.js';
+import { TooltipManager } from './tooltip-manager.js';
 
 interface ActivityEntry {
     date: string;
@@ -330,11 +331,14 @@ class ActivityHeatmap {
         // Add both light and dark mode classes for the current activity level
         colorClasses[activityLevel].forEach(cls => cell.classList.add(cls));
 
-        // Set tooltip (reading time focused)
+        // Prepare tooltip content
         const readLabel = DateUtils.formatDuration(activityObj.read);
-        cell.setAttribute('title', `${dateStr}: ${readLabel}, ${activityObj.pages} ${translation.get('pages-label', activityObj.pages)}`);
+        const tooltipContent = `${dateStr}: ${readLabel}, ${activityObj.pages} ${translation.get('pages-label', activityObj.pages)}`;
 
-        // Add hover functionality
+        // Use custom tooltip manager instead of title attribute
+        TooltipManager.attach(cell, tooltipContent);
+
+        // Add hover functionality for highlighting
         this.addCellHoverEffects(cell);
     }
 
@@ -438,6 +442,7 @@ class ActivityHeatmap {
             this.resizeObserver = null;
         }
         this.isInitialized = false;
+        TooltipManager.cleanup();
     }
 }
 

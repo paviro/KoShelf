@@ -47,6 +47,61 @@
     right: anchor(right);
     position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block;
   }
+
+  /* Heatmap Tooltip */
+  .heatmap-tooltip {
+    position: fixed;
+    margin-bottom: 0;
+    z-index: 50;
+    /* Default arrow x position (center) if JS fails */
+    --arrow-x: 50%;
+    --arrow-y: 50%;
+  }
+
+  /* Tooltip Arrow (Speech Bubble) */
+  .heatmap-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    /* Arrow size must match JS (arrowSize) */
+    border-width: 6px;
+  }
+
+  /* Arrow pointing down (tooltip on top) */
+  .tooltip-top::after {
+    top: 100%;
+    /* Bottom of tooltip */
+    border-color: theme('colors.gray.900') transparent transparent transparent;
+    left: var(--arrow-x);
+    margin-left: -6px;
+  }
+
+  /* Arrow pointing up (tooltip on bottom) */
+  .tooltip-bottom::after {
+    bottom: 100%;
+    /* Top of tooltip */
+    border-color: transparent transparent theme('colors.gray.900') transparent;
+    left: var(--arrow-x);
+    margin-left: -6px;
+  }
+
+  /* Arrow pointing right (tooltip on left) */
+  .tooltip-left::after {
+    left: 100%;
+    border-color: transparent theme('colors.gray.900') transparent transparent;
+    top: var(--arrow-y);
+    margin-top: -6px;
+  }
+
+  /* Arrow pointing left (tooltip on right) */
+  .tooltip-right::after {
+    right: 100%;
+    border-color: transparent transparent transparent theme('colors.gray.900');
+    top: var(--arrow-y);
+    margin-top: -6px;
+  }
 }
 
 @layer base {
