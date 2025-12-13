@@ -190,32 +190,31 @@ more = Plus
 period = Période
 sessions = Sessions
 yearly-summary = Résumé annuel { $count }
-# TODO: Translate the following strings
 recap-empty =
-    .nothing-here = Nothing here yet
-    .try-switching = Try switching scope or year above.
-    .finish-reading = Finish reading in KoReader to see your recap.
-    .info-question = Why isn't my recap showing up?
-    .info-answer = KoShelf uses reading statistics to detect completions, which allows tracking re-reads. Simply marking a book as "finished" without reading data will not make it appear here.
-# TODO: Translate the following strings
+    .nothing-here = Il n’y a encore rien ici
+    .try-switching = Essayez de changer la période ou l'année au dessus.
+    .finish-reading = Terminez un livre dans KoReader pour voir votre récapitulatif.
+    .info-question = Pourquoi mon récapitulatif ne s’affiche-t-il pas ?
+    .info-answer = KoShelf utilise les statistiques de lecture pour détecter les livres et bandes dessinées terminés, ce qui permet de suivre les relectures. Marquer simplement un livre comme "terminé" sans données de lecture ne le fera pas apparaître ici.
+
 stats-empty =
-    .nothing-here = Nothing here yet
-    .start-reading = Start reading with KoReader to see your statistics here.
-    .info-question = How does reading tracking work?
-    .info-answer = KoReader automatically tracks your reading sessions, including time spent and pages read. Sync your statistics database to KoShelf to see your activity visualized here.
+    .nothing-here = Il n’y a encore rien ici
+    .start-reading = Commencez à lire avec KoReader pour voir vos statistiques ici.
+    .info-question = Comment fonctionne le suivi de lecture ?
+    .info-answer = KoReader enregistre automatiquement vos sessions de lecture, y compris le temps passé et les pages lues. Synchronisez votre base de données de statistiques avec KoShelf pour visualiser vos activités ici.
 
 # Navigation and sorting
-sort-order = 
+sort-order =
     .aria-label-toggle = Inverser l’ordre de tri
     .newest-first = { sort-order.aria-label-toggle } - Actuel : Plus récents d’abord
     .oldest-first = { sort-order.aria-label-toggle } - Actuel : Plus anciens d’abord
-previous-month = 
+previous-month =
     .aria-label = Mois précédent
-next-month = 
+next-month =
     .aria-label = Mois suivant
-search = 
+search =
     .aria-label = Rechercher
-close-search = 
+close-search =
     .aria-label = Fermer la recherche
 close = Fermer
     .aria-label = Fermer
