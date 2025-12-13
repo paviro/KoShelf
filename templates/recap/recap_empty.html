@@ -99,13 +99,13 @@
                         </div>
                     </div>
                     <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                        {% if year.is_some() %}No completions for this filter{% else %}No recap yet{% endif %}
+                        {{ translation.get("recap-empty.nothing-here") }}
                     </h3>
                     <p class="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed">
                         {% if year.is_some() %}
-                            Try switching scope or year above.
+                            {{ translation.get("recap-empty.try-switching") }}
                         {% else %}
-                            Finish reading in KoReader to see your recap.
+                            {{ translation.get("recap-empty.finish-reading") }}
                         {% endif %}
                     </p>
                 </div>
@@ -118,7 +118,7 @@
                                 <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span>Why isn't my recap showing up?</span>
+                                <span>{{ translation.get("recap-empty.info-question") }}</span>
                             </div>
                             <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200 group-open:rotate-180 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -126,8 +126,7 @@
                         </summary>
                         <div class="px-4 pb-4 pt-4 text-left text-sm text-gray-500 dark:text-gray-400 ml-8 leading-relaxed">
                             <p>
-                                KoShelf uses reading statistics to detect completions, which allows tracking re-reads. 
-                                Simply marking a book as "finished" without reading data will not make it appear here.
+                                {{ translation.get("recap-empty.info-answer") }}
                             </p>
                         </div>
                     </details>
