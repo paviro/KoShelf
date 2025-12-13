@@ -38,8 +38,6 @@ pub struct RecapTemplate {
     pub show_type_filter: bool,
     pub year: i32,
     pub available_years: Vec<i32>,
-    pub prev_year: Option<i32>,
-    pub next_year: Option<i32>,
     pub monthly: Vec<MonthRecap>,
     pub summary: YearlySummary,
     pub version: String,
@@ -56,11 +54,9 @@ pub struct RecapEmptyTemplate {
     pub recap_scope: String,
     /// Whether we should show the Books/Comics filter UI (only when both exist).
     pub show_type_filter: bool,
-    /// When present, show year + scope pickers and prev/next navigation.
+    /// When present, show year + scope pickers.
     pub year: Option<i32>,
     pub available_years: Vec<i32>,
-    pub prev_year: Option<i32>,
-    pub next_year: Option<i32>,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
