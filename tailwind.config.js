@@ -2,7 +2,8 @@
 module.exports = {
   content: [
     "./templates/**/*.html",
-    "./src/**/*.rs"
+    "./src/**/*.rs",
+    "./assets/ts/**/*.ts"
   ],
   theme: {
     extend: {
