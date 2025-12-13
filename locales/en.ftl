@@ -219,6 +219,7 @@ close = Close
     .aria-label = Close
 go-back =
     .aria-label = Go back
+select-month = Select Month
 
 # -----------------------------------
 #           Time & Dates

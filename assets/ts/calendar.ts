@@ -31,6 +31,7 @@ interface EventCalendarOptions {
 
 interface EventCalendarInstance {
     setOption<K extends keyof EventCalendarOptions>(key: K, value: EventCalendarOptions[K]): void;
+    setOption(key: 'date', value: Date | string): void;
     prev(): void;
     next(): void;
     destroy?(): void;
@@ -120,6 +121,17 @@ const monthlyDataCache = new Map<string, MonthData>(); // Cache for monthly data
 let availableMonths: string[] = []; // List of months that have data
 let currentDisplayedMonth: string | null = null;
 let currentContentFilter: ContentFilter = loadInitialFilter();
+
+// Month/Year picker state
+let currentPickerYear: number = new Date().getFullYear();
+let currentPickerMonth: number = new Date().getMonth();
+let yearPickerStartYear: number = new Date().getFullYear() - 4; // Show 9 years (4 before, current, 4 after)
+
+// Cached modal element references (initialized in setupDatePickerHandlers)
+let monthPickerModal: HTMLElement | null = null;
+let monthPickerCard: HTMLElement | null = null;
+let yearPickerModal: HTMLElement | null = null;
+let yearPickerCard: HTMLElement | null = null;
 
 function loadInitialFilter(): ContentFilter {
     try {
@@ -289,10 +301,9 @@ function initializeEventCalendar(events: RawEvent[]): void {
         eventClick: info => showEventModal(info.event.title, info.event.extendedProps),
         dateClick: info => console.debug('Date clicked:', info.dateStr),
         datesSet: info => {
-            const viewTitle = info.view.title;
             const currentMonthDate = info.view.currentStart;
 
-            updateCalendarTitleDirect(viewTitle);
+            updateCalendarTitle(currentMonthDate);
             updateMonthlyStats(currentMonthDate);
 
             // Load data for the new month if it's different from current data
@@ -404,21 +415,28 @@ function syncFilterButtons(): void {
     }
 }
 
-// Update the calendar title directly with the provided title string
-function updateCalendarTitleDirect(title: string): void {
-    if (!title) return;
+// Update the calendar title using the displayed date
+function updateCalendarTitle(date: Date): void {
+    if (!date) return;
 
-    // Update mobile h1 title
-    const mobileTitle = document.querySelector('.lg\\:hidden h1');
-    if (mobileTitle) {
-        mobileTitle.textContent = title;
-    }
+    const locale = translation.getLanguage() || 'en';
+    const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'long' });
+    const yearFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric' });
 
-    // Update desktop h2 title
-    const desktopTitle = document.querySelector('.hidden.lg\\:block');
-    if (desktopTitle) {
-        desktopTitle.textContent = title;
-    }
+    const monthName = monthFormatter.format(date);
+    const year = yearFormatter.format(date);
+
+    // Update mobile buttons
+    const mobileMonthBtn = document.getElementById('mobileMonthBtn');
+    const mobileYearBtn = document.getElementById('mobileYearBtn');
+    if (mobileMonthBtn) mobileMonthBtn.textContent = monthName;
+    if (mobileYearBtn) mobileYearBtn.textContent = year;
+
+    // Update desktop buttons
+    const desktopMonthBtn = document.getElementById('desktopMonthBtn');
+    const desktopYearBtn = document.getElementById('desktopYearBtn');
+    if (desktopMonthBtn) desktopMonthBtn.textContent = monthName;
+    if (desktopYearBtn) desktopYearBtn.textContent = year;
 }
 
 // Deterministic colour hashing based on book title (+md5 when available)
@@ -524,10 +542,7 @@ function setupEventHandlers(): void {
     const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
     todayBtn?.addEventListener('click', () => {
         if (!calendar || !todayBtn || todayBtn.disabled) return;
-
-        // EventCalendar doesn't provide a stable public "go to today" API in this build.
-        // Re-creating the instance reliably resets the view to the current month/day.
-        initializeEventCalendar(getFilteredRawEvents(currentEvents));
+        calendar.setOption('date', new Date());
         setTimeout(() => scrollCurrentDayIntoView(), 100);
     });
 
@@ -545,6 +560,9 @@ function setupEventHandlers(): void {
             calendar.next();
         }
     });
+
+    // Month/Year picker handlers
+    setupDatePickerHandlers();
 
     // Modal close handlers using shared utility
     const modal = document.getElementById('eventModal');
@@ -697,4 +715,147 @@ function refreshAggregatedData(): void {
         }
         Object.assign(currentBooks, monthData.books || {});
     }
+}
+
+// ========== Month/Year Picker Functions ==========
+
+function setupDatePickerHandlers(): void {
+    // Cache modal element references
+    monthPickerModal = document.getElementById('monthPickerModal');
+    monthPickerCard = document.getElementById('monthPickerCard');
+    yearPickerModal = document.getElementById('yearPickerModal');
+    yearPickerCard = document.getElementById('yearPickerCard');
+
+    // Month buttons click handlers (DRY)
+    ['mobileMonthBtn', 'desktopMonthBtn'].forEach(id =>
+        document.getElementById(id)?.addEventListener('click', showMonthPicker));
+    ['mobileYearBtn', 'desktopYearBtn'].forEach(id =>
+        document.getElementById(id)?.addEventListener('click', showYearPicker));
+
+    // Use modal-utils for backdrop click and Escape key handling
+    setupModalCloseHandlers(monthPickerModal, monthPickerCard);
+    setupModalCloseHandlers(yearPickerModal, yearPickerCard);
+
+    // Year picker navigation
+    document.getElementById('yearPickerPrev')?.addEventListener('click', () => {
+        yearPickerStartYear -= 9;
+        populateYearPickerGrid();
+    });
+    document.getElementById('yearPickerNext')?.addEventListener('click', () => {
+        yearPickerStartYear += 9;
+        populateYearPickerGrid();
+    });
+}
+
+function showMonthPicker(): void {
+    // Set picker month/year to current displayed month
+    if (currentDisplayedMonth) {
+        const [yr, mo] = currentDisplayedMonth.split('-');
+        currentPickerYear = Number(yr);
+        currentPickerMonth = Number(mo) - 1;
+    }
+
+    populateMonthPickerGrid();
+    showModal(monthPickerModal, monthPickerCard);
+}
+
+function hideMonthPicker(): void {
+    hideModal(monthPickerModal, monthPickerCard);
+}
+
+function showYearPicker(): void {
+    // Set starting year range based on current displayed month
+    if (currentDisplayedMonth) {
+        const [yr] = currentDisplayedMonth.split('-');
+        currentPickerYear = Number(yr);
+        yearPickerStartYear = currentPickerYear - 4;
+    }
+
+    populateYearPickerGrid();
+    showModal(yearPickerModal, yearPickerCard);
+}
+
+function hideYearPicker(): void {
+    hideModal(yearPickerModal, yearPickerCard);
+}
+
+// Helper to create styled picker buttons
+function createPickerButton(text: string, isActive: boolean, onClick: () => void): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${isActive
+        ? 'bg-primary-600 text-white'
+        : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
+        }`;
+    btn.textContent = text;
+    btn.addEventListener('click', onClick);
+    return btn;
+}
+
+function populateMonthPickerGrid(): void {
+    const grid = document.getElementById('monthPickerGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    // Get localized month names
+    const locale = translation.getLanguage() || 'en';
+    const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'short' });
+
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(currentPickerYear, i, 1);
+        const monthName = monthFormatter.format(date);
+        const isCurrentMonth = currentDisplayedMonth === `${currentPickerYear}-${String(i + 1).padStart(2, '0')}`;
+
+        const btn = createPickerButton(monthName, isCurrentMonth, () => {
+            navigateToMonth(currentPickerYear, i);
+            hideMonthPicker();
+        });
+
+        grid.appendChild(btn);
+    }
+}
+
+function populateYearPickerGrid(): void {
+    const grid = document.getElementById('yearPickerGrid');
+    const title = document.getElementById('yearPickerTitle');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    // Update title to show year range
+    if (title) {
+        title.textContent = `${yearPickerStartYear} - ${yearPickerStartYear + 8}`;
+    }
+
+    // Get current displayed year for highlighting
+    let displayedYear = new Date().getFullYear();
+    if (currentDisplayedMonth) {
+        displayedYear = Number(currentDisplayedMonth.split('-')[0]);
+    }
+
+    for (let i = 0; i < 9; i++) {
+        const year = yearPickerStartYear + i;
+        const isCurrentYear = year === displayedYear;
+
+        const btn = createPickerButton(String(year), isCurrentYear, () => {
+            // Navigate to the same month but different year
+            let month = new Date().getMonth();
+            if (currentDisplayedMonth) {
+                month = Number(currentDisplayedMonth.split('-')[1]) - 1;
+            }
+            navigateToMonth(year, month);
+            hideYearPicker();
+        });
+
+        grid.appendChild(btn);
+    }
+}
+
+function navigateToMonth(year: number, month: number): void {
+    if (!calendar) return;
+
+    // Use setOption('date') to jump directly to the target month
+    // This is more efficient than looping through prev/next
+    const targetDate = new Date(year, month, 1);
+    calendar.setOption('date', targetDate);
 }

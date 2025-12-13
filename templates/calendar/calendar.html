@@ -20,13 +20,17 @@
         <div class="flex items-center justify-between h-full">
             <!-- Mobile Logo/Title -->
             <div class="lg:hidden flex items-center">
-                <!-- Filled by JavaScript -->
-                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate"></h1>
+                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-1">
+                    <button id="mobileMonthBtn" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"></button>
+                    <button id="mobileYearBtn" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"></button>
+                </h1>
             </div>
             
             <!-- Desktop Page Title -->
-            <!-- Filled by JavaScript -->
-            <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white"></h2>
+            <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                <button id="desktopMonthBtn" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"></button>
+                <button id="desktopYearBtn" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"></button>
+            </h2>
             
             <!-- Calendar Controls -->
             <div class="flex items-center space-x-2 md:space-x-4">
@@ -77,10 +81,10 @@
     
     <div class="min-h-screen lg:ml-64 flex flex-col">
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-6 px-4 md:px-6 space-y-3">
+        <main class="flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-4">
 
             <!-- Monthly Statistics -->
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-[15px]">
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
                 <!-- Books Count -->
                 <div class="@container bg-white dark:bg-dark-800/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                     <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
@@ -151,6 +155,42 @@
     <!-- Bottom Navigation Bar - Mobile Only -->
     {% include "bottom_navbar.html" %}
     
+    <!-- Month Picker Modal -->
+    <div id="monthPickerModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div id="monthPickerCard" class="bg-white dark:bg-dark-800 rounded-xl shadow-2xl w-full max-w-xs overflow-hidden transform transition-all duration-300 opacity-0 scale-95">
+            <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">{{ translation.get("select-month") }}</h3>
+                <div id="monthPickerGrid" class="grid grid-cols-3 gap-2">
+                    <!-- Month buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Year Picker Modal -->
+    <div id="yearPickerModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div id="yearPickerCard" class="bg-white dark:bg-dark-800 rounded-xl shadow-2xl w-full max-w-xs overflow-hidden transform transition-all duration-300 opacity-0 scale-95">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <button id="yearPickerPrev" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h3 id="yearPickerTitle" class="text-lg font-semibold text-gray-900 dark:text-white"></h3>
+                    <button id="yearPickerNext" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="yearPickerGrid" class="grid grid-cols-3 gap-2">
+                    <!-- Year buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Event Details Modal (hidden by default) -->
     {% include "calendar/components/event_modal.html" %}
 

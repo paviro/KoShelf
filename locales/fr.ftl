@@ -220,6 +220,7 @@ close = Fermer
     .aria-label = Fermer
 go-back =
     .aria-label = Retour
+select-month = Sélectionner le mois
 
 # -----------------------------------
 #           Time & Dates
