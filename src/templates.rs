@@ -1,6 +1,6 @@
-use askama::Template;
-use crate::models::*;
 use crate::i18n::Translations;
+use crate::models::*;
+use askama::Template;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -15,10 +15,13 @@ pub struct NavItem {
 #[template(path = "book_list/book_list.html", whitespace = "minimize")]
 pub struct IndexTemplate {
     pub site_title: String,
-    pub reading_books: Vec<Book>,
-    pub completed_books: Vec<Book>,
-    pub abandoned_books: Vec<Book>,
-    pub unread_books: Vec<Book>,
+    /// Base path for detail pages (e.g. "/books/" or "/comics/").
+    #[allow(dead_code)]
+    pub details_base_path: String,
+    pub reading_books: Vec<LibraryItem>,
+    pub completed_books: Vec<LibraryItem>,
+    pub abandoned_books: Vec<LibraryItem>,
+    pub unread_books: Vec<LibraryItem>,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
@@ -29,6 +32,8 @@ pub struct IndexTemplate {
 #[template(path = "recap/recap_year.html", whitespace = "minimize")]
 pub struct RecapTemplate {
     pub site_title: String,
+    /// "all" | "books" | "comics"
+    pub recap_scope: String,
     pub year: i32,
     pub available_years: Vec<i32>,
     pub prev_year: Option<i32>,
@@ -45,6 +50,13 @@ pub struct RecapTemplate {
 #[template(path = "recap/recap_empty.html", whitespace = "minimize")]
 pub struct RecapEmptyTemplate {
     pub site_title: String,
+    /// "all" | "books" | "comics"
+    pub recap_scope: String,
+    /// When present, show year + scope pickers and prev/next navigation.
+    pub year: Option<i32>,
+    pub available_years: Vec<i32>,
+    pub prev_year: Option<i32>,
+    pub next_year: Option<i32>,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
@@ -55,9 +67,10 @@ pub struct RecapEmptyTemplate {
 #[template(path = "book_details/book_details.html", whitespace = "minimize")]
 pub struct BookTemplate {
     pub site_title: String,
-    pub book: Book,
+    pub book: LibraryItem,
     pub book_stats: Option<StatBook>,
     pub session_stats: Option<BookSessionStats>,
+    pub search_base_path: String,
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
@@ -67,7 +80,7 @@ pub struct BookTemplate {
 #[derive(Template)]
 #[template(path = "book_details/book_details.md", escape = "none")]
 pub struct BookMarkdownTemplate {
-    pub book: Book,
+    pub book: LibraryItem,
     pub book_stats: Option<StatBook>,
     pub session_stats: Option<BookSessionStats>,
     pub version: String,
@@ -78,6 +91,10 @@ pub struct BookMarkdownTemplate {
 #[template(path = "statistics/statistics.html", whitespace = "minimize")]
 pub struct StatsTemplate {
     pub site_title: String,
+    /// "all" | "books" | "comics"
+    pub stats_scope: String,
+    /// Base path for stats JSON (e.g. "/assets/json/statistics", "/assets/json/statistics/books")
+    pub stats_json_base_path: String,
     pub reading_stats: ReadingStats,
     pub available_years: Vec<i32>,
     pub version: String,

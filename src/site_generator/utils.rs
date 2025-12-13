@@ -9,17 +9,34 @@ use minify_html::{Cfg, minify};
 use std::fs;
 use std::path::Path;
 
+/// Describes what content exists in the generated site so the navbar can route correctly.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NavContext {
+    pub has_books: bool,
+    pub has_comics: bool,
+    /// When true, the statistics page is rendered to `/` instead of `/statistics/`.
+    pub stats_at_root: bool,
+}
+
 /// Format a duration in seconds to a human-readable string (e.g., "2d 5h 30m")
 pub(crate) fn format_duration(seconds: i64, translations: &crate::i18n::Translations) -> String {
-    if seconds <= 0 { return format!("0{}", translations.get("units.m")); }
+    if seconds <= 0 {
+        return format!("0{}", translations.get("units.m"));
+    }
     let total_minutes = seconds / 60;
     let days = total_minutes / (24 * 60);
     let hours = (total_minutes % (24 * 60)) / 60;
     let mins = total_minutes % 60;
     let mut parts: Vec<String> = Vec::new();
-    if days > 0 { parts.push(format!("{}{}", days, translations.get("units.d"))); }
-    if hours > 0 { parts.push(format!("{}{}", hours, translations.get("units.h"))); }
-    if mins > 0 || parts.is_empty() { parts.push(format!("{}{}", mins, translations.get("units.m"))); }
+    if days > 0 {
+        parts.push(format!("{}{}", days, translations.get("units.d")));
+    }
+    if hours > 0 {
+        parts.push(format!("{}{}", hours, translations.get("units.h")));
+    }
+    if mins > 0 || parts.is_empty() {
+        parts.push(format!("{}{}", mins, translations.get("units.m")));
+    }
     parts.join(" ")
 }
 
@@ -28,7 +45,7 @@ pub(crate) fn format_day_month(iso: &str, translations: &crate::i18n::Translatio
     if let Ok(date) = chrono::NaiveDate::parse_from_str(iso, "%Y-%m-%d") {
         let current_year = chrono::Utc::now().year();
         let locale = translations.locale();
-        
+
         // Get appropriate format string from translations
         let format_key = if date.year() == current_year {
             "datetime.short-current-year"
@@ -36,7 +53,7 @@ pub(crate) fn format_day_month(iso: &str, translations: &crate::i18n::Translatio
             "datetime.short-with-year"
         };
         let format_str = translations.get(format_key);
-        
+
         date.format_localized(&format_str, locale).to_string()
     } else {
         iso.to_string()
@@ -48,10 +65,10 @@ impl SiteGenerator {
     pub(crate) fn get_version(&self) -> String {
         env!("CARGO_PKG_VERSION").to_string()
     }
-    
+
     /// Get current datetime as formatted string
-    pub(crate) fn get_last_updated(&self) -> String { 
-        self.time_config.now_formatted() 
+    pub(crate) fn get_last_updated(&self) -> String {
+        self.time_config.now_formatted()
     }
 
     /// Minifies and writes HTML to disk, registering in cache manifest.
@@ -63,21 +80,23 @@ impl SiteGenerator {
         };
 
         // Attempt minification; on failure fall back to original HTML
-        let minified = String::from_utf8(minify(html.as_bytes(), &cfg)).unwrap_or_else(|_| html.to_string());
-        
+        let minified =
+            String::from_utf8(minify(html.as_bytes(), &cfg)).unwrap_or_else(|_| html.to_string());
+
         // Register in cache manifest before writing
-        self.cache_manifest.register_file(&path, &self.output_dir, minified.as_bytes());
-        
+        self.cache_manifest
+            .register_file(&path, &self.output_dir, minified.as_bytes());
+
         fs::write(path, minified)?;
         Ok(())
     }
 
     /// Create default navbar items
-    pub(crate) fn create_navbar_items(&self, current_page: &str) -> Vec<NavItem> {
+    pub(crate) fn create_navbar_items(&self, current_page: &str, nav: NavContext) -> Vec<NavItem> {
         let mut items = Vec::new();
-        
-        // Add books navigation item only if we have a books path configured
-        if self.books_path.is_some() {
+
+        // Books list is only available when there are books.
+        if nav.has_books {
             items.push(NavItem {
                 label: self.translations.get("books"),
                 href: "/".to_string(),
@@ -85,15 +104,28 @@ impl SiteGenerator {
                 is_active: current_page == "books",
             });
         }
-        
+
+        // Comics list is `/comics/` when books exist, otherwise it becomes the home page (`/`).
+        if nav.has_comics {
+            let href = if nav.has_books { "/comics/" } else { "/" };
+            items.push(NavItem {
+                label: self.translations.get("comics"),
+                href: href.to_string(),
+                // Comic book icon (layered rectangles with binding)
+                icon_svg: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10".to_string(),
+                is_active: current_page == "comics",
+            });
+        }
+
         // Add stats navigation item if we have a stats database path configured
         if self.statistics_db_path.is_some() {
-            let stats_href = if self.books_path.is_some() {
-                "/statistics/".to_string()  // Books exist, stats go to subfolder
+            let stats_href = if nav.stats_at_root {
+                "/"
             } else {
-                "/".to_string()  // No books, stats are at root
-            };
-            
+                "/statistics/"
+            }
+            .to_string();
+
             items.push(NavItem {
                 label: self.translations.get("statistics"),
                 href: stats_href,
@@ -101,7 +133,7 @@ impl SiteGenerator {
                 is_active: current_page == "statistics",
             });
         }
-        
+
         // Add calendar navigation item if we have statistics data
         if self.statistics_db_path.is_some() {
             items.push(NavItem {
@@ -111,12 +143,17 @@ impl SiteGenerator {
                 is_active: current_page == "calendar",
             });
         }
-        
+
         items
     }
 
-    pub(crate) fn create_navbar_items_with_recap(&self, current_page: &str, recap_latest_href: Option<&str>) -> Vec<NavItem> {
-        let mut items = self.create_navbar_items(current_page);
+    pub(crate) fn create_navbar_items_with_recap(
+        &self,
+        current_page: &str,
+        recap_latest_href: Option<&str>,
+        nav: NavContext,
+    ) -> Vec<NavItem> {
+        let mut items = self.create_navbar_items(current_page, nav);
         if self.statistics_db_path.is_some() {
             let href = recap_latest_href.unwrap_or("/recap/");
             items.push(NavItem {

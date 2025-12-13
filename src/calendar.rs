@@ -1,9 +1,9 @@
-/// Provides utilities for generating calendar-related data (events, monthly payloads, stats).
-use chrono::{NaiveDate, Duration};
-use std::collections::{HashMap, BTreeMap};
-use chrono::Datelike;
 use crate::models::*;
 use crate::time_config::TimeConfig;
+use chrono::Datelike;
+/// Provides utilities for generating calendar-related data (events, monthly payloads, stats).
+use chrono::{Duration, NaiveDate};
+use std::collections::{BTreeMap, HashMap};
 
 pub struct CalendarGenerator;
 
@@ -12,7 +12,7 @@ impl CalendarGenerator {
     /// Returns a `CalendarMonths` map keyed by "YYYY-MM".
     pub fn generate_calendar_months(
         stats_data: &StatisticsData,
-        books: &[Book],
+        books: &[LibraryItem],
         time_config: &TimeConfig,
     ) -> CalendarMonths {
         // Group page stats by book ID first
@@ -67,12 +67,8 @@ impl CalendarGenerator {
                     .map(|(path, cover)| (Some(path.clone()), Some(cover.clone())))
                     .unwrap_or((None, None));
 
-                let calendar_book = CalendarBook::new(
-                    stat_book.title.clone(),
-                    authors,
-                    book_path,
-                    book_cover,
-                );
+                let calendar_book =
+                    CalendarBook::new(stat_book.title.clone(), authors, book_path, book_cover);
                 calendar_books.insert(calendar_book_id.clone(), calendar_book);
             }
 
@@ -83,9 +79,10 @@ impl CalendarGenerator {
             // Build sessions grouped per day (NaiveDate)
             let mut sessions_by_day: HashMap<NaiveDate, Vec<&PageStat>> = HashMap::new();
             for session in &sorted_sessions {
-                if let Ok(date) =
-                    NaiveDate::parse_from_str(&Self::timestamp_to_date_string(session.start_time, time_config), "%Y-%m-%d")
-                {
+                if let Ok(date) = NaiveDate::parse_from_str(
+                    &Self::timestamp_to_date_string(session.start_time, time_config),
+                    "%Y-%m-%d",
+                ) {
                     sessions_by_day.entry(date).or_default().push(session);
                 }
             }
@@ -159,14 +156,17 @@ impl CalendarGenerator {
                 let year_month = format!("{}-{:02}", iter_date.year(), iter_date.month());
 
                 // Ensure entry exists
-                let month_entry = months_map.entry(year_month.clone()).or_insert_with(|| CalendarMonthData {
-                    events: Vec::new(),
-                    books: std::collections::BTreeMap::new(),
-                    stats: monthly_stats_map
-                        .get(&year_month)
-                        .cloned()
-                        .unwrap_or(zero_stats.clone()),
-                });
+                let month_entry =
+                    months_map
+                        .entry(year_month.clone())
+                        .or_insert_with(|| CalendarMonthData {
+                            events: Vec::new(),
+                            books: std::collections::BTreeMap::new(),
+                            stats: monthly_stats_map
+                                .get(&year_month)
+                                .cloned()
+                                .unwrap_or(zero_stats.clone()),
+                        });
 
                 // Push event (clone so that events can live in multiple months if spanning)
                 month_entry.events.push(ev.clone());
@@ -183,7 +183,8 @@ impl CalendarGenerator {
                 iter_date = if iter_date.month() == 12 {
                     chrono::NaiveDate::from_ymd_opt(iter_date.year() + 1, 1, 1).unwrap()
                 } else {
-                    chrono::NaiveDate::from_ymd_opt(iter_date.year(), iter_date.month() + 1, 1).unwrap()
+                    chrono::NaiveDate::from_ymd_opt(iter_date.year(), iter_date.month() + 1, 1)
+                        .unwrap()
                 };
             }
         }
@@ -217,10 +218,8 @@ impl CalendarGenerator {
 
         let mut span_start = days[0];
         let mut prev_day = days[0];
-        let mut span_sessions: Vec<&PageStat> = sessions_by_day
-            .get(&days[0])
-            .cloned()
-            .unwrap_or_default();
+        let mut span_sessions: Vec<&PageStat> =
+            sessions_by_day.get(&days[0]).cloned().unwrap_or_default();
 
         for day in days.iter().skip(1) {
             let is_consecutive_day = *day == prev_day + Duration::days(1);
@@ -272,7 +271,11 @@ impl CalendarGenerator {
         let end_exclusive = if start_date == end_date {
             None
         } else {
-            Some((end_date + Duration::days(1)).format("%Y-%m-%d").to_string())
+            Some(
+                (end_date + Duration::days(1))
+                    .format("%Y-%m-%d")
+                    .to_string(),
+            )
         };
 
         let event = CalendarEvent::new(
@@ -287,7 +290,9 @@ impl CalendarGenerator {
     }
 
     /// Convert Unix timestamp to ISO date string (yyyy-mm-dd)
-    fn timestamp_to_date_string(timestamp: i64, time_config: &TimeConfig) -> String { time_config.format_date(timestamp) }
+    fn timestamp_to_date_string(timestamp: i64, time_config: &TimeConfig) -> String {
+        time_config.format_date(timestamp)
+    }
 
     /// Build per-month reading statistics from raw `StatisticsData`.
     /// Returns a map keyed by "YYYY-MM" → `MonthlyStats`.
@@ -295,8 +300,8 @@ impl CalendarGenerator {
         stats_data: &StatisticsData,
         time_config: &TimeConfig,
     ) -> std::collections::HashMap<String, MonthlyStats> {
-        use std::collections::{HashMap, HashSet};
         use chrono::{Datelike, NaiveDate};
+        use std::collections::{HashMap, HashSet};
 
         #[derive(Default)]
         struct MonthlyStatsAccumulator {
@@ -360,4 +365,4 @@ impl CalendarGenerator {
 
         monthly_stats_map
     }
-} 
+}

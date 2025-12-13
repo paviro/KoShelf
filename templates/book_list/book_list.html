@@ -10,7 +10,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans">
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
+      data-section-toggle-scope="book-list"
+      data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else %}books{% endif %}">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
     
@@ -19,7 +21,9 @@
         <div class="flex items-center justify-between h-full">
             <!-- Mobile Logo/Title (hidden when search is active) -->
             <div id="mobileTitle" class="lg:hidden flex items-center">
-                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ translation.get("books") }}</h1>
+                <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                    {% if details_base_path == "/comics/" %}{{ translation.get("comics") }}{% else %}{{ translation.get("books") }}{% endif %}
+                </h1>
             </div>
             
             <!-- Mobile Search Input (hidden by default, shown when search is active) -->
@@ -28,7 +32,9 @@
             </div>
             
             <!-- Desktop Page Title -->
-            <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("books") }}</h2>
+            <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">
+                {% if details_base_path == "/comics/" %}{{ translation.get("comics") }}{% else %}{{ translation.get("books") }}{% endif %}
+            </h2>
             
             <div class="flex items-center space-x-3 md:space-x-4">
                 <!-- Desktop search input -->
@@ -116,7 +122,7 @@
                 {% set section_name = "unread" %}
                 {% set section_title = translation.get("status.unread") %}
                 {% set books = unread_books %}
-                {% set default_visible = "false" %}
+                {% set default_visible = "true" %}
                 {% set gradient_classes = "from-orange-400 to-orange-600" %}
                 {% set badge_classes = "from-orange-500 to-orange-600" %}
                 {% include "book_list/components/book_section.html" %}

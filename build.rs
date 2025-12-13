@@ -1,6 +1,6 @@
-use std::process::Command;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
+use std::process::Command;
 
 fn main() {
     println!("cargo:rerun-if-changed=assets/input.css");
@@ -20,18 +20,24 @@ fn main() {
     }
 
     // Install dependencies if node_modules doesn't exist or if package-lock.json is newer than node_modules
-    let should_install = !Path::new("node_modules").exists() || 
-        (Path::new("package-lock.json").exists() && 
-         Path::new("node_modules").metadata().and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::UNIX_EPOCH) <
-         Path::new("package-lock.json").metadata().and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::UNIX_EPOCH));
-    
+    let should_install = !Path::new("node_modules").exists()
+        || (Path::new("package-lock.json").exists()
+            && Path::new("node_modules")
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                < Path::new("package-lock.json")
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH));
+
     if should_install {
         eprintln!("Installing npm dependencies...");
         let install_output = Command::new("npm")
             .arg("install")
             .output()
             .expect("Failed to run npm install. Make sure Node.js and npm are installed.");
-        
+
         if !install_output.status.success() {
             panic!(
                 "npm install failed: {}",
@@ -45,20 +51,22 @@ fn main() {
 
     // Generate the CSS using Tailwind
     eprintln!("Compiling Tailwind CSS...");
-    
+
     // Create a temporary output file for the CSS
     let output_path = std::env::temp_dir().join("style.css");
-    
+
     let tailwind_output = Command::new("npx")
         .args([
             "tailwindcss",
-            "-i", "./assets/input.css",
-            "-o", &output_path.to_string_lossy(),
-            "--minify"
+            "-i",
+            "./assets/input.css",
+            "-o",
+            &output_path.to_string_lossy(),
+            "--minify",
         ])
         .output()
         .expect("Failed to run Tailwind CSS compilation. Make sure Node.js and npm are installed.");
-    
+
     if !tailwind_output.status.success() {
         panic!(
             "Tailwind CSS compilation failed: {}",
@@ -67,62 +75,67 @@ fn main() {
     }
 
     // Read the generated CSS and write it to a file that can be included at compile time
-    let css_content = fs::read_to_string(&output_path)
-        .expect("Failed to read generated CSS file");
-    
+    let css_content = fs::read_to_string(&output_path).expect("Failed to read generated CSS file");
+
     // Write the CSS to a file in the target directory for inclusion
     let dest_path = Path::new(&out_dir).join("compiled_style.css");
-    fs::write(&dest_path, css_content)
-        .expect("Failed to write CSS to output directory");
-    
+    fs::write(&dest_path, css_content).expect("Failed to write CSS to output directory");
+
     // Clean up the temporary file
     let _ = fs::remove_file(&output_path);
-    
+
     eprintln!("Tailwind CSS compilation completed");
 
     // Compile TypeScript with esbuild
     compile_typescript(&out_dir);
 
-
-
     // Copy calendar library files
     eprintln!("Copying event calendar library files...");
-    
-    let calendar_js_path = Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js");
-    let calendar_css_path = Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.css");
-    let calendar_map_path = Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js.map");
-    
+
+    let calendar_js_path =
+        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js");
+    let calendar_css_path =
+        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.css");
+    let calendar_map_path =
+        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js.map");
+
     // Ensure calendar JS file exists
     if !calendar_js_path.exists() {
-        panic!("Event calendar JS file not found at {:?}. Make sure @event-calendar/build is properly installed.", calendar_js_path);
+        panic!(
+            "Event calendar JS file not found at {:?}. Make sure @event-calendar/build is properly installed.",
+            calendar_js_path
+        );
     }
-    
-    let calendar_js_content = fs::read_to_string(calendar_js_path)
-        .expect("Failed to read event calendar JS file");
+
+    let calendar_js_content =
+        fs::read_to_string(calendar_js_path).expect("Failed to read event calendar JS file");
     let calendar_js_dest = Path::new(&out_dir).join("event-calendar.min.js");
     fs::write(&calendar_js_dest, calendar_js_content)
         .expect("Failed to write event calendar JS to output directory");
-    
-    // Ensure calendar CSS file exists  
+
+    // Ensure calendar CSS file exists
     if !calendar_css_path.exists() {
-        panic!("Event calendar CSS file not found at {:?}. Make sure @event-calendar/build is properly installed.", calendar_css_path);
+        panic!(
+            "Event calendar CSS file not found at {:?}. Make sure @event-calendar/build is properly installed.",
+            calendar_css_path
+        );
     }
-    
-    let calendar_css_content = fs::read_to_string(calendar_css_path)
-        .expect("Failed to read event calendar CSS file");
+
+    let calendar_css_content =
+        fs::read_to_string(calendar_css_path).expect("Failed to read event calendar CSS file");
     let calendar_css_dest = Path::new(&out_dir).join("event-calendar.min.css");
     fs::write(&calendar_css_dest, calendar_css_content)
         .expect("Failed to write event calendar CSS to output directory");
-    
+
     // Copy calendar JS map file if it exists
     if calendar_map_path.exists() {
-        let calendar_map_content = fs::read_to_string(calendar_map_path)
-            .expect("Failed to read event calendar map file");
+        let calendar_map_content =
+            fs::read_to_string(calendar_map_path).expect("Failed to read event calendar map file");
         let calendar_map_dest = Path::new(&out_dir).join("event-calendar.min.js.map");
         fs::write(&calendar_map_dest, calendar_map_content)
             .expect("Failed to write event calendar map to output directory");
     }
-    
+
     eprintln!("Event calendar library files copied successfully");
 
     // Download and embed fonts for SVG rendering
@@ -133,13 +146,13 @@ fn main() {
 /// Outputs JavaScript files to the OUT_DIR for embedding via include_str!
 fn compile_typescript(out_dir: &str) {
     let ts_dir = Path::new("assets/ts");
-    
+
     // Skip if no TypeScript directory exists yet (allows gradual migration)
     if !ts_dir.exists() {
         eprintln!("No assets/ts directory found, skipping TypeScript compilation");
         return;
     }
-    
+
     // Collect all .ts files (excluding types/ subdirectory which contains type definitions only)
     let ts_files: Vec<_> = fs::read_dir(ts_dir)
         .expect("Failed to read assets/ts directory")
@@ -150,14 +163,14 @@ fn compile_typescript(out_dir: &str) {
         })
         .map(|e| e.path().to_string_lossy().to_string())
         .collect();
-    
+
     if ts_files.is_empty() {
         eprintln!("No TypeScript files found in assets/ts/, skipping compilation");
         return;
     }
-    
+
     eprintln!("Compiling {} TypeScript files...", ts_files.len());
-    
+
     let mut args = vec![
         "esbuild".to_string(),
         "--bundle".to_string(),
@@ -167,12 +180,12 @@ fn compile_typescript(out_dir: &str) {
         format!("--outdir={}", out_dir),
     ];
     args.extend(ts_files);
-    
+
     let esbuild_output = Command::new("npx")
         .args(&args)
         .output()
         .expect("Failed to run esbuild. Make sure Node.js and npm are installed.");
-    
+
     if !esbuild_output.status.success() {
         panic!(
             "TypeScript compilation failed:\nstdout: {}\nstderr: {}",
@@ -180,7 +193,7 @@ fn compile_typescript(out_dir: &str) {
             String::from_utf8_lossy(&esbuild_output.stderr)
         );
     }
-    
+
     eprintln!("TypeScript compilation completed successfully");
 }
 
@@ -190,11 +203,11 @@ fn download_fonts(out_dir: &str) {
     let fonts = [
         (
             "Gelasio-Regular.ttf",
-            "https://fonts.gstatic.com/s/gelasio/v14/cIfiMaFfvUQxTTqS3iKJkLGbI41wQL8Ilycs.ttf"
+            "https://fonts.gstatic.com/s/gelasio/v14/cIfiMaFfvUQxTTqS3iKJkLGbI41wQL8Ilycs.ttf",
         ),
         (
-            "Gelasio-Italic.ttf", 
-            "https://fonts.gstatic.com/s/gelasio/v14/cIfsMaFfvUQxTTqS9Cu7b2nySBfeR6rA1M9v8zQ.ttf"
+            "Gelasio-Italic.ttf",
+            "https://fonts.gstatic.com/s/gelasio/v14/cIfsMaFfvUQxTTqS9Cu7b2nySBfeR6rA1M9v8zQ.ttf",
         ),
     ];
 
@@ -206,7 +219,7 @@ fn download_fonts(out_dir: &str) {
     for (filename, url) in fonts {
         let cache_path = cache_dir.join(filename);
         let dest_path = Path::new(out_dir).join(filename);
-        
+
         // Check if font is already in shared cache
         if cache_path.exists() {
             eprintln!("Font {} found in cache, copying to build dir", filename);
@@ -216,29 +229,33 @@ fn download_fonts(out_dir: &str) {
         }
 
         eprintln!("Downloading font: {}...", filename);
-        
+
         match ureq::get(url).call() {
             Ok(response) => {
                 let bytes = match response.into_body().read_to_vec() {
                     Ok(b) => b,
                     Err(e) => panic!("Failed to read font data for {}: {}", filename, e),
                 };
-                
+
                 // Save to shared cache
                 fs::write(&cache_path, &bytes)
                     .unwrap_or_else(|e| panic!("Failed to cache font {}: {}", filename, e));
-                
+
                 // Copy to build output directory
                 fs::write(&dest_path, &bytes)
                     .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
-                
-                eprintln!("Font {} downloaded and cached ({} bytes)", filename, bytes.len());
+
+                eprintln!(
+                    "Font {} downloaded and cached ({} bytes)",
+                    filename,
+                    bytes.len()
+                );
             }
             Err(e) => {
                 panic!("Failed to download font {}: {}", filename, e);
             }
         }
     }
-    
+
     eprintln!("Font files downloaded/verified successfully");
-} 
+}

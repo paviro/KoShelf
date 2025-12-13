@@ -20,6 +20,7 @@
 #           Navigation & Shared
 # -----------------------------------
 books = Книги
+comics = Комікси
 statistics = Статистика
 calendar = Календар
 recap = Підсумки
@@ -63,16 +64,29 @@ book-label = { $count ->
     [many] Книг
    *[other] Книг
 }
+comic-label = { $count ->
+    [one] Комікс
+    [few] Комікси
+    [many] Коміксів
+   *[other] Коміксів
+}
 books-finished = { $count ->
     [one] { book-label } прочитана
     [few] { book-label } прочитані
     [many] { book-label } прочитано
    *[other] { book-label } прочитано
 }
+comics-finished = { $count ->
+    [one] { comic-label } прочитаний
+    [few] { comic-label } прочитані
+    [many] { comic-label } прочитано
+   *[other] { comic-label } прочитано
+}
 unknown-book = Невідома книга
 unknown-author = Невідомий автор
 by = автор
 book-overview = Огляд книги
+comic-overview = Огляд коміксу
 
 # -----------------------------------
 #            Book Details

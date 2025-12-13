@@ -34,7 +34,10 @@ impl MobiParser {
         let record0 = match Self::extract_pdb_record0(&data) {
             Ok(r0) => r0,
             Err(e) => {
-                warn!("Failed to parse PDB/MOBI structure for {:?}: {}", mobi_path, e);
+                warn!(
+                    "Failed to parse PDB/MOBI structure for {:?}: {}",
+                    mobi_path, e
+                );
                 return Ok(Self::book_info_from_filename(&fallback_title));
             }
         };
@@ -146,13 +149,19 @@ impl MobiParser {
                     candidates.push(cover_rec.saturating_add(1));
                     if first_image_index > 0 {
                         candidates.push(first_image_index.saturating_add(cover_rec));
-                        candidates.push(first_image_index.saturating_add(cover_rec).saturating_add(1));
+                        candidates.push(
+                            first_image_index
+                                .saturating_add(cover_rec)
+                                .saturating_add(1),
+                        );
                     }
                     candidates.sort();
                     candidates.dedup();
 
                     for idx in candidates {
-                        if let Some((bytes, mime)) = Self::extract_image_record(&data, &record_ranges, idx) {
+                        if let Some((bytes, mime)) =
+                            Self::extract_image_record(&data, &record_ranges, idx)
+                        {
                             cover_data = Some(bytes);
                             cover_mime_type = Some(mime);
                             break;
@@ -167,7 +176,8 @@ impl MobiParser {
         if cover_data.is_none() && !record_ranges.is_empty() {
             let start = first_image_index.min(record_ranges.len().saturating_sub(1));
             for idx in start..record_ranges.len() {
-                if let Some((bytes, mime)) = Self::extract_image_record(&data, &record_ranges, idx) {
+                if let Some((bytes, mime)) = Self::extract_image_record(&data, &record_ranges, idx)
+                {
                     cover_data = Some(bytes);
                     cover_mime_type = Some(mime);
                     break;
@@ -226,7 +236,8 @@ impl MobiParser {
         if data.len() < 78 {
             return Err(anyhow!("File too small to be a PDB/MOBI"));
         }
-        let record_count = Self::read_u16_be(data, 76).context("Failed to read PDB record count")? as usize;
+        let record_count =
+            Self::read_u16_be(data, 76).context("Failed to read PDB record count")? as usize;
         if record_count == 0 {
             return Err(anyhow!("PDB record count is zero"));
         }
@@ -239,15 +250,22 @@ impl MobiParser {
         }
 
         // Read first two record offsets to bound record 0.
-        let off0 = Self::read_u32_be(data, record_list_start).context("Failed to read record 0 offset")? as usize;
+        let off0 = Self::read_u32_be(data, record_list_start)
+            .context("Failed to read record 0 offset")? as usize;
         let off1 = if record_count >= 2 {
-            Self::read_u32_be(data, record_list_start + 8).context("Failed to read record 1 offset")? as usize
+            Self::read_u32_be(data, record_list_start + 8)
+                .context("Failed to read record 1 offset")? as usize
         } else {
             data.len()
         };
 
         if off0 >= data.len() || off1 > data.len() || off1 <= off0 {
-            return Err(anyhow!("Invalid PDB record offsets (off0={}, off1={}, len={})", off0, off1, data.len()));
+            return Err(anyhow!(
+                "Invalid PDB record offsets (off0={}, off1={}, len={})",
+                off0,
+                off1,
+                data.len()
+            ));
         }
         Ok(data[off0..off1].to_vec())
     }
@@ -258,7 +276,8 @@ impl MobiParser {
         if data.len() < 78 {
             return Err(anyhow!("File too small to be a PDB/MOBI"));
         }
-        let record_count = Self::read_u16_be(data, 76).context("Failed to read PDB record count")? as usize;
+        let record_count =
+            Self::read_u16_be(data, 76).context("Failed to read PDB record count")? as usize;
         if record_count == 0 {
             return Err(anyhow!("PDB record count is zero"));
         }
@@ -273,7 +292,8 @@ impl MobiParser {
         let mut offsets: Vec<usize> = Vec::with_capacity(record_count);
         for i in 0..record_count {
             let off = Self::read_u32_be(data, record_list_start + (i * 8))
-                .with_context(|| format!("Failed to read record {} offset", i))? as usize;
+                .with_context(|| format!("Failed to read record {} offset", i))?
+                as usize;
             offsets.push(off);
         }
         // Add end sentinel
@@ -284,14 +304,24 @@ impl MobiParser {
             let start = offsets[i];
             let end = offsets[i + 1];
             if start >= data.len() || end > data.len() || end <= start {
-                return Err(anyhow!("Invalid PDB record offsets at {} (start={}, end={}, len={})", i, start, end, data.len()));
+                return Err(anyhow!(
+                    "Invalid PDB record offsets at {} (start={}, end={}, len={})",
+                    i,
+                    start,
+                    end,
+                    data.len()
+                ));
             }
             ranges.push((start, end));
         }
         Ok(ranges)
     }
 
-    fn extract_image_record(data: &[u8], ranges: &[(usize, usize)], record_index: usize) -> Option<(Vec<u8>, String)> {
+    fn extract_image_record(
+        data: &[u8],
+        ranges: &[(usize, usize)],
+        record_index: usize,
+    ) -> Option<(Vec<u8>, String)> {
         let (start, end) = *ranges.get(record_index)?;
         let bytes = &data[start..end];
         let mime = Self::guess_image_mime(bytes)?;
@@ -405,7 +435,11 @@ impl MobiParser {
                 out.push(part.to_string());
             }
         }
-        if out.is_empty() { vec![s.to_string()] } else { out }
+        if out.is_empty() {
+            vec![s.to_string()]
+        } else {
+            out
+        }
     }
 
     fn dedupe_preserve_order(items: Vec<String>) -> Vec<String> {

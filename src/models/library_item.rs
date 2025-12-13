@@ -5,10 +5,27 @@ use serde::{Deserialize, Serialize};
 
 use super::koreader_metadata::KoReaderMetadata;
 
-/// Supported ebook formats
+/// Content type classification (broad category)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum BookFormat {
+pub enum ContentType {
+    Book,
+    Comic,
+}
+
+impl std::fmt::Display for ContentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContentType::Book => write!(f, "book"),
+            ContentType::Comic => write!(f, "comic"),
+        }
+    }
+}
+
+/// Supported library item formats (ebooks + comics)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LibraryItemFormat {
     Epub,
     Fb2,
     Mobi,
@@ -16,17 +33,17 @@ pub enum BookFormat {
     Cbr,
 }
 
-impl BookFormat {
+impl LibraryItemFormat {
     /// Try to detect format from a file path's extension
     /// Handles compound extensions like .fb2.zip
     pub fn from_path(path: &Path) -> Option<Self> {
         let filename = path.file_name()?.to_str()?.to_lowercase();
-        
+
         // Check for compound extensions first (e.g., .fb2.zip)
         if filename.ends_with(".fb2.zip") {
             return Some(Self::Fb2);
         }
-        
+
         // Then check simple extensions
         let ext = path.extension()?.to_str()?.to_lowercase();
         match ext.as_str() {
@@ -61,6 +78,14 @@ impl BookFormat {
                 | "metadata.cbz.lua"
                 | "metadata.cbr.lua"
         )
+    }
+
+    /// Get the content type for this format
+    pub fn content_type(&self) -> ContentType {
+        match self {
+            Self::Epub | Self::Fb2 | Self::Mobi => ContentType::Book,
+            Self::Cbz | Self::Cbr => ContentType::Comic,
+        }
     }
 }
 
@@ -123,14 +148,15 @@ impl Identifier {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Book {
+pub struct LibraryItem {
     pub id: String,
     pub book_info: BookInfo,
     pub koreader_metadata: Option<KoReaderMetadata>,
     pub file_path: PathBuf,
+    pub format: LibraryItemFormat,
 }
 
-impl Book {
+impl LibraryItem {
     pub fn status(&self) -> BookStatus {
         self.koreader_metadata
             .as_ref()
@@ -338,6 +364,21 @@ impl Book {
             _ => None,
         }
     }
+
+    /// Get the content type of this book
+    pub fn content_type(&self) -> ContentType {
+        self.format.content_type()
+    }
+
+    /// Check if this is a comic (CBZ/CBR)
+    pub fn is_comic(&self) -> bool {
+        self.content_type() == ContentType::Comic
+    }
+
+    /// Check if this is a book (EPUB/FB2/MOBI)
+    pub fn is_book(&self) -> bool {
+        self.content_type() == ContentType::Book
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -351,7 +392,7 @@ pub struct BookInfo {
     pub subjects: Vec<String>,        // Genres/subjects/tags
     pub series: Option<String>,
     pub series_number: Option<String>,
-    pub pages: Option<u32>,           // Page count from format (EPUB page-list, comic images)
+    pub pages: Option<u32>, // Page count from format (EPUB page-list, comic images)
     pub cover_data: Option<Vec<u8>>,
     pub cover_mime_type: Option<String>,
 }

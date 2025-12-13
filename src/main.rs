@@ -1,50 +1,51 @@
+use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::PathBuf;
-use anyhow::{Result, Context};
-use regex::Regex;
 use log::info;
+use regex::Regex;
+use std::path::PathBuf;
 
-mod models;
+mod calendar;
+mod comic_parser;
 mod config;
 mod epub_parser;
 mod fb2_parser;
-mod mobi_parser;
-mod comic_parser;
-mod lua_parser;
-mod site_generator;
-mod templates;
-mod web_server;
 mod file_watcher;
-mod book_scanner;
-mod utils;
-mod session_calculator;
-mod statistics_parser;
-mod statistics;
-mod calendar;
-mod read_completion_analyzer;
-mod time_config;
-mod partial_md5;
-mod share_image;
-mod version_notifier;
 mod i18n;
+mod library_scanner;
+mod lua_parser;
+mod mobi_parser;
+mod models;
+mod partial_md5;
+mod read_completion_analyzer;
+mod session_calculator;
+mod share_image;
+mod site_generator;
+mod statistics;
+mod statistics_parser;
+mod templates;
+mod time_config;
+mod utils;
+mod version_notifier;
+mod web_server;
 
 #[cfg(test)]
 mod tests;
 
 use crate::config::SiteConfig;
-use crate::site_generator::SiteGenerator;
-use crate::web_server::WebServer;
 use crate::file_watcher::FileWatcher;
+use crate::library_scanner::MetadataLocation;
+use crate::site_generator::SiteGenerator;
 use crate::time_config::TimeConfig;
-use crate::book_scanner::MetadataLocation;
 use crate::version_notifier::create_version_notifier;
+use crate::web_server::WebServer;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Path to the folder containing epub files and KoReader metadata (optional if statistics_db is provided)
-    #[arg(short, long, display_order = 1)]
-    books_path: Option<PathBuf>,
+    /// Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata.
+    /// Can be specified multiple times. (optional if statistics_db is provided)
+    #[arg(short = 'i', long, alias = "books-path", display_order = 1, action = clap::ArgAction::Append)]
+    library_path: Vec<PathBuf>,
 
     /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --books-path. Mutually exclusive with --hashdocsettings-path.
     #[arg(long, display_order = 2)]
@@ -57,7 +58,7 @@ struct Cli {
     /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
     #[arg(short, long, display_order = 4)]
     statistics_db: Option<PathBuf>,
-    
+
     /// Output directory for the generated static site (if not provided, starts web server with file watching)
     #[arg(short, long, display_order = 5)]
     output: Option<PathBuf>,
@@ -69,7 +70,7 @@ struct Cli {
     /// Enable file watching with static output (requires --output)
     #[arg(short, long, default_value = "false", display_order = 7)]
     watch: bool,
-    
+
     /// Site title
     #[arg(short, long, default_value = "KoShelf", display_order = 8)]
     title: String,
@@ -81,7 +82,7 @@ struct Cli {
     /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
     #[arg(long, default_value = "auto", display_order = 10)]
     heatmap_scale_max: String,
-    
+
     /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
     #[arg(long, display_order = 11)]
     timezone: Option<String>,
@@ -157,77 +158,90 @@ async fn main() -> Result<()> {
         .parse_default_env()
         .init();
     let cli = Cli::parse();
-    
+
     // Handle --github flag
     if cli.github {
         println!("https://github.com/paviro/KOShelf");
         return Ok(());
     }
-    
+
     // Handle --list-languages flag
     if cli.list_languages {
         println!("{}", i18n::list_supported_languages());
         return Ok(());
     }
-    
+
     info!("Starting KOShelf...");
-    
-    // Require at least one of books_path or statistics_db
-    if cli.books_path.is_none() && cli.statistics_db.is_none() {
-        anyhow::bail!("Either --books-path or --statistics-db (or both) must be provided");
+
+    // Require at least one of library_path or statistics_db
+    if cli.library_path.is_empty() && cli.statistics_db.is_none() {
+        anyhow::bail!("Either --library-path or --statistics-db (or both) must be provided");
     }
-    
-    // Validate books path if provided
-    if let Some(ref books_path) = cli.books_path {
-        if !books_path.exists() {
-            anyhow::bail!("Books path does not exist: {:?}", books_path);
+
+    // Validate library paths if provided
+    for library_path in &cli.library_path {
+        if !library_path.exists() {
+            anyhow::bail!("Library path does not exist: {:?}", library_path);
         }
-        if !books_path.is_dir() {
-            anyhow::bail!("Books path is not a directory: {:?}", books_path);
+        if !library_path.is_dir() {
+            anyhow::bail!("Library path is not a directory: {:?}", library_path);
         }
     }
 
     // Validate include-unread option
-    if cli.include_unread && cli.books_path.is_none() {
-        anyhow::bail!("--include-unread can only be used when --books-path is provided");
+    if cli.include_unread && cli.library_path.is_empty() {
+        anyhow::bail!("--include-unread can only be used when --library-path is provided");
     }
 
     // Validate docsettings-path and hashdocsettings-path options
     if cli.docsettings_path.is_some() && cli.hashdocsettings_path.is_some() {
-        anyhow::bail!("--docsettings-path and --hashdocsettings-path are mutually exclusive. Please use only one.");
+        anyhow::bail!(
+            "--docsettings-path and --hashdocsettings-path are mutually exclusive. Please use only one."
+        );
     }
-    
-    if cli.docsettings_path.is_some() && cli.books_path.is_none() {
-        anyhow::bail!("--docsettings-path requires --books-path to be provided");
+
+    if cli.docsettings_path.is_some() && cli.library_path.is_empty() {
+        anyhow::bail!("--docsettings-path requires --library-path to be provided");
     }
-    
-    if cli.hashdocsettings_path.is_some() && cli.books_path.is_none() {
-        anyhow::bail!("--hashdocsettings-path requires --books-path to be provided");
+
+    if cli.hashdocsettings_path.is_some() && cli.library_path.is_empty() {
+        anyhow::bail!("--hashdocsettings-path requires --library-path to be provided");
     }
-    
+
     // Validate docsettings path if provided
     if let Some(ref docsettings_path) = cli.docsettings_path {
         if !docsettings_path.exists() {
             anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
         }
         if !docsettings_path.is_dir() {
-            anyhow::bail!("Docsettings path is not a directory: {:?}", docsettings_path);
+            anyhow::bail!(
+                "Docsettings path is not a directory: {:?}",
+                docsettings_path
+            );
         }
     }
-    
+
     // Validate hashdocsettings path if provided
     if let Some(ref hashdocsettings_path) = cli.hashdocsettings_path {
         if !hashdocsettings_path.exists() {
-            anyhow::bail!("Hashdocsettings path does not exist: {:?}", hashdocsettings_path);
+            anyhow::bail!(
+                "Hashdocsettings path does not exist: {:?}",
+                hashdocsettings_path
+            );
         }
         if !hashdocsettings_path.is_dir() {
-            anyhow::bail!("Hashdocsettings path is not a directory: {:?}", hashdocsettings_path);
+            anyhow::bail!(
+                "Hashdocsettings path is not a directory: {:?}",
+                hashdocsettings_path
+            );
         }
     }
 
     // Validate watch option
     if cli.watch && cli.output.is_none() {
-        info!("--watch specified without --output. Note that file watching is enabled by default when no output directory is specified (web server mode)");
+        info!(
+            "--watch specified without --output. Note that file watching is enabled by default when no output directory is specified (web server mode)"
+        );
     }
 
     // Validate port option
@@ -237,13 +251,18 @@ async fn main() -> Result<()> {
 
     // Validate statistics database if provided
     if let Some(ref stats_path) = cli.statistics_db
-        && !stats_path.exists() {
+        && !stats_path.exists()
+    {
         anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
     }
 
     // Parse heatmap scale max
-    let heatmap_scale_max = parse_time_to_seconds(&cli.heatmap_scale_max)
-        .with_context(|| format!("Invalid heatmap-scale-max format: {}", cli.heatmap_scale_max))?;
+    let heatmap_scale_max = parse_time_to_seconds(&cli.heatmap_scale_max).with_context(|| {
+        format!(
+            "Invalid heatmap-scale-max format: {}",
+            cli.heatmap_scale_max
+        )
+    })?;
 
     // Build time configuration from CLI
     let time_config = TimeConfig::from_cli(&cli.timezone, &cli.day_start_time)?;
@@ -282,7 +301,7 @@ async fn main() -> Result<()> {
         output_dir: output_dir.clone(),
         site_title: cli.title.clone(),
         include_unread: cli.include_unread,
-        books_path: cli.books_path.clone(),
+        library_paths: cli.library_path.clone(),
         metadata_location: metadata_location.clone(),
         statistics_db_path: cli.statistics_db.clone(),
         heatmap_scale_max,
@@ -296,7 +315,7 @@ async fn main() -> Result<()> {
 
     // Create site generator - it will handle book scanning and stats loading internally
     let site_generator = SiteGenerator::new(config.clone());
-    
+
     // Generate initial site
     site_generator.generate().await?;
 
@@ -307,10 +326,10 @@ async fn main() -> Result<()> {
     // Web server mode or watch mode
     if cli.output.is_some() && cli.watch {
         info!("Starting file watcher mode for static output");
-        
+
         // Start file watcher only (no long-polling needed for static output)
         let file_watcher = FileWatcher::new(config.clone(), None).await?;
-        
+
         // Run file watcher
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);
@@ -339,6 +358,6 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }

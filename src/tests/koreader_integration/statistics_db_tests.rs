@@ -1,7 +1,7 @@
 use super::*;
 use crate::statistics_parser::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -467,4 +467,3 @@ _G.G_reader_settings = {
     isTrue = function() return false end,
 }
 "#;
-

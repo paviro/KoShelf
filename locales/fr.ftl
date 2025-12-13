@@ -20,6 +20,7 @@
 #           Navigation & Shared
 # -----------------------------------
 books = Livres
+comics = Bandes dessinées
 statistics = Statistiques
 calendar = Calendrier
 recap = Récap
@@ -61,14 +62,23 @@ book-label = { $count ->
     [one] Livre
    *[other] Livres
 }
+comic-label = { $count ->
+    [one] Bande dessinée
+   *[other] Bandes dessinées
+}
 books-finished = { $count ->
     [one] { book-label } terminé
    *[other] { book-label } terminés
+}
+comics-finished = { $count ->
+    [one] { comic-label } terminée
+   *[other] { comic-label } terminées
 }
 unknown-book = Livre inconnu
 unknown-author = Auteur inconnu
 by = par
 book-overview = Aperçu du livre
+comic-overview = Aperçu de la bande dessinée
 
 # -----------------------------------
 #            Book Details

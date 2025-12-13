@@ -10,6 +10,14 @@ export class StorageManager {
 
     static readonly KEYS = {
         RECAP_SORT_ORDER: 'recap_sort_newest_first',
+        // UI state
+        BOOK_LIST_SECTION_STATE_BOOKS: 'book_list_section_state_books',
+        BOOK_LIST_SECTION_STATE_COMICS: 'book_list_section_state_comics',
+        BOOK_DETAILS_SECTION_STATE_BOOKS: 'book_details_section_state_books',
+        BOOK_DETAILS_SECTION_STATE_COMICS: 'book_details_section_state_comics',
+        STATISTICS_SECTION_STATE_ALL: 'statistics_section_state_all',
+        STATISTICS_SECTION_STATE_BOOKS: 'statistics_section_state_books',
+        STATISTICS_SECTION_STATE_COMICS: 'statistics_section_state_comics',
         // PWA & Versioning
         VERSION: 'version',
         SERVER_MODE: 'server_mode',

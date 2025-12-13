@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::book::BookStatus;
+use super::BookStatus;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KoReaderMetadata {
@@ -25,7 +25,7 @@ pub struct Annotation {
     pub pos0: Option<String>,
     #[serde(skip_serializing)]
     pub pos1: Option<String>,
-    pub text: Option<String>,  // Optional: highlights have text, bookmarks don't
+    pub text: Option<String>, // Optional: highlights have text, bookmarks don't
     pub note: Option<String>,
 }
 
@@ -37,7 +37,7 @@ impl Annotation {
                 .map(|ndt| {
                     let locale = translations.locale();
                     let format_str = translations.get("datetime.full");
-                    
+
                     // format_localized is only available on NaiveDate and DateTime<Tz>, not NaiveDateTime - we need to convert to a DateTime<Utc> first
                     let dt_utc: DateTime<Utc> = DateTime::from_naive_utc_and_offset(ndt, Utc);
                     dt_utc.format_localized(&format_str, locale).to_string()

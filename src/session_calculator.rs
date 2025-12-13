@@ -69,4 +69,4 @@ pub fn session_metrics(page_stats: &[PageStat]) -> (Option<i64>, Option<i64>) {
     let average = Some(total / sessions.len() as i64);
     let longest = sessions.iter().max().copied();
     (average, longest)
-} 
+}

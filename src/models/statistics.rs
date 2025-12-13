@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use chrono::{Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::ContentType;
 use super::completions::BookCompletions;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +20,8 @@ pub struct StatBook {
     pub pages: Option<i64>,
     #[serde(skip_serializing)]
     pub md5: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<ContentType>,
     pub total_read_time: Option<i64>,
     #[serde(skip_serializing)]
     pub total_read_pages: Option<i64>,
@@ -52,6 +55,57 @@ pub struct StatisticsData {
     pub stats_by_md5: HashMap<String, StatBook>,
 }
 
+impl StatisticsData {
+    /// Tag each `StatBook` with its content type using a MD5 lookup map.
+    ///
+    /// Any books not found in the map will keep `content_type = None`.
+    pub fn tag_content_types(&mut self, md5_to_content_type: &HashMap<String, ContentType>) {
+        for b in &mut self.books {
+            b.content_type = md5_to_content_type.get(&b.md5).copied();
+        }
+        for (md5, b) in &mut self.stats_by_md5 {
+            b.content_type = md5_to_content_type.get(md5).copied();
+        }
+    }
+
+    /// Return a cloned `StatisticsData` containing only entries of the given content type.
+    ///
+    /// This filters:
+    /// - `books` by `content_type`
+    /// - `page_stats` by the remaining `id_book` set
+    /// - `stats_by_md5` by the remaining MD5 set
+    pub fn filtered_by_content_type(&self, content_type: ContentType) -> Self {
+        let books: Vec<StatBook> = self
+            .books
+            .iter()
+            .filter(|b| b.content_type == Some(content_type))
+            .cloned()
+            .collect();
+
+        // Keep deterministic ordering the same as the original slice.
+        // (No sorting here; the upstream order is preserved.)
+
+        let ids_to_keep: std::collections::HashSet<i64> = books.iter().map(|b| b.id).collect();
+        let page_stats: Vec<PageStat> = self
+            .page_stats
+            .iter()
+            .filter(|ps| ids_to_keep.contains(&ps.id_book))
+            .cloned()
+            .collect();
+
+        let mut stats_by_md5: HashMap<String, StatBook> = HashMap::new();
+        for b in &books {
+            stats_by_md5.insert(b.md5.clone(), b.clone());
+        }
+
+        Self {
+            books,
+            page_stats,
+            stats_by_md5,
+        }
+    }
+}
+
 /// Streak information with date ranges
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreakInfo {
@@ -74,7 +128,9 @@ impl StreakInfo {
         match (&self.start_date, &self.end_date) {
             (Some(start), Some(end)) => {
                 if start == end {
-                    Self::format_date_display(start, translations).to_string().into()
+                    Self::format_date_display(start, translations)
+                        .to_string()
+                        .into()
                 } else {
                     Some(format!(
                         "{} - {}",
@@ -83,7 +139,10 @@ impl StreakInfo {
                     ))
                 }
             }
-            (Some(start), None) => Some(format!("{} - now", Self::format_date_display(start, translations))),
+            (Some(start), None) => Some(format!(
+                "{} - now",
+                Self::format_date_display(start, translations)
+            )),
             _ => None,
         }
     }
@@ -93,7 +152,7 @@ impl StreakInfo {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
             let current_year = Utc::now().year();
             let locale = translations.locale();
-            
+
             // Get appropriate format string from translations
             let format_key = if date.year() == current_year {
                 "datetime.short-current-year"
@@ -101,7 +160,7 @@ impl StreakInfo {
                 "datetime.short-with-year"
             };
             let format_str = translations.get(format_key);
-            
+
             date.format_localized(&format_str, locale).to_string()
         } else {
             date_str.to_string()

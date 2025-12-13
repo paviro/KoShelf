@@ -10,7 +10,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans">
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
+      data-stats-json-base="{{ stats_json_base_path }}"
+      data-section-toggle-scope="statistics"
+      data-section-toggle-kind="{{ stats_scope }}">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
     
@@ -24,6 +27,27 @@
             
             <!-- Desktop Page Title -->
             <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("reading-statistics") }}</h2>
+
+            <!-- Scope Selector -->
+            <div class="flex items-center">
+                <details class="relative">
+                    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                        <span class="font-medium">
+                            {% if stats_scope == "books" %}{{ translation.get("books") }}
+                            {% elif stats_scope == "comics" %}{{ translation.get("comics") }}
+                            {% else %}{{ translation.get("filter.all") }}{% endif %}
+                        </span>
+                        <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                        <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/">{{ translation.get("filter.all") }}</a>
+                        <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/books/">{{ translation.get("books") }}</a>
+                        <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/statistics/comics/">{{ translation.get("comics") }}</a>
+                    </div>
+                </details>
+            </div>
         </div>
     </header>
     

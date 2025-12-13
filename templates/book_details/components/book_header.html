@@ -3,7 +3,9 @@
     <div class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
         <div class="flex items-center space-x-3">
             <div class="w-2 h-6 md:h-8 bg-gradient-to-b from-primary-400 to-primary-600 rounded-full"></div>
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("book-overview") }}</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                {% if book.is_comic() %}{{ translation.get("comic-overview") }}{% else %}{{ translation.get("book-overview") }}{% endif %}
+            </h2>
         </div>
         
         <!-- Hide/Show Button -->
@@ -108,6 +110,7 @@
                         </div>
                     </div>
                     
+                    {% if !book.is_comic() %}
                     <div class="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                         <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                             <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -122,7 +125,9 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     
+                    {% if !book.is_comic() %}
                     <div class="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                         <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                             <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -137,6 +142,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     
                     <div class="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-800 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                         <div class="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
@@ -191,7 +197,7 @@
                     </h4>
                     {% match book.series() %}
                     {% when Some with (series_name) %}
-                    <a href="/?search={{ series_name|urlencode }}" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-650 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">
+                    <a href="{{ search_base_path }}?search={{ series_name|urlencode }}" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-650 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">
                         {{ series }}
                         <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>

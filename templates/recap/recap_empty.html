@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recap - {{ site_title }}</title>
+    <title>{{ translation.get("recap") }}{% if year.is_some() %} {{ year.as_ref().unwrap() }}{% endif %} - {{ site_title }}</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#6366f1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans">
+<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans" data-recap-scope="{{ recap_scope }}">
     {% include "sidebar.html" %}
 
     <div class="min-h-full lg:ml-64">
@@ -18,11 +18,90 @@
             <div class="flex items-center justify-between h-full">
                 <!-- Mobile title -->
                 <div class="lg:hidden flex items-center">
-                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">Recap</h1>
+                    <h1 class="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ translation.get("recap") }}</h1>
                 </div>
     
                 <!-- Desktop title -->
-                <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">Recap</h2>
+                <h2 class="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">{{ translation.get("recap") }}</h2>
+
+                {% if year.is_some() %}
+                <!-- Controls (only when we have a year context) -->
+                <div class="flex items-center space-x-2 md:space-x-4">
+                    <!-- Prev/Next year -->
+                    <div class="flex items-center space-x-1">
+                        {% if prev_year.is_some() %}
+                        <a href="/recap/{{ prev_year.as_ref().unwrap() }}/{% if recap_scope != "all" %}{{ recap_scope }}/{% endif %}" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("previous-year.aria-label") }}" aria-label="{{ translation.get("previous-year.aria-label") }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </a>
+                        {% else %}
+                        <span class="px-3 md:px-4 py-2 h-10 bg-gray-100 dark:bg-dark-800 text-gray-400 dark:text-dark-400 rounded-lg flex items-center justify-center cursor-not-allowed" aria-disabled="true">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </span>
+                        {% endif %}
+
+                        {% if next_year.is_some() %}
+                        <a href="/recap/{{ next_year.as_ref().unwrap() }}/{% if recap_scope != "all" %}{{ recap_scope }}/{% endif %}" class="px-3 md:px-4 py-2 h-10 bg-gray-200 dark:bg-dark-700 hover:bg-gray-300 dark:hover:bg-dark-600 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center" title="{{ translation.get("next-year.aria-label") }}" aria-label="{{ translation.get("next-year.aria-label") }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                        {% else %}
+                        <span class="px-3 md:px-4 py-2 h-10 bg-gray-100 dark:bg-dark-800 text-gray-400 dark:text-dark-400 rounded-lg flex items-center justify-center cursor-not-allowed" aria-disabled="true">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Year selector (only if multiple years) -->
+                    {% if available_years.len() > 1 %}
+                    <div class="relative w-full max-w-32 sm:max-w-36 lg:max-w-40">
+                        <div id="yearSelectorWrapper" class="flex items-center justify-between bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg px-3 sm:px-4 py-2 cursor-pointer hover:border-primary-500 transition-all duration-200 shadow w-full text-sm md:text-base">
+                            <div class="flex items-center space-x-2 sm:space-x-3">
+                                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span id="selectedYearText" class="text-gray-900 dark:text-white font-medium text-xs sm:text-sm">
+                                    <span class="font-bold">{{ year.as_ref().unwrap() }}</span>
+                                </span>
+                            </div>
+                            <svg id="yearDropdownArrow" class="w-4 h-4 text-gray-400 dark:text-dark-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div id="yearOptions" class="absolute z-30 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg hidden w-full text-xs sm:text-sm">
+                            {% for y in available_years %}
+                                <div class="year-option px-3 sm:px-4 py-2 sm:py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if *y == *year.as_ref().unwrap() %}bg-green-50 dark:bg-dark-700 text-green-900 dark:text-white{% endif %}"
+                                     data-year="{{ y }}">
+                                    <div class="flex items-center">
+                                        <svg class="w-3 h-3 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span class="font-bold">{{ y }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Scope selector -->
+                    <details class="relative">
+                        <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center space-x-2 px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                            <span class="font-medium">
+                                {% if recap_scope == "books" %}{{ translation.get("books") }}
+                                {% else if recap_scope == "comics" %}{{ translation.get("comics") }}
+                                {% else %}{{ translation.get("filter.all") }}{% endif %}
+                            </span>
+                            <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year.as_ref().unwrap() }}/">{{ translation.get("filter.all") }}</a>
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year.as_ref().unwrap() }}/books/">{{ translation.get("books") }}</a>
+                            <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year.as_ref().unwrap() }}/comics/">{{ translation.get("comics") }}</a>
+                        </div>
+                    </details>
+                </div>
+                {% endif %}
             </div>
         </header>
 
@@ -40,9 +119,15 @@
                             </svg>
                         </div>
                     </div>
-                    <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">No Books Found</h3>
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                        {% if year.is_some() %}No completions for this filter{% else %}No recap yet{% endif %}
+                    </h3>
                     <p class="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed">
-                        Finish reading a book in KoReader to see your recap.
+                        {% if year.is_some() %}
+                            Try switching scope or year above.
+                        {% else %}
+                            Finish reading in KoReader to see your recap.
+                        {% endif %}
                     </p>
                 </div>
 
@@ -54,7 +139,7 @@
                                 <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span>Why aren't my books showing up?</span>
+                                <span>Why isn't my recap showing up?</span>
                             </div>
                             <svg class="w-4 h-4 text-gray-400 transform transition-transform duration-200 group-open:rotate-180 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -74,6 +159,7 @@
 
     {% include "bottom_navbar.html" %}
 
+    <script type="module" src="/assets/js/recap.js"></script>
     <script type="module" src="/assets/js/pwa.js"></script>
 </body>
 </html>
