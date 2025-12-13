@@ -1,7 +1,7 @@
 use crate::i18n::Translations;
 use crate::models::*;
 use askama::Template;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct NavItem {
@@ -25,7 +25,7 @@ pub struct IndexTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }
 
 #[derive(Template)]
@@ -43,7 +43,7 @@ pub struct RecapTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }
 
 #[derive(Template)]
@@ -60,7 +60,7 @@ pub struct RecapEmptyTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }
 
 #[derive(Template)]
@@ -74,7 +74,7 @@ pub struct BookTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }
 
 #[derive(Template)]
@@ -100,7 +100,7 @@ pub struct StatsTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }
 
 #[derive(Template)]
@@ -110,5 +110,5 @@ pub struct CalendarTemplate {
     pub version: String,
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
-    pub translation: Arc<Translations>,
+    pub translation: Rc<Translations>,
 }

@@ -421,8 +421,8 @@ impl SiteGenerator {
             if !path.is_dir() {
                 continue;
             }
-            if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
-                if !current_ids.contains(dir_name) {
+            if let Some(dir_name) = path.file_name().and_then(|n| n.to_str())
+                && !current_ids.contains(dir_name) {
                     info!("Removing stale {} directory: {:?}", label, path);
                     if let Err(e) = fs::remove_dir_all(&path) {
                         warn!(
@@ -431,7 +431,6 @@ impl SiteGenerator {
                         );
                     }
                 }
-            }
         }
         Ok(())
     }

@@ -62,8 +62,8 @@ impl EpubParser {
         let (mut book_info, cover_id, nav_path) = Self::parse_opf_metadata(&opf_xml)?;
 
         // Step 3.5: If no page count from metadata, try parsing page-list from nav document
-        if book_info.pages.is_none() {
-            if let Some(ref nav_rel_path) = nav_path {
+        if book_info.pages.is_none()
+            && let Some(ref nav_rel_path) = nav_path {
                 // Resolve nav path relative to OPF directory
                 let opf_parent = Path::new(&opf_path).parent();
                 let resolved_nav_path = if let Some(parent) = opf_parent {
@@ -82,7 +82,6 @@ impl EpubParser {
                     }
                 }
             }
-        }
 
         // Step 4: Find cover image path and MIME type in manifest
         let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
@@ -335,13 +334,11 @@ impl EpubParser {
                                                     .into_owned(),
                                             );
                                         }
-                                    } else if prop == "schema:numberOfPages" {
-                                        if let Ok(text_content) = reader.read_text(e.name()) {
-                                            if let Ok(pages) = text_content.trim().parse::<u32>() {
+                                    } else if prop == "schema:numberOfPages"
+                                        && let Ok(text_content) = reader.read_text(e.name())
+                                            && let Ok(pages) = text_content.trim().parse::<u32>() {
                                                 number_of_pages = Some(pages);
                                             }
-                                        }
-                                    }
                                 }
                             }
                             _ => {}
@@ -382,17 +379,15 @@ impl EpubParser {
                                 if let Ok(h) = attr.unescape_value() {
                                     href = Some(h.into_owned());
                                 }
-                            } else if key == b"properties" {
-                                if let Ok(p) = attr.unescape_value() {
+                            } else if key == b"properties"
+                                && let Ok(p) = attr.unescape_value() {
                                     properties = Some(p.into_owned());
                                 }
-                            }
                         }
-                        if let (Some(h), Some(p)) = (href, properties) {
-                            if p.contains("nav") {
+                        if let (Some(h), Some(p)) = (href, properties)
+                            && p.contains("nav") {
                                 nav_path = Some(h);
                             }
-                        }
                     }
                 }
                 Ok(Event::End(ref e)) => {
@@ -524,13 +519,11 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             // Look for epub:type attribute (either with or without namespace prefix)
                             let key = attr.key.as_ref();
-                            if key == b"epub:type" || key.ends_with(b":type") || key == b"type" {
-                                if let Ok(val) = attr.unescape_value() {
-                                    if val.contains("page-list") {
+                            if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
+                                && let Ok(val) = attr.unescape_value()
+                                    && val.contains("page-list") {
                                         in_page_list = true;
                                     }
-                                }
-                            }
                         }
                     }
 

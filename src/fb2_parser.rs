@@ -213,12 +213,11 @@ impl Fb2Parser {
                             for attr in e.attributes().flatten() {
                                 let key = attr.key.as_ref();
                                 // Handle both href and l:href (XLink namespace)
-                                if key == b"href" || key.ends_with(b":href") {
-                                    if let Ok(href) = attr.unescape_value() {
+                                if (key == b"href" || key.ends_with(b":href"))
+                                    && let Ok(href) = attr.unescape_value() {
                                         cover_href = Some(href.trim_start_matches('#').to_string());
                                         break;
                                     }
-                                }
                             }
                         }
                         _ => {}
@@ -250,12 +249,11 @@ impl Fb2Parser {
                     else if name == b"image" && in_coverpage {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if key == b"href" || key.ends_with(b":href") {
-                                if let Ok(href) = attr.unescape_value() {
+                            if (key == b"href" || key.ends_with(b":href"))
+                                && let Ok(href) = attr.unescape_value() {
                                     cover_href = Some(href.trim_start_matches('#').to_string());
                                     break;
                                 }
-                            }
                         }
                     }
                 }
@@ -330,11 +328,10 @@ impl Fb2Parser {
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
                                 b"id" => {
-                                    if let Ok(id) = attr.unescape_value() {
-                                        if id.as_ref() == cover_href {
+                                    if let Ok(id) = attr.unescape_value()
+                                        && id.as_ref() == cover_href {
                                             found_id = true;
                                         }
-                                    }
                                 }
                                 b"content-type" => {
                                     if let Ok(ct) = attr.unescape_value() {
@@ -350,9 +347,7 @@ impl Fb2Parser {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 let text_clean = text
                                     .trim()
-                                    .replace('\n', "")
-                                    .replace('\r', "")
-                                    .replace(' ', "");
+                                    .replace(['\n', '\r', ' '], "");
                                 match general_purpose::STANDARD.decode(&text_clean) {
                                     Ok(data) => return Ok((Some(data), mime_type)),
                                     Err(e) => {

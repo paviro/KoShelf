@@ -31,6 +31,7 @@ use anyhow::Result;
 use log::info;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 use utils::NavContext;
 
@@ -39,7 +40,7 @@ pub struct SiteGenerator {
     /// Cache manifest builder for PWA smart caching
     cache_manifest: Arc<CacheManifestBuilder>,
     /// Translations for i18n
-    translations: Arc<Translations>,
+    translations: Rc<Translations>,
 }
 
 impl std::ops::Deref for SiteGenerator {
@@ -56,7 +57,7 @@ impl SiteGenerator {
         let cache_manifest = Arc::new(CacheManifestBuilder::new(version));
 
         // Load translations for the configured language
-        let translations = Arc::new(Translations::load(&config.language).unwrap_or_else(|e| {
+        let translations = Rc::new(Translations::load(&config.language).unwrap_or_else(|e| {
             log::warn!(
                 "Failed to load translations for '{}': {}. Falling back to English.",
                 config.language,
@@ -72,9 +73,9 @@ impl SiteGenerator {
         }
     }
 
-    /// Get Arc<Translations> for templates to call get()/get_with_num()
-    pub(crate) fn t(&self) -> Arc<Translations> {
-        Arc::clone(&self.translations)
+    /// Get Rc<Translations> for templates to call get()/get_with_num()
+    pub(crate) fn t(&self) -> Rc<Translations> {
+        Rc::clone(&self.translations)
     }
 
     // Path constants to avoid duplication

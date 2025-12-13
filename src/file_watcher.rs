@@ -188,25 +188,22 @@ impl FileWatcher {
             }
 
             // Check for metadata files
-            if let Some(filename) = filename {
-                if LibraryItemFormat::is_metadata_file(filename) {
+            if let Some(filename) = filename
+                && LibraryItemFormat::is_metadata_file(filename) {
                     return true;
                 }
-            }
 
             // Check for .sdr directories (KoReader metadata folders)
-            if let Some(filename) = filename {
-                if filename.ends_with(".sdr") {
+            if let Some(filename) = filename
+                && filename.ends_with(".sdr") {
                     return true;
                 }
-            }
 
             // Check for statistics database files
-            if let Some(ref stats_path) = self.statistics_db_path {
-                if path == stats_path {
+            if let Some(ref stats_path) = self.statistics_db_path
+                && path == stats_path {
                     return true;
                 }
-            }
 
             false
         })
@@ -227,25 +224,22 @@ impl FileWatcher {
             }
 
             // Check metadata files
-            if let Some(filename) = filename {
-                if LibraryItemFormat::is_metadata_file(filename) {
+            if let Some(filename) = filename
+                && LibraryItemFormat::is_metadata_file(filename) {
                     info!("Metadata file {}: {:?}", action, path);
                 }
-            }
 
             // Check .sdr directories
-            if let Some(filename) = filename {
-                if filename.ends_with(".sdr") {
+            if let Some(filename) = filename
+                && filename.ends_with(".sdr") {
                     info!("KoReader metadata directory {}: {:?}", action, path);
                 }
-            }
 
             // Check statistics database
-            if let Some(ref stats_path) = self.statistics_db_path {
-                if path == stats_path {
+            if let Some(ref stats_path) = self.statistics_db_path
+                && path == stats_path {
                     info!("Statistics database {}: {:?}", action, path);
                 }
-            }
         }
     }
 }
