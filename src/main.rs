@@ -44,7 +44,7 @@ use crate::web_server::WebServer;
 struct Cli {
     /// Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata.
     /// Can be specified multiple times. (optional if statistics_db is provided)
-    #[arg(short = 'i', long, alias = "books-path", display_order = 1, action = clap::ArgAction::Append)]
+    #[arg(short = 'i', visible_short_alias = 'b', long, alias = "books-path", display_order = 1, action = clap::ArgAction::Append)]
     library_path: Vec<PathBuf>,
 
     /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --books-path. Mutually exclusive with --hashdocsettings-path.

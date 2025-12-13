@@ -78,6 +78,7 @@ pub fn generate_share_image(
     format: ShareFormat,
     output_path: &Path,
 ) -> Result<()> {
+    log::debug!("Generating share image: {:?}", output_path);
     let (width, height) = format.dimensions();
 
     // Generate SVG content by replacing placeholders in template
@@ -112,6 +113,8 @@ pub fn generate_share_image(
     // Also generate SVG file
     let svg_path = output_path.with_extension("svg");
     generate_share_svg(data, format, &svg_path)?;
+
+    log::debug!("Finished creating share image: {:?}", output_path);
 
     Ok(())
 }
