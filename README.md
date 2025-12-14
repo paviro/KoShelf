@@ -474,8 +474,8 @@ site/
     │   ├── style.css       # Compiled Tailwind CSS
     │   └── event-calendar.min.css # Event calendar library styles
     ├── js/
-    │   ├── book_list.js    # Search and filtering functionality
-    │   ├── book_detail.js  # Book detail page functionality
+    │   ├── library_list.js # Search and filtering functionality
+    │   ├── item_detail.js  # Item detail page functionality
     │   ├── lazy-loading.js # Image lazy loading
     │   ├── section-toggle.js # Section collapsing/expanding
     │   ├── statistics.js   # Statistics page functionality
