@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 use std::process::Command;
 
@@ -9,6 +10,14 @@ fn main() {
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=package.json");
     println!("cargo:rerun-if-changed=package-lock.json");
+    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NODE_BUILD");
+    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NPM_INSTALL");
+    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_FONT_DOWNLOAD");
+    println!("cargo:rerun-if-env-changed=KOSHELF_FONT_CACHE_DIR");
+
+    let skip_node_build = env_flag("KOSHELF_SKIP_NODE_BUILD");
+    let skip_npm_install = env_flag("KOSHELF_SKIP_NPM_INSTALL");
+    let skip_font_download = env_flag("KOSHELF_SKIP_FONT_DOWNLOAD");
 
     // Check if we have the node_modules and package.json for Tailwind
     if !Path::new("package.json").exists() {
@@ -27,10 +36,16 @@ fn main() {
                     .and_then(|m| m.modified())
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH));
 
-    if should_install {
+    if should_install && !skip_npm_install && !skip_node_build {
         eprintln!("Installing npm dependencies...");
-        let install_output = Command::new("npm")
-            .arg("install")
+        let mut cmd = Command::new("npm");
+        if Path::new("package-lock.json").exists() {
+            // Deterministic install based on lockfile (better for CI / reproducibility).
+            cmd.arg("ci");
+        } else {
+            cmd.arg("install");
+        }
+        let install_output = cmd
             .output()
             .expect("Failed to run npm install. Make sure Node.js and npm are installed.");
 
@@ -41,55 +56,35 @@ fn main() {
             );
         }
         eprintln!("npm install completed successfully");
+    } else if should_install && (skip_npm_install || skip_node_build) {
+        panic!(
+            "node_modules missing/outdated but npm install is disabled (KOSHELF_SKIP_NODE_BUILD or KOSHELF_SKIP_NPM_INSTALL). \
+             Run `npm ci`/`npm install` manually, or unset the env var(s)."
+        );
     }
 
     let out_dir = std::env::var("OUT_DIR").unwrap();
 
-    // Generate the CSS using Tailwind
-    eprintln!("Compiling Tailwind CSS...");
+    if !skip_node_build {
+        // Compile CSS bundles
+        compile_tailwind_css(&out_dir);
+        compile_css("calendar", "assets/css/calendar.css", &out_dir);
 
-    // Create a temporary output file for the CSS
-    let output_path = std::env::temp_dir().join("style.css");
-
-    let tailwind_output = Command::new("npx")
-        .args([
-            "tailwindcss",
-            "-i",
-            "./assets/css/input.css",
-            "-o",
-            &output_path.to_string_lossy(),
-            "--minify",
-        ])
-        .output()
-        .expect("Failed to run Tailwind CSS compilation. Make sure Node.js and npm are installed.");
-
-    if !tailwind_output.status.success() {
-        panic!(
-            "Tailwind CSS compilation failed: {}",
-            String::from_utf8_lossy(&tailwind_output.stderr)
-        );
+        // Compile TypeScript with esbuild
+        compile_typescript(&out_dir);
+    } else {
+        eprintln!("Skipping Tailwind/CSS/TypeScript build (KOSHELF_SKIP_NODE_BUILD=1)");
     }
 
-    // Read the generated CSS and write it to a file that can be included at compile time
-    let css_content = fs::read_to_string(&output_path).expect("Failed to read generated CSS file");
-
-    // Write the CSS to a file in the target directory for inclusion
-    let dest_path = Path::new(&out_dir).join("compiled_style.css");
-    fs::write(&dest_path, css_content).expect("Failed to write CSS to output directory");
-
-    // Clean up the temporary file
-    let _ = fs::remove_file(&output_path);
-
-    eprintln!("Tailwind CSS compilation completed");
-
-    // Compile TypeScript with esbuild
-    compile_typescript(&out_dir);
-
-    // Bundle calendar-only CSS (keep it off non-calendar pages)
-    compile_calendar_css(&out_dir);
-
     // Download and embed fonts for SVG rendering
-    download_fonts(&out_dir);
+    download_fonts(&out_dir, skip_font_download);
+}
+
+fn env_flag(name: &str) -> bool {
+    matches!(
+        std::env::var(name).as_deref(),
+        Ok("1") | Ok("true") | Ok("TRUE") | Ok("yes") | Ok("YES") | Ok("on") | Ok("ON")
+    )
 }
 
 fn rerun_if_changed_recursive(dir: &Path) {
@@ -120,36 +115,99 @@ fn rerun_if_changed_recursive(dir: &Path) {
     }
 }
 
-fn compile_calendar_css(out_dir: &str) {
-    let entry = Path::new("assets/css/calendar.css");
-    if !entry.exists() {
-        panic!("assets/css/calendar.css not found (required for calendar styling)");
+fn write_if_changed(path: &Path, bytes: &[u8]) -> io::Result<bool> {
+    match fs::read(path) {
+        Ok(existing) if existing == bytes => Ok(false),
+        _ => {
+            fs::write(path, bytes)?;
+            Ok(true)
+        }
+    }
+}
+
+/// Compile Tailwind CSS from input.css to compiled_style.css
+fn compile_tailwind_css(out_dir: &str) {
+    let input = Path::new("assets/css/input.css");
+    if !input.exists() {
+        panic!("assets/css/input.css not found (required for Tailwind CSS)");
     }
 
-    eprintln!("Bundling calendar CSS...");
-    let outfile = Path::new(out_dir).join("calendar.css");
+    eprintln!("Compiling Tailwind CSS...");
+    // Use OUT_DIR for intermediates to avoid collisions across parallel builds.
+    let tmp_path = Path::new(out_dir).join("compiled_style.css.tmp");
+    let dest_path = Path::new(out_dir).join("compiled_style.css");
 
-    let esbuild_output = Command::new("npx")
+    let output = Command::new("npx")
         .args([
-            "esbuild",
-            entry.to_string_lossy().as_ref(),
-            "--bundle",
+            "tailwindcss",
+            "-i",
+            &input.to_string_lossy(),
+            "-o",
+            &tmp_path.to_string_lossy(),
             "--minify",
-            "--loader:.css=css",
-            &format!("--outfile={}", outfile.to_string_lossy()),
         ])
         .output()
-        .expect("Failed to run esbuild for calendar CSS. Make sure Node.js and npm are installed.");
+        .expect("Failed to run Tailwind CSS. Make sure Node.js and npm are installed.");
 
-    if !esbuild_output.status.success() {
+    if !output.status.success() {
         panic!(
-            "Calendar CSS bundling failed:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&esbuild_output.stdout),
-            String::from_utf8_lossy(&esbuild_output.stderr)
+            "Tailwind CSS compilation failed:\nstderr: {}",
+            String::from_utf8_lossy(&output.stderr)
         );
     }
 
-    eprintln!("Calendar CSS bundling completed");
+    // Copy to output directory (but avoid rewriting identical output).
+    let css_bytes = fs::read(&tmp_path).expect("Failed to read generated CSS");
+    let _wrote = write_if_changed(&dest_path, &css_bytes).expect("Failed to write CSS to output directory");
+
+    let _ = fs::remove_file(&tmp_path);
+    eprintln!("Tailwind CSS compilation completed");
+}
+
+/// Bundle and minify a CSS file using esbuild
+/// - `name`: Display name for logging (e.g., "calendar")
+/// - `input_path`: Path to the source CSS file
+/// - `out_dir`: Output directory for the bundled file
+fn compile_css(name: &str, input_path: &str, out_dir: &str) {
+    let entry = Path::new(input_path);
+    if !entry.exists() {
+        panic!("{} not found (required for {} styling)", input_path, name);
+    }
+
+    eprintln!("Bundling {} CSS...", name);
+    let output_name = format!("{}.css", name);
+    let outfile = Path::new(out_dir).join(&output_name);
+    let tmpfile = Path::new(out_dir).join(format!("{}.css.tmp", name));
+
+    let output = Command::new("npx")
+        .args([
+            "esbuild",
+            input_path,
+            "--bundle",
+            "--minify",
+            "--loader:.css=css",
+            &format!("--outfile={}", tmpfile.to_string_lossy()),
+        ])
+        .output()
+        .expect(&format!(
+            "Failed to run esbuild for {} CSS. Make sure Node.js and npm are installed.",
+            name
+        ));
+
+    if !output.status.success() {
+        panic!(
+            "{} CSS bundling failed:\nstdout: {}\nstderr: {}",
+            name,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let css_bytes = fs::read(&tmpfile).expect("Failed to read bundled CSS");
+    let _wrote = write_if_changed(&outfile, &css_bytes).expect("Failed to write bundled CSS");
+    let _ = fs::remove_file(&tmpfile);
+
+    eprintln!("{} CSS bundling completed", name);
 }
 
 /// Compile TypeScript files with esbuild
@@ -225,7 +283,7 @@ fn compile_typescript(out_dir: &str) {
 
 /// Download Gelasio font files for SVG rendering
 /// Uses a shared cache directory so fonts are only downloaded once across all targets
-fn download_fonts(out_dir: &str) {
+fn download_fonts(out_dir: &str, skip_download: bool) {
     let fonts = [
         (
             "Gelasio-Regular.ttf",
@@ -239,7 +297,9 @@ fn download_fonts(out_dir: &str) {
 
     // Use a shared cache directory in target/ so fonts are only downloaded once
     // across all target architectures during cross-compilation
-    let cache_dir = Path::new("target").join(".font-cache");
+    let cache_dir = std::env::var("KOSHELF_FONT_CACHE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| Path::new("target").join(".font-cache"));
     fs::create_dir_all(&cache_dir).expect("Failed to create font cache directory");
 
     for (filename, url) in fonts {
@@ -249,9 +309,19 @@ fn download_fonts(out_dir: &str) {
         // Check if font is already in shared cache
         if cache_path.exists() {
             eprintln!("Font {} found in cache, copying to build dir", filename);
-            fs::copy(&cache_path, &dest_path)
-                .unwrap_or_else(|e| panic!("Failed to copy cached font {}: {}", filename, e));
+            let bytes = fs::read(&cache_path)
+                .unwrap_or_else(|e| panic!("Failed to read cached font {}: {}", filename, e));
+            let _wrote = write_if_changed(&dest_path, &bytes)
+                .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
             continue;
+        }
+
+        if skip_download {
+            panic!(
+                "Font {} not found in cache and downloading is disabled (KOSHELF_SKIP_FONT_DOWNLOAD=1). \
+                 Either unset that env var, or pre-populate the cache at {:?}.",
+                filename, cache_dir
+            );
         }
 
         eprintln!("Downloading font: {}...", filename);
@@ -267,8 +337,8 @@ fn download_fonts(out_dir: &str) {
                 fs::write(&cache_path, &bytes)
                     .unwrap_or_else(|e| panic!("Failed to cache font {}: {}", filename, e));
 
-                // Copy to build output directory
-                fs::write(&dest_path, &bytes)
+                // Copy to build output directory (but avoid rewriting identical output).
+                let _wrote = write_if_changed(&dest_path, &bytes)
                     .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
 
                 eprintln!(
