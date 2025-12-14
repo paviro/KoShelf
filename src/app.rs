@@ -151,4 +151,3 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
     }
 }
-

@@ -1,5 +1,5 @@
-use crate::models::{PageStat, StatBook, StatisticsData};
 use super::statistics::StatisticsCalculator;
+use crate::models::{PageStat, StatBook, StatisticsData};
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::{debug, info, warn};

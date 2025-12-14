@@ -2,10 +2,10 @@ use chrono::{Datelike, Duration, NaiveDate};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 
-use crate::i18n::Translations;
-use crate::models::*;
 use super::completion::{CompletionConfig, ReadCompletionDetector};
 use super::session;
+use crate::i18n::Translations;
+use crate::models::*;
 use crate::time_config::TimeConfig;
 
 /// Trait for calculating book session statistics

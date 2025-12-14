@@ -2,4 +2,4 @@
 
 pub mod image;
 
-pub use image::{generate_share_image, ShareFormat, ShareImageData};
+pub use image::{ShareFormat, ShareImageData, generate_share_image};

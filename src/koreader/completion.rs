@@ -1,8 +1,8 @@
 use log::{debug, info};
 use std::collections::{HashMap, HashSet};
 
-use crate::models::*;
 use super::session;
+use crate::models::*;
 use crate::time_config::TimeConfig;
 
 /// Configuration for read completion detection

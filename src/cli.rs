@@ -162,14 +162,20 @@ impl Cli {
                 anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
             }
             if !docsettings_path.is_dir() {
-                anyhow::bail!("Docsettings path is not a directory: {:?}", docsettings_path);
+                anyhow::bail!(
+                    "Docsettings path is not a directory: {:?}",
+                    docsettings_path
+                );
             }
         }
 
         // Validate hashdocsettings path if provided
         if let Some(ref hashdocsettings_path) = self.hashdocsettings_path {
             if !hashdocsettings_path.exists() {
-                anyhow::bail!("Hashdocsettings path does not exist: {:?}", hashdocsettings_path);
+                anyhow::bail!(
+                    "Hashdocsettings path does not exist: {:?}",
+                    hashdocsettings_path
+                );
             }
             if !hashdocsettings_path.is_dir() {
                 anyhow::bail!(
@@ -208,4 +214,3 @@ impl Cli {
         Ok(())
     }
 }
-

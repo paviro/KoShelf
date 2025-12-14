@@ -102,8 +102,8 @@ impl Fb2Parser {
 
     /// Extract FB2 content from a ZIP archive
     fn extract_fb2_from_zip(path: &Path) -> Result<String> {
-        let file = File::open(path)
-            .with_context(|| format!("Failed to open FB2 zip file: {:?}", path))?;
+        let file =
+            File::open(path).with_context(|| format!("Failed to open FB2 zip file: {:?}", path))?;
         let mut archive = ZipArchive::new(file)
             .with_context(|| format!("Failed to read FB2 zip archive: {:?}", path))?;
 
@@ -123,7 +123,10 @@ impl Fb2Parser {
             }
         }
 
-        Err(anyhow!("No .fb2 or .xml file found inside zip archive: {:?}", path))
+        Err(anyhow!(
+            "No .fb2 or .xml file found inside zip archive: {:?}",
+            path
+        ))
     }
 
     fn parse_fb2_metadata(fb2_xml: &str) -> Result<(BookInfo, Option<String>)> {
@@ -247,10 +250,11 @@ impl Fb2Parser {
                                 let key = attr.key.as_ref();
                                 // Handle both href and l:href (XLink namespace)
                                 if (key == b"href" || key.ends_with(b":href"))
-                                    && let Ok(href) = attr.unescape_value() {
-                                        cover_href = Some(href.trim_start_matches('#').to_string());
-                                        break;
-                                    }
+                                    && let Ok(href) = attr.unescape_value()
+                                {
+                                    cover_href = Some(href.trim_start_matches('#').to_string());
+                                    break;
+                                }
                             }
                         }
                         _ => {}
@@ -283,10 +287,11 @@ impl Fb2Parser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if (key == b"href" || key.ends_with(b":href"))
-                                && let Ok(href) = attr.unescape_value() {
-                                    cover_href = Some(href.trim_start_matches('#').to_string());
-                                    break;
-                                }
+                                && let Ok(href) = attr.unescape_value()
+                            {
+                                cover_href = Some(href.trim_start_matches('#').to_string());
+                                break;
+                            }
                         }
                     }
                 }
@@ -362,9 +367,10 @@ impl Fb2Parser {
                             match attr.key.as_ref() {
                                 b"id" => {
                                     if let Ok(id) = attr.unescape_value()
-                                        && id.as_ref() == cover_href {
-                                            found_id = true;
-                                        }
+                                        && id.as_ref() == cover_href
+                                    {
+                                        found_id = true;
+                                    }
                                 }
                                 b"content-type" => {
                                     if let Ok(ct) = attr.unescape_value() {
@@ -378,9 +384,7 @@ impl Fb2Parser {
                         if found_id {
                             // Read the base64 content
                             if let Ok(text) = reader.read_text(e.name()) {
-                                let text_clean = text
-                                    .trim()
-                                    .replace(['\n', '\r', ' '], "");
+                                let text_clean = text.trim().replace(['\n', '\r', ' '], "");
                                 match general_purpose::STANDARD.decode(&text_clean) {
                                     Ok(data) => return Ok((Some(data), mime_type)),
                                     Err(e) => {
