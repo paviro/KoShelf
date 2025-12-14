@@ -1,5 +1,16 @@
 // Shared modal animation utilities
 
+type ModalRegistration = {
+    modal: HTMLElement;
+    modalCard: HTMLElement;
+    hide: () => void;
+    onBackdropClick: (e: MouseEvent) => void;
+    closeBtn: HTMLElement | null;
+};
+
+const modalRegistrations = new Map<HTMLElement, ModalRegistration>();
+let escapeHandlerInstalled = false;
+
 /**
  * Show a modal with scale/fade animation
  */
@@ -39,36 +50,51 @@ export function hideModal(modal: HTMLElement | null, modalCard: HTMLElement | nu
     }, 300);
 }
 
+function installEscapeHandlerOnce(): void {
+    if (escapeHandlerInstalled) return;
+    escapeHandlerInstalled = true;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+
+        // Close any currently-visible registered modal.
+        // Multiple modals can register handlers (e.g. calendar has 3),
+        // but this keeps the global listener to a single instance.
+        for (const { modal, hide } of modalRegistrations.values()) {
+            if (!modal.classList.contains('hidden')) {
+                hide();
+            }
+        }
+    });
+}
+
 /**
  * Setup standard modal close handlers (close button, backdrop click, Escape key)
  */
 export function setupModalCloseHandlers(
     modal: HTMLElement | null,
     modalCard: HTMLElement | null,
-    closeBtn: HTMLElement | null = null
+    closeBtn: HTMLElement | null = null,
 ): (() => void) | undefined {
     if (!modal || !modalCard) return;
 
-    const hide = () => hideModal(modal, modalCard);
+    // Avoid stacking handlers if called multiple times for the same modal.
+    const existing = modalRegistrations.get(modal);
+    if (existing) return existing.hide;
 
-    // Close button
-    if (closeBtn) {
-        closeBtn.addEventListener('click', hide);
-    }
+    const hide = (): void => hideModal(modal, modalCard);
 
     // Backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            hide();
-        }
-    });
+    const onBackdropClick = (e: MouseEvent): void => {
+        if (e.target === modal) hide();
+    };
+    modal.addEventListener('click', onBackdropClick);
 
-    // Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-            hide();
-        }
-    });
+    // Close button
+    closeBtn?.addEventListener('click', hide);
+
+    modalRegistrations.set(modal, { modal, modalCard, hide, onBackdropClick, closeBtn });
+    installEscapeHandlerOnce();
 
     return hide;
 }

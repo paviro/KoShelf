@@ -3,7 +3,7 @@
  * Handles namespaced storage to avoid collisions and provides type safety.
  */
 
-type StorageKey = typeof StorageManager.KEYS[keyof typeof StorageManager.KEYS];
+type StorageKey = (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS];
 
 export class StorageManager {
     static readonly PREFIX = 'koshelf_';

@@ -6,12 +6,13 @@ export class TooltipManager {
     private static isVisible = false;
     private static hasGlobalListeners = false;
 
-    static init() {
+    static init(): void {
         if (!this.tooltipElement) {
             this.tooltipElement = document.createElement('div');
             // Basic visual styles (bg, text, rounding) - specialized positioning handled in CSS
             // NOTE: keep classes Tailwind-safe (Tailwind scans ./assets/ts/**/*.ts)
-            this.tooltipElement.className = 'heatmap-tooltip hidden z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-normal break-words opacity-90 [--tooltip-color:theme(colors.gray.900)] dark:[--tooltip-color:theme(colors.gray.100)]';
+            this.tooltipElement.className =
+                'heatmap-tooltip hidden z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-normal break-words opacity-90 [--tooltip-color:theme(colors.gray.900)] dark:[--tooltip-color:theme(colors.gray.100)]';
             this.tooltipElement.setAttribute('role', 'tooltip');
 
             // Dedicated content node (safer than innerHTML when setting content)
@@ -27,35 +28,44 @@ export class TooltipManager {
 
             // Close tooltip on click outside (for mobile)
             document.addEventListener('click', (e) => {
-                if (this.activeCell && !this.activeCell.contains(e.target as Node)) {
+                const target = e.target instanceof Node ? e.target : null;
+                if (this.activeCell && target && !this.activeCell.contains(target)) {
                     this.hide();
                 }
             });
 
             // Reposition on scroll (capture catches scroll containers too)
-            document.addEventListener('scroll', () => {
-                if (this.activeCell && this.isVisible) {
-                    this.updatePosition(this.activeCell, this.tooltipElement!);
-                }
-            }, { passive: true, capture: true });
+            document.addEventListener(
+                'scroll',
+                () => {
+                    if (this.activeCell && this.isVisible && this.tooltipElement) {
+                        this.updatePosition(this.activeCell, this.tooltipElement);
+                    }
+                },
+                { passive: true, capture: true },
+            );
 
             // Reposition on resize
-            window.addEventListener('resize', () => {
-                if (this.activeCell && this.isVisible) {
-                    this.updatePosition(this.activeCell, this.tooltipElement!);
-                }
-            }, { passive: true });
+            window.addEventListener(
+                'resize',
+                () => {
+                    if (this.activeCell && this.isVisible && this.tooltipElement) {
+                        this.updatePosition(this.activeCell, this.tooltipElement);
+                    }
+                },
+                { passive: true },
+            );
         }
     }
 
-    static attach(cell: HTMLElement, content: string) {
+    static attach(cell: HTMLElement, content: string): void {
         this.init(); // Ensure initialized
 
         // Prevent duplicate listeners if heatmap re-initializes
         if (cell.dataset.tooltipAttached === '1') return;
         cell.dataset.tooltipAttached = '1';
 
-        const showTooltip = () => {
+        const showTooltip = (): void => {
             // If clicking the same cell that is already active, toggle it off (optional, but good for mobile)
             if (this.activeCell === cell && !this.tooltipElement?.classList.contains('hidden')) {
                 // On mobile/click, we might want to toggle, but for now we just show.
@@ -81,7 +91,7 @@ export class TooltipManager {
         });
     }
 
-    static show(cell: HTMLElement, content: string) {
+    static show(cell: HTMLElement, content: string): void {
         if (!this.tooltipElement) return;
 
         this.activeCell = cell;
@@ -99,12 +109,17 @@ export class TooltipManager {
         this.updatePosition(cell, this.tooltipElement);
     }
 
-    static hide() {
+    static hide(): void {
         if (this.tooltipElement) {
             this.tooltipElement.classList.add('hidden');
             this.isVisible = false;
             // Remove positioning classes
-            this.tooltipElement.classList.remove('tooltip-top', 'tooltip-bottom', 'tooltip-left', 'tooltip-right');
+            this.tooltipElement.classList.remove(
+                'tooltip-top',
+                'tooltip-bottom',
+                'tooltip-left',
+                'tooltip-right',
+            );
         }
 
         if (this.activeCell) {
@@ -113,7 +128,7 @@ export class TooltipManager {
     }
 
     // Calculate and apply position
-    static updatePosition(cell: HTMLElement, tooltip: HTMLElement) {
+    static updatePosition(cell: HTMLElement, tooltip: HTMLElement): void {
         if (!cell.isConnected) {
             this.hide();
             return;
@@ -139,8 +154,8 @@ export class TooltipManager {
         const tooltipRect = tooltip.getBoundingClientRect();
         tooltip.style.visibility = previousVisibility;
 
-        const cellCenterX = cellRect.left + (cellRect.width / 2);
-        const cellCenterY = cellRect.top + (cellRect.height / 2);
+        const cellCenterX = cellRect.left + cellRect.width / 2;
+        const cellCenterY = cellRect.top + cellRect.height / 2;
 
         const spaceTop = cellRect.top;
         const spaceBottom = viewportHeight - cellRect.bottom;
@@ -152,10 +167,22 @@ export class TooltipManager {
         const requiredH = tooltipRect.width + gap + arrowSize;
 
         const candidates: Array<{ placement: Placement; score: number }> = [
-            { placement: 'top', score: (spaceTop >= requiredV) ? 10000 + spaceTop : spaceTop - requiredV },
-            { placement: 'bottom', score: (spaceBottom >= requiredV) ? 10000 + spaceBottom : spaceBottom - requiredV },
-            { placement: 'right', score: (spaceRight >= requiredH) ? 10000 + spaceRight : spaceRight - requiredH },
-            { placement: 'left', score: (spaceLeft >= requiredH) ? 10000 + spaceLeft : spaceLeft - requiredH },
+            {
+                placement: 'top',
+                score: spaceTop >= requiredV ? 10000 + spaceTop : spaceTop - requiredV,
+            },
+            {
+                placement: 'bottom',
+                score: spaceBottom >= requiredV ? 10000 + spaceBottom : spaceBottom - requiredV,
+            },
+            {
+                placement: 'right',
+                score: spaceRight >= requiredH ? 10000 + spaceRight : spaceRight - requiredH,
+            },
+            {
+                placement: 'left',
+                score: spaceLeft >= requiredH ? 10000 + spaceLeft : spaceLeft - requiredH,
+            },
         ];
         candidates.sort((a, b) => b.score - a.score);
         const placement: Placement = candidates[0]?.placement ?? 'top';
@@ -166,15 +193,16 @@ export class TooltipManager {
 
         if (placement === 'top') {
             top = cellRect.top - tooltipRect.height - gap - arrowSize;
-            left = cellCenterX - (tooltipRect.width / 2);
+            left = cellCenterX - tooltipRect.width / 2;
         } else if (placement === 'bottom') {
             top = cellRect.bottom + gap + arrowSize;
-            left = cellCenterX - (tooltipRect.width / 2);
+            left = cellCenterX - tooltipRect.width / 2;
         } else if (placement === 'right') {
-            top = cellCenterY - (tooltipRect.height / 2);
+            top = cellCenterY - tooltipRect.height / 2;
             left = cellRect.right + gap + arrowSize;
-        } else { // left
-            top = cellCenterY - (tooltipRect.height / 2);
+        } else {
+            // left
+            top = cellCenterY - tooltipRect.height / 2;
             left = cellRect.left - tooltipRect.width - gap - arrowSize;
         }
 
@@ -188,11 +216,11 @@ export class TooltipManager {
         const arrowClampPadding = arrowSize + 6;
         const arrowX = Math.min(
             Math.max(cellCenterX - left, arrowClampPadding),
-            Math.max(arrowClampPadding, tooltipRect.width - arrowClampPadding)
+            Math.max(arrowClampPadding, tooltipRect.width - arrowClampPadding),
         );
         const arrowY = Math.min(
             Math.max(cellCenterY - top, arrowClampPadding),
-            Math.max(arrowClampPadding, tooltipRect.height - arrowClampPadding)
+            Math.max(arrowClampPadding, tooltipRect.height - arrowClampPadding),
         );
 
         // Apply styles
@@ -206,7 +234,7 @@ export class TooltipManager {
         tooltip.classList.add(`tooltip-${placement}`);
     }
 
-    static cleanup() {
+    static cleanup(): void {
         if (this.tooltipElement) {
             this.tooltipElement.remove();
             this.tooltipElement = null;

@@ -44,7 +44,7 @@ const DEFAULT_OPTIONS: Required<Omit<TiltOptions, 'selector'>> = {
     hoverScale: 1.02,
     hoverLift: 4,
     shadowBlur: 15,
-    shadowOpacity: 0.20,
+    shadowOpacity: 0.2,
     enableOverlays: false,
     overlayFloatZ: 10,
     overlayScale: 1.05,
@@ -71,7 +71,7 @@ export function initTilt(options: TiltOptions): void {
     const opts = { ...DEFAULT_OPTIONS, ...options };
     const elements = document.querySelectorAll<HTMLElement>(opts.selector);
 
-    elements.forEach(element => {
+    elements.forEach((element) => {
         // Set up element for 3D transforms with Safari-specific optimizations
         element.style.transformStyle = 'preserve-3d';
         element.style.transformOrigin = 'center center';
@@ -95,7 +95,7 @@ export function initTilt(options: TiltOptions): void {
             progressBar = element.querySelector<HTMLElement>(opts.progressBarSelector);
 
             // Prepare overlays with Safari optimizations
-            badgeOverlays?.forEach(overlay => {
+            badgeOverlays?.forEach((overlay) => {
                 overlay.style.willChange = 'transform';
                 overlay.style.backfaceVisibility = 'hidden';
                 overlay.style.transform = 'translateZ(0)';
@@ -118,7 +118,7 @@ export function initTilt(options: TiltOptions): void {
             element.style.boxShadow = `0px 8px ${opts.shadowBlur}px rgba(0, 0, 0, ${opts.shadowOpacity * 0.5})`;
 
             if (opts.enableOverlays && badgeOverlays) {
-                badgeOverlays.forEach(overlay => {
+                badgeOverlays.forEach((overlay) => {
                     overlay.style.transition = `transform ${opts.transitionDuration}ms ease-out`;
                     overlay.style.transform = `translateZ(${opts.overlayFloatZ}px) scale(${opts.overlayScale})`;
                 });
@@ -158,7 +158,7 @@ export function initTilt(options: TiltOptions): void {
                 const parallaxX = rotateY * opts.parallaxMultiplier;
                 const parallaxY = -rotateX * opts.parallaxMultiplier;
 
-                badgeOverlays?.forEach(overlay => {
+                badgeOverlays?.forEach((overlay) => {
                     overlay.style.transform = `translateZ(${opts.overlayFloatZ}px) translate(${parallaxX}px, ${parallaxY}px) scale(${opts.overlayScale})`;
                 });
 
@@ -194,7 +194,7 @@ export function initTilt(options: TiltOptions): void {
 
             // Reset overlays
             if (opts.enableOverlays) {
-                badgeOverlays?.forEach(overlay => {
+                badgeOverlays?.forEach((overlay) => {
                     overlay.style.transition = `transform ${opts.transitionDuration * 2}ms ease-out`;
                     overlay.style.transform = 'translateZ(0)';
                 });

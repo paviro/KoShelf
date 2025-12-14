@@ -52,7 +52,7 @@ class StatisticsManager {
         const weekOptions = document.querySelectorAll<HTMLElement>('.week-option');
         const selectedWeekText = document.getElementById('selectedWeekText');
 
-        weekOptions.forEach(option => {
+        weekOptions.forEach((option) => {
             const startDate = option.getAttribute('data-start-date');
             const endDate = option.getAttribute('data-end-date');
             const displayEl = option.querySelector('.week-date-display');
@@ -95,7 +95,7 @@ class StatisticsManager {
         }
 
         // Handle option selection
-        weekOptionElements.forEach(option => {
+        weekOptionElements.forEach((option) => {
             option.addEventListener('click', () => {
                 const selectedIndex = option.getAttribute('data-week-index');
                 const startDate = option.getAttribute('data-start-date');
@@ -132,26 +132,54 @@ class StatisticsManager {
         });
 
         // Mark first option as active if none is selected
-        if (weekOptionElements.length > 0 && !weekOptionElements[0].classList.contains('bg-primary-50')) {
-            weekOptionElements[0].classList.add('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white');
+        if (
+            weekOptionElements.length > 0 &&
+            !weekOptionElements[0].classList.contains('bg-primary-50')
+        ) {
+            weekOptionElements[0].classList.add(
+                'bg-primary-50',
+                'dark:bg-dark-700',
+                'text-primary-900',
+                'dark:text-white',
+            );
             weekOptionElements[0].classList.remove('text-gray-600', 'dark:text-dark-200');
         }
     }
 
     // Update active state for dropdown options
-    private updateActiveOption(allOptions: NodeListOf<HTMLElement>, selectedOption: HTMLElement): void {
-        allOptions.forEach(el => {
+    private updateActiveOption(
+        allOptions: NodeListOf<HTMLElement>,
+        selectedOption: HTMLElement,
+    ): void {
+        allOptions.forEach((el) => {
             // Remove both light and dark mode active classes
-            el.classList.remove('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white', 'bg-green-50', 'text-green-900');
+            el.classList.remove(
+                'bg-primary-50',
+                'dark:bg-dark-700',
+                'text-primary-900',
+                'dark:text-white',
+                'bg-green-50',
+                'text-green-900',
+            );
             // Reset to default text color
             el.classList.add('text-gray-600', 'dark:text-dark-200');
         });
 
         // Add appropriate active classes based on the context (week or year selector)
         if (selectedOption.closest('#weekOptions')) {
-            selectedOption.classList.add('bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white');
+            selectedOption.classList.add(
+                'bg-primary-50',
+                'dark:bg-dark-700',
+                'text-primary-900',
+                'dark:text-white',
+            );
         } else {
-            selectedOption.classList.add('bg-green-50', 'dark:bg-dark-700', 'text-green-900', 'dark:text-white');
+            selectedOption.classList.add(
+                'bg-green-50',
+                'dark:bg-dark-700',
+                'text-green-900',
+                'dark:text-white',
+            );
         }
         selectedOption.classList.remove('text-gray-600', 'dark:text-dark-200');
     }
@@ -187,20 +215,19 @@ class StatisticsManager {
             this.showLoadingIndicator();
 
             // Wait for transition out to complete before fetching
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, 200));
 
             const response = await fetch(`${this.statsJsonBasePath}/week_${weekIndex}.json`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const weekData = await response.json() as WeekData;
+            const weekData = (await response.json()) as WeekData;
 
             // Update UI with the loaded data
             this.updateWeekStats(weekData);
 
             // Hide loading indicator after data is loaded
             this.hideLoadingIndicator();
-
         } catch (error) {
             console.error('Error loading week data:', error);
 
@@ -225,12 +252,23 @@ class StatisticsManager {
         const weekAverageSession = document.getElementById('weekAverageSession');
 
         // Update the values
-        if (weekReadTime) weekReadTime.textContent = DataFormatter.formatReadTime(weekData.read_time);
+        if (weekReadTime)
+            weekReadTime.textContent = DataFormatter.formatReadTime(weekData.read_time);
         if (weekPagesRead) weekPagesRead.textContent = String(weekData.pages_read);
-        if (weekAvgPagesPerDay) weekAvgPagesPerDay.textContent = DataFormatter.formatAvgPages(weekData.avg_pages_per_day);
-        if (weekAvgReadTimePerDay) weekAvgReadTimePerDay.textContent = `${Math.floor(weekData.avg_read_time_per_day / 60)}m`;
-        if (weekLongestSession) weekLongestSession.textContent = DataFormatter.formatReadTime(weekData.longest_session_duration);
-        if (weekAverageSession) weekAverageSession.textContent = DataFormatter.formatReadTime(weekData.average_session_duration);
+        if (weekAvgPagesPerDay)
+            weekAvgPagesPerDay.textContent = DataFormatter.formatAvgPages(
+                weekData.avg_pages_per_day,
+            );
+        if (weekAvgReadTimePerDay)
+            weekAvgReadTimePerDay.textContent = `${Math.floor(weekData.avg_read_time_per_day / 60)}m`;
+        if (weekLongestSession)
+            weekLongestSession.textContent = DataFormatter.formatReadTime(
+                weekData.longest_session_duration,
+            );
+        if (weekAverageSession)
+            weekAverageSession.textContent = DataFormatter.formatReadTime(
+                weekData.average_session_duration,
+            );
 
         // Use requestAnimationFrame to ensure DOM updates before animation
         requestAnimationFrame(() => {
@@ -257,8 +295,11 @@ class StatisticsManager {
 
         // Get today's date in YYYY-MM-DD format
         const today = new Date();
-        const todayStr = today.getFullYear() + '-' +
-            String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        const todayStr =
+            today.getFullYear() +
+            '-' +
+            String(today.getMonth() + 1).padStart(2, '0') +
+            '-' +
             String(today.getDate()).padStart(2, '0');
 
         // If the last streak date is not today, reset the streak to 0
@@ -293,9 +334,18 @@ class DateFormatter {
     // Format date as "D Month" (e.g. "17 March")
     static formatDateNice(dateObj: Date): string {
         const monthKeys = [
-            'january', 'february', 'march', 'april',
-            'may', 'june', 'july', 'august',
-            'september', 'october', 'november', 'december'
+            'january',
+            'february',
+            'march',
+            'april',
+            'may',
+            'june',
+            'july',
+            'august',
+            'september',
+            'october',
+            'november',
+            'december',
         ];
         return `${dateObj.getDate()} ${translation.get(monthKeys[dateObj.getMonth()])}`;
     }
@@ -313,11 +363,20 @@ class DateFormatter {
         const endYear = endDate.getFullYear();
 
         const monthKeys = [
-            'january.short', 'february.short', 'march.short', 'april.short',
-            'may.short', 'june.short', 'july.short', 'august.short',
-            'september.short', 'october.short', 'november.short', 'december.short'
+            'january.short',
+            'february.short',
+            'march.short',
+            'april.short',
+            'may.short',
+            'june.short',
+            'july.short',
+            'august.short',
+            'september.short',
+            'october.short',
+            'november.short',
+            'december.short',
         ];
-        const months = monthKeys.map(k => translation.get(k));
+        const months = monthKeys.map((k) => translation.get(k));
 
         // If same month
         if (startMonth === endMonth && startYear === endYear) {

@@ -25,7 +25,8 @@ interface ToggleOptions {
 
 export class SectionToggle {
     private sections = new Map<string, SectionData>();
-    private persistenceKey: (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS] | null = null;
+    private persistenceKey: (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS] | null =
+        null;
     private persistedState: PersistedSectionState | null = null;
 
     constructor() {
@@ -45,7 +46,7 @@ export class SectionToggle {
         // Find all sections with data-name attributes
         const toggleSections = document.querySelectorAll<HTMLElement>('section[data-name]');
 
-        toggleSections.forEach(section => {
+        toggleSections.forEach((section) => {
             const sectionName = section.dataset.name;
             if (!sectionName) return;
 
@@ -63,7 +64,7 @@ export class SectionToggle {
                     container,
                     chevron: chevron as SVGElement,
                     buttonText: buttonText as HTMLSpanElement,
-                    defaultVisible
+                    defaultVisible,
                 });
 
                 // Set initial state
@@ -120,7 +121,8 @@ export class SectionToggle {
 
         const { container, chevron, buttonText, defaultVisible } = sectionData;
         const persistedVisible =
-            this.persistedState && Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
+            this.persistedState &&
+            Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
                 ? this.persistedState[sectionName]
                 : null;
         const visible = persistedVisible === null ? defaultVisible : persistedVisible;
@@ -214,10 +216,12 @@ export class SectionToggle {
     restorePersistedOrDefault(): void {
         this.sections.forEach((sectionData, sectionName) => {
             const persistedVisible =
-                this.persistedState && Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
+                this.persistedState &&
+                Object.prototype.hasOwnProperty.call(this.persistedState, sectionName)
                     ? this.persistedState[sectionName]
                     : null;
-            const visible = persistedVisible === null ? sectionData.defaultVisible : persistedVisible;
+            const visible =
+                persistedVisible === null ? sectionData.defaultVisible : persistedVisible;
             if (visible) {
                 this.show(sectionName, { persist: false });
             } else {

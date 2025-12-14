@@ -5,6 +5,40 @@ import { translation } from '../shared/i18n.js';
 import { initBookCardTilt } from '../components/tilt-effect.js';
 import { StorageManager } from '../shared/storage-manager.js';
 
+const FILTER_ARIA_MAP = {
+    all: 'filter.all-aria',
+    reading: 'filter.reading-aria',
+    completed: 'filter.completed-aria',
+    abandoned: 'filter.on-hold-aria',
+    unread: 'filter.unread-aria',
+} as const;
+
+function getFilterAriaKey(filterType: string): string {
+    return FILTER_ARIA_MAP[filterType as keyof typeof FILTER_ARIA_MAP] ?? FILTER_ARIA_MAP.all;
+}
+
+function setFilterDropdownAria(filterDropdownButton: HTMLElement | null, filterType: string): void {
+    if (!filterDropdownButton) return;
+    const ariaLabel = translation.get(getFilterAriaKey(filterType));
+    filterDropdownButton.title = ariaLabel;
+    filterDropdownButton.setAttribute('aria-label', ariaLabel);
+}
+
+function setFilterIconColor(filterIcon: HTMLElement | null, filterType: string): void {
+    if (!filterIcon) return;
+    if (filterType === 'all') {
+        filterIcon.classList.remove('text-primary-500');
+        filterIcon.classList.add('text-gray-600', 'dark:text-gray-300');
+    } else {
+        filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
+        filterIcon.classList.add('text-primary-500');
+    }
+}
+
+function getNormalizedSearchTerm(input: HTMLInputElement | null): string {
+    return input ? input.value.toLowerCase().trim() : '';
+}
+
 declare global {
     interface Window {
         bookListSections: SectionToggle;
@@ -24,19 +58,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load translations for dynamic aria-label updates
     await translation.init();
     const searchInput = document.getElementById('searchInput') as HTMLInputElement | null;
-    const mobileSearchInput = document.getElementById('mobileSearchInput') as HTMLInputElement | null;
+    const mobileSearchInput = document.getElementById(
+        'mobileSearchInput',
+    ) as HTMLInputElement | null;
     const filterButtons = document.querySelectorAll<HTMLElement>('[data-filter]');
     const readingSection = document.querySelector<HTMLElement>('section:has(#readingContainer)');
-    const completedSection = document.querySelector<HTMLElement>('section:has(#completedContainer)');
-    const abandonedSection = document.querySelector<HTMLElement>('section:has(#abandonedContainer)');
+    const completedSection = document.querySelector<HTMLElement>(
+        'section:has(#completedContainer)',
+    );
+    const abandonedSection = document.querySelector<HTMLElement>(
+        'section:has(#abandonedContainer)',
+    );
     const unreadSection = document.querySelector<HTMLElement>('section:has(#unreadContainer)');
     const bookCards = document.querySelectorAll<BookCard>('.book-card');
 
     // Determine if this is books or comics page based on data attribute
     const pageKind = document.body.dataset.sectionToggleKind || 'books';
-    const filterStorageKey = pageKind === 'comics'
-        ? StorageManager.KEYS.LIBRARY_LIST_COMICS_FILTER
-        : StorageManager.KEYS.LIBRARY_LIST_BOOKS_FILTER;
+    const filterStorageKey =
+        pageKind === 'comics'
+            ? StorageManager.KEYS.LIBRARY_LIST_COMICS_FILTER
+            : StorageManager.KEYS.LIBRARY_LIST_BOOKS_FILTER;
 
     // Load persisted filter or default to 'all'
     let currentFilter = StorageManager.get<string>(filterStorageKey, 'all') || 'all';
@@ -87,11 +128,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // After filtering, expand/collapse sections based on visible books
         if (searchTerm) {
             // For each section, check if it has visible books
-            ['reading', 'completed', 'abandoned', 'unread'].forEach(name => {
+            ['reading', 'completed', 'abandoned', 'unread'].forEach((name) => {
                 const container = document.getElementById(name + 'Container');
                 if (!container) return;
                 const hasVisible = Array.from(container.children).some(
-                    child => (child as HTMLElement).style.display !== 'none'
+                    (child) => (child as HTMLElement).style.display !== 'none',
                 );
                 if (hasVisible) {
                     sectionToggle.show(name, { persist: false });
@@ -103,31 +144,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Attach input listeners to both inputs (if they exist)
-    [searchInput, mobileSearchInput].forEach(inp => {
+    [searchInput, mobileSearchInput].forEach((inp) => {
         if (!inp) return;
-        inp.addEventListener('input', function (this: HTMLInputElement) {
+        inp.addEventListener('input', (e) => {
+            const el = e.currentTarget as HTMLInputElement;
             // keep values in sync
-            if (inp === searchInput && mobileSearchInput) {
-                mobileSearchInput.value = inp.value;
+            if (el === searchInput && mobileSearchInput) {
+                mobileSearchInput.value = el.value;
             }
-            if (inp === mobileSearchInput && searchInput) {
-                searchInput.value = inp.value;
+            if (el === mobileSearchInput && searchInput) {
+                searchInput.value = el.value;
             }
-            handleSearchInput(inp.value);
+            handleSearchInput(el.value);
         });
     });
 
     // Filter functionality
-    filterButtons.forEach(button => {
+    filterButtons.forEach((button) => {
         button.addEventListener('click', function (this: HTMLElement) {
             // Update filter button states
-            filterButtons.forEach(btn => btn.classList.remove('filter-button-active'));
+            filterButtons.forEach((btn) => btn.classList.remove('filter-button-active'));
             this.classList.add('filter-button-active');
 
             currentFilter = this.dataset.filter || 'all';
             // Persist the filter selection
             StorageManager.set(filterStorageKey, currentFilter);
-            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const searchTerm = getNormalizedSearchTerm(searchInput);
             filterBooks(searchTerm, currentFilter);
         });
     });
@@ -138,20 +180,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         let abandonedVisible = 0;
         let unreadVisible = 0;
 
-        bookCards.forEach(card => {
+        bookCards.forEach((card) => {
             const title = (card.dataset.title || '').toLowerCase();
             const author = (card.dataset.author || '').toLowerCase();
             const series = (card.dataset.series || '').toLowerCase();
             const status = card.dataset.status || '';
 
             // Check search match
-            const matchesSearch = !searchTerm ||
+            const matchesSearch =
+                !searchTerm ||
                 title.includes(searchTerm) ||
                 author.includes(searchTerm) ||
                 series.includes(searchTerm);
 
             // Check filter match
-            const matchesFilter = filter === 'all' ||
+            const matchesFilter =
+                filter === 'all' ||
                 (filter === 'reading' && status === 'reading') ||
                 (filter === 'completed' && status === 'completed') ||
                 (filter === 'abandoned' && status === 'abandoned') ||
@@ -180,17 +224,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Show/hide sections based on content and filter
         if (readingSection) {
-            const shouldShowReading = readingVisible > 0 && (filter === 'all' || filter === 'reading');
+            const shouldShowReading =
+                readingVisible > 0 && (filter === 'all' || filter === 'reading');
             readingSection.style.display = shouldShowReading ? 'block' : 'none';
         }
 
         if (completedSection) {
-            const shouldShowCompleted = completedVisible > 0 && (filter === 'all' || filter === 'completed');
+            const shouldShowCompleted =
+                completedVisible > 0 && (filter === 'all' || filter === 'completed');
             completedSection.style.display = shouldShowCompleted ? 'block' : 'none';
         }
 
         if (abandonedSection) {
-            const shouldShowAbandoned = abandonedVisible > 0 && (filter === 'all' || filter === 'abandoned');
+            const shouldShowAbandoned =
+                abandonedVisible > 0 && (filter === 'all' || filter === 'abandoned');
             abandonedSection.style.display = shouldShowAbandoned ? 'block' : 'none';
         }
 
@@ -270,7 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize progress bar animations
     const progressBars = document.querySelectorAll<HTMLElement>('.book-progress-bar');
-    progressBars.forEach(bar => {
+    progressBars.forEach((bar) => {
         const width = bar.style.width;
         bar.style.width = '0%';
         setTimeout(() => {
@@ -301,40 +348,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Update filter icon color (gray when all, primary when filtered)
             const filterIcon = document.getElementById('filterIcon');
-            if (filterIcon) {
-                if (filterType === 'all') {
-                    filterIcon.classList.remove('text-primary-500');
-                    filterIcon.classList.add('text-gray-600', 'dark:text-gray-300');
-                } else {
-                    filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
-                    filterIcon.classList.add('text-primary-500');
-                }
-            }
+            setFilterIconColor(filterIcon, filterType);
 
             // Update aria-label and title based on filter type
-            const filterAriaMap: Record<string, string> = {
-                'all': 'filter.all-aria',
-                'reading': 'filter.reading-aria',
-                'completed': 'filter.completed-aria',
-                'abandoned': 'filter.on-hold-aria',
-                'unread': 'filter.unread-aria'
-            };
-            const ariaKey = filterAriaMap[filterType] || 'filter.all-aria';
-            const ariaLabel = translation.get(ariaKey);
-            if (filterDropdownButton) {
-                filterDropdownButton.title = ariaLabel;
-                filterDropdownButton.setAttribute('aria-label', ariaLabel);
-            }
+            setFilterDropdownAria(filterDropdownButton, filterType);
 
             // Apply the filter
-            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const searchTerm = getNormalizedSearchTerm(searchInput);
             filterBooks(searchTerm, currentFilter);
 
             filterDropdownMenu.classList.add('hidden');
         }
     });
-
-
 
     // Mobile search inline toggle logic
     mobileSearchButton?.addEventListener('click', () => {
@@ -374,37 +399,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Apply persisted filter on initial page load
     if (currentFilter !== 'all') {
         // Find the button with the saved filter and simulate its selection
-        const savedFilterButton = document.querySelector<HTMLButtonElement>(`#filterDropdownMenu button[data-filter="${currentFilter}"]`);
+        const savedFilterButton = document.querySelector<HTMLButtonElement>(
+            `#filterDropdownMenu button[data-filter="${currentFilter}"]`,
+        );
         if (savedFilterButton && selectedFilterLabel) {
             selectedFilterLabel.textContent = savedFilterButton.textContent;
         }
 
         // Update filter icon color
         const filterIcon = document.getElementById('filterIcon');
-        if (filterIcon) {
-            filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
-            filterIcon.classList.add('text-primary-500');
-        }
+        setFilterIconColor(filterIcon, currentFilter);
 
         // Update aria-label
-        const filterAriaMap: Record<string, string> = {
-            'all': 'filter.all-aria',
-            'reading': 'filter.reading-aria',
-            'completed': 'filter.completed-aria',
-            'abandoned': 'filter.on-hold-aria',
-            'unread': 'filter.unread-aria'
-        };
-        const ariaKey = filterAriaMap[currentFilter] || 'filter.all-aria';
-        const ariaLabel = translation.get(ariaKey);
-        if (filterDropdownButton) {
-            filterDropdownButton.title = ariaLabel;
-            filterDropdownButton.setAttribute('aria-label', ariaLabel);
-        }
+        setFilterDropdownAria(filterDropdownButton, currentFilter);
 
         // Mark the legacy filter button as active if present
-        const legacyFilterButton = document.querySelector<HTMLElement>(`[data-filter="${currentFilter}"]`);
+        const legacyFilterButton = document.querySelector<HTMLElement>(
+            `[data-filter="${currentFilter}"]`,
+        );
         if (legacyFilterButton) {
-            filterButtons.forEach(btn => btn.classList.remove('filter-button-active'));
+            filterButtons.forEach((btn) => btn.classList.remove('filter-button-active'));
             legacyFilterButton.classList.add('filter-button-active');
         }
 
