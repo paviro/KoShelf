@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
-    <link href="/assets/css/style.css" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#6366f1">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+{% extends "base.html" %}
+
+{% block title %}404 - Page Not Found{% endblock %}
+
+{% block body_class %}bg-gray-100 min-h-screen flex items-center justify-center{% endblock %}
+
+{% block body %}
     <div class="max-w-md mx-auto text-center">
         <div class="mb-8">
             <h1 class="text-9xl font-bold text-gray-300 mb-4">404</h1>
@@ -19,7 +13,7 @@
                 The page you're looking for doesn't exist or has been moved.
             </p>
         </div>
-        
+
         <div class="space-y-4">
             <a href="/" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors">
                 Go Home
@@ -31,6 +25,4 @@
             </div>
         </div>
     </div>
-    <script type="module" src="/assets/js/base.js"></script>
-</body>
-</html> 
+{% endblock %}
