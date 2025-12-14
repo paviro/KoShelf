@@ -3,6 +3,7 @@ import { LazyImageLoader } from './lazy-loading.js';
 import { SectionToggle } from './section-toggle.js';
 import { translation } from './i18n.js';
 import { initBookCardTilt } from './tilt-effect.js';
+import { StorageManager } from './storage-manager.js';
 
 declare global {
     interface Window {
@@ -31,7 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const unreadSection = document.querySelector<HTMLElement>('section:has(#unreadContainer)');
     const bookCards = document.querySelectorAll<BookCard>('.book-card');
 
-    let currentFilter = 'all';
+    // Determine if this is books or comics page based on data attribute
+    const pageKind = document.body.dataset.sectionToggleKind || 'books';
+    const filterStorageKey = pageKind === 'comics'
+        ? StorageManager.KEYS.COMIC_LIST_FILTER
+        : StorageManager.KEYS.BOOK_LIST_FILTER;
+
+    // Load persisted filter or default to 'all'
+    let currentFilter = StorageManager.get<string>(filterStorageKey, 'all') || 'all';
 
     // Initialize lazy loading
     const lazyLoader = new LazyImageLoader();
@@ -117,6 +125,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.classList.add('filter-button-active');
 
             currentFilter = this.dataset.filter || 'all';
+            // Persist the filter selection
+            StorageManager.set(filterStorageKey, currentFilter);
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             filterBooks(searchTerm, currentFilter);
         });
@@ -285,6 +295,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const filterType = target.dataset.filter || 'all';
             if (selectedFilterLabel && filterText) selectedFilterLabel.textContent = filterText;
 
+            // Persist the filter selection
+            currentFilter = filterType;
+            StorageManager.set(filterStorageKey, currentFilter);
+
             // Update filter icon color (gray when all, primary when filtered)
             const filterIcon = document.getElementById('filterIcon');
             if (filterIcon) {
@@ -311,6 +325,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 filterDropdownButton.title = ariaLabel;
                 filterDropdownButton.setAttribute('aria-label', ariaLabel);
             }
+
+            // Apply the filter
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            filterBooks(searchTerm, currentFilter);
 
             filterDropdownMenu.classList.add('hidden');
         }
@@ -352,4 +370,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchInput.dispatchEvent(new Event('input'));
         }
     });
+
+    // Apply persisted filter on initial page load
+    if (currentFilter !== 'all') {
+        // Find the button with the saved filter and simulate its selection
+        const savedFilterButton = document.querySelector<HTMLButtonElement>(`#filterDropdownMenu button[data-filter="${currentFilter}"]`);
+        if (savedFilterButton && selectedFilterLabel) {
+            selectedFilterLabel.textContent = savedFilterButton.textContent;
+        }
+
+        // Update filter icon color
+        const filterIcon = document.getElementById('filterIcon');
+        if (filterIcon) {
+            filterIcon.classList.remove('text-gray-600', 'dark:text-gray-300');
+            filterIcon.classList.add('text-primary-500');
+        }
+
+        // Update aria-label
+        const filterAriaMap: Record<string, string> = {
+            'all': 'filter.all-aria',
+            'reading': 'filter.reading-aria',
+            'completed': 'filter.completed-aria',
+            'abandoned': 'filter.on-hold-aria',
+            'unread': 'filter.unread-aria'
+        };
+        const ariaKey = filterAriaMap[currentFilter] || 'filter.all-aria';
+        const ariaLabel = translation.get(ariaKey);
+        if (filterDropdownButton) {
+            filterDropdownButton.title = ariaLabel;
+            filterDropdownButton.setAttribute('aria-label', ariaLabel);
+        }
+
+        // Mark the legacy filter button as active if present
+        const legacyFilterButton = document.querySelector<HTMLElement>(`[data-filter="${currentFilter}"]`);
+        if (legacyFilterButton) {
+            filterButtons.forEach(btn => btn.classList.remove('filter-button-active'));
+            legacyFilterButton.classList.add('filter-button-active');
+        }
+
+        // Apply the filter
+        filterBooks('', currentFilter);
+    }
 });
