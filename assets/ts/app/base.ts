@@ -4,3 +4,6 @@
 import '../shared/pwa.js';
 import '../shared/dropdown.js';
 import '../shared/filter-restore.js';
+
+// Side-effect import: runs on WebKit only.
+import '../components/webkit-repaint-hack.js';
