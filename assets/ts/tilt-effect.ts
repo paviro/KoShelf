@@ -63,6 +63,11 @@ export function initTilt(options: TiltOptions): void {
         return;
     }
 
+    // Disable on touch-only devices (no fine pointer like a mouse)
+    if (!window.matchMedia('(pointer: fine)').matches) {
+        return;
+    }
+
     const opts = { ...DEFAULT_OPTIONS, ...options };
     const elements = document.querySelectorAll<HTMLElement>(opts.selector);
 
