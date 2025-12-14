@@ -177,6 +177,16 @@ export async function initializeCalendar(): Promise<void> {
     });
 }
 
+// When this module is loaded as a page entry bundle, auto-initialize.
+// (Still exported for tests / potential future reuse.)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeCalendar().catch((e) => console.error('Failed to initialize calendar:', e));
+    });
+} else {
+    initializeCalendar().catch((e) => console.error('Failed to initialize calendar:', e));
+}
+
 // Load the list of available months
 async function loadAvailableMonths(): Promise<void> {
     try {

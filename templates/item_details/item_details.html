@@ -98,7 +98,7 @@
     {% include "bottom_navbar.html" %}
     
     <!-- Include JavaScript -->
-    <script type="module" src="/assets/js/section-toggle.js"></script>
+    <script type="module" src="/assets/js/base.js"></script>
     <script type="module" src="/assets/js/item_detail.js"></script>
     
     <script>
@@ -124,9 +124,6 @@
             }
         }
         </script>
-    <script type="module" src="/assets/js/pwa.js"></script>
-    {% if has_statistics %}
-    <script type="module" src="/assets/js/filter-restore.js"></script>
-    {% endif %}
+    <!-- base.js includes PWA + dropdown handling + filter restore -->
 </body>
 </html> 

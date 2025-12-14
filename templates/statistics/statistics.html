@@ -69,18 +69,7 @@
     <!-- Bottom Navigation Bar - Mobile Only -->
     {% include "bottom_navbar.html" %}
 
-    <script type="module">
-        import { SectionToggle } from '/assets/js/section-toggle.js';
-        
-        // Initialize section toggles when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            new SectionToggle();
-        });
-    </script>
+    <script type="module" src="/assets/js/base.js"></script>
     <script type="module" src="/assets/js/statistics.js"></script>
-    <script type="module" src="/assets/js/heatmap.js"></script>
-    <script type="module" src="/assets/js/pwa.js"></script>
-    <script type="module" src="/assets/js/filter-restore.js"></script>
-    <script type="module" src="/assets/js/dropdown.js"></script>
 </body>
 </html> 

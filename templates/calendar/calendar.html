@@ -195,14 +195,7 @@
     {% include "calendar/components/event_modal.html" %}
 
     <script src="/assets/js/event-calendar.min.js"></script>
-    <script type="module">
-        import { initializeCalendar } from '/assets/js/calendar.js';
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeCalendar();
-        });
-    </script>
-    <script type="module" src="/assets/js/pwa.js"></script>
-    <script type="module" src="/assets/js/dropdown.js"></script>
-    <script type="module" src="/assets/js/filter-restore.js"></script>
+    <script type="module" src="/assets/js/base.js"></script>
+    <script type="module" src="/assets/js/calendar.js"></script>
 </body>
 </html>
