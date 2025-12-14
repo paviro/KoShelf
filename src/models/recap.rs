@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use super::ContentType;
 
-/// Recap view item for a single completed book entry enriched with optional Book data
+/// Recap view item for a single completed item entry enriched with optional LibraryItem data
 #[derive(Debug, Clone, Serialize)]
 pub struct RecapItem {
     pub title: String,
@@ -22,9 +22,9 @@ pub struct RecapItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub series_display: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_path: Option<String>,
+    pub item_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_cover: Option<String>,
+    pub item_cover: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<ContentType>,
     pub star_display: [bool; 5],

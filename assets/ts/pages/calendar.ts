@@ -25,22 +25,22 @@ function monthKey(date: Date): string {
 }
 
 interface EventExtendedProps extends Record<string, unknown> {
-    book_id: string;
+    item_id: string;
     start: string;
     end?: string;
     total_read_time: number;
     total_pages_read: number;
     book_title: string;
     authors: string[];
-    book_path?: string;
-    book_cover?: string;
+    item_path?: string;
+    item_cover?: string;
     color?: string;
     content_type: ContentType;
     md5: string;
 }
 
 interface RawEvent {
-    book_id: string;
+    item_id: string;
     start: string;
     end?: string;
     total_read_time: number;
@@ -50,8 +50,8 @@ interface RawEvent {
 interface BookInfo {
     title?: string;
     authors?: string[];
-    book_path?: string;
-    book_cover?: string;
+    item_path?: string;
+    item_cover?: string;
     color?: string;
     content_type?: ContentType;
 }
@@ -284,7 +284,7 @@ function initializeEventCalendar(events: RawEvent[]): void {
 }
 
 function getEventContentType(ev: RawEvent): ContentType {
-    const book = currentBooks[ev.book_id];
+    const book = currentBooks[ev.item_id];
     return book?.content_type === 'comic' ? 'comic' : 'book';
 }
 
@@ -295,21 +295,21 @@ function getFilteredRawEvents(evts: RawEvent[]): RawEvent[] {
 
 function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
     return evts.map((ev) => {
-        const book = currentBooks[ev.book_id] || {};
+        const book = currentBooks[ev.item_id] || {};
         const content_type: ContentType = book.content_type === 'comic' ? 'comic' : 'book';
         const extendedProps: EventExtendedProps = {
             ...ev,
             book_title: book.title || translation.get('unknown-book'),
             authors: book.authors || [],
-            book_path: book.book_path,
-            book_cover: book.book_cover,
+            item_path: book.item_path,
+            item_cover: book.item_cover,
             color: book.color,
             content_type,
-            md5: ev.book_id,
+            md5: ev.item_id,
         };
 
         const input: Calendar.EventInput = {
-            id: ev.book_id,
+            id: ev.item_id,
             title: book.title || translation.get('unknown-book'),
             start: ev.start,
             end: ev.end || ev.start,
@@ -418,9 +418,9 @@ function getEventColor(event: RawEvent): string {
         '#6366F1',
     ];
 
-    const book = currentBooks[event.book_id] || {};
+    const book = currentBooks[event.item_id] || {};
     let hash = 0;
-    const str = (book.title || '') + (event.book_id || '');
+    const str = (book.title || '') + (event.item_id || '');
     for (let i = 0; i < str.length; i++) {
         hash = (hash << 5) - hash + str.charCodeAt(i);
         hash |= 0; // Convert to 32-bit int
@@ -446,8 +446,8 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
     const coverPlaceholder = document.getElementById('bookCoverPlaceholder');
 
     if (coverImg && coverContainer && coverPlaceholder) {
-        if (event.book_cover && event.book_cover.trim() !== '') {
-            coverImg.src = event.book_cover;
+        if (event.item_cover && event.item_cover.trim() !== '') {
+            coverImg.src = event.item_cover;
             coverImg.onload = () => {
                 coverContainer.classList.remove('hidden');
                 coverPlaceholder.classList.add('hidden');
@@ -479,13 +479,13 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
         pagesReadEl.textContent = String(event.total_pages_read);
     }
 
-    // View-book button setup
-    const bookPath = event.book_path;
-    if (bookPath) {
+    // View-item button setup
+    const itemPath = event.item_path;
+    if (itemPath) {
         viewBookBtn.classList.remove('hidden');
         viewBookBtn.onclick = () => {
             hideEventModal(); // Ensure modal hidden immediately
-            window.location.href = bookPath;
+            window.location.href = itemPath;
         };
     } else {
         viewBookBtn.classList.add('hidden');
@@ -708,7 +708,7 @@ function refreshAggregatedData(): void {
 
     for (const [, monthData] of monthlyDataCache) {
         for (const ev of monthData.events || []) {
-            const key = `${ev.book_id}|${ev.start}|${ev.end || ''}`;
+            const key = `${ev.item_id}|${ev.start}|${ev.end || ''}`;
             if (!seenKeys.has(key)) {
                 seenKeys.add(key);
                 currentEvents.push(ev);
@@ -789,11 +789,10 @@ function createPickerButton(
     onClick: () => void,
 ): HTMLButtonElement {
     const btn = document.createElement('button');
-    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${
-        isActive
-            ? 'bg-primary-600 text-white'
-            : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
-    }`;
+    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${isActive
+        ? 'bg-primary-600 text-white'
+        : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
+        }`;
     btn.textContent = text;
     btn.addEventListener('click', onClick);
     return btn;
