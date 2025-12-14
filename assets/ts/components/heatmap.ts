@@ -3,7 +3,7 @@
  * Handles loading and displaying reading activity heatmap with year selection
  */
 
-import { translation } from './i18n.js';
+import { translation } from '../shared/i18n.js';
 import { TooltipManager } from './tooltip-manager.js';
 
 interface ActivityEntry {

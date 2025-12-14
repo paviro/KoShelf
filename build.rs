@@ -3,14 +3,10 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    println!("cargo:rerun-if-changed=assets/input.css");
-    println!("cargo:rerun-if-changed=assets/ts/");
-    println!("cargo:rerun-if-changed=assets/share_story.svg");
-    println!("cargo:rerun-if-changed=assets/share_square.svg");
-    println!("cargo:rerun-if-changed=assets/share_banner.svg");
+    rerun_if_changed_recursive(Path::new("assets"));
+    rerun_if_changed_recursive(Path::new("templates"));
+    rerun_if_changed_recursive(Path::new("src"));
     println!("cargo:rerun-if-changed=tailwind.config.js");
-    println!("cargo:rerun-if-changed=templates/");
-    println!("cargo:rerun-if-changed=src/");
     println!("cargo:rerun-if-changed=package.json");
     println!("cargo:rerun-if-changed=package-lock.json");
 
@@ -89,29 +85,10 @@ fn main() {
     // Compile TypeScript with esbuild
     compile_typescript(&out_dir);
 
-    // Copy calendar library files
-    eprintln!("Copying event calendar library files...");
-
-    let calendar_js_path =
-        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js");
     let calendar_css_path =
         Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.css");
-    let calendar_map_path =
-        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.js.map");
-
-    // Ensure calendar JS file exists
-    if !calendar_js_path.exists() {
-        panic!(
-            "Event calendar JS file not found at {:?}. Make sure @event-calendar/build is properly installed.",
-            calendar_js_path
-        );
-    }
-
-    let calendar_js_content =
-        fs::read_to_string(calendar_js_path).expect("Failed to read event calendar JS file");
-    let calendar_js_dest = Path::new(&out_dir).join("event-calendar.min.js");
-    fs::write(&calendar_js_dest, calendar_js_content)
-        .expect("Failed to write event calendar JS to output directory");
+    // Copy calendar CSS (JS is bundled into calendar.js via esbuild)
+    eprintln!("Copying event calendar CSS...");
 
     // Ensure calendar CSS file exists
     if !calendar_css_path.exists() {
@@ -126,20 +103,38 @@ fn main() {
     let calendar_css_dest = Path::new(&out_dir).join("event-calendar.min.css");
     fs::write(&calendar_css_dest, calendar_css_content)
         .expect("Failed to write event calendar CSS to output directory");
-
-    // Copy calendar JS map file if it exists
-    if calendar_map_path.exists() {
-        let calendar_map_content =
-            fs::read_to_string(calendar_map_path).expect("Failed to read event calendar map file");
-        let calendar_map_dest = Path::new(&out_dir).join("event-calendar.min.js.map");
-        fs::write(&calendar_map_dest, calendar_map_content)
-            .expect("Failed to write event calendar map to output directory");
-    }
-
-    eprintln!("Event calendar library files copied successfully");
+    eprintln!("Event calendar CSS copied successfully");
 
     // Download and embed fonts for SVG rendering
     download_fonts(&out_dir);
+}
+
+fn rerun_if_changed_recursive(dir: &Path) {
+    if !dir.exists() {
+        return;
+    }
+
+    // Watch the directory entry too, so add/remove/rename can trigger rebuilds.
+    if let Some(p) = dir.to_str() {
+        println!("cargo:rerun-if-changed={}", p);
+    }
+
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            rerun_if_changed_recursive(&path);
+        } else if path.is_file() {
+            // Best-effort: only print paths Cargo can parse nicely.
+            if let Some(p) = path.to_str() {
+                println!("cargo:rerun-if-changed={}", p);
+            }
+        }
+    }
 }
 
 /// Compile TypeScript files with esbuild
@@ -156,14 +151,14 @@ fn compile_typescript(out_dir: &str) {
     // Explicit entrypoints: we want a small shared base bundle + a few page bundles.
     // Helper modules are imported by these entrypoints and should not be emitted as standalone files.
     let ts_files: Vec<String> = vec![
-        "assets/ts/base.ts",
-        "assets/ts/library_list.ts",
-        "assets/ts/item_detail.ts",
-        "assets/ts/statistics.ts",
-        "assets/ts/recap.ts",
-        "assets/ts/calendar.ts",
+        "assets/ts/app/base.ts",
+        "assets/ts/pages/library_list.ts",
+        "assets/ts/pages/item_detail.ts",
+        "assets/ts/pages/statistics.ts",
+        "assets/ts/pages/recap.ts",
+        "assets/ts/pages/calendar.ts",
         // Service worker must remain its own top-level script.
-        "assets/ts/service-worker.ts",
+        "assets/ts/app/service-worker.ts",
     ]
     .into_iter()
     .map(|p| p.to_string())
@@ -189,6 +184,10 @@ fn compile_typescript(out_dir: &str) {
         "--format=esm".to_string(),
         "--target=es2020".to_string(),
         "--minify".to_string(),
+        // Flatten output names so Rust can embed OUT_DIR/<name>.js.
+        // Without this, esbuild preserves folders (e.g. pages/calendar.ts -> OUT_DIR/pages/calendar.js),
+        // and stale OUT_DIR/calendar.js can remain and accidentally get embedded/served.
+        "--entry-names=[name]".to_string(),
         format!("--outdir={}", out_dir),
     ];
     args.extend(ts_files);

@@ -30,6 +30,7 @@ async function initializeServiceWorker(): Promise<void> {
 
     navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
     window.addEventListener('error', handleWindowError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
     // Start version monitoring after page load
     setTimeout(startVersionMonitoring, 1000);
@@ -49,6 +50,17 @@ function handleWindowError(event: ErrorEvent): void {
         console.error('[PWA] Window error detected:', event.error || event.message);
         recoveryReload();
     }
+}
+
+function handleUnhandledRejection(event: PromiseRejectionEvent): void {
+    // Some runtime failures surface only as unhandled promise rejections.
+    // Treat them as critical and trigger the same recovery path.
+    if (event.reason) {
+        console.error('[PWA] Unhandled rejection detected:', event.reason);
+    } else {
+        console.error('[PWA] Unhandled rejection detected');
+    }
+    recoveryReload();
 }
 
 function recoveryReload(): void {

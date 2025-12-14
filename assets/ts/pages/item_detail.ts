@@ -1,7 +1,7 @@
 // Book Details Page JavaScript
 // Uses the SectionToggle module for handling collapsible sections
 
-import { SectionToggle } from './section-toggle.js';
+import { SectionToggle } from '../components/section-toggle.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize section toggles using the module

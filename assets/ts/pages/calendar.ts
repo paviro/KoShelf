@@ -1,73 +1,17 @@
 // Calendar module: provides initializeCalendar() to bootstrap the reading calendar UI
 // All logic is self-contained – nothing is written to or read from the global `window` object.
 
-import { showModal, hideModal, setupModalCloseHandlers } from './modal-utils.js';
-import { translation } from './i18n.js';
+// Event Calendar (module API)
+import { createCalendar, destroyCalendar, DayGrid } from '@event-calendar/core';
+import type { Calendar } from '@event-calendar/core';
+
+import { showModal, hideModal, setupModalCloseHandlers } from '../components/modal-utils.js';
+import { translation } from '../shared/i18n.js';
 
 type ContentFilter = 'all' | 'book' | 'comic';
 type ContentType = 'book' | 'comic';
 
-// Type declarations for EventCalendar library
-declare const EventCalendar: {
-    create(el: HTMLElement, options: EventCalendarOptions): EventCalendarInstance;
-    destroy(calendar: EventCalendarInstance): void;
-};
-
-interface EventCalendarOptions {
-    view: string;
-    headerToolbar: boolean;
-    height: string;
-    locale: string;
-    firstDay: number;
-    displayEventEnd: boolean;
-    editable: boolean;
-    eventStartEditable: boolean;
-    eventDurationEditable: boolean;
-    events: CalendarEvent[];
-    eventClick: (info: EventClickInfo) => void;
-    dateClick: (info: DateClickInfo) => void;
-    datesSet: (info: DatesSetInfo) => void;
-}
-
-interface EventCalendarInstance {
-    setOption<K extends keyof EventCalendarOptions>(key: K, value: EventCalendarOptions[K]): void;
-    setOption(key: 'date', value: Date | string): void;
-    prev(): void;
-    next(): void;
-    destroy?(): void;
-}
-
-interface EventClickInfo {
-    event: {
-        title: string;
-        extendedProps: EventExtendedProps;
-    };
-}
-
-interface DateClickInfo {
-    dateStr: string;
-}
-
-interface DatesSetInfo {
-    view: {
-        title: string;
-        currentStart: Date;
-    };
-}
-
-interface CalendarEvent {
-    id: string;
-    title: string;
-    start: string;
-    end: string;
-    allDay: boolean;
-    backgroundColor: string;
-    borderColor: string;
-    textColor: string;
-    extendedProps: EventExtendedProps;
-}
-
-interface EventExtendedProps {
+interface EventExtendedProps extends Record<string, unknown> {
     book_id: string;
     start: string;
     end?: string;
@@ -114,7 +58,7 @@ interface MonthData {
     stats_comics?: MonthlyStats;
 }
 
-let calendar: EventCalendarInstance | null = null;
+let calendar: Calendar | null = null;
 let currentEvents: RawEvent[] = [];
 let currentBooks: Record<string, BookInfo> = {};
 const monthlyDataCache = new Map<string, MonthData>(); // Cache for monthly data: month -> {events, books}
@@ -287,19 +231,12 @@ function initializeEventCalendar(events: RawEvent[]): void {
 
     // Destroy existing instance when re-initialising
     if (calendar) {
-        try {
-            EventCalendar.destroy(calendar);
-        } catch {
-            // Some versions expose a destroy() method on the instance instead – try that as well
-            if (typeof calendar.destroy === 'function') {
-                calendar.destroy();
-            }
-        }
+        // destroyCalendar returns a Promise; we don't need to await for our use.
+        void destroyCalendar(calendar);
     }
 
-    calendar = EventCalendar.create(calendarEl, {
+    calendar = createCalendar(calendarEl, [DayGrid], {
         view: 'dayGridMonth',
-        headerToolbar: false,
         height: 'auto',
         locale: translation.getLanguage(),
         firstDay: 1, // Monday
@@ -308,8 +245,11 @@ function initializeEventCalendar(events: RawEvent[]): void {
         eventStartEditable: false,
         eventDurationEditable: false,
         events: mapEvents(events),
-        eventClick: info => showEventModal(info.event.title, info.event.extendedProps),
-        dateClick: info => console.debug('Date clicked:', info.dateStr),
+        eventClick: info => {
+            // event.title is `Calendar.Content` (string | {html} | {domNodes}); we don't need it for our modal.
+            showEventModal('', info.event.extendedProps as unknown as EventExtendedProps);
+        },
+        dateClick: (info) => console.debug('Date clicked:', info.dateStr),
         datesSet: info => {
             const currentMonthDate = info.view.currentStart;
 
@@ -342,30 +282,33 @@ function getFilteredRawEvents(evts: RawEvent[]): RawEvent[] {
     return evts.filter(ev => getEventContentType(ev) === currentContentFilter);
 }
 
-function mapEvents(evts: RawEvent[]): CalendarEvent[] {
+function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
     return evts.map(ev => {
         const book = currentBooks[ev.book_id] || {};
         const content_type: ContentType = (book.content_type === 'comic' ? 'comic' : 'book');
-        return {
+        const extendedProps: EventExtendedProps = {
+            ...ev,
+            book_title: book.title || translation.get('unknown-book'),
+            authors: book.authors || [],
+            book_path: book.book_path,
+            book_cover: book.book_cover,
+            color: book.color,
+            content_type,
+            md5: ev.book_id
+        };
+
+        const input: Calendar.EventInput = {
             id: ev.book_id,
             title: book.title || translation.get('unknown-book'),
             start: ev.start,
             end: ev.end || ev.start,
             allDay: true,
             backgroundColor: book.color || getEventColor(ev),
-            borderColor: book.color || getEventColor(ev),
             textColor: '#ffffff',
-            extendedProps: {
-                ...ev,
-                book_title: book.title || translation.get('unknown-book'),
-                authors: book.authors || [],
-                book_path: book.book_path,
-                book_cover: book.book_cover,
-                color: book.color,
-                content_type,
-                md5: ev.book_id
-            }
+            extendedProps
         };
+
+        return input;
     });
 }
 

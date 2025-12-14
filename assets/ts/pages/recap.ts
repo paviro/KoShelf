@@ -1,7 +1,7 @@
-import { showModal, setupModalCloseHandlers } from './modal-utils.js';
-import { translation } from './i18n.js';
-import { initRecapCoverTilt } from './tilt-effect.js';
-import { StorageManager } from './storage-manager.js';
+import { showModal, setupModalCloseHandlers } from '../components/modal-utils.js';
+import { translation } from '../shared/i18n.js';
+import { initRecapCoverTilt } from '../components/tilt-effect.js';
+import { StorageManager } from '../shared/storage-manager.js';
 
 // Recap interactions: year dropdown + navigation
 document.addEventListener('DOMContentLoaded', async () => {

@@ -15,7 +15,9 @@ interface BroadcastMessage {
     changedCount?: number;
 }
 
-const CACHE_NAME = 'koshelf-cache-v1';
+// Bump cache name when we make major asset pipeline changes.
+// This forces a clean slate for users stuck with stale cached JS files.
+const CACHE_NAME = 'koshelf-cache-v2';
 const MANIFEST_URL = '/cache-manifest.json';
 const BATCH_SIZE = 10;
 
