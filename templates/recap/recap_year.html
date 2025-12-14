@@ -1,18 +1,10 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ translation.get("recap") }} {{ year }} - {{ site_title }}</title>
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#6366f1">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-</head>
-<body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans" data-recap-scope="{{ recap_scope }}">
-    {% include "sidebar.html" %}
+{% extends "app_layout.html" %}
 
+{% block title %}{{ translation.get("recap") }} {{ year }} - {{ site_title }}{% endblock %}
+
+{% block body_attributes %}data-recap-scope="{{ recap_scope }}"{% endblock %}
+
+{% block header %}
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-850/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
         <div class="flex items-center justify-between h-full">
@@ -101,6 +93,9 @@
             </div>
         </div>
     </header>
+{% endblock %}
+
+{% block content %}
 
     <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
@@ -189,8 +184,7 @@
         </div>
     </div>
 
-    <div class="min-h-full lg:ml-64">
-        <main class="pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-6 md:space-y-8">
+    <main class="pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-6 md:space-y-8">
             <!-- Single full-year timeline -->
             <div class="recap-timeline space-y-6" id="recapTimeline">
                 <!-- Yearly Summary Timeline Event -->
@@ -554,14 +548,12 @@
                 </div>
                 {% endfor %}
             </div>
-        </main>
-    </div>
+    </main>
 
-    {% include "bottom_navbar.html" %}
+{% endblock %}
 
-    <script type="module" src="/assets/js/base.js"></script>
+{% block page_scripts %}
     <script type="module" src="/assets/js/recap.js"></script>
-</body>
-</html>
+{% endblock %}
 
 

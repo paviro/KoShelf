@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en" class="{% block html_class %}h-full{% endblock %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_title }}{% endblock %}</title>
+
+    <link rel="stylesheet" href="/assets/css/style.css">
+    {% block extra_css %}{% endblock %}
+
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body class="{% block body_class %}min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans{% endblock %}"
+      {% block body_attributes %}{% endblock %}>
+    {% block body %}{% endblock %}
+
+    <script type="module" src="/assets/js/base.js"></script>
+    {% block page_scripts %}{% endblock %}
+</body>
+</html>

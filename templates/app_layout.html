@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block body %}
+    {% include "sidebar.html" %}
+
+    {% block header %}{% endblock %}
+
+    <div class="{% block content_container_class %}min-h-full lg:ml-64{% endblock %}">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% include "bottom_navbar.html" %}
+    {% block after_bottom_nav %}{% endblock %}
+{% endblock %}
