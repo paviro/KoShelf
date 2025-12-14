@@ -3,7 +3,7 @@
 use super::SiteGenerator;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::statistics::BookStatistics;
-use crate::templates::{BookMarkdownTemplate, BookTemplate, IndexTemplate};
+use crate::templates::{ItemDetailMarkdownTemplate, ItemDetailTemplate, LibraryListTemplate};
 use anyhow::Result;
 use askama::Template;
 use log::{info, warn};
@@ -124,7 +124,7 @@ impl SiteGenerator {
         let buckets = StatusBuckets::from_items(items);
         self.write_list_manifest(content_type, &buckets)?;
 
-        let template = IndexTemplate {
+        let template = LibraryListTemplate {
             site_title: self.site_title.clone(),
             details_base_path: match content_type {
                 ContentType::Book => "/books/".to_string(),
@@ -193,7 +193,7 @@ impl SiteGenerator {
                 _ => None,
             };
 
-            let template = BookTemplate {
+            let template = ItemDetailTemplate {
                 site_title: self.site_title.clone(),
                 book: item.clone(),
                 book_stats: item_stats.clone(),
@@ -223,7 +223,7 @@ impl SiteGenerator {
             self.write_minify_html(item_path, &html)?;
 
             // Generate Markdown export
-            let md_template = BookMarkdownTemplate {
+            let md_template = ItemDetailMarkdownTemplate {
                 book: item.clone(),
                 book_stats: item_stats.clone(),
                 session_stats: session_stats.clone(),
