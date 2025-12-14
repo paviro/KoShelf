@@ -94,9 +94,9 @@ impl SiteGenerator {
                 stats_js_content.as_bytes(),
             )?;
 
-            let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.css"));
+            let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/calendar.css"));
             self.write_asset(
-                self.css_dir().join("event-calendar.min.css"),
+                self.css_dir().join("calendar.css"),
                 calendar_css.as_bytes(),
             )?;
 

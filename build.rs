@@ -55,7 +55,7 @@ fn main() {
         .args([
             "tailwindcss",
             "-i",
-            "./assets/input.css",
+            "./assets/css/input.css",
             "-o",
             &output_path.to_string_lossy(),
             "--minify",
@@ -85,25 +85,8 @@ fn main() {
     // Compile TypeScript with esbuild
     compile_typescript(&out_dir);
 
-    let calendar_css_path =
-        Path::new("node_modules/@event-calendar/build/dist/event-calendar.min.css");
-    // Copy calendar CSS (JS is bundled into calendar.js via esbuild)
-    eprintln!("Copying event calendar CSS...");
-
-    // Ensure calendar CSS file exists
-    if !calendar_css_path.exists() {
-        panic!(
-            "Event calendar CSS file not found at {:?}. Make sure @event-calendar/build is properly installed.",
-            calendar_css_path
-        );
-    }
-
-    let calendar_css_content =
-        fs::read_to_string(calendar_css_path).expect("Failed to read event calendar CSS file");
-    let calendar_css_dest = Path::new(&out_dir).join("event-calendar.min.css");
-    fs::write(&calendar_css_dest, calendar_css_content)
-        .expect("Failed to write event calendar CSS to output directory");
-    eprintln!("Event calendar CSS copied successfully");
+    // Bundle calendar-only CSS (keep it off non-calendar pages)
+    compile_calendar_css(&out_dir);
 
     // Download and embed fonts for SVG rendering
     download_fonts(&out_dir);
@@ -135,6 +118,38 @@ fn rerun_if_changed_recursive(dir: &Path) {
             }
         }
     }
+}
+
+fn compile_calendar_css(out_dir: &str) {
+    let entry = Path::new("assets/css/calendar.css");
+    if !entry.exists() {
+        panic!("assets/css/calendar.css not found (required for calendar styling)");
+    }
+
+    eprintln!("Bundling calendar CSS...");
+    let outfile = Path::new(out_dir).join("calendar.css");
+
+    let esbuild_output = Command::new("npx")
+        .args([
+            "esbuild",
+            entry.to_string_lossy().as_ref(),
+            "--bundle",
+            "--minify",
+            "--loader:.css=css",
+            &format!("--outfile={}", outfile.to_string_lossy()),
+        ])
+        .output()
+        .expect("Failed to run esbuild for calendar CSS. Make sure Node.js and npm are installed.");
+
+    if !esbuild_output.status.success() {
+        panic!(
+            "Calendar CSS bundling failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&esbuild_output.stdout),
+            String::from_utf8_lossy(&esbuild_output.stderr)
+        );
+    }
+
+    eprintln!("Calendar CSS bundling completed");
 }
 
 /// Compile TypeScript files with esbuild

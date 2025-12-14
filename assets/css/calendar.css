@@ -1,0 +1,8 @@
+/* Calendar-only CSS bundle.
+ *
+ * This gets bundled/minified during build into /assets/css/calendar.css
+ * and should only be included on the calendar page.
+ */
+
+@import "@event-calendar/build/dist/event-calendar.min.css";
+
