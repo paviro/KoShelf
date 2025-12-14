@@ -9,15 +9,14 @@ use askama::Template;
 use log::info;
 use std::fs;
 
-use super::utils::NavContext;
+use super::utils::UiContext;
 
 impl SiteGenerator {
     pub(crate) async fn generate_calendar_page(
         &self,
         stats_data: &mut StatisticsData,
         books: &[LibraryItem],
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
         info!("Generating calendar page...");
 
@@ -33,32 +32,26 @@ impl SiteGenerator {
         // Available months (newest first)
         let mut available_months: Vec<String> = calendar_months.keys().cloned().collect();
         available_months.sort_by(|a, b| b.cmp(a));
-        let months_json = serde_json::to_string_pretty(&available_months)?;
         let months_path = self.calendar_json_dir().join("available_months.json");
-        self.cache_manifest
-            .register_file(&months_path, &self.output_dir, months_json.as_bytes());
-        fs::write(months_path, months_json)?;
+        self.write_registered_json_pretty(months_path, &available_months)?;
 
         // Individual month files
         for (ym, month_data) in &calendar_months {
             let filename = format!("{}.json", ym);
             let file_path = self.calendar_json_dir().join(filename);
-            let month_json = serde_json::to_string_pretty(&month_data)?;
-            self.cache_manifest
-                .register_file(&file_path, &self.output_dir, month_json.as_bytes());
-            fs::write(file_path, month_json)?;
+            self.write_registered_json_pretty(file_path, month_data)?;
         }
 
         // Create the template
         let template = CalendarTemplate {
             site_title: self.site_title.clone(),
-            show_type_filter: nav.has_books && nav.has_comics,
+            show_type_filter: ui.nav.show_type_filter(),
             version: self.get_version(),
             last_updated: self.get_last_updated(),
             navbar_items: self.create_navbar_items_with_recap(
                 "calendar",
-                recap_latest_href.as_deref(),
-                nav,
+                ui.recap_latest_href.as_deref(),
+                ui.nav,
             ),
             translation: self.t(),
         };

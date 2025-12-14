@@ -10,17 +10,16 @@ use log::info;
 use std::fs;
 use std::path::Path;
 
-use super::utils::NavContext;
+use super::utils::UiContext;
 
 impl SiteGenerator {
     pub(crate) async fn generate_statistics_page(
         &self,
         stats_data: &mut StatisticsData,
         render_to_root: bool,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
-        let show_type_filter = nav.has_books && nav.has_comics;
+        let show_type_filter = ui.nav.show_type_filter();
         if render_to_root {
             info!("Generating statistics page at root index...");
         } else {
@@ -76,8 +75,8 @@ impl SiteGenerator {
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap(
                     "statistics",
-                    recap_latest_href.as_deref(),
-                    nav,
+                    ui.recap_latest_href.as_deref(),
+                    ui.nav,
                 ),
                 translation: self.t(),
             };
@@ -97,8 +96,8 @@ impl SiteGenerator {
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap(
                     "statistics",
-                    recap_latest_href.as_deref(),
-                    nav,
+                    ui.recap_latest_href.as_deref(),
+                    ui.nav,
                 ),
                 translation: self.t(),
             };
@@ -120,8 +119,8 @@ impl SiteGenerator {
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
                             "statistics",
-                            recap_latest_href.as_deref(),
-                            nav,
+                            ui.recap_latest_href.as_deref(),
+                            ui.nav,
                         ),
                         translation: self.t(),
                     };
@@ -138,8 +137,8 @@ impl SiteGenerator {
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
                             "statistics",
-                            recap_latest_href.as_deref(),
-                            nav,
+                            ui.recap_latest_href.as_deref(),
+                            ui.nav,
                         ),
                         translation: self.t(),
                     };
@@ -161,8 +160,8 @@ impl SiteGenerator {
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
                             "statistics",
-                            recap_latest_href.as_deref(),
-                            nav,
+                            ui.recap_latest_href.as_deref(),
+                            ui.nav,
                         ),
                         translation: self.t(),
                     };
@@ -179,8 +178,8 @@ impl SiteGenerator {
                         last_updated: self.get_last_updated(),
                         navbar_items: self.create_navbar_items_with_recap(
                             "statistics",
-                            recap_latest_href.as_deref(),
-                            nav,
+                            ui.recap_latest_href.as_deref(),
+                            ui.nav,
                         ),
                         translation: self.t(),
                     };
@@ -229,10 +228,7 @@ impl SiteGenerator {
                 }
             });
 
-            let json = serde_json::to_string_pretty(&json_data)?;
-            self.cache_manifest
-                .register_file(&file_path, &self.output_dir, json.as_bytes());
-            fs::write(file_path, json)?;
+            self.write_registered_json_pretty(file_path, &json_data)?;
         }
 
         Ok(available_years)
@@ -244,11 +240,8 @@ impl SiteGenerator {
         output_dir: &Path,
     ) -> Result<()> {
         for (index, week) in weeks.iter().enumerate() {
-            let week_json = serde_json::to_string_pretty(&week)?;
             let file_path = output_dir.join(format!("week_{}.json", index));
-            self.cache_manifest
-                .register_file(&file_path, &self.output_dir, week_json.as_bytes());
-            fs::write(file_path, week_json)?;
+            self.write_registered_json_pretty(file_path, week)?;
         }
         Ok(())
     }

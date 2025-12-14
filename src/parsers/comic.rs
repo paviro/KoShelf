@@ -15,6 +15,12 @@ const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif"];
 
 pub struct ComicParser;
 
+impl Default for ComicParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComicParser {
     pub fn new() -> Self {
         Self

@@ -211,10 +211,12 @@ fn bundle_css_with_esbuild(name: &str, input_path: &Path, out_dir: &str) {
             &format!("--outfile={}", tmpfile.to_string_lossy()),
         ])
         .output()
-        .expect(&format!(
-            "Failed to run esbuild for {} CSS. Make sure Node.js and npm are installed.",
-            name
-        ));
+        .unwrap_or_else(|e| {
+            panic!(
+                "Failed to run esbuild for {} CSS. Make sure Node.js and npm are installed. Error: {}",
+                name, e
+            )
+        });
 
     if !output.status.success() {
         panic!(

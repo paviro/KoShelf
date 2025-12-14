@@ -22,16 +22,25 @@ pub use cache_manifest::CacheManifestBuilder;
 use crate::config::SiteConfig;
 use crate::i18n::Translations;
 use crate::library::scan_library;
-use crate::models::BookStatus;
-use crate::models::ContentType;
+use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::koreader::{calculate_partial_md5, StatisticsCalculator, StatisticsParser};
 use anyhow::Result;
 use log::info;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use utils::NavContext;
+use utils::{NavContext, UiContext};
+
+#[derive(Debug)]
+struct GenerationContext {
+    all_items: Vec<LibraryItem>,
+    books: Vec<LibraryItem>,
+    comics: Vec<LibraryItem>,
+    stats_data: Option<StatisticsData>,
+    recap_latest_href: Option<String>,
+    nav: NavContext,
+}
 
 pub struct SiteGenerator {
     config: SiteConfig,
@@ -117,15 +126,36 @@ impl SiteGenerator {
         self.json_dir().join("calendar")
     }
 
-    pub async fn generate(&self) -> Result<()> {
-        info!("Generating static site in: {:?}", self.output_dir);
+    fn recap_latest_href(stats_data: Option<&StatisticsData>) -> Option<String> {
+        let sd = stats_data?;
+        let mut years: Vec<i32> = Vec::new();
+        for b in &sd.books {
+            if let Some(cs) = &b.completions {
+                for c in &cs.entries {
+                    if c.end_date.len() >= 4
+                        && let Ok(y) = c.end_date[0..4].parse::<i32>()
+                        && !years.contains(&y)
+                    {
+                        years.push(y);
+                    }
+                }
+            }
+        }
+        if years.is_empty() {
+            None
+        } else {
+            years.sort_by(|a, b| b.cmp(a));
+            Some(format!("/recap/{}/", years[0]))
+        }
+    }
 
+    async fn build_generation_context(&self) -> Result<GenerationContext> {
         // Scan all library paths for books and comics
         // Also returns the set of MD5 hashes for all items (for statistics filtering)
         let (all_items, library_md5s) = if !self.library_paths.is_empty() {
             scan_library(&self.library_paths, &self.metadata_location).await?
         } else {
-            (Vec::new(), std::collections::HashSet::new())
+            (Vec::new(), HashSet::new())
         };
 
         // Filter items based on include_unread setting
@@ -150,7 +180,7 @@ impl SiteGenerator {
         let has_books = !books.is_empty();
         let has_comics = !comics.is_empty();
 
-        // After loading statistics if path is provided
+        // Load statistics if path is provided
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
                 let mut data = StatisticsParser::parse(stats_path)?;
@@ -181,28 +211,7 @@ impl SiteGenerator {
             None
         };
 
-        // Compute latest recap href (if any completions are available)
-        let recap_latest_href: Option<String> = stats_data.as_ref().and_then(|sd| {
-            let mut years: Vec<i32> = Vec::new();
-            for b in &sd.books {
-                if let Some(cs) = &b.completions {
-                    for c in &cs.entries {
-                        if c.end_date.len() >= 4
-                            && let Ok(y) = c.end_date[0..4].parse::<i32>()
-                            && !years.contains(&y)
-                        {
-                            years.push(y);
-                        }
-                    }
-                }
-            }
-            if years.is_empty() {
-                None
-            } else {
-                years.sort_by(|a, b| b.cmp(a));
-                Some(format!("/recap/{}/", years[0]))
-            }
-        });
+        let recap_latest_href = Self::recap_latest_href(stats_data.as_ref());
 
         let nav = NavContext {
             has_books,
@@ -234,64 +243,98 @@ impl SiteGenerator {
             sd.tag_content_types(&md5_to_content_type);
         }
 
+        Ok(GenerationContext {
+            all_items,
+            books,
+            comics,
+            stats_data,
+            recap_latest_href,
+            nav,
+        })
+    }
+
+    pub async fn generate(&self) -> Result<()> {
+        info!("Generating static site in: {:?}", self.output_dir);
+        let mut ctx = self.build_generation_context().await?;
+        let ui = UiContext {
+            recap_latest_href: ctx.recap_latest_href.clone(),
+            nav: ctx.nav,
+        };
+
         // Create output directories based on what we're generating
-        self.create_directories(&all_items, &stats_data).await?;
+        self.create_directories(&ctx.all_items, &ctx.stats_data).await?;
 
         // Copy static assets
-        self.copy_static_assets(&all_items, &stats_data).await?;
+        self.copy_static_assets(&ctx.all_items, &ctx.stats_data)
+            .await?;
 
         // Generate covers for all items (books and comics)
-        self.generate_covers(&all_items).await?;
+        self.generate_covers(&ctx.all_items).await?;
 
         // Clean up stale book directories (for deleted books)
-        self.cleanup_stale_books(&books)?;
+        self.cleanup_stale_books(&ctx.books)?;
 
         // Clean up stale comic directories (for deleted comics)
-        self.cleanup_stale_comics(&comics)?;
+        self.cleanup_stale_comics(&ctx.comics)?;
 
         // Clean up stale covers (for deleted items)
-        self.cleanup_stale_covers(&all_items)?;
+        self.cleanup_stale_covers(&ctx.all_items)?;
 
         // Generate individual book pages
-        self.generate_book_pages(&books, &mut stats_data, recap_latest_href.clone(), nav)
+        self.generate_book_pages(
+            &ctx.books,
+            &mut ctx.stats_data,
+            &ui,
+        )
             .await?;
 
         // Generate individual comic pages (always at /comics/<id>/)
-        self.generate_comic_pages(&comics, &mut stats_data, recap_latest_href.clone(), nav)
+        self.generate_comic_pages(
+            &ctx.comics,
+            &mut ctx.stats_data,
+            &ui,
+        )
             .await?;
 
         // Generate list pages with conditional routing:
         // - If books exist: book list at /
         // - If comics exist AND books exist: comic list at /comics/
         // - If comics exist AND no books: comic list at /
-        if has_books {
+        if ctx.nav.has_books {
             // Generate book list page at index.html
-            self.generate_book_list(&books, recap_latest_href.clone(), nav)
+            self.generate_book_list(&ctx.books, &ui)
                 .await?;
         }
 
-        if has_comics {
+        if ctx.nav.has_comics {
             // Generate comic list - at root if no books, otherwise at /comics/
-            self.generate_comic_list(&comics, !has_books, recap_latest_href.clone(), nav)
+            self.generate_comic_list(
+                &ctx.comics,
+                !ctx.nav.has_books,
+                &ui,
+            )
                 .await?;
         }
 
-        if let Some(ref mut stats_data) = stats_data {
+        if let Some(ref mut stats_data) = ctx.stats_data {
             // Generate statistics page (render to root if no items at all)
             self.generate_statistics_page(
                 stats_data,
-                all_items.is_empty(),
-                recap_latest_href.clone(),
-                nav,
+                ctx.all_items.is_empty(),
+                &ui,
             )
             .await?;
 
             // Generate calendar page if we have statistics data
-            self.generate_calendar_page(stats_data, &all_items, recap_latest_href.clone(), nav)
+            self.generate_calendar_page(
+                stats_data,
+                &ctx.all_items,
+                &ui,
+            )
                 .await?;
 
             // Generate recap pages (static yearly)
-            self.generate_recap_pages(stats_data, &all_items, nav)
+            self.generate_recap_pages(stats_data, &ctx.all_items, ctx.nav)
                 .await?;
         }
 

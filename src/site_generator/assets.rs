@@ -50,14 +50,6 @@ impl SiteGenerator {
         Ok(())
     }
 
-    /// Helper to write a static asset and register it in the cache manifest.
-    fn write_asset(&self, path: std::path::PathBuf, content: &[u8]) -> Result<()> {
-        self.cache_manifest
-            .register_file(&path, &self.output_dir, content);
-        fs::write(path, content)?;
-        Ok(())
-    }
-
     pub(crate) async fn copy_static_assets(
         &self,
         items: &[LibraryItem],
@@ -65,7 +57,7 @@ impl SiteGenerator {
     ) -> Result<()> {
         // Write the pre-compiled CSS (always needed for basic styling)
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
-        self.write_asset(self.css_dir().join("style.css"), css_content.as_bytes())?;
+        self.write_registered_bytes(self.css_dir().join("style.css"), css_content.as_bytes())?;
 
         // Base JS bundle (always needed: PWA + global dropdown handling + filter restore)
         let base_js_content = include_str!(concat!(env!("OUT_DIR"), "/base.js"));
@@ -75,51 +67,57 @@ impl SiteGenerator {
             "external"
         };
         let base_js_content = base_js_content.replace("{{SERVER_MODE}}", server_mode);
-        self.write_asset(self.js_dir().join("base.js"), base_js_content.as_bytes())?;
+        self.write_registered_bytes(self.js_dir().join("base.js"), base_js_content.as_bytes())?;
 
         // Copy list/detail JavaScript when we have any content (books and/or comics use the same templates).
         if !items.is_empty() {
             let js_content = include_str!(concat!(env!("OUT_DIR"), "/library_list.js"));
-            self.write_asset(self.js_dir().join("library_list.js"), js_content.as_bytes())?;
+            self.write_registered_bytes(
+                self.js_dir().join("library_list.js"),
+                js_content.as_bytes(),
+            )?;
 
             let js_content = include_str!(concat!(env!("OUT_DIR"), "/item_detail.js"));
-            self.write_asset(self.js_dir().join("item_detail.js"), js_content.as_bytes())?;
+            self.write_registered_bytes(
+                self.js_dir().join("item_detail.js"),
+                js_content.as_bytes(),
+            )?;
         }
 
         // Copy statistics-related JavaScript files only if we have stats data
         if stats_data.is_some() {
             let stats_js_content = include_str!(concat!(env!("OUT_DIR"), "/statistics.js"));
-            self.write_asset(
+            self.write_registered_bytes(
                 self.js_dir().join("statistics.js"),
                 stats_js_content.as_bytes(),
             )?;
 
             let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/calendar.css"));
-            self.write_asset(
+            self.write_registered_bytes(
                 self.css_dir().join("calendar.css"),
                 calendar_css.as_bytes(),
             )?;
 
             let calendar_init_js_content = include_str!(concat!(env!("OUT_DIR"), "/calendar.js"));
-            self.write_asset(
+            self.write_registered_bytes(
                 self.js_dir().join("calendar.js"),
                 calendar_init_js_content.as_bytes(),
             )?;
 
             let recap_js_content = include_str!(concat!(env!("OUT_DIR"), "/recap.js"));
-            self.write_asset(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
+            self.write_registered_bytes(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
         }
 
         // Translations JSON - copy the locale file directly for the frontend
         fs::create_dir_all(self.json_dir())?;
-        self.write_asset(
+        self.write_registered_bytes(
             self.json_dir().join("locales.json"),
             self.translations.raw_json().as_bytes(),
         )?;
 
         // PWA manifest
         let manifest_content = include_str!("../../assets/manifest.json");
-        self.write_asset(
+        self.write_registered_bytes(
             self.output_dir.join("manifest.json"),
             manifest_content.as_bytes(),
         )?;
@@ -133,10 +131,10 @@ impl SiteGenerator {
 
         // PWA icons
         let icon_192 = include_bytes!("../../assets/icons/icon-192.png");
-        self.write_asset(self.icons_dir().join("icon-192.png"), icon_192)?;
+        self.write_registered_bytes(self.icons_dir().join("icon-192.png"), icon_192)?;
 
         let icon_512 = include_bytes!("../../assets/icons/icon-512.png");
-        self.write_asset(self.icons_dir().join("icon-512.png"), icon_512)?;
+        self.write_registered_bytes(self.icons_dir().join("icon-512.png"), icon_512)?;
 
         Ok(())
     }
