@@ -35,8 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Determine if this is books or comics page based on data attribute
     const pageKind = document.body.dataset.sectionToggleKind || 'books';
     const filterStorageKey = pageKind === 'comics'
-        ? StorageManager.KEYS.COMIC_LIST_FILTER
-        : StorageManager.KEYS.BOOK_LIST_FILTER;
+        ? StorageManager.KEYS.COMICS_LIST_FILTER
+        : StorageManager.KEYS.BOOKS_LIST_FILTER;
 
     // Load persisted filter or default to 'all'
     let currentFilter = StorageManager.get<string>(filterStorageKey, 'all') || 'all';

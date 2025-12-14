@@ -9,25 +9,26 @@ export class StorageManager {
     static readonly PREFIX = 'koshelf_';
 
     static readonly KEYS = {
-        RECAP_SORT_ORDER: 'recap_sort_newest_first',
-        RECAP_SCOPE: 'recap_scope',
-        STATS_SCOPE: 'stats_scope',
-        // List filters
-        BOOK_LIST_FILTER: 'book_list_filter',
-        COMIC_LIST_FILTER: 'comic_list_filter',
-        // UI state
-        BOOK_LIST_SECTION_STATE_BOOKS: 'book_list_section_state_books',
-        BOOK_LIST_SECTION_STATE_COMICS: 'book_list_section_state_comics',
-        BOOK_DETAILS_SECTION_STATE_BOOKS: 'book_details_section_state_books',
-        BOOK_DETAILS_SECTION_STATE_COMICS: 'book_details_section_state_comics',
-        STATISTICS_SECTION_STATE_ALL: 'statistics_section_state_all',
-        STATISTICS_SECTION_STATE_BOOKS: 'statistics_section_state_books',
-        STATISTICS_SECTION_STATE_COMICS: 'statistics_section_state_comics',
+        // Filters (content type filtering)
+        RECAP_FILTER: 'recap_filter',
+        STATS_FILTER: 'stats_filter',
+        BOOKS_LIST_FILTER: 'books_list_filter',
+        COMICS_LIST_FILTER: 'comics_list_filter',
+        // Section collapse states
+        BOOKS_LIST_SECTIONS: 'books_list_sections',
+        COMICS_LIST_SECTIONS: 'comics_list_sections',
+        BOOK_DETAIL_SECTIONS: 'book_detail_sections',
+        COMIC_DETAIL_SECTIONS: 'comic_detail_sections',
+        STATS_ALL_SECTIONS: 'stats_all_sections',
+        STATS_BOOKS_SECTIONS: 'stats_books_sections',
+        STATS_COMICS_SECTIONS: 'stats_comics_sections',
+        // Recap settings
+        RECAP_SORT_NEWEST: 'recap_sort_newest',
         // PWA & Versioning
         VERSION: 'version',
         SERVER_MODE: 'server_mode',
         RELOAD_COUNT: 'reload_count',
-        LAST_RELOAD: 'last_reload_time',
+        LAST_RELOAD: 'last_reload',
     } as const;
 
     /**
