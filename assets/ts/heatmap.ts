@@ -345,11 +345,11 @@ class ActivityHeatmap {
     // Add hover effects to a cell
     private addCellHoverEffects(cell: HTMLElement): void {
         cell.addEventListener('mouseover', function (this: HTMLElement) {
-            this.classList.add('ring-1', 'ring-white', 'z-10');
+            this.classList.add('ring-1', 'ring-inset', 'ring-gray-900', 'dark:ring-white', 'z-10');
         });
 
         cell.addEventListener('mouseout', function (this: HTMLElement) {
-            this.classList.remove('ring-1', 'ring-white', 'z-10');
+            this.classList.remove('ring-1', 'ring-inset', 'ring-gray-900', 'dark:ring-white', 'z-10');
         });
     }
 

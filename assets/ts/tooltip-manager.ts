@@ -11,7 +11,7 @@ export class TooltipManager {
             this.tooltipElement = document.createElement('div');
             // Basic visual styles (bg, text, rounding) - specialized positioning handled in CSS
             // NOTE: keep classes Tailwind-safe (Tailwind scans ./assets/ts/**/*.ts)
-            this.tooltipElement.className = 'heatmap-tooltip hidden z-50 bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-normal break-words opacity-90';
+            this.tooltipElement.className = 'heatmap-tooltip hidden z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-normal break-words opacity-90 [--tooltip-color:theme(colors.gray.900)] dark:[--tooltip-color:theme(colors.gray.100)]';
             this.tooltipElement.setAttribute('role', 'tooltip');
 
             // Dedicated content node (safer than innerHTML when setting content)
