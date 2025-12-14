@@ -39,7 +39,9 @@ export function installWebkitResizeRepaintHack(): void {
     // Log once so it's easy to confirm it's active.
     console.debug('[KoShelf] WebKit repaint hack active');
 
-    let lastBucket: WebkitRepaintHackBreakpointBucket = getTailwindBreakpointBucket(window.innerWidth);
+    let lastBucket: WebkitRepaintHackBreakpointBucket = getTailwindBreakpointBucket(
+        window.innerWidth,
+    );
     let scheduled = false;
 
     const nudge = () => {
