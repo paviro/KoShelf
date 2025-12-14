@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "build-css": "tailwindcss -i ./assets/input.css -o ./assets/style.css --watch",
-    "build-css-prod": "tailwindcss -i ./assets/input.css -o ./assets/style.css --minify",
+    "build-css": "tailwindcss -i ./assets/css/input.css -o ./assets/style.css --watch",
+    "build-css-prod": "tailwindcss -i ./assets/css/input.css -o ./assets/style.css --minify",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
