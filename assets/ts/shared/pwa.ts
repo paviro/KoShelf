@@ -20,6 +20,12 @@ if ('serviceWorker' in navigator) {
     initializeServiceWorker();
 }
 
+function parseStoredInt(value: string | null, fallback: number): number {
+    if (value === null) return fallback;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 async function initializeServiceWorker(): Promise<void> {
     try {
         await navigator.serviceWorker.register('/service-worker.js');
@@ -65,8 +71,8 @@ function handleUnhandledRejection(event: PromiseRejectionEvent): void {
 
 function recoveryReload(): void {
     const now = Date.now();
-    const lastReload = parseInt(StorageManager.get<string>(KEYS.LAST_RELOAD) || '0');
-    let count = parseInt(StorageManager.get<string>(KEYS.RELOAD_COUNT) || '0');
+    const lastReload = parseStoredInt(StorageManager.get<string>(KEYS.LAST_RELOAD), 0);
+    let count = parseStoredInt(StorageManager.get<string>(KEYS.RELOAD_COUNT), 0);
 
     // Reset counter after cooldown period
     if (now - lastReload > RECOVERY_CONFIG.cooldownMs) {
@@ -83,8 +89,9 @@ function recoveryReload(): void {
 
     console.log('[PWA] Attempting recovery reload...');
 
-    navigator.serviceWorker.getRegistrations()
-        .then(regs => regs.forEach(r => r.unregister()))
+    navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
         .then(() => location.reload());
 }
 
@@ -110,7 +117,9 @@ async function fetchVersion(): Promise<string | null> {
 }
 
 function handleVersionChange(version: string): void {
-    console.log(`[PWA] Version check: stored=${initialVersion}, fetched=${version}, lastNotified=${lastNotifiedVersion}`);
+    console.log(
+        `[PWA] Version check: stored=${initialVersion}, fetched=${version}, lastNotified=${lastNotifiedVersion}`,
+    );
 
     if (initialVersion === null) {
         initialVersion = version;
@@ -177,5 +186,5 @@ function showUpdateNotification(): void {
 }
 
 function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }

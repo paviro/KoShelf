@@ -52,7 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (sortToggle && Timeline) {
         // Read from storage, default to true (Newest First)
-        let isNewestFirst = StorageManager.get<boolean>(StorageManager.KEYS.RECAP_SORT_NEWEST, true) ?? true;
+        let isNewestFirst =
+            StorageManager.get<boolean>(StorageManager.KEYS.RECAP_SORT_NEWEST, true) ?? true;
 
         // Icons
         // Newest First (Sort Descending): Lines + Arrow Down
@@ -67,7 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (svg) {
                 svg.innerHTML = isNewestFirst ? iconNewest : iconOldest;
             }
-            const label = isNewestFirst ? translation.get('sort-order.newest-first') : translation.get('sort-order.oldest-first');
+            const label = isNewestFirst
+                ? translation.get('sort-order.newest-first')
+                : translation.get('sort-order.oldest-first');
             sortToggle.title = label;
             sortToggle.setAttribute('aria-label', label);
         };
@@ -76,10 +79,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const flipOrder = (): void => {
             // 1. Reorder Month Groups
             const months = Array.from(Timeline.querySelectorAll('.month-group'));
-            months.reverse().forEach(month => Timeline.appendChild(month));
+            months.reverse().forEach((month) => Timeline.appendChild(month));
 
             // 2. Reorder Items within each Month Group (keep header at top)
-            months.forEach(month => {
+            months.forEach((month) => {
                 const children = Array.from(month.children);
                 if (children.length > 1) {
                     const header = children[0]; // first element is month title
@@ -87,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     month.innerHTML = '';
                     month.appendChild(header);
-                    items.reverse().forEach(item => month.appendChild(item));
+                    items.reverse().forEach((item) => month.appendChild(item));
                 }
             });
         };
@@ -116,8 +119,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Detect if we're on a mobile device (iOS, Android, etc.)
     const isMobileDevice = (): boolean => {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-            (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 2);
+        return (
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+                navigator.userAgent,
+            ) ||
+            (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 2)
+        );
     };
 
     // Check if Web Share API is available and can share files
@@ -135,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             shareModalTitle.textContent = translation.get('share.recap-label');
         }
         // Update button texts
-        document.querySelectorAll('.share-btn-text').forEach(span => {
+        document.querySelectorAll('.share-btn-text').forEach((span) => {
             span.textContent = translation.get('share');
         });
         // Update header button title/aria-label
@@ -155,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupModalCloseHandlers(shareModal, shareModalCard, shareModalClose);
 
         // Handle share/download button clicks
-        document.querySelectorAll<HTMLElement>('.share-webp-btn').forEach(btn => {
+        document.querySelectorAll<HTMLElement>('.share-webp-btn').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const url = btn.dataset.shareUrl;
                 const filename = btn.dataset.shareFilename;
@@ -174,7 +181,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                             // Extract year from filename (e.g., "koshelf_2024_story.webp" -> "2024")
                             const yearMatch = filename.match(/koshelf_(\d{4})_/);
-                            const year = yearMatch ? yearMatch[1] : String(new Date().getFullYear());
+                            const year = yearMatch
+                                ? yearMatch[1]
+                                : String(new Date().getFullYear());
 
                             await navigator.share({
                                 files: [file],

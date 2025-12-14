@@ -56,7 +56,6 @@ class ActivityHeatmap {
             }
 
             this.isInitialized = true;
-
         } catch (error) {
             console.error('Error initializing heatmap:', error);
         }
@@ -65,9 +64,9 @@ class ActivityHeatmap {
     // Get available years from the template-rendered year options
     private getAvailableYearsFromTemplate(): void {
         const yearOptions = document.querySelectorAll<HTMLElement>('.year-option');
-        this.availableYears = Array.from(yearOptions).map(option =>
-            parseInt(option.getAttribute('data-year') || '0')
-        ).filter(year => year > 0);
+        this.availableYears = Array.from(yearOptions)
+            .map((option) => parseInt(option.getAttribute('data-year') || '0'))
+            .filter((year) => year > 0);
     }
 
     // Load activity data for a specific year
@@ -78,13 +77,15 @@ class ActivityHeatmap {
                 throw new Error(`Failed to load activity data for ${year}`);
             }
 
-            const jsonResponse = await response.json() as { data: ActivityEntry[]; config: ActivityConfig };
+            const jsonResponse = (await response.json()) as {
+                data: ActivityEntry[];
+                config: ActivityConfig;
+            };
 
             this.activityData = jsonResponse.data;
             this.activityConfig = jsonResponse.config;
 
             this.currentYear = year;
-
         } catch (error) {
             console.error(`Error loading activity data for ${year}:`, error);
             this.activityData = [];
@@ -157,7 +158,6 @@ class ActivityHeatmap {
 
             // Reinitialize heatmap with new data
             this.initializeHeatmap();
-
         } catch (error) {
             console.error(`Error selecting year ${year}:`, error);
         } finally {
@@ -168,7 +168,7 @@ class ActivityHeatmap {
     // Update active year option in dropdown
     private updateActiveYearOption(selectedOption: HTMLElement): void {
         const allOptions = document.querySelectorAll<HTMLElement>('.year-option');
-        allOptions.forEach(opt => {
+        allOptions.forEach((opt) => {
             opt.classList.remove('bg-dark-700', 'text-white');
             opt.classList.add('text-dark-200');
         });
@@ -237,23 +237,29 @@ class ActivityHeatmap {
     }
 
     // Process activity data and find maximum activity level
-    private processActivityData(activityData: ActivityEntry[]): { activityMap: Map<string, ActivityData>; maxActivity: number } {
+    private processActivityData(activityData: ActivityEntry[]): {
+        activityMap: Map<string, ActivityData>;
+        maxActivity: number;
+    } {
         const activityMap = new Map<string, ActivityData>();
         let maxActivity = 0;
 
         // Find max reading time and fill map
-        activityData.forEach(day => {
+        activityData.forEach((day) => {
             if (day.read_time > maxActivity) {
                 maxActivity = day.read_time;
             }
             activityMap.set(day.date, {
                 pages: day.pages_read,
-                read: day.read_time
+                read: day.read_time,
             });
         });
 
         // Use custom max scale if provided
-        if (this.activityConfig?.max_scale_seconds !== null && this.activityConfig?.max_scale_seconds !== undefined) {
+        if (
+            this.activityConfig?.max_scale_seconds !== null &&
+            this.activityConfig?.max_scale_seconds !== undefined
+        ) {
             maxActivity = this.activityConfig.max_scale_seconds;
         }
 
@@ -264,7 +270,7 @@ class ActivityHeatmap {
     private fillHeatmapCells(activityMap: Map<string, ActivityData>, maxActivity: number): void {
         const cells = document.querySelectorAll<HTMLElement>('.activity-cell');
 
-        cells.forEach(cell => {
+        cells.forEach((cell) => {
             if (this.currentYear === null) return;
 
             // Calculate the date for this cell
@@ -316,20 +322,25 @@ class ActivityHeatmap {
     }
 
     // Apply styling and interactions to a heatmap cell
-    private applyCellStyling(cell: HTMLElement, activityLevel: number, dateStr: string, activityObj: ActivityData): void {
+    private applyCellStyling(
+        cell: HTMLElement,
+        activityLevel: number,
+        dateStr: string,
+        activityObj: ActivityData,
+    ): void {
         const colorClasses = [
-            ['bg-gray-200', 'dark:bg-dark-700'],       // 0 (no activity)
-            ['bg-green-100', 'dark:bg-green-900'],     // 1 (low)
-            ['bg-green-300', 'dark:bg-green-700'],     // 2 (medium)
-            ['bg-green-500', 'dark:bg-green-500'],     // 3 (high)
-            ['bg-green-600', 'dark:bg-green-300']      // 4 (very high)
+            ['bg-gray-200', 'dark:bg-dark-700'], // 0 (no activity)
+            ['bg-green-100', 'dark:bg-green-900'], // 1 (low)
+            ['bg-green-300', 'dark:bg-green-700'], // 2 (medium)
+            ['bg-green-500', 'dark:bg-green-500'], // 3 (high)
+            ['bg-green-600', 'dark:bg-green-300'], // 4 (very high)
         ];
 
         // Remove all possible color classes
-        colorClasses.flat().forEach(cls => cell.classList.remove(cls));
+        colorClasses.flat().forEach((cls) => cell.classList.remove(cls));
 
         // Add both light and dark mode classes for the current activity level
-        colorClasses[activityLevel].forEach(cls => cell.classList.add(cls));
+        colorClasses[activityLevel].forEach((cls) => cell.classList.add(cls));
 
         // Prepare tooltip content
         const readLabel = DateUtils.formatDuration(activityObj.read);
@@ -349,7 +360,13 @@ class ActivityHeatmap {
         });
 
         cell.addEventListener('mouseout', function (this: HTMLElement) {
-            this.classList.remove('ring-1', 'ring-inset', 'ring-gray-900', 'dark:ring-white', 'z-10');
+            this.classList.remove(
+                'ring-1',
+                'ring-inset',
+                'ring-gray-900',
+                'dark:ring-white',
+                'z-10',
+            );
         });
     }
 
@@ -374,7 +391,7 @@ class ActivityHeatmap {
             const weekWidth = heatmapWidth / 53;
 
             // Position current week at 70% from the left (towards the right)
-            const targetPosition = (currentWeek * weekWidth) - (containerWidth * 0.7);
+            const targetPosition = currentWeek * weekWidth - containerWidth * 0.7;
 
             // Ensure we don't scroll past the beginning or end
             const maxScroll = heatmapWidth - containerWidth;
@@ -415,7 +432,9 @@ class ActivityHeatmap {
         firstMonday.setDate(janFirst.getDate() + shiftToMonday);
 
         // Calculate which week the current date falls into
-        const daysDiff = Math.floor((today.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.floor(
+            (today.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24),
+        );
         return Math.floor(daysDiff / 7);
     }
 

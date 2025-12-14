@@ -1,9 +1,9 @@
 /**
  * Filter Restore Module
- * 
+ *
  * Stores the current filter scope (all/books/comics) when visiting recap/stats pages
  * and intercepts navigation to restore the last-selected scope.
- * 
+ *
  * Progressive enhancement: without JS, links work as normal.
  */
 
@@ -70,7 +70,7 @@ function setupNavigationInterception(): void {
     const recapLinks = document.querySelectorAll<HTMLAnchorElement>('#nav-recap');
 
     // Handle Statistics links
-    statsLinks.forEach(link => {
+    statsLinks.forEach((link) => {
         link.addEventListener('click', (e) => {
             const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.STATS_FILTER);
             if (storedScope && storedScope !== 'all') {
@@ -83,7 +83,7 @@ function setupNavigationInterception(): void {
     });
 
     // Handle Recap links
-    recapLinks.forEach(link => {
+    recapLinks.forEach((link) => {
         link.addEventListener('click', (e) => {
             const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.RECAP_FILTER);
             if (storedScope && storedScope !== 'all') {

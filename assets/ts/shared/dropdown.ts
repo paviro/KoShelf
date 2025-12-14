@@ -1,9 +1,10 @@
 // Global handler for closing details elements when clicking outside
 document.addEventListener('click', (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
+    const target = e.target instanceof Node ? e.target : null;
+    if (!target) return;
 
     // Find all open details elements
-    const openDetails = document.querySelectorAll('details[open]');
+    const openDetails = document.querySelectorAll<HTMLDetailsElement>('details[open]');
 
     openDetails.forEach((details) => {
         // If the click is not inside the details element, close it

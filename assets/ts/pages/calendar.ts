@@ -11,6 +11,19 @@ import { translation } from '../shared/i18n.js';
 type ContentFilter = 'all' | 'book' | 'comic';
 type ContentType = 'book' | 'comic';
 
+function byId<T extends HTMLElement>(id: string): T | null {
+    return document.getElementById(id) as T | null;
+}
+
+function parseContentFilter(value: string | undefined | null): ContentFilter {
+    if (value === 'all' || value === 'book' || value === 'comic') return value;
+    return 'all';
+}
+
+function monthKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
 interface EventExtendedProps extends Record<string, unknown> {
     book_id: string;
     start: string;
@@ -68,7 +81,7 @@ let currentContentFilter: ContentFilter = loadInitialFilter();
 
 // Month/Year picker state
 let currentPickerYear: number = new Date().getFullYear();
-let currentPickerMonth: number = new Date().getMonth();
+let _currentPickerMonth: number = new Date().getMonth();
 let yearPickerStartYear: number = new Date().getFullYear() - 4; // Show 9 years (4 before, current, 4 after)
 
 // Cached modal element references (initialized in setupDatePickerHandlers)
@@ -80,7 +93,7 @@ let yearPickerCard: HTMLElement | null = null;
 function loadInitialFilter(): ContentFilter {
     try {
         const saved = localStorage.getItem('koshelf_calendar_filter');
-        if (saved === 'all' || saved === 'book' || saved === 'comic') return saved;
+        return parseContentFilter(saved);
     } catch {
         // ignore
     }
@@ -92,33 +105,31 @@ export async function initializeCalendar(): Promise<void> {
     // Load translations first
     await translation.init();
 
-    // First, load the list of available months
-    loadAvailableMonths().then(() => {
-        // Load calendar data for current month and its neighbours
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const [prevMonth, nextMonth] = getAdjacentMonths(currentMonth);
+    // Load the list of available months first (best-effort; it can fail and we still continue).
+    await loadAvailableMonths();
 
-        (async () => {
-            // Load current, previous and next month (if they exist)
-            await Promise.all([
-                fetchMonthData(prevMonth),
-                fetchMonthData(currentMonth),
-                fetchMonthData(nextMonth)
-            ]);
+    // Load calendar data for current month and its neighbours
+    const now = new Date();
+    const currentMonth = monthKey(now);
+    const [prevMonth, nextMonth] = getAdjacentMonths(currentMonth);
 
-            currentDisplayedMonth = currentMonth;
-            refreshAggregatedData();
+    // Load current, previous and next month (if they exist)
+    await Promise.all([
+        fetchMonthData(prevMonth),
+        fetchMonthData(currentMonth),
+        fetchMonthData(nextMonth),
+    ]);
 
-            initializeEventCalendar(getFilteredRawEvents(currentEvents));
+    currentDisplayedMonth = currentMonth;
+    refreshAggregatedData();
 
-            // Populate statistics widgets for the initial month
-            updateMonthlyStats(now);
+    initializeEventCalendar(getFilteredRawEvents(currentEvents));
 
-            // Wire up DOM interaction handlers (today / prev / next / modal)
-            setupEventHandlers();
-        })();
-    });
+    // Populate statistics widgets for the initial month
+    updateMonthlyStats(now);
+
+    // Wire up DOM interaction handlers (today / prev / next / modal)
+    setupEventHandlers();
 }
 
 // When this module is loaded as a page entry bundle, auto-initialize.
@@ -136,7 +147,7 @@ async function loadAvailableMonths(): Promise<void> {
     try {
         const response = await fetch('/assets/json/calendar/available_months.json');
         if (response.ok) {
-            availableMonths = await response.json() as string[];
+            availableMonths = (await response.json()) as string[];
         } else {
             console.warn('Could not load available months list');
             availableMonths = [];
@@ -161,7 +172,7 @@ async function updateDisplayedMonth(targetMonth: string): Promise<void> {
         await Promise.all([
             fetchMonthData(prevMonth),
             fetchMonthData(targetMonth),
-            fetchMonthData(nextMonth)
+            fetchMonthData(nextMonth),
         ]);
 
         currentDisplayedMonth = targetMonth;
@@ -210,7 +221,7 @@ async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
             return { events: [], books: {} };
         }
 
-        const calendarData = await response.json() as MonthData;
+        const calendarData = (await response.json()) as MonthData;
 
         // Cache the loaded data
         monthlyDataCache.set(targetMonth, calendarData);
@@ -226,7 +237,7 @@ async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
 
 // Build or rebuild the EventCalendar instance
 function initializeEventCalendar(events: RawEvent[]): void {
-    const calendarEl = document.getElementById('calendar');
+    const calendarEl = byId<HTMLElement>('calendar');
     if (!calendarEl) return;
 
     // Destroy existing instance when re-initialising
@@ -245,12 +256,12 @@ function initializeEventCalendar(events: RawEvent[]): void {
         eventStartEditable: false,
         eventDurationEditable: false,
         events: mapEvents(events),
-        eventClick: info => {
+        eventClick: (info) => {
             // event.title is `Calendar.Content` (string | {html} | {domNodes}); we don't need it for our modal.
             showEventModal('', info.event.extendedProps as unknown as EventExtendedProps);
         },
         dateClick: (info) => console.debug('Date clicked:', info.dateStr),
-        datesSet: info => {
+        datesSet: (info) => {
             const currentMonthDate = info.view.currentStart;
 
             updateCalendarTitle(currentMonthDate);
@@ -265,7 +276,7 @@ function initializeEventCalendar(events: RawEvent[]): void {
 
             // Scroll current day into view if needed
             setTimeout(() => scrollCurrentDayIntoView(), 100);
-        }
+        },
     });
 
     // Set initial visual state of filter buttons
@@ -279,13 +290,13 @@ function getEventContentType(ev: RawEvent): ContentType {
 
 function getFilteredRawEvents(evts: RawEvent[]): RawEvent[] {
     if (currentContentFilter === 'all') return evts;
-    return evts.filter(ev => getEventContentType(ev) === currentContentFilter);
+    return evts.filter((ev) => getEventContentType(ev) === currentContentFilter);
 }
 
 function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
-    return evts.map(ev => {
+    return evts.map((ev) => {
         const book = currentBooks[ev.book_id] || {};
-        const content_type: ContentType = (book.content_type === 'comic' ? 'comic' : 'book');
+        const content_type: ContentType = book.content_type === 'comic' ? 'comic' : 'book';
         const extendedProps: EventExtendedProps = {
             ...ev,
             book_title: book.title || translation.get('unknown-book'),
@@ -294,7 +305,7 @@ function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
             book_cover: book.book_cover,
             color: book.color,
             content_type,
-            md5: ev.book_id
+            md5: ev.book_id,
         };
 
         const input: Calendar.EventInput = {
@@ -305,7 +316,7 @@ function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
             allDay: true,
             backgroundColor: book.color || getEventColor(ev),
             textColor: '#ffffff',
-            extendedProps
+            extendedProps,
         };
 
         return input;
@@ -329,7 +340,7 @@ function setContentFilter(filter: ContentFilter): void {
     renderCalendarEvents();
 
     // Close dropdown if open
-    const dropdown = document.getElementById('calendarFilterDropdown') as HTMLDetailsElement | null;
+    const dropdown = byId<HTMLDetailsElement>('calendarFilterDropdown');
     if (dropdown) dropdown.open = false;
 
     // Refresh stats for the currently displayed month (if we know it)
@@ -395,15 +406,23 @@ function updateCalendarTitle(date: Date): void {
 // Deterministic colour hashing based on book title (+md5 when available)
 function getEventColor(event: RawEvent): string {
     const palette = [
-        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-        '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
+        '#3B82F6',
+        '#10B981',
+        '#F59E0B',
+        '#EF4444',
+        '#8B5CF6',
+        '#06B6D4',
+        '#84CC16',
+        '#F97316',
+        '#EC4899',
+        '#6366F1',
     ];
 
     const book = currentBooks[event.book_id] || {};
     let hash = 0;
     const str = (book.title || '') + (event.book_id || '');
     for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = (hash << 5) - hash + str.charCodeAt(i);
         hash |= 0; // Convert to 32-bit int
     }
 
@@ -449,7 +468,9 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
     const pagesReadEl = document.getElementById('modalPagesRead');
 
     if (authorEl) {
-        authorEl.textContent = event.authors?.length ? event.authors.join(', ') : translation.get('unknown-author');
+        authorEl.textContent = event.authors?.length
+            ? event.authors.join(', ')
+            : translation.get('unknown-author');
     }
     if (readTimeEl) {
         readTimeEl.textContent = formatDuration(event.total_read_time);
@@ -459,11 +480,12 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
     }
 
     // View-book button setup
-    if (event.book_path) {
+    const bookPath = event.book_path;
+    if (bookPath) {
         viewBookBtn.classList.remove('hidden');
         viewBookBtn.onclick = () => {
             hideEventModal(); // Ensure modal hidden immediately
-            window.location.href = event.book_path!;
+            window.location.href = bookPath;
         };
     } else {
         viewBookBtn.classList.add('hidden');
@@ -483,16 +505,17 @@ function hideEventModal(): void {
 
 function setupEventHandlers(): void {
     // Filter buttons
-    document.querySelectorAll<HTMLElement>('.calendar-filter-btn').forEach(el => {
+    document.querySelectorAll<HTMLElement>('.calendar-filter-btn').forEach((el) => {
         el.addEventListener('click', (e) => {
             e.preventDefault();
-            const next = ((el as HTMLElement).dataset.calendarFilter || 'all') as ContentFilter;
+            const target = e.currentTarget as HTMLElement;
+            const next = parseContentFilter(target.dataset.calendarFilter);
             setContentFilter(next);
         });
     });
 
     // Today
-    const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
+    const todayBtn = byId<HTMLButtonElement>('todayBtn');
     todayBtn?.addEventListener('click', () => {
         if (!calendar || !todayBtn || todayBtn.disabled) return;
         calendar.setOption('date', new Date());
@@ -503,12 +526,12 @@ function setupEventHandlers(): void {
     updateTodayButtonState(new Date());
 
     // Prev / next navigation
-    document.getElementById('prevBtn')?.addEventListener('click', () => {
+    byId<HTMLElement>('prevBtn')?.addEventListener('click', () => {
         if (calendar && typeof calendar.prev === 'function') {
             calendar.prev();
         }
     });
-    document.getElementById('nextBtn')?.addEventListener('click', () => {
+    byId<HTMLElement>('nextBtn')?.addEventListener('click', () => {
         if (calendar && typeof calendar.next === 'function') {
             calendar.next();
         }
@@ -518,15 +541,15 @@ function setupEventHandlers(): void {
     setupDatePickerHandlers();
 
     // Modal close handlers using shared utility
-    const modal = document.getElementById('eventModal');
-    const modalCard = document.getElementById('modalCard');
-    const closeBtn = document.getElementById('closeModal');
+    const modal = byId<HTMLElement>('eventModal');
+    const modalCard = byId<HTMLElement>('modalCard');
+    const closeBtn = byId<HTMLElement>('closeModal');
     setupModalCloseHandlers(modal, modalCard, closeBtn);
 }
 
 // Update Today button disabled state based on whether we're viewing the current month
 function updateTodayButtonState(displayedDate: Date): void {
-    const todayBtn = document.getElementById('todayBtn') as HTMLButtonElement | null;
+    const todayBtn = byId<HTMLButtonElement>('todayBtn');
     if (!todayBtn) return;
 
     const now = new Date();
@@ -539,19 +562,29 @@ function updateTodayButtonState(displayedDate: Date): void {
     if (isCurrentMonth) {
         // Disabled styling - match recap page disabled buttons
         todayBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700', 'text-white');
-        todayBtn.classList.add('bg-gray-100', 'dark:bg-dark-800', 'text-gray-400', 'dark:text-dark-400', 'cursor-not-allowed');
+        todayBtn.classList.add(
+            'bg-gray-100',
+            'dark:bg-dark-800',
+            'text-gray-400',
+            'dark:text-dark-400',
+            'cursor-not-allowed',
+        );
     } else {
         // Enabled styling - primary color
         todayBtn.classList.add('bg-primary-600', 'hover:bg-primary-700', 'text-white');
-        todayBtn.classList.remove('bg-gray-100', 'dark:bg-dark-800', 'text-gray-400', 'dark:text-dark-400', 'cursor-not-allowed');
+        todayBtn.classList.remove(
+            'bg-gray-100',
+            'dark:bg-dark-800',
+            'text-gray-400',
+            'dark:text-dark-400',
+            'cursor-not-allowed',
+        );
     }
 }
 
 // Update monthly statistics for the given month/year (preferring pre-calculated stats when available)
 function updateMonthlyStats(currentDate: Date): void {
-    if (!currentDate) return;
-
-    const targetMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const targetMonthKey = monthKey(currentDate);
     const monthData = monthlyDataCache.get(targetMonthKey);
 
     let booksRead = 0;
@@ -568,7 +601,12 @@ function updateMonthlyStats(currentDate: Date): void {
 
     const stats = pickStats();
     if (stats) {
-        ({ books_read: booksRead, pages_read: pagesRead, time_read: timeRead, days_read_pct: daysPct } = stats);
+        ({
+            books_read: booksRead,
+            pages_read: pagesRead,
+            time_read: timeRead,
+            days_read_pct: daysPct,
+        } = stats);
     }
 
     const booksEl = document.getElementById('monthlyBooks');
@@ -609,8 +647,8 @@ function scrollCurrentDayIntoView(): void {
 
     // If today is outside the visible area, scroll to center it
     if (todayLeft < containerLeft || todayRight > containerRight) {
-        const todayCenter = todayLeft + (todayRect.width / 2);
-        const containerCenter = containerLeft + (containerRect.width / 2);
+        const todayCenter = todayLeft + todayRect.width / 2;
+        const containerCenter = containerLeft + containerRect.width / 2;
         const scrollOffset = todayCenter - containerCenter;
 
         // Clamp desired scroll position to valid range to prevent overshooting
@@ -623,7 +661,7 @@ function scrollCurrentDayIntoView(): void {
         if (Math.abs(clampedOffset) > 1) {
             calendarContainer.scrollBy({
                 left: clampedOffset,
-                behavior: 'smooth'
+                behavior: 'smooth',
             });
         }
     }
@@ -656,7 +694,8 @@ function getAdjacentMonths(monthKey: string): [string | null, string | null] {
     const prevDate = new Date(year, monthIndex - 1, 1);
     const nextDate = new Date(year, monthIndex + 1, 1);
 
-    const format = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const format = (d: Date): string =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     return [format(prevDate), format(nextDate)];
 }
 
@@ -689,10 +728,12 @@ function setupDatePickerHandlers(): void {
     yearPickerCard = document.getElementById('yearPickerCard');
 
     // Month buttons click handlers (DRY)
-    ['mobileMonthBtn', 'desktopMonthBtn'].forEach(id =>
-        document.getElementById(id)?.addEventListener('click', showMonthPicker));
-    ['mobileYearBtn', 'desktopYearBtn'].forEach(id =>
-        document.getElementById(id)?.addEventListener('click', showYearPicker));
+    ['mobileMonthBtn', 'desktopMonthBtn'].forEach((id) =>
+        document.getElementById(id)?.addEventListener('click', showMonthPicker),
+    );
+    ['mobileYearBtn', 'desktopYearBtn'].forEach((id) =>
+        document.getElementById(id)?.addEventListener('click', showYearPicker),
+    );
 
     // Use modal-utils for backdrop click and Escape key handling
     setupModalCloseHandlers(monthPickerModal, monthPickerCard);
@@ -714,7 +755,7 @@ function showMonthPicker(): void {
     if (currentDisplayedMonth) {
         const [yr, mo] = currentDisplayedMonth.split('-');
         currentPickerYear = Number(yr);
-        currentPickerMonth = Number(mo) - 1;
+        _currentPickerMonth = Number(mo) - 1;
     }
 
     populateMonthPickerGrid();
@@ -742,12 +783,17 @@ function hideYearPicker(): void {
 }
 
 // Helper to create styled picker buttons
-function createPickerButton(text: string, isActive: boolean, onClick: () => void): HTMLButtonElement {
+function createPickerButton(
+    text: string,
+    isActive: boolean,
+    onClick: () => void,
+): HTMLButtonElement {
     const btn = document.createElement('button');
-    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${isActive
-        ? 'bg-primary-600 text-white'
-        : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
-        }`;
+    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${
+        isActive
+            ? 'bg-primary-600 text-white'
+            : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
+    }`;
     btn.textContent = text;
     btn.addEventListener('click', onClick);
     return btn;
@@ -766,7 +812,8 @@ function populateMonthPickerGrid(): void {
     for (let i = 0; i < 12; i++) {
         const date = new Date(currentPickerYear, i, 1);
         const monthName = monthFormatter.format(date);
-        const isCurrentMonth = currentDisplayedMonth === `${currentPickerYear}-${String(i + 1).padStart(2, '0')}`;
+        const isCurrentMonth =
+            currentDisplayedMonth === `${currentPickerYear}-${String(i + 1).padStart(2, '0')}`;
 
         const btn = createPickerButton(monthName, isCurrentMonth, () => {
             navigateToMonth(currentPickerYear, i);

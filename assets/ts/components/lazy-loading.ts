@@ -43,40 +43,43 @@ export class LazyImageLoader {
     }
 
     private setupIntersectionObserver(lazyImages: NodeListOf<HTMLImageElement>): void {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            const intersectingEntries = entries.filter(entry => entry.isIntersecting);
+        const imageObserver = new IntersectionObserver(
+            (entries, observer) => {
+                const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
 
-            // Check if this is the initial load (images visible immediately on page load)
-            const isInitialLoad = !this.hasScrolled && !this.initialLoadProcessed;
+                // Check if this is the initial load (images visible immediately on page load)
+                const isInitialLoad = !this.hasScrolled && !this.initialLoadProcessed;
 
-            if (isInitialLoad) {
-                // Load initial images immediately without staggering
-                intersectingEntries.forEach(entry => {
-                    const img = entry.target as HTMLImageElement;
-                    this.loadImageWithStagger(img); // No stagger delay
-                    observer.unobserve(img);
-                });
-                this.initialLoadProcessed = true;
-            } else {
-                // Apply staggered loading for images that appear after scrolling
-                const sortedEntries = intersectingEntries.sort((a, b) => {
-                    const rectA = a.boundingClientRect;
-                    const rectB = b.boundingClientRect;
-                    // Sort by row first (top), then by column (left)
-                    return rectA.top - rectB.top || rectA.left - rectB.left;
-                });
+                if (isInitialLoad) {
+                    // Load initial images immediately without staggering
+                    intersectingEntries.forEach((entry) => {
+                        const img = entry.target as HTMLImageElement;
+                        this.loadImageWithStagger(img); // No stagger delay
+                        observer.unobserve(img);
+                    });
+                    this.initialLoadProcessed = true;
+                } else {
+                    // Apply staggered loading for images that appear after scrolling
+                    const sortedEntries = intersectingEntries.sort((a, b) => {
+                        const rectA = a.boundingClientRect;
+                        const rectB = b.boundingClientRect;
+                        // Sort by row first (top), then by column (left)
+                        return rectA.top - rectB.top || rectA.left - rectB.left;
+                    });
 
-                sortedEntries.forEach((entry, index) => {
-                    const img = entry.target as HTMLImageElement;
-                    const staggerDelay = index * 50; // 50ms between each image
-                    this.loadImageWithStagger(img, staggerDelay);
-                    observer.unobserve(img);
-                });
-            }
-        }, {
-            rootMargin: '50px 0px', // Start loading 50px before image comes into view
-            threshold: 0.01
-        });
+                    sortedEntries.forEach((entry, index) => {
+                        const img = entry.target as HTMLImageElement;
+                        const staggerDelay = index * 50; // 50ms between each image
+                        this.loadImageWithStagger(img, staggerDelay);
+                        observer.unobserve(img);
+                    });
+                }
+            },
+            {
+                rootMargin: '50px 0px', // Start loading 50px before image comes into view
+                threshold: 0.01,
+            },
+        );
 
         // Observe all images
         lazyImages.forEach((img) => {

@@ -4,4 +4,3 @@
 import '../shared/pwa.js';
 import '../shared/dropdown.js';
 import '../shared/filter-restore.js';
-

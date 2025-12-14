@@ -4,6 +4,7 @@
  */
 
 import { FluentBundle, FluentResource } from '@fluent/bundle';
+import type { FluentVariable } from '@fluent/bundle';
 
 let bundle: FluentBundle | null = null;
 let loadPromise: Promise<void> | null = null;
@@ -12,7 +13,7 @@ async function load(): Promise<void> {
     if (bundle) return;
     try {
         const res = await fetch('/assets/json/locales.json');
-        const data = await res.json() as { language: string; resources: string[] };
+        const data = (await res.json()) as { language: string; resources: string[] };
 
         // Initialize bundle with the language from the server
         bundle = new FluentBundle(data.language);
@@ -47,11 +48,11 @@ export const translation = {
      * @param key - The translation key (e.g., 'pages', 'share.recap-label')
      * @param args - Optional arguments. If number, treated as { count: n }. If object, passed as is.
      */
-    get(key: string, args?: number | Record<string, any>): string {
+    get(key: string, args?: number | Record<string, FluentVariable>): string {
         if (!bundle) return key;
 
         // Normalize args
-        let fluentArgs: Record<string, any> | undefined;
+        let fluentArgs: Record<string, FluentVariable> | undefined;
         if (typeof args === 'number') {
             fluentArgs = { count: args };
         } else {
@@ -89,5 +90,5 @@ export const translation = {
      */
     getLanguage(): string {
         return bundle?.locales[0] || 'en-US';
-    }
+    },
 };
