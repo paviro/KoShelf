@@ -1,5 +1,5 @@
 use super::*;
-use crate::statistics_parser::StatisticsParser;
+use crate::koreader::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
 use rusqlite::{Connection, params};
 use std::collections::HashSet;

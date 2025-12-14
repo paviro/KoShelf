@@ -1,5 +1,5 @@
 use crate::models::{PageStat, StatBook, StatisticsData};
-use crate::statistics::StatisticsCalculator;
+use crate::koreader::statistics::StatisticsCalculator;
 use crate::time_config::TimeConfig;
 use std::collections::HashMap;
 

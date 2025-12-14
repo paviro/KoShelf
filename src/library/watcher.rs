@@ -1,8 +1,8 @@
 use crate::config::SiteConfig;
-use crate::library_scanner::MetadataLocation;
+use super::scanner::MetadataLocation;
 use crate::models::LibraryItemFormat;
 use crate::site_generator::SiteGenerator;
-use crate::version_notifier::SharedVersionNotifier;
+use crate::server::version::SharedVersionNotifier;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};

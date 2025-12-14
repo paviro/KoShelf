@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::i18n::Translations;
 use crate::models::*;
-use crate::read_completion_analyzer::{CompletionConfig, ReadCompletionDetector};
-use crate::session_calculator;
+use super::completion::{CompletionConfig, ReadCompletionDetector};
+use super::session;
 use crate::time_config::TimeConfig;
 
 /// Trait for calculating book session statistics
@@ -33,7 +33,7 @@ impl BookStatistics for StatBook {
 
         // Calculate session statistics using shared helper
         let book_stats: Vec<PageStat> = book_sessions.iter().cloned().cloned().collect();
-        let durations = session_calculator::session_durations(&book_stats);
+        let durations = session::session_durations(&book_stats);
         let session_count = durations.len() as i64;
         let longest_session_duration = durations.iter().max().copied();
         let average_session_duration = if !durations.is_empty() {
@@ -139,7 +139,7 @@ impl StatisticsCalculator {
 
         // Calculate overall session statistics
         let (average_session_duration, longest_session_duration) =
-            session_calculator::session_metrics(&stats_data.page_stats);
+            session::session_metrics(&stats_data.page_stats);
 
         // Calculate completion statistics
         let (total_completions, books_completed, most_completions) =
@@ -190,7 +190,7 @@ impl StatisticsCalculator {
 
             // Calculate session statistics for this week
             let (average_session_duration, longest_session_duration) =
-                session_calculator::session_metrics(&page_stats);
+                session::session_metrics(&page_stats);
 
             let weekly_stat = WeeklyStats {
                 start_date: start_date_approx.format("%Y-%m-%d").to_string(),

@@ -1,7 +1,7 @@
 //! Calendar page generation.
 
 use super::SiteGenerator;
-use crate::calendar::CalendarGenerator;
+use crate::koreader::CalendarGenerator;
 use crate::models::{LibraryItem, StatisticsData};
 use crate::templates::CalendarTemplate;
 use anyhow::Result;

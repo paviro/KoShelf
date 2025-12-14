@@ -1,5 +1,5 @@
 use super::*;
-use crate::partial_md5::calculate_partial_md5;
+use crate::koreader::partial_md5::calculate_partial_md5;
 use mlua::Lua;
 use regex::Regex;
 

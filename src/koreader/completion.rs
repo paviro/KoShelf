@@ -2,7 +2,7 @@ use log::{debug, info};
 use std::collections::{HashMap, HashSet};
 
 use crate::models::*;
-use crate::session_calculator;
+use super::session;
 use crate::time_config::TimeConfig;
 
 /// Configuration for read completion detection
@@ -208,7 +208,7 @@ impl ReadCompletionDetector {
         }
 
         // Calculate session count
-        let session_count = session_calculator::session_count(&progression.stats);
+        let session_count = session::session_count(&progression.stats);
 
         // Convert timestamps to dates
         let start_date = self.time_config.format_date(progression.start_time);

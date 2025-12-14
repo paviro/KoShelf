@@ -1,4 +1,4 @@
-use crate::version_notifier::SharedVersionNotifier;
+use super::version::SharedVersionNotifier;
 use anyhow::Result;
 use axum::{Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use log::info;
