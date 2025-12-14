@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
-      data-section-toggle-scope="book-details"
+      data-section-toggle-scope="item-details"
       data-section-toggle-kind="{% if book.is_comic() %}comics{% else %}books{% endif %}">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
@@ -73,24 +73,24 @@
     <!-- Main Content -->
         <main class="pt-[88px] md:pt-24 pb-28 lg:pb-6 px-4 md:px-6 space-y-6 md:space-y-8">
             <!-- Book Header -->
-            {% include "book_details/components/book_header.html" %}
+            {% include "item_details/components/item_header.html" %}
 
             <!-- Reading Statistics -->
-            {% include "book_details/components/reading_statistics.html" %}
+            {% include "item_details/components/reading_statistics.html" %}
             
             <!-- Review Note -->
-            {% include "book_details/components/review_note.html" %}
+            {% include "item_details/components/review_note.html" %}
 
             {% if !book.is_comic() %}
                 <!-- Highlights & Quotes Section -->
-                {% include "book_details/components/highlights.html" %}
+                {% include "item_details/components/highlights.html" %}
                 
                 <!-- Bookmarks Section -->
-                {% include "book_details/components/bookmarks.html" %}
+                {% include "item_details/components/bookmarks.html" %}
             {% endif %}
 
             <!-- Additional Information -->
-            {% include "book_details/components/additional_info.html" %}
+            {% include "item_details/components/additional_info.html" %}
         </main>
                 </div>
                 
@@ -99,7 +99,7 @@
     
     <!-- Include JavaScript -->
     <script type="module" src="/assets/js/section-toggle.js"></script>
-    <script type="module" src="/assets/js/book_detail.js"></script>
+    <script type="module" src="/assets/js/item_detail.js"></script>
     
     <script>
         function smartBack(href) {

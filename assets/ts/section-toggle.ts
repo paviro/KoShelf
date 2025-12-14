@@ -85,16 +85,16 @@ export class SectionToggle {
 
         // We cannot rely on the URL because comics may be served at "/" or "/comics/".
         // Templates provide a stable signal via data attributes.
-        if (scope === 'book-list') {
-            if (kind === 'comics') return StorageManager.KEYS.COMICS_LIST_SECTIONS;
-            if (kind === 'books') return StorageManager.KEYS.BOOKS_LIST_SECTIONS;
+        if (scope === 'library-list') {
+            if (kind === 'comics') return StorageManager.KEYS.LIBRARY_LIST_COMICS_SECTIONS;
+            if (kind === 'books') return StorageManager.KEYS.LIBRARY_LIST_BOOKS_SECTIONS;
             return null;
         }
 
         // Persist the same state across all detail pages (not per-book/per-comic).
-        if (scope === 'book-details') {
-            if (kind === 'comics') return StorageManager.KEYS.COMIC_DETAIL_SECTIONS;
-            if (kind === 'books') return StorageManager.KEYS.BOOK_DETAIL_SECTIONS;
+        if (scope === 'item-details') {
+            if (kind === 'comics') return StorageManager.KEYS.ITEM_DETAIL_COMICS_SECTIONS;
+            if (kind === 'books') return StorageManager.KEYS.ITEM_DETAIL_BOOKS_SECTIONS;
             return null;
         }
 

@@ -37,37 +37,37 @@
                         <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
                         
                         <!-- Rating Indicator -->
-                        {% include "book_list/components/overlays/rating_overlay.html" %}
+                        {% include "library_list/components/overlays/rating_overlay.html" %}
                         
                         <!-- Notes Indicator for Reading -->
                         {% set notes_color_classes = "bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-400/30" %}
-                        {% include "book_list/components/overlays/notes_overlay.html" %}
+                        {% include "library_list/components/overlays/notes_overlay.html" %}
 
                     {% elif section_name == "abandoned" %}
                         <!-- Progress Bar -->
                         <div class="book-progress-bar progress-reading" style="width: {{ book.progress_percentage_display() }}%;"></div>
                         
                         <!-- Rating Indicator -->
-                        {% include "book_list/components/overlays/rating_overlay.html" %}
+                        {% include "library_list/components/overlays/rating_overlay.html" %}
 
                         <!-- Notes Indicator for On Hold -->
                         {% set notes_color_classes = "bg-gradient-to-br from-purple-500 to-purple-600 border border-purple-400/30" %}
-                        {% include "book_list/components/overlays/notes_overlay.html" %}
+                        {% include "library_list/components/overlays/notes_overlay.html" %}
 
                         <!-- Pause Indicator -->
-                        {% include "book_list/components/overlays/pause_overlay.html" %}
+                        {% include "library_list/components/overlays/pause_overlay.html" %}
 
                     {% elif section_name == "completed" %}
                         <!-- Rating Indicator -->
-                        {% include "book_list/components/overlays/rating_overlay.html" %}
+                        {% include "library_list/components/overlays/rating_overlay.html" %}
                         
                         <!-- Notes Indicator for Completed -->
                         {% set notes_color_classes = "bg-gradient-to-br from-emerald-500 to-emerald-600 border border-emerald-400/30" %}
-                        {% include "book_list/components/overlays/notes_overlay.html" %}
+                        {% include "library_list/components/overlays/notes_overlay.html" %}
 
                     {% elif section_name == "unread" %}
                         <!-- Unread Indicator -->
-                        {% include "book_list/components/overlays/unread_overlay.html" %}
+                        {% include "library_list/components/overlays/unread_overlay.html" %}
                     {% endif %}
                 </div>
             </a>

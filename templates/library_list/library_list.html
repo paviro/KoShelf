@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="min-h-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white font-sans"
-      data-section-toggle-scope="book-list"
+      data-section-toggle-scope="library-list"
       data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else %}books{% endif %}">
     <!-- Sidebar - Hidden on mobile, visible on md+ screens -->
     {% include "sidebar.html" %}
@@ -98,7 +98,7 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-primary-400 to-primary-600" %}
                 {% set badge_classes = "from-primary-500 to-primary-600" %}
-                {% include "book_list/components/book_section.html" %}
+                {% include "library_list/components/item_section.html" %}
                 {% endif %}
                 
                 {% if !abandoned_books.is_empty() %}
@@ -108,7 +108,7 @@
                 {% set default_visible = "false" %}
                 {% set gradient_classes = "from-purple-400 to-purple-600" %}
                 {% set badge_classes = "from-purple-500 to-purple-600" %}
-                {% include "book_list/components/book_section.html" %}
+                {% include "library_list/components/item_section.html" %}
                 {% endif %}
                 
                 {% if !completed_books.is_empty() %}
@@ -118,7 +118,7 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-green-400 to-green-600" %}
                 {% set badge_classes = "from-green-500 to-green-600" %}
-                {% include "book_list/components/book_section.html" %}
+                {% include "library_list/components/item_section.html" %}
                 {% endif %}
                 
                 {% if !unread_books.is_empty() %}
@@ -128,11 +128,11 @@
                 {% set default_visible = "true" %}
                 {% set gradient_classes = "from-orange-400 to-orange-600" %}
                 {% set badge_classes = "from-orange-500 to-orange-600" %}
-                {% include "book_list/components/book_section.html" %}
+                {% include "library_list/components/item_section.html" %}
                 {% endif %}
                 
                 <!-- Empty State Component -->
-                {% include "book_list/components/empty_state.html" %}
+                {% include "library_list/components/empty_state.html" %}
         </main>
     </div>
 
@@ -140,7 +140,7 @@
     {% include "bottom_navbar.html" %}
 
     <script type="module" src="/assets/js/section-toggle.js"></script>
-    <script type="module" src="/assets/js/book_list.js"></script>
+    <script type="module" src="/assets/js/library_list.js"></script>
     <script type="module" src="/assets/js/pwa.js"></script>
     <script type="module" src="/assets/js/dropdown.js"></script>
     {% if has_statistics %}

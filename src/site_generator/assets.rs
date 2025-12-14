@@ -68,11 +68,11 @@ impl SiteGenerator {
 
         // Copy list/detail JavaScript when we have any content (books and/or comics use the same templates).
         if !items.is_empty() {
-            let js_content = include_str!(concat!(env!("OUT_DIR"), "/book_list.js"));
-            self.write_asset(self.js_dir().join("book_list.js"), js_content.as_bytes())?;
+            let js_content = include_str!(concat!(env!("OUT_DIR"), "/library_list.js"));
+            self.write_asset(self.js_dir().join("library_list.js"), js_content.as_bytes())?;
 
-            let js_content = include_str!(concat!(env!("OUT_DIR"), "/book_detail.js"));
-            self.write_asset(self.js_dir().join("book_detail.js"), js_content.as_bytes())?;
+            let js_content = include_str!(concat!(env!("OUT_DIR"), "/item_detail.js"));
+            self.write_asset(self.js_dir().join("item_detail.js"), js_content.as_bytes())?;
 
             let lazy_loading_content = include_str!(concat!(env!("OUT_DIR"), "/lazy-loading.js"));
             self.write_asset(

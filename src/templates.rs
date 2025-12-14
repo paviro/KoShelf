@@ -14,8 +14,8 @@ pub struct NavItem {
 }
 
 #[derive(Template)]
-#[template(path = "book_list/book_list.html", whitespace = "minimize")]
-pub struct IndexTemplate {
+#[template(path = "library_list/library_list.html", whitespace = "minimize")]
+pub struct LibraryListTemplate {
     pub site_title: String,
     /// Base path for detail pages (e.g. "/books/" or "/comics/").
     #[allow(dead_code)]
@@ -67,8 +67,8 @@ pub struct RecapEmptyTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "book_details/book_details.html", whitespace = "minimize")]
-pub struct BookTemplate {
+#[template(path = "item_details/item_details.html", whitespace = "minimize")]
+pub struct ItemDetailTemplate {
     pub site_title: String,
     pub book: LibraryItem,
     pub book_stats: Option<StatBook>,
@@ -82,8 +82,8 @@ pub struct BookTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "book_details/book_details.md", escape = "none")]
-pub struct BookMarkdownTemplate {
+#[template(path = "item_details/item_details.md", escape = "none")]
+pub struct ItemDetailMarkdownTemplate {
     pub book: LibraryItem,
     pub book_stats: Option<StatBook>,
     pub session_stats: Option<BookSessionStats>,
