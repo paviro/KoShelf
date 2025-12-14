@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (sortToggle && Timeline) {
         // Read from storage, default to true (Newest First)
-        let isNewestFirst = StorageManager.get<boolean>(StorageManager.KEYS.RECAP_SORT_ORDER, true) ?? true;
+        let isNewestFirst = StorageManager.get<boolean>(StorageManager.KEYS.RECAP_SORT_NEWEST, true) ?? true;
 
         // Icons
         // Newest First (Sort Descending): Lines + Arrow Down
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sortToggle.addEventListener('click', () => {
             isNewestFirst = !isNewestFirst;
-            StorageManager.set(StorageManager.KEYS.RECAP_SORT_ORDER, isNewestFirst);
+            StorageManager.set(StorageManager.KEYS.RECAP_SORT_NEWEST, isNewestFirst);
 
             updateUI();
             flipOrder();

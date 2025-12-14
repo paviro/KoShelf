@@ -86,23 +86,23 @@ export class SectionToggle {
         // We cannot rely on the URL because comics may be served at "/" or "/comics/".
         // Templates provide a stable signal via data attributes.
         if (scope === 'book-list') {
-            if (kind === 'comics') return StorageManager.KEYS.BOOK_LIST_SECTION_STATE_COMICS;
-            if (kind === 'books') return StorageManager.KEYS.BOOK_LIST_SECTION_STATE_BOOKS;
+            if (kind === 'comics') return StorageManager.KEYS.COMICS_LIST_SECTIONS;
+            if (kind === 'books') return StorageManager.KEYS.BOOKS_LIST_SECTIONS;
             return null;
         }
 
         // Persist the same state across all detail pages (not per-book/per-comic).
         if (scope === 'book-details') {
-            if (kind === 'comics') return StorageManager.KEYS.BOOK_DETAILS_SECTION_STATE_COMICS;
-            if (kind === 'books') return StorageManager.KEYS.BOOK_DETAILS_SECTION_STATE_BOOKS;
+            if (kind === 'comics') return StorageManager.KEYS.COMIC_DETAIL_SECTIONS;
+            if (kind === 'books') return StorageManager.KEYS.BOOK_DETAIL_SECTIONS;
             return null;
         }
 
         // Statistics can be scoped (all/books/comics); keep state separate per scope.
         if (scope === 'statistics') {
-            if (kind === 'books') return StorageManager.KEYS.STATISTICS_SECTION_STATE_BOOKS;
-            if (kind === 'comics') return StorageManager.KEYS.STATISTICS_SECTION_STATE_COMICS;
-            if (kind === 'all') return StorageManager.KEYS.STATISTICS_SECTION_STATE_ALL;
+            if (kind === 'books') return StorageManager.KEYS.STATS_BOOKS_SECTIONS;
+            if (kind === 'comics') return StorageManager.KEYS.STATS_COMICS_SECTIONS;
+            if (kind === 'all') return StorageManager.KEYS.STATS_ALL_SECTIONS;
             return null;
         }
 

@@ -42,9 +42,9 @@ function saveCurrentScope(): void {
     const context = detectPageContext();
 
     if (context.type === 'statistics') {
-        StorageManager.set(StorageManager.KEYS.STATS_SCOPE, context.scope);
+        StorageManager.set(StorageManager.KEYS.STATS_FILTER, context.scope);
     } else if (context.type === 'recap') {
-        StorageManager.set(StorageManager.KEYS.RECAP_SCOPE, context.scope);
+        StorageManager.set(StorageManager.KEYS.RECAP_FILTER, context.scope);
     }
 }
 
@@ -72,7 +72,7 @@ function setupNavigationInterception(): void {
     // Handle Statistics links
     statsLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.STATS_SCOPE);
+            const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.STATS_FILTER);
             if (storedScope && storedScope !== 'all') {
                 e.preventDefault();
                 const newUrl = buildScopedUrl(link.href, storedScope);
@@ -85,7 +85,7 @@ function setupNavigationInterception(): void {
     // Handle Recap links
     recapLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.RECAP_SCOPE);
+            const storedScope = StorageManager.get<Scope>(StorageManager.KEYS.RECAP_FILTER);
             if (storedScope && storedScope !== 'all') {
                 e.preventDefault();
                 const newUrl = buildScopedUrl(link.href, storedScope);
