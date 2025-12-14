@@ -1,8 +1,8 @@
 //! Content list and detail page generation (books + comics).
 
 use super::SiteGenerator;
-use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::koreader::BookStatistics;
+use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::templates::{ItemDetailMarkdownTemplate, ItemDetailTemplate, LibraryListTemplate};
 use anyhow::Result;
 use askama::Template;
@@ -411,15 +411,16 @@ impl SiteGenerator {
                 continue;
             }
             if let Some(dir_name) = path.file_name().and_then(|n| n.to_str())
-                && !current_ids.contains(dir_name) {
-                    info!("Removing stale {} directory: {:?}", label, path);
-                    if let Err(e) = fs::remove_dir_all(&path) {
-                        warn!(
-                            "Failed to remove stale {} directory {:?}: {}",
-                            label, path, e
-                        );
-                    }
+                && !current_ids.contains(dir_name)
+            {
+                info!("Removing stale {} directory: {:?}", label, path);
+                if let Err(e) = fs::remove_dir_all(&path) {
+                    warn!(
+                        "Failed to remove stale {} directory {:?}: {}",
+                        label, path, e
+                    );
                 }
+            }
         }
         Ok(())
     }

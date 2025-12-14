@@ -23,4 +23,3 @@ pub use cli::Cli;
 
 #[cfg(test)]
 mod tests;
-

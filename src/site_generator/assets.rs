@@ -107,7 +107,10 @@ impl SiteGenerator {
             )?;
 
             let recap_js_content = include_str!(concat!(env!("OUT_DIR"), "/recap.js"));
-            self.write_registered_bytes(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
+            self.write_registered_bytes(
+                self.js_dir().join("recap.js"),
+                recap_js_content.as_bytes(),
+            )?;
         }
 
         // Translations JSON - copy the locale file directly for the frontend
@@ -174,51 +177,57 @@ impl SiteGenerator {
                 if should_generate {
                     let tx = progress_tx.clone();
                     // Spawn a task for each cover generation
-                    let task = tokio::task::spawn_blocking(move || -> Result<(PathBuf, Vec<u8>)> {
-                        let img = image::load_from_memory(&cover_data)
-                            .context("Failed to load cover image")?;
+                    let task =
+                        tokio::task::spawn_blocking(move || -> Result<(PathBuf, Vec<u8>)> {
+                            let img = image::load_from_memory(&cover_data)
+                                .context("Failed to load cover image")?;
 
-                        // Resize to height of 600px while maintaining aspect ratio (skip if already small).
-                        let resized = {
-                            let (original_width, original_height) = (img.width(), img.height());
-                            let target_height = 600;
-                            if original_height > target_height {
-                                let target_width = (original_width * target_height) / original_height;
-                                img.resize(
-                                    target_width,
-                                    target_height,
-                                    image::imageops::FilterType::CatmullRom,
-                                )
-                            } else {
-                                img
-                            }
-                        };
+                            // Resize to height of 600px while maintaining aspect ratio (skip if already small).
+                            let resized = {
+                                let (original_width, original_height) = (img.width(), img.height());
+                                let target_height = 600;
+                                if original_height > target_height {
+                                    let target_width =
+                                        (original_width * target_height) / original_height;
+                                    img.resize(
+                                        target_width,
+                                        target_height,
+                                        image::imageops::FilterType::CatmullRom,
+                                    )
+                                } else {
+                                    img
+                                }
+                            };
 
-                        // Convert to RGB8 format for WebP encoding
-                        let rgb_img = resized.to_rgb8();
+                            // Convert to RGB8 format for WebP encoding
+                            let rgb_img = resized.to_rgb8();
 
-                        // Use webp crate with a faster config than defaults (method=4 by default).
-                        let encoder =
-                            webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
-                        let mut config = webp::WebPConfig::new()
-                            .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
-                        config.lossless = 0;
-                        config.quality = 50.0;
-                        config.method = 1; // faster encoding; good enough for 600px covers
-                        config.thread_level = 1; // allow libwebp internal threading
+                            // Use webp crate with a faster config than defaults (method=4 by default).
+                            let encoder = webp::Encoder::from_rgb(
+                                &rgb_img,
+                                rgb_img.width(),
+                                rgb_img.height(),
+                            );
+                            let mut config = webp::WebPConfig::new()
+                                .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
+                            config.lossless = 0;
+                            config.quality = 50.0;
+                            config.method = 1; // faster encoding; good enough for 600px covers
+                            config.thread_level = 1; // allow libwebp internal threading
 
-                        let webp_data = encoder
-                            .encode_advanced(&config)
-                            .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
+                            let webp_data = encoder
+                                .encode_advanced(&config)
+                                .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
-                        fs::write(&cover_path, &*webp_data)
-                            .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+                            fs::write(&cover_path, &*webp_data).with_context(|| {
+                                format!("Failed to save cover: {:?}", cover_path)
+                            })?;
 
-                        // Signal progress
-                        let _ = tx.send(());
+                            // Signal progress
+                            let _ = tx.send(());
 
-                        Ok((cover_path, (&*webp_data).to_vec()))
-                    });
+                            Ok((cover_path, (&*webp_data).to_vec()))
+                        });
 
                     tasks.push(task);
                 }
@@ -266,7 +275,7 @@ impl SiteGenerator {
                     Ok(Ok((path, bytes))) => generated_covers.push((path, bytes)),
                     Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
                     Err(e) => {
-                        return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i)))
+                        return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i)));
                     }
                 }
             }
@@ -285,7 +294,8 @@ impl SiteGenerator {
             }
 
             // Track which paths we already registered from memory.
-            let generated_paths: HashSet<&PathBuf> = generated_covers.iter().map(|(p, _)| p).collect();
+            let generated_paths: HashSet<&PathBuf> =
+                generated_covers.iter().map(|(p, _)| p).collect();
 
             // Register existing covers (that we didn't regenerate) in cache manifest.
             for cover_path in &all_cover_paths {

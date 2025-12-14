@@ -146,7 +146,11 @@ fn compile_tailwind_css(
     out_filename: &str,
 ) -> std::path::PathBuf {
     if !input.exists() {
-        panic!("{} not found (required for {} styling)", input.display(), display_name);
+        panic!(
+            "{} not found (required for {} styling)",
+            input.display(),
+            display_name
+        );
     }
 
     eprintln!("Compiling {} CSS...", display_name);

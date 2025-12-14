@@ -202,7 +202,11 @@ impl LibraryScanner {
         })
     }
 
-    async fn parse_book_info(&self, format: LibraryItemFormat, path: &std::path::Path) -> Result<BookInfo> {
+    async fn parse_book_info(
+        &self,
+        format: LibraryItemFormat,
+        path: &std::path::Path,
+    ) -> Result<BookInfo> {
         match format {
             LibraryItemFormat::Epub => self.epub_parser.parse(path).await,
             LibraryItemFormat::Fb2 => self.fb2_parser.parse(path).await,
@@ -261,7 +265,10 @@ impl LibraryScanner {
         (metadata_path, book_md5)
     }
 
-    async fn parse_koreader_metadata(&self, metadata_path: Option<PathBuf>) -> Option<KoReaderMetadata> {
+    async fn parse_koreader_metadata(
+        &self,
+        metadata_path: Option<PathBuf>,
+    ) -> Option<KoReaderMetadata> {
         let metadata_path = metadata_path?;
         match self.lua_parser.parse(&metadata_path).await {
             Ok(metadata) => {

@@ -1,8 +1,8 @@
-use crate::config::SiteConfig;
 use super::scanner::MetadataLocation;
+use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
-use crate::site_generator::SiteGenerator;
 use crate::server::version::SharedVersionNotifier;
+use crate::site_generator::SiteGenerator;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -183,21 +183,24 @@ impl FileWatcher {
 
             // Check for metadata files
             if let Some(filename) = filename
-                && LibraryItemFormat::is_metadata_file(filename) {
-                    return true;
-                }
+                && LibraryItemFormat::is_metadata_file(filename)
+            {
+                return true;
+            }
 
             // Check for .sdr directories (KoReader metadata folders)
             if let Some(filename) = filename
-                && filename.ends_with(".sdr") {
-                    return true;
-                }
+                && filename.ends_with(".sdr")
+            {
+                return true;
+            }
 
             // Check for statistics database files
             if let Some(ref stats_path) = self.statistics_db_path
-                && path == stats_path {
-                    return true;
-                }
+                && path == stats_path
+            {
+                return true;
+            }
 
             false
         })
@@ -219,21 +222,24 @@ impl FileWatcher {
 
             // Check metadata files
             if let Some(filename) = filename
-                && LibraryItemFormat::is_metadata_file(filename) {
-                    info!("Metadata file {}: {:?}", action, path);
-                }
+                && LibraryItemFormat::is_metadata_file(filename)
+            {
+                info!("Metadata file {}: {:?}", action, path);
+            }
 
             // Check .sdr directories
             if let Some(filename) = filename
-                && filename.ends_with(".sdr") {
-                    info!("KoReader metadata directory {}: {:?}", action, path);
-                }
+                && filename.ends_with(".sdr")
+            {
+                info!("KoReader metadata directory {}: {:?}", action, path);
+            }
 
             // Check statistics database
             if let Some(ref stats_path) = self.statistics_db_path
-                && path == stats_path {
-                    info!("Statistics database {}: {:?}", action, path);
-                }
+                && path == stats_path
+            {
+                info!("Statistics database {}: {:?}", action, path);
+            }
         }
     }
 }

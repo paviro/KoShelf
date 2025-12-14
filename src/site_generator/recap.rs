@@ -10,11 +10,11 @@ use crate::templates::{RecapEmptyTemplate, RecapTemplate};
 use anyhow::Result;
 use askama::Template;
 use chrono::Datelike;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::time::{Instant, SystemTime};
-use indicatif::{ProgressBar, ProgressStyle};
 
 use super::utils::NavContext;
 
@@ -49,13 +49,13 @@ fn build_monthly_recaps(
         // Sort items by end_date descending (Newest first)
         items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
-        let month_label =
-            if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
-            {
-                date.format("%B").to_string()
-            } else {
-                ym.clone()
-            };
+        let month_label = if let Ok(date) =
+            chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
+        {
+            date.format("%B").to_string()
+        } else {
+            ym.clone()
+        };
 
         let hours = *month_hours_all.get(&ym).unwrap_or(&0);
         let month_recap = MonthRecap {
@@ -200,7 +200,16 @@ fn group_completions_by_year_month(
                         .map(|s| s.trim().to_string())
                         .filter(|s| !s.is_empty())
                         .collect::<Vec<_>>();
-                    (title, authors, None, None, None, None, None, sb.content_type)
+                    (
+                        title,
+                        authors,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        sb.content_type,
+                    )
                 };
 
                 let item = RecapItem {
@@ -311,12 +320,12 @@ fn compute_yearly_summary(
         .filter(|day| day.date.starts_with(&year_str) && day.read_time > 0)
         .count();
 
-    let days_in_year = if chrono::NaiveDate::from_ymd_opt(year, 12, 31).is_some_and(|d| d.ordinal() == 366)
-    {
-        366.0
-    } else {
-        365.0
-    };
+    let days_in_year =
+        if chrono::NaiveDate::from_ymd_opt(year, 12, 31).is_some_and(|d| d.ordinal() == 366) {
+            366.0
+        } else {
+            365.0
+        };
     let active_days_percentage = (active_days as f64 / days_in_year * 100.0).round();
 
     // 4. Longest streak within this year (based on daily activity)
@@ -397,11 +406,7 @@ fn compute_yearly_summary(
 }
 
 impl SiteGenerator {
-    async fn render_share_images_for_year(
-        &self,
-        year: i32,
-        summary: &YearlySummary,
-    ) -> Result<()> {
+    async fn render_share_images_for_year(&self, year: i32, summary: &YearlySummary) -> Result<()> {
         // Generate share images for social media
         let share_data = crate::share::ShareImageData {
             year,
@@ -461,16 +466,10 @@ impl SiteGenerator {
                     let share_data = share_data.clone();
                     let tx = progress_tx.clone();
                     Some(tokio::task::spawn_blocking(move || {
-                        if let Err(e) = crate::share::generate_share_image(
-                            &share_data,
-                            format,
-                            &output_path,
-                        ) {
-                            log::warn!(
-                                "Failed to generate share image {:?}: {}",
-                                output_path,
-                                e
-                            );
+                        if let Err(e) =
+                            crate::share::generate_share_image(&share_data, format, &output_path)
+                        {
+                            log::warn!("Failed to generate share image {:?}: {}", output_path, e);
                         }
                         // Signal progress
                         let _ = tx.send(());
@@ -555,10 +554,8 @@ impl SiteGenerator {
         // - monthly hour totals (from daily_activity)
         // - active day counts / streaks (also from daily_activity)
         // - per-year session stats (from page_stats)
-        let reading_stats_all = crate::koreader::StatisticsParser::calculate_stats(
-            stats_data,
-            &self.time_config,
-        );
+        let reading_stats_all =
+            crate::koreader::StatisticsParser::calculate_stats(stats_data, &self.time_config);
         let mut books_stats_data = stats_data.filtered_by_content_type(ContentType::Book);
         let mut comics_stats_data = stats_data.filtered_by_content_type(ContentType::Comic);
         let reading_stats_books = crate::koreader::StatisticsParser::calculate_stats(

@@ -2,4 +2,4 @@
 
 pub mod translations;
 
-pub use translations::{list_supported_languages, Translations};
+pub use translations::{Translations, list_supported_languages};

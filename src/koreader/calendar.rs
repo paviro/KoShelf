@@ -1,5 +1,5 @@
-use crate::models::*;
 use super::partial_md5::calculate_partial_md5;
+use crate::models::*;
 use crate::time_config::TimeConfig;
 use chrono::Datelike;
 /// Provides utilities for generating calendar-related data (events, monthly payloads, stats).
@@ -84,8 +84,13 @@ impl CalendarGenerator {
                     .or(stat_book.content_type)
                     .unwrap_or(ContentType::Book);
 
-                let calendar_item =
-                    CalendarItem::new(stat_book.title.clone(), authors, content_type, item_path, item_cover);
+                let calendar_item = CalendarItem::new(
+                    stat_book.title.clone(),
+                    authors,
+                    content_type,
+                    item_path,
+                    item_cover,
+                );
                 calendar_items.insert(calendar_item_id.clone(), calendar_item);
             }
 

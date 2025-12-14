@@ -106,7 +106,11 @@ impl SiteGenerator {
     }
 
     /// Writes bytes to disk and registers them in the cache manifest.
-    pub(crate) fn write_registered_bytes<P: AsRef<Path>>(&self, path: P, bytes: &[u8]) -> Result<()> {
+    pub(crate) fn write_registered_bytes<P: AsRef<Path>>(
+        &self,
+        path: P,
+        bytes: &[u8],
+    ) -> Result<()> {
         let path_ref = path.as_ref();
         self.cache_manifest
             .register_file(path_ref, &self.output_dir, bytes);
@@ -115,7 +119,11 @@ impl SiteGenerator {
     }
 
     /// Writes a UTF-8 string to disk and registers it in the cache manifest.
-    pub(crate) fn write_registered_string<P: AsRef<Path>>(&self, path: P, content: &str) -> Result<()> {
+    pub(crate) fn write_registered_string<P: AsRef<Path>>(
+        &self,
+        path: P,
+        content: &str,
+    ) -> Result<()> {
         self.write_registered_bytes(path, content.as_bytes())
     }
 

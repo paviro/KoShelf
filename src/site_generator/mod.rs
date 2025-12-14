@@ -21,9 +21,9 @@ pub use cache_manifest::CacheManifestBuilder;
 
 use crate::config::SiteConfig;
 use crate::i18n::Translations;
+use crate::koreader::{StatisticsCalculator, StatisticsParser, calculate_partial_md5};
 use crate::library::scan_library;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
-use crate::koreader::{calculate_partial_md5, StatisticsCalculator, StatisticsParser};
 use anyhow::Result;
 use log::info;
 use std::collections::{HashMap, HashSet};
@@ -262,7 +262,8 @@ impl SiteGenerator {
         };
 
         // Create output directories based on what we're generating
-        self.create_directories(&ctx.all_items, &ctx.stats_data).await?;
+        self.create_directories(&ctx.all_items, &ctx.stats_data)
+            .await?;
 
         // Copy static assets
         self.copy_static_assets(&ctx.all_items, &ctx.stats_data)
@@ -281,19 +282,11 @@ impl SiteGenerator {
         self.cleanup_stale_covers(&ctx.all_items)?;
 
         // Generate individual book pages
-        self.generate_book_pages(
-            &ctx.books,
-            &mut ctx.stats_data,
-            &ui,
-        )
+        self.generate_book_pages(&ctx.books, &mut ctx.stats_data, &ui)
             .await?;
 
         // Generate individual comic pages (always at /comics/<id>/)
-        self.generate_comic_pages(
-            &ctx.comics,
-            &mut ctx.stats_data,
-            &ui,
-        )
+        self.generate_comic_pages(&ctx.comics, &mut ctx.stats_data, &ui)
             .await?;
 
         // Generate list pages with conditional routing:
@@ -302,35 +295,22 @@ impl SiteGenerator {
         // - If comics exist AND no books: comic list at /
         if ctx.nav.has_books {
             // Generate book list page at index.html
-            self.generate_book_list(&ctx.books, &ui)
-                .await?;
+            self.generate_book_list(&ctx.books, &ui).await?;
         }
 
         if ctx.nav.has_comics {
             // Generate comic list - at root if no books, otherwise at /comics/
-            self.generate_comic_list(
-                &ctx.comics,
-                !ctx.nav.has_books,
-                &ui,
-            )
+            self.generate_comic_list(&ctx.comics, !ctx.nav.has_books, &ui)
                 .await?;
         }
 
         if let Some(ref mut stats_data) = ctx.stats_data {
             // Generate statistics page (render to root if no items at all)
-            self.generate_statistics_page(
-                stats_data,
-                ctx.all_items.is_empty(),
-                &ui,
-            )
-            .await?;
+            self.generate_statistics_page(stats_data, ctx.all_items.is_empty(), &ui)
+                .await?;
 
             // Generate calendar page if we have statistics data
-            self.generate_calendar_page(
-                stats_data,
-                &ctx.all_items,
-                &ui,
-            )
+            self.generate_calendar_page(stats_data, &ctx.all_items, &ui)
                 .await?;
 
             // Generate recap pages (static yearly)

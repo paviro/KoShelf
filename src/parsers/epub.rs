@@ -69,25 +69,26 @@ impl EpubParser {
 
         // Step 3.5: If no page count from metadata, try parsing page-list from nav document
         if book_info.pages.is_none()
-            && let Some(ref nav_rel_path) = nav_path {
-                // Resolve nav path relative to OPF directory
-                let opf_parent = Path::new(&opf_path).parent();
-                let resolved_nav_path = if let Some(parent) = opf_parent {
-                    parent
-                        .join(nav_rel_path)
-                        .to_string_lossy()
-                        .replace('\\', "/")
-                } else {
-                    nav_rel_path.clone()
-                };
+            && let Some(ref nav_rel_path) = nav_path
+        {
+            // Resolve nav path relative to OPF directory
+            let opf_parent = Path::new(&opf_path).parent();
+            let resolved_nav_path = if let Some(parent) = opf_parent {
+                parent
+                    .join(nav_rel_path)
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            } else {
+                nav_rel_path.clone()
+            };
 
-                if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
-                    let mut nav_xml = String::new();
-                    if nav_file.read_to_string(&mut nav_xml).is_ok() {
-                        book_info.pages = Self::parse_page_list(&nav_xml);
-                    }
+            if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
+                let mut nav_xml = String::new();
+                if nav_file.read_to_string(&mut nav_xml).is_ok() {
+                    book_info.pages = Self::parse_page_list(&nav_xml);
                 }
             }
+        }
 
         // Step 4: Find cover image path and MIME type in manifest
         let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
@@ -342,9 +343,10 @@ impl EpubParser {
                                         }
                                     } else if prop == "schema:numberOfPages"
                                         && let Ok(text_content) = reader.read_text(e.name())
-                                            && let Ok(pages) = text_content.trim().parse::<u32>() {
-                                                number_of_pages = Some(pages);
-                                            }
+                                        && let Ok(pages) = text_content.trim().parse::<u32>()
+                                    {
+                                        number_of_pages = Some(pages);
+                                    }
                                 }
                             }
                             _ => {}
@@ -386,14 +388,16 @@ impl EpubParser {
                                     href = Some(h.into_owned());
                                 }
                             } else if key == b"properties"
-                                && let Ok(p) = attr.unescape_value() {
-                                    properties = Some(p.into_owned());
-                                }
+                                && let Ok(p) = attr.unescape_value()
+                            {
+                                properties = Some(p.into_owned());
+                            }
                         }
                         if let (Some(h), Some(p)) = (href, properties)
-                            && p.contains("nav") {
-                                nav_path = Some(h);
-                            }
+                            && p.contains("nav")
+                        {
+                            nav_path = Some(h);
+                        }
                     }
                 }
                 Ok(Event::End(ref e)) => {
@@ -527,9 +531,10 @@ impl EpubParser {
                             let key = attr.key.as_ref();
                             if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
                                 && let Ok(val) = attr.unescape_value()
-                                    && val.contains("page-list") {
-                                        in_page_list = true;
-                                    }
+                                && val.contains("page-list")
+                            {
+                                in_page_list = true;
+                            }
                         }
                     }
 

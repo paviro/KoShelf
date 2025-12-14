@@ -1,8 +1,8 @@
 //! Statistics page generation and JSON export.
 
 use super::SiteGenerator;
-use crate::models::{ContentType, ReadingStats, StatisticsData};
 use crate::koreader::StatisticsParser;
+use crate::models::{ContentType, ReadingStats, StatisticsData};
 use crate::templates::{StatsEmptyTemplate, StatsTemplate};
 use anyhow::Result;
 use askama::Template;
@@ -39,29 +39,33 @@ impl SiteGenerator {
 
         // Only export/render per-type views when we actually have both types in the site.
         // If only one type exists, the "all" view is the only meaningful one.
-        let (reading_stats_books, available_years_books, reading_stats_comics, available_years_comics) =
-            if show_type_filter {
-                // Also export separate JSON outputs for books and comics
-                let books_data = stats_data.filtered_by_content_type(ContentType::Book);
-                let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
+        let (
+            reading_stats_books,
+            available_years_books,
+            reading_stats_comics,
+            available_years_comics,
+        ) = if show_type_filter {
+            // Also export separate JSON outputs for books and comics
+            let books_data = stats_data.filtered_by_content_type(ContentType::Book);
+            let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
 
-                let (reading_stats_books, available_years_books) = self
-                    .export_stats_bundle(&books_data, ContentType::Book)
-                    .await?;
+            let (reading_stats_books, available_years_books) = self
+                .export_stats_bundle(&books_data, ContentType::Book)
+                .await?;
 
-                let (reading_stats_comics, available_years_comics) = self
-                    .export_stats_bundle(&comics_data, ContentType::Comic)
-                    .await?;
+            let (reading_stats_comics, available_years_comics) = self
+                .export_stats_bundle(&comics_data, ContentType::Comic)
+                .await?;
 
-                (
-                    Some(reading_stats_books),
-                    Some(available_years_books),
-                    Some(reading_stats_comics),
-                    Some(available_years_comics),
-                )
-            } else {
-                (None, None, None, None)
-            };
+            (
+                Some(reading_stats_books),
+                Some(available_years_books),
+                Some(reading_stats_comics),
+                Some(available_years_comics),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         if render_to_root {
             let template = StatsTemplate {
