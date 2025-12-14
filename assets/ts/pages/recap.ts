@@ -17,27 +17,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (wrapper && options) {
         // Toggle dropdown
-        wrapper.addEventListener('click', (e) => {
-            e.stopPropagation();
+        wrapper.addEventListener('click', () => {
             options.classList.toggle('hidden');
             if (arrow) arrow.classList.toggle('rotate-180');
-        });
-
-        // Close on outside click
-        document.addEventListener('click', (e) => {
-            const target = e.target as Node;
-            if (!wrapper.contains(target)) {
-                options.classList.add('hidden');
-                if (arrow) arrow.classList.remove('rotate-180');
-            }
         });
 
         // Navigate when selecting a year (keep current scope)
         const scope = document.body.getAttribute('data-recap-scope') || 'all';
         const scopePath = scope === 'all' ? '' : `${scope}/`;
         document.querySelectorAll<HTMLElement>('.year-option').forEach((opt) => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
+            opt.addEventListener('click', () => {
                 const y = opt.getAttribute('data-year');
                 if (y) {
                     window.location.href = `/recap/${y}/${scopePath}`;
