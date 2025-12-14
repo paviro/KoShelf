@@ -211,7 +211,7 @@ async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
 
         // Check if this month has data available
         if (availableMonths.length > 0 && !availableMonths.includes(targetMonth)) {
-            console.info(`No calendar data available for ${targetMonth}`);
+            // No data available for this month - this is expected for future months
             return { events: [], books: {} }; // Return empty data instead of null
         }
 
@@ -631,39 +631,35 @@ function updateMonthlyStats(currentDate: Date): void {
 // Scroll the current day into view within the calendar container
 function scrollCurrentDayIntoView(): void {
     const calendarContainer = document.querySelector<HTMLElement>('.calendar-container');
-    const todayCell = document.querySelector<HTMLElement>('.ec-today');
+    const todayCell = document.querySelector<HTMLElement>('.ec-day.ec-today');
 
     if (!calendarContainer || !todayCell) return;
 
-    // Get the container's scroll width and visible width
+    // Only scroll if container is horizontally scrollable
+    const maxScrollLeft = calendarContainer.scrollWidth - calendarContainer.clientWidth;
+    if (maxScrollLeft <= 0) return;
+
+    // Get positions relative to viewport
     const containerRect = calendarContainer.getBoundingClientRect();
     const todayRect = todayCell.getBoundingClientRect();
 
-    // Calculate if today is outside the visible area
-    const containerLeft = containerRect.left;
-    const containerRight = containerRect.right;
-    const todayLeft = todayRect.left;
-    const todayRight = todayRect.right;
+    // Calculate the offset of today cell's center relative to the container's left edge
+    // This accounts for the current scroll position
+    const todayCenterRelativeToContainer =
+        todayRect.left - containerRect.left + todayRect.width / 2 + calendarContainer.scrollLeft;
 
-    // If today is outside the visible area, scroll to center it
-    if (todayLeft < containerLeft || todayRight > containerRight) {
-        const todayCenter = todayLeft + todayRect.width / 2;
-        const containerCenter = containerLeft + containerRect.width / 2;
-        const scrollOffset = todayCenter - containerCenter;
+    // Calculate the scroll position to center the today cell
+    const desiredScrollLeft = todayCenterRelativeToContainer - calendarContainer.clientWidth / 2;
 
-        // Clamp desired scroll position to valid range to prevent overshooting
-        const currentScroll = calendarContainer.scrollLeft;
-        const maxScrollLeft = calendarContainer.scrollWidth - calendarContainer.clientWidth;
-        const desiredScroll = Math.max(0, Math.min(currentScroll + scrollOffset, maxScrollLeft));
-        const clampedOffset = desiredScroll - currentScroll;
+    // Clamp to valid scroll range
+    const clampedScrollLeft = Math.max(0, Math.min(desiredScrollLeft, maxScrollLeft));
 
-        // Only scroll if there's a meaningful offset after clamping
-        if (Math.abs(clampedOffset) > 1) {
-            calendarContainer.scrollBy({
-                left: clampedOffset,
-                behavior: 'smooth',
-            });
-        }
+    // Only scroll if there's a meaningful difference from current position
+    if (Math.abs(clampedScrollLeft - calendarContainer.scrollLeft) > 1) {
+        calendarContainer.scrollTo({
+            left: clampedScrollLeft,
+            behavior: 'instant',
+        });
     }
 }
 
