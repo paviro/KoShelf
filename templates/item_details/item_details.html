@@ -21,7 +21,7 @@
         <div class="flex items-center h-full min-w-0 flex-1">
             <!-- Mobile Title & Back Button -->
             <div class="lg:hidden flex items-center space-x-3 min-w-0 flex-1">
-                <button onclick="if (typeof smartBack === 'function') { smartBack(document.referrer); }" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0" title="{{ translation.get("go-back.aria-label") }}" aria-label="{{ translation.get("go-back.aria-label") }}">
+                <button onclick="if (typeof smartBack === 'function') { smartBack(event, document.referrer); }" class="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0" title="{{ translation.get("go-back.aria-label") }}" aria-label="{{ translation.get("go-back.aria-label") }}">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
@@ -102,16 +102,14 @@
     <script type="module" src="/assets/js/item_detail.js"></script>
     
     <script>
-        function smartBack(href) {
+        function smartBack(event, href) {
             event.preventDefault();
             var referrer = document.referrer;
-            console.log(href);
         
             // Seems the user directly navigated to the book details page, so we need to go back to root
             if (href == '' || href == window.location.href) {
                 href = '/';
             }
-            console.log(href);
     
             var historyLength = window.history.length;
     
