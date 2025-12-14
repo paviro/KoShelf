@@ -6,7 +6,9 @@ use anyhow::{Context, Result};
 use futures::future;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
+use std::collections::HashSet;
 use std::fs;
+use std::path::PathBuf;
 use std::time::{Instant, SystemTime};
 
 impl SiteGenerator {
@@ -172,28 +174,42 @@ impl SiteGenerator {
                 if should_generate {
                     let tx = progress_tx.clone();
                     // Spawn a task for each cover generation
-                    let task = tokio::task::spawn_blocking(move || -> Result<()> {
+                    let task = tokio::task::spawn_blocking(move || -> Result<(PathBuf, Vec<u8>)> {
                         let img = image::load_from_memory(&cover_data)
                             .context("Failed to load cover image")?;
 
-                        // Resize to height of 600px while maintaining aspect ratio
-                        let (original_width, original_height) = (img.width(), img.height());
-                        let target_height = 600;
-                        let target_width = (original_width * target_height) / original_height;
-
-                        let resized = img.resize(
-                            target_width,
-                            target_height,
-                            image::imageops::FilterType::Lanczos3,
-                        );
+                        // Resize to height of 600px while maintaining aspect ratio (skip if already small).
+                        let resized = {
+                            let (original_width, original_height) = (img.width(), img.height());
+                            let target_height = 600;
+                            if original_height > target_height {
+                                let target_width = (original_width * target_height) / original_height;
+                                img.resize(
+                                    target_width,
+                                    target_height,
+                                    image::imageops::FilterType::CatmullRom,
+                                )
+                            } else {
+                                img
+                            }
+                        };
 
                         // Convert to RGB8 format for WebP encoding
                         let rgb_img = resized.to_rgb8();
 
-                        // Use webp crate for better quality control
+                        // Use webp crate with a faster config than defaults (method=4 by default).
                         let encoder =
                             webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
-                        let webp_data = encoder.encode(50.0);
+                        let mut config = webp::WebPConfig::new()
+                            .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
+                        config.lossless = 0;
+                        config.quality = 50.0;
+                        config.method = 1; // faster encoding; good enough for 600px covers
+                        config.thread_level = 1; // allow libwebp internal threading
+
+                        let webp_data = encoder
+                            .encode_advanced(&config)
+                            .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
                         fs::write(&cover_path, &*webp_data)
                             .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
@@ -201,7 +217,7 @@ impl SiteGenerator {
                         // Signal progress
                         let _ = tx.send(());
 
-                        Ok(())
+                        Ok((cover_path, (&*webp_data).to_vec()))
                     });
 
                     tasks.push(task);
@@ -244,9 +260,10 @@ impl SiteGenerator {
             pb.finish_and_clear();
 
             // Check for any errors
+            let mut generated_covers: Vec<(PathBuf, Vec<u8>)> = Vec::new();
             for (i, result) in results.into_iter().enumerate() {
                 match result {
-                    Ok(Ok(())) => {} // Success
+                    Ok(Ok((path, bytes))) => generated_covers.push((path, bytes)),
                     Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
                     Err(e) => {
                         return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i)))
@@ -260,13 +277,25 @@ impl SiteGenerator {
                 total_covers,
                 elapsed.as_secs_f64()
             );
-        }
 
-        // Register all covers in cache manifest
-        for cover_path in &all_cover_paths {
-            if let Ok(content) = fs::read(cover_path) {
+            // Register newly generated covers without re-reading them from disk.
+            for (path, bytes) in &generated_covers {
                 self.cache_manifest
-                    .register_file(cover_path, &self.output_dir, &content);
+                    .register_file(path, &self.output_dir, bytes);
+            }
+
+            // Track which paths we already registered from memory.
+            let generated_paths: HashSet<&PathBuf> = generated_covers.iter().map(|(p, _)| p).collect();
+
+            // Register existing covers (that we didn't regenerate) in cache manifest.
+            for cover_path in &all_cover_paths {
+                if generated_paths.contains(cover_path) {
+                    continue;
+                }
+                if let Ok(content) = fs::read(cover_path) {
+                    self.cache_manifest
+                        .register_file(cover_path, &self.output_dir, &content);
+                }
             }
         }
 
