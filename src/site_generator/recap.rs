@@ -83,15 +83,15 @@ impl SiteGenerator {
                         years.push(year);
                     }
 
-                    // Enrich from Book when possible
+                    // Enrich from LibraryItem when possible
                     let (
                         title,
                         authors,
                         rating,
                         review_note,
                         series_display,
-                        book_path,
-                        book_cover,
+                        item_path,
+                        item_cover,
                         content_type,
                     ) = if let Some(book) = md5_to_book.get(&sb.md5) {
                         let title = book.book_info.title.clone();
@@ -99,19 +99,19 @@ impl SiteGenerator {
                         let rating = book.rating();
                         let review_note = book.review_note().cloned();
                         let series_display = book.series_display();
-                        let book_path = Some(match book.content_type() {
+                        let item_path = Some(match book.content_type() {
                             ContentType::Book => format!("/books/{}/index.html", book.id),
                             ContentType::Comic => format!("/comics/{}/index.html", book.id),
                         });
-                        let book_cover = Some(format!("/assets/covers/{}.webp", book.id));
+                        let item_cover = Some(format!("/assets/covers/{}.webp", book.id));
                         (
                             title,
                             authors,
                             rating,
                             review_note,
                             series_display,
-                            book_path,
-                            book_cover,
+                            item_path,
+                            item_cover,
                             Some(book.content_type()),
                         )
                     } else {
@@ -149,8 +149,8 @@ impl SiteGenerator {
                         rating,
                         review_note,
                         series_display,
-                        book_path,
-                        book_cover,
+                        item_path,
+                        item_cover,
                         content_type,
                         star_display: {
                             let mut stars = [false; 5];

@@ -25,7 +25,7 @@ impl CalendarGenerator {
         }
 
         let mut calendar_events = Vec::new();
-        let mut calendar_books: BTreeMap<String, CalendarBook> = BTreeMap::new();
+        let mut calendar_items: BTreeMap<String, CalendarItem> = BTreeMap::new();
 
         // Build a lookup map from partial MD5 checksum to the corresponding book detail path,
         // cover path, and content type.
@@ -69,13 +69,13 @@ impl CalendarGenerator {
                 continue;
             }
 
-            // Generate a unique book ID for the calendar system
-            let calendar_book_id = stat_book.md5.clone();
+            // Generate a unique item ID for the calendar system
+            let calendar_item_id = stat_book.md5.clone();
 
-            // Create the book metadata entry if we haven't already
-            if !calendar_books.contains_key(&calendar_book_id) {
+            // Create the item metadata entry if we haven't already
+            if !calendar_items.contains_key(&calendar_item_id) {
                 let authors = Self::parse_authors(&stat_book.authors);
-                let (book_path, book_cover, content_type_from_library) = md5_to_book_info
+                let (item_path, item_cover, content_type_from_library) = md5_to_book_info
                     .get(&stat_book.md5.to_lowercase())
                     .map(|(path, cover, ct)| (Some(path.clone()), Some(cover.clone()), Some(*ct)))
                     .unwrap_or((None, None, None));
@@ -84,9 +84,9 @@ impl CalendarGenerator {
                     .or(stat_book.content_type)
                     .unwrap_or(ContentType::Book);
 
-                let calendar_book =
-                    CalendarBook::new(stat_book.title.clone(), authors, content_type, book_path, book_cover);
-                calendar_books.insert(calendar_book_id.clone(), calendar_book);
+                let calendar_item =
+                    CalendarItem::new(stat_book.title.clone(), authors, content_type, item_path, item_cover);
+                calendar_items.insert(calendar_item_id.clone(), calendar_item);
             }
 
             // Sort sessions by start time globally for this book
@@ -113,23 +113,23 @@ impl CalendarGenerator {
             // Process reading days and create calendar events
             Self::create_calendar_events_from_reading_days(
                 &mut calendar_events,
-                &calendar_book_id,
+                &calendar_item_id,
                 &days,
                 &sessions_by_day,
             );
         }
 
-        // Sort events deterministically by start date then book title to ensure consistent ordering across builds
+        // Sort events deterministically by start date then item title to ensure consistent ordering across builds
         calendar_events.sort_by(|a, b| {
             use std::cmp::Ordering;
             match a.start.cmp(&b.start) {
                 Ordering::Equal => {
-                    let title_a = calendar_books
-                        .get(&a.book_id)
+                    let title_a = calendar_items
+                        .get(&a.item_id)
                         .map(|bk| bk.title.as_str())
                         .unwrap_or("");
-                    let title_b = calendar_books
-                        .get(&b.book_id)
+                    let title_b = calendar_items
+                        .get(&b.item_id)
                         .map(|bk| bk.title.as_str())
                         .unwrap_or("");
                     title_a.cmp(title_b)
@@ -204,12 +204,12 @@ impl CalendarGenerator {
                 // Push event (clone so that events can live in multiple months if spanning)
                 month_entry.events.push(ev.clone());
 
-                // Add corresponding book metadata
-                if let Some(book_meta) = calendar_books.get(&ev.book_id) {
+                // Add corresponding item metadata
+                if let Some(item_meta) = calendar_items.get(&ev.item_id) {
                     month_entry
                         .books
-                        .entry(ev.book_id.clone())
-                        .or_insert(book_meta.clone());
+                        .entry(ev.item_id.clone())
+                        .or_insert(item_meta.clone());
                 }
 
                 // Move iter_date to first day of next month
@@ -241,7 +241,7 @@ impl CalendarGenerator {
     /// Create calendar events from reading days, grouping consecutive days (spanning month boundaries).
     fn create_calendar_events_from_reading_days(
         calendar_events: &mut Vec<CalendarEvent>,
-        calendar_book_id: &str,
+        calendar_item_id: &str,
         days: &[NaiveDate],
         sessions_by_day: &HashMap<NaiveDate, Vec<&PageStat>>,
     ) {
@@ -267,7 +267,7 @@ impl CalendarGenerator {
                 // Close previous streak
                 Self::create_calendar_event(
                     calendar_events,
-                    calendar_book_id,
+                    calendar_item_id,
                     span_start,
                     prev_day,
                     &span_sessions,
@@ -283,7 +283,7 @@ impl CalendarGenerator {
         // Push final streak
         Self::create_calendar_event(
             calendar_events,
-            calendar_book_id,
+            calendar_item_id,
             span_start,
             prev_day,
             &span_sessions,
@@ -293,7 +293,7 @@ impl CalendarGenerator {
     /// Create a calendar event from reading sessions spanning consecutive days
     fn create_calendar_event(
         calendar_events: &mut Vec<CalendarEvent>,
-        calendar_book_id: &str,
+        calendar_item_id: &str,
         start_date: NaiveDate,
         end_date: NaiveDate,
         sessions: &[&PageStat],
@@ -316,7 +316,7 @@ impl CalendarGenerator {
             end_exclusive,
             total_read_time,
             total_pages_read,
-            calendar_book_id.to_string(),
+            calendar_item_id.to_string(),
         );
 
         calendar_events.push(event);

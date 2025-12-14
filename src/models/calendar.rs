@@ -4,35 +4,35 @@ use serde::{Deserialize, Serialize};
 
 use super::ContentType;
 
-/// Calendar event representing a book reading session (optimized structure)
+/// Calendar event representing a reading session (optimized structure)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarEvent {
     pub start: String, // ISO date: yyyy-mm-dd
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<String>, // ISO date: yyyy-mm-dd (optional, for single-day events)
-    pub total_read_time: i64, // Total seconds read for this book
-    pub total_pages_read: i64, // Total pages read for this book
-    pub book_id: String, // Reference to book metadata
+    pub total_read_time: i64, // Total seconds read for this item
+    pub total_pages_read: i64, // Total pages read for this item
+    pub item_id: String, // Reference to item metadata
 }
 
-/// Book metadata for calendar events
+/// Item metadata for calendar events
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CalendarBook {
+pub struct CalendarItem {
     pub title: String,
     pub authors: Vec<String>,
     pub content_type: ContentType,
     pub color: String, // Color for the event
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_path: Option<String>, // Relative path to the book detail page, if available
+    pub item_path: Option<String>, // Relative path to the item detail page, if available
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_cover: Option<String>, // Relative path to the book cover image, if available
+    pub item_cover: Option<String>, // Relative path to the item cover image, if available
 }
 
 /// Complete calendar data structure with optimized format
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarMonthData {
     pub events: Vec<CalendarEvent>,
-    pub books: BTreeMap<String, CalendarBook>,
+    pub books: BTreeMap<String, CalendarItem>,
     /// Pre-calculated monthly statistics across all content types
     pub stats: MonthlyStats,
     /// Pre-calculated monthly statistics for books only
@@ -45,34 +45,34 @@ pub struct CalendarMonthData {
 pub type CalendarMonths = BTreeMap<String, CalendarMonthData>;
 
 impl CalendarEvent {
-    /// Create a new calendar event for a book's reading period
+    /// Create a new calendar event for an item's reading period
     pub fn new(
         start_date: String,
         end_date: Option<String>,
         total_read_time: i64,
         total_pages_read: i64,
-        book_id: String,
+        item_id: String,
     ) -> Self {
         Self {
             start: start_date,
             end: end_date,
             total_read_time,
             total_pages_read,
-            book_id,
+            item_id,
         }
     }
 }
 
-impl CalendarBook {
-    /// Create a new calendar book metadata entry
+impl CalendarItem {
+    /// Create a new calendar item metadata entry
     pub fn new(
         title: String,
         authors: Vec<String>,
         content_type: ContentType,
-        book_path: Option<String>,
-        book_cover: Option<String>,
+        item_path: Option<String>,
+        item_cover: Option<String>,
     ) -> Self {
-        // Generate a consistent color based on book title
+        // Generate a consistent color based on item title
         let color = Self::generate_color(&title);
 
         Self {
@@ -80,12 +80,12 @@ impl CalendarBook {
             authors,
             content_type,
             color,
-            book_path,
-            book_cover,
+            item_path,
+            item_cover,
         }
     }
 
-    /// Generate a consistent color for a book based on its title
+    /// Generate a consistent color for an item based on its title
     fn generate_color(title: &str) -> String {
         // Define a set of pleasant colors for calendar events
         let colors = [
