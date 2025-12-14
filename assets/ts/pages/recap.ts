@@ -13,13 +13,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const wrapper = document.getElementById('yearSelectorWrapper');
     const options = document.getElementById('yearOptions');
-    const arrow = document.getElementById('yearDropdownArrow');
 
     if (wrapper && options) {
         // Toggle dropdown
         wrapper.addEventListener('click', () => {
             options.classList.toggle('hidden');
-            if (arrow) arrow.classList.toggle('rotate-180');
         });
 
         // Navigate when selecting a year (keep current scope)

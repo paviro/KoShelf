@@ -4,6 +4,7 @@
  */
 
 import { translation } from '../shared/i18n.js';
+import { SectionToggle } from '../components/section-toggle.js';
 // The statistics page also includes the reading heatmap.
 // Importing it here ensures it is bundled and initialized with the page.
 import '../components/heatmap.js';
@@ -82,15 +83,13 @@ class StatisticsManager {
     private initializeWeekSelector(): void {
         const weekSelectorWrapper = document.getElementById('weekSelectorWrapper');
         const weekOptions = document.getElementById('weekOptions');
-        const dropdownArrow = document.getElementById('dropdownArrow');
         const weekOptionElements = document.querySelectorAll<HTMLElement>('.week-option');
         const selectedWeekText = document.getElementById('selectedWeekText');
 
         // Handle dropdown toggle
-        if (weekSelectorWrapper && weekOptions && dropdownArrow) {
+        if (weekSelectorWrapper && weekOptions) {
             weekSelectorWrapper.addEventListener('click', () => {
                 weekOptions.classList.toggle('hidden');
-                dropdownArrow.classList.toggle('rotate-180');
             });
         }
 
@@ -118,7 +117,6 @@ class StatisticsManager {
 
                 // Close dropdown
                 weekOptions?.classList.add('hidden');
-                dropdownArrow?.classList.remove('rotate-180');
             });
         });
 
@@ -409,6 +407,7 @@ const statisticsManager = new StatisticsManager();
 // Initialize when DOM is ready
 async function initStats(): Promise<void> {
     await translation.init();
+    new SectionToggle();
     statisticsManager.init();
 }
 

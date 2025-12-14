@@ -99,7 +99,6 @@ class ActivityHeatmap {
     private initializeYearSelector(): void {
         const yearSelectorWrapper = document.getElementById('yearSelectorWrapper');
         const yearOptions = document.getElementById('yearOptions');
-        const yearDropdownArrow = document.getElementById('yearDropdownArrow');
 
         if (!yearSelectorWrapper || !yearOptions) return;
 
@@ -109,16 +108,6 @@ class ActivityHeatmap {
         // Handle dropdown toggle
         yearSelectorWrapper.addEventListener('click', () => {
             yearOptions.classList.toggle('hidden');
-            yearDropdownArrow?.classList.toggle('rotate-180');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            const target = e.target as Node;
-            if (!yearSelectorWrapper.contains(target)) {
-                yearOptions.classList.add('hidden');
-                yearDropdownArrow?.classList.remove('rotate-180');
-            }
         });
     }
 
@@ -139,7 +128,6 @@ class ActivityHeatmap {
 
                     // Close dropdown
                     document.getElementById('yearOptions')?.classList.add('hidden');
-                    document.getElementById('yearDropdownArrow')?.classList.remove('rotate-180');
                 }
             });
         });

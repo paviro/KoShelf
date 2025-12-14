@@ -29,11 +29,6 @@ document.addEventListener('click', (e: MouseEvent) => {
         // We use parentElement because normally the trigger is a sibling.
         if (menu.parentElement && !menu.parentElement.contains(target)) {
             menu.classList.add('hidden');
-
-            // If a dropdown uses a rotated arrow icon, reset it when we close the menu.
-            // Convention: any arrow that should be reset has class "dropdown-arrow".
-            const arrows = menu.parentElement.querySelectorAll<HTMLElement>('.dropdown-arrow');
-            arrows.forEach((arrow) => arrow.classList.remove('rotate-180'));
         }
     });
 });
