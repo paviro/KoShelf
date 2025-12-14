@@ -789,10 +789,11 @@ function createPickerButton(
     onClick: () => void,
 ): HTMLButtonElement {
     const btn = document.createElement('button');
-    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${isActive
-        ? 'bg-primary-600 text-white'
-        : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
-        }`;
+    btn.className = `px-3 py-2 text-sm rounded-lg transition-colors ${
+        isActive
+            ? 'bg-primary-600 text-white'
+            : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300'
+    }`;
     btn.textContent = text;
     btn.addEventListener('click', onClick);
     return btn;
