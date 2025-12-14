@@ -14,6 +14,12 @@ use zip::ZipArchive;
 
 pub struct EpubParser;
 
+impl Default for EpubParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EpubParser {
     pub fn new() -> Self {
         Self

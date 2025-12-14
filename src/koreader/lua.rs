@@ -9,6 +9,12 @@ pub struct LuaParser {
     lua: Lua,
 }
 
+impl Default for LuaParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LuaParser {
     pub fn new() -> Self {
         Self { lua: Lua::new() }

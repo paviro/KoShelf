@@ -12,7 +12,6 @@ use tokio::time::sleep;
 
 pub struct FileWatcher {
     config: SiteConfig,
-    rebuild_tx: Option<mpsc::UnboundedSender<()>>,
     version_notifier: Option<SharedVersionNotifier>,
 }
 
@@ -24,21 +23,16 @@ impl std::ops::Deref for FileWatcher {
 }
 
 impl FileWatcher {
-    pub async fn new(
-        config: SiteConfig,
-        version_notifier: Option<SharedVersionNotifier>,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(config: SiteConfig, version_notifier: Option<SharedVersionNotifier>) -> Self {
+        Self {
             config,
-            rebuild_tx: None,
             version_notifier,
-        })
+        }
     }
 
-    pub async fn run(mut self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
         let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<()>();
-        self.rebuild_tx = Some(rebuild_tx);
 
         // Set up file watcher
         let mut watcher = RecommendedWatcher::new(
@@ -99,6 +93,8 @@ impl FileWatcher {
         let version_notifier_clone = self.version_notifier.clone();
 
         // Spawn delayed rebuild task
+        // NOTE: Site generation uses non-Send types (e.g. mlua::Lua, Rc-based translations),
+        // so this rebuild loop must not be spawned onto the multithreaded executor.
         let rebuild_task = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
             rt.block_on(async move {
@@ -139,9 +135,7 @@ impl FileWatcher {
                 self.log_file_event(&event);
 
                 // Just queue a rebuild - no need to track individual file changes anymore
-                if let Some(ref tx) = self.rebuild_tx {
-                    let _ = tx.send(());
-                }
+                let _ = rebuild_tx.send(());
             }
         }
 

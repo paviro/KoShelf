@@ -6,6 +6,12 @@ use std::path::{Path, PathBuf};
 
 pub struct MobiParser;
 
+impl Default for MobiParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MobiParser {
     pub fn new() -> Self {
         Self

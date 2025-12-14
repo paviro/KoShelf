@@ -10,7 +10,7 @@ use log::{info, warn};
 use std::collections::HashSet;
 use std::fs;
 
-use super::utils::NavContext;
+use super::utils::UiContext;
 
 #[derive(Debug, Default)]
 struct StatusBuckets {
@@ -98,12 +98,7 @@ impl SiteGenerator {
         fs::create_dir_all(self.content_dir(content_type))?;
         let list_json_path = self.content_dir(content_type).join("list.json");
         let list_json_content = serde_json::to_string_pretty(&manifest)?;
-        self.cache_manifest.register_file(
-            &list_json_path,
-            &self.output_dir,
-            list_json_content.as_bytes(),
-        );
-        fs::write(list_json_path, list_json_content)?;
+        self.write_registered_string(list_json_path, &list_json_content)?;
         Ok(())
     }
 
@@ -112,8 +107,7 @@ impl SiteGenerator {
         content_type: ContentType,
         items: &[LibraryItem],
         render_to_root: bool,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
         info!(
             "Generating {} list page...",
@@ -140,8 +134,8 @@ impl SiteGenerator {
                     ContentType::Book => "books",
                     ContentType::Comic => "comics",
                 },
-                recap_latest_href.as_deref(),
-                nav,
+                ui.recap_latest_href.as_deref(),
+                ui.nav,
             ),
             translation: self.t(),
         };
@@ -162,8 +156,7 @@ impl SiteGenerator {
         content_type: ContentType,
         items: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
         info!(
             "Generating {} detail pages...",
@@ -196,7 +189,7 @@ impl SiteGenerator {
                 book_stats: item_stats.clone(),
                 session_stats: session_stats.clone(),
                 search_base_path: match content_type {
-                    ContentType::Comic if nav.has_books => "/comics/".to_string(),
+                    ContentType::Comic if ui.nav.has_books => "/comics/".to_string(),
                     _ => "/".to_string(),
                 },
                 version: self.get_version(),
@@ -206,8 +199,8 @@ impl SiteGenerator {
                         ContentType::Book => "books",
                         ContentType::Comic => "comics",
                     },
-                    recap_latest_href.as_deref(),
-                    nav,
+                    ui.recap_latest_href.as_deref(),
+                    ui.nav,
                 ),
                 translation: self.t(),
             };
@@ -228,9 +221,7 @@ impl SiteGenerator {
             };
             let markdown = md_template.render()?;
             let md_path = item_dir.join("details.md");
-            self.cache_manifest
-                .register_file(&md_path, &self.output_dir, markdown.as_bytes());
-            fs::write(md_path, markdown)?;
+            self.write_registered_string(md_path, &markdown)?;
 
             // Generate JSON export (not used by the frontend code - only for the user's convenience)
             let mut root = serde_json::Map::new();
@@ -349,9 +340,7 @@ impl SiteGenerator {
 
             let json_str = serde_json::to_string_pretty(&serde_json::Value::Object(root))?;
             let json_path = item_dir.join("details.json");
-            self.cache_manifest
-                .register_file(&json_path, &self.output_dir, json_str.as_bytes());
-            fs::write(json_path, json_str)?;
+            self.write_registered_string(json_path, &json_str)?;
         }
 
         Ok(())
@@ -439,10 +428,9 @@ impl SiteGenerator {
     pub(crate) async fn generate_book_list(
         &self,
         books: &[LibraryItem],
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
-        self.generate_content_list(ContentType::Book, books, true, recap_latest_href, nav)
+        self.generate_content_list(ContentType::Book, books, true, ui)
             .await
     }
 
@@ -450,27 +438,19 @@ impl SiteGenerator {
         &self,
         comics: &[LibraryItem],
         render_to_root: bool,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
-        self.generate_content_list(
-            ContentType::Comic,
-            comics,
-            render_to_root,
-            recap_latest_href,
-            nav,
-        )
-        .await
+        self.generate_content_list(ContentType::Comic, comics, render_to_root, ui)
+            .await
     }
 
     pub(crate) async fn generate_book_pages(
         &self,
         books: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
-        self.generate_content_pages(ContentType::Book, books, stats_data, recap_latest_href, nav)
+        self.generate_content_pages(ContentType::Book, books, stats_data, ui)
             .await
     }
 
@@ -478,16 +458,9 @@ impl SiteGenerator {
         &self,
         comics: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
-        recap_latest_href: Option<String>,
-        nav: NavContext,
+        ui: &UiContext,
     ) -> Result<()> {
-        self.generate_content_pages(
-            ContentType::Comic,
-            comics,
-            stats_data,
-            recap_latest_href,
-            nav,
-        )
-        .await
+        self.generate_content_pages(ContentType::Comic, comics, stats_data, ui)
+            .await
     }
 }

@@ -14,6 +14,12 @@ use zip::ZipArchive;
 
 pub struct Fb2Parser;
 
+impl Default for Fb2Parser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Fb2Parser {
     pub fn new() -> Self {
         Self

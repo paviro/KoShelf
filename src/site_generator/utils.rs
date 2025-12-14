@@ -18,6 +18,20 @@ pub(crate) struct NavContext {
     pub stats_at_root: bool,
 }
 
+impl NavContext {
+    /// Whether the UI should show a content-type filter (books vs comics).
+    pub(crate) fn show_type_filter(self) -> bool {
+        self.has_books && self.has_comics
+    }
+}
+
+/// Shared UI routing context passed to page generators.
+#[derive(Debug, Clone)]
+pub(crate) struct UiContext {
+    pub recap_latest_href: Option<String>,
+    pub nav: NavContext,
+}
+
 /// Format a duration in seconds to a human-readable string (e.g., "2d 5h 30m")
 pub(crate) fn format_duration(seconds: i64, translations: &crate::i18n::Translations) -> String {
     if seconds <= 0 {
@@ -89,6 +103,30 @@ impl SiteGenerator {
 
         fs::write(path, minified)?;
         Ok(())
+    }
+
+    /// Writes bytes to disk and registers them in the cache manifest.
+    pub(crate) fn write_registered_bytes<P: AsRef<Path>>(&self, path: P, bytes: &[u8]) -> Result<()> {
+        let path_ref = path.as_ref();
+        self.cache_manifest
+            .register_file(path_ref, &self.output_dir, bytes);
+        fs::write(path_ref, bytes)?;
+        Ok(())
+    }
+
+    /// Writes a UTF-8 string to disk and registers it in the cache manifest.
+    pub(crate) fn write_registered_string<P: AsRef<Path>>(&self, path: P, content: &str) -> Result<()> {
+        self.write_registered_bytes(path, content.as_bytes())
+    }
+
+    /// Writes pretty JSON to disk and registers it in the cache manifest.
+    pub(crate) fn write_registered_json_pretty<P: AsRef<Path>, T: serde::Serialize>(
+        &self,
+        path: P,
+        value: &T,
+    ) -> Result<()> {
+        let json = serde_json::to_string_pretty(value)?;
+        self.write_registered_string(path, &json)
     }
 
     /// Create default navbar items
