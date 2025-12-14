@@ -153,16 +153,28 @@ fn compile_typescript(out_dir: &str) {
         return;
     }
 
-    // Collect all .ts files (excluding types/ subdirectory which contains type definitions only)
-    let ts_files: Vec<_> = fs::read_dir(ts_dir)
-        .expect("Failed to read assets/ts directory")
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            let path = e.path();
-            path.extension().is_some_and(|ext| ext == "ts") && path.is_file()
-        })
-        .map(|e| e.path().to_string_lossy().to_string())
-        .collect();
+    // Explicit entrypoints: we want a small shared base bundle + a few page bundles.
+    // Helper modules are imported by these entrypoints and should not be emitted as standalone files.
+    let ts_files: Vec<String> = vec![
+        "assets/ts/base.ts",
+        "assets/ts/library_list.ts",
+        "assets/ts/item_detail.ts",
+        "assets/ts/statistics.ts",
+        "assets/ts/recap.ts",
+        "assets/ts/calendar.ts",
+        // Service worker must remain its own top-level script.
+        "assets/ts/service-worker.ts",
+    ]
+    .into_iter()
+    .map(|p| p.to_string())
+    .collect();
+
+    // Ensure all entrypoints exist to keep build errors actionable.
+    for entry in &ts_files {
+        if !Path::new(entry).exists() {
+            panic!("TypeScript entrypoint not found: {}", entry);
+        }
+    }
 
     if ts_files.is_empty() {
         eprintln!("No TypeScript files found in assets/ts/, skipping compilation");

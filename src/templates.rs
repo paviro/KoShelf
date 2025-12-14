@@ -28,7 +28,6 @@ pub struct LibraryListTemplate {
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
     pub translation: Rc<Translations>,
-    pub has_statistics: bool,
 }
 
 #[derive(Template)]
@@ -78,7 +77,6 @@ pub struct ItemDetailTemplate {
     pub last_updated: String,
     pub navbar_items: Vec<NavItem>,
     pub translation: Rc<Translations>,
-    pub has_statistics: bool,
 }
 
 #[derive(Template)]

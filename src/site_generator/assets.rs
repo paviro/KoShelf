@@ -67,6 +67,16 @@ impl SiteGenerator {
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
         self.write_asset(self.css_dir().join("style.css"), css_content.as_bytes())?;
 
+        // Base JS bundle (always needed: PWA + global dropdown handling + filter restore)
+        let base_js_content = include_str!(concat!(env!("OUT_DIR"), "/base.js"));
+        let server_mode = if self.is_internal_server {
+            "internal"
+        } else {
+            "external"
+        };
+        let base_js_content = base_js_content.replace("{{SERVER_MODE}}", server_mode);
+        self.write_asset(self.js_dir().join("base.js"), base_js_content.as_bytes())?;
+
         // Copy list/detail JavaScript when we have any content (books and/or comics use the same templates).
         if !items.is_empty() {
             let js_content = include_str!(concat!(env!("OUT_DIR"), "/library_list.js"));
@@ -74,19 +84,6 @@ impl SiteGenerator {
 
             let js_content = include_str!(concat!(env!("OUT_DIR"), "/item_detail.js"));
             self.write_asset(self.js_dir().join("item_detail.js"), js_content.as_bytes())?;
-
-            let lazy_loading_content = include_str!(concat!(env!("OUT_DIR"), "/lazy-loading.js"));
-            self.write_asset(
-                self.js_dir().join("lazy-loading.js"),
-                lazy_loading_content.as_bytes(),
-            )?;
-
-            let section_toggle_content =
-                include_str!(concat!(env!("OUT_DIR"), "/section-toggle.js"));
-            self.write_asset(
-                self.js_dir().join("section-toggle.js"),
-                section_toggle_content.as_bytes(),
-            )?;
         }
 
         // Copy statistics-related JavaScript files only if we have stats data
@@ -95,12 +92,6 @@ impl SiteGenerator {
             self.write_asset(
                 self.js_dir().join("statistics.js"),
                 stats_js_content.as_bytes(),
-            )?;
-
-            let heatmap_js_content = include_str!(concat!(env!("OUT_DIR"), "/heatmap.js"));
-            self.write_asset(
-                self.js_dir().join("heatmap.js"),
-                heatmap_js_content.as_bytes(),
             )?;
 
             let calendar_css = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.css"));
@@ -129,37 +120,7 @@ impl SiteGenerator {
 
             let recap_js_content = include_str!(concat!(env!("OUT_DIR"), "/recap.js"));
             self.write_asset(self.js_dir().join("recap.js"), recap_js_content.as_bytes())?;
-
-            let modal_utils_content = include_str!(concat!(env!("OUT_DIR"), "/modal-utils.js"));
-            self.write_asset(
-                self.js_dir().join("modal-utils.js"),
-                modal_utils_content.as_bytes(),
-            )?;
-
-            let filter_restore_content = include_str!(concat!(env!("OUT_DIR"), "/filter-restore.js"));
-            self.write_asset(
-                self.js_dir().join("filter-restore.js"),
-                filter_restore_content.as_bytes(),
-            )?;
         }
-
-        // Storage utility - always needed as pwa.js depends on it
-        let storage_js_content = include_str!(concat!(env!("OUT_DIR"), "/storage-manager.js"));
-        self.write_asset(
-            self.js_dir().join("storage-manager.js"),
-            storage_js_content.as_bytes(),
-        )?;
-
-        // Global dropdown handler
-        let dropdown_js_content = include_str!(concat!(env!("OUT_DIR"), "/dropdown.js"));
-        self.write_asset(
-            self.js_dir().join("dropdown.js"),
-            dropdown_js_content.as_bytes(),
-        )?;
-
-        // i18n helper - always needed for translation.get() on frontend
-        let i18n_js_content = include_str!(concat!(env!("OUT_DIR"), "/i18n.js"));
-        self.write_asset(self.js_dir().join("i18n.js"), i18n_js_content.as_bytes())?;
 
         // Translations JSON - copy the locale file directly for the frontend
         fs::create_dir_all(self.json_dir())?;
@@ -177,16 +138,6 @@ impl SiteGenerator {
 
         let sw_content = include_str!(concat!(env!("OUT_DIR"), "/service-worker.js"));
         fs::write(self.output_dir.join("service-worker.js"), sw_content)?;
-
-        // PWA client-side script (handles update notifications)
-        let pwa_js_content = include_str!(concat!(env!("OUT_DIR"), "/pwa.js"));
-        let server_mode = if self.is_internal_server {
-            "internal"
-        } else {
-            "external"
-        };
-        let pwa_js_content = pwa_js_content.replace("{{SERVER_MODE}}", server_mode);
-        self.write_asset(self.js_dir().join("pwa.js"), pwa_js_content.as_bytes())?;
 
         // Generate version.txt for lightweight polling (plain timestamp, ~25 bytes)
         let version = chrono::Local::now().to_rfc3339();
