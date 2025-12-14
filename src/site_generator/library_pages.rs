@@ -2,7 +2,7 @@
 
 use super::SiteGenerator;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
-use crate::statistics::BookStatistics;
+use crate::koreader::BookStatistics;
 use crate::templates::{ItemDetailMarkdownTemplate, ItemDetailTemplate, LibraryListTemplate};
 use anyhow::Result;
 use askama::Template;

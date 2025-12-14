@@ -2,7 +2,7 @@
 
 use super::SiteGenerator;
 use crate::models::{ContentType, ReadingStats, StatisticsData};
-use crate::statistics_parser::StatisticsParser;
+use crate::koreader::StatisticsParser;
 use crate::templates::{StatsEmptyTemplate, StatsTemplate};
 use anyhow::Result;
 use askama::Template;

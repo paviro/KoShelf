@@ -43,17 +43,17 @@ impl SiteGenerator {
         // - monthly hour totals (from daily_activity)
         // - active day counts / streaks (also from daily_activity)
         // - per-year session stats (from page_stats)
-        let reading_stats_all = crate::statistics_parser::StatisticsParser::calculate_stats(
+        let reading_stats_all = crate::koreader::StatisticsParser::calculate_stats(
             stats_data,
             &self.time_config,
         );
         let mut books_stats_data = stats_data.filtered_by_content_type(ContentType::Book);
         let mut comics_stats_data = stats_data.filtered_by_content_type(ContentType::Comic);
-        let reading_stats_books = crate::statistics_parser::StatisticsParser::calculate_stats(
+        let reading_stats_books = crate::koreader::StatisticsParser::calculate_stats(
             &mut books_stats_data,
             &self.time_config,
         );
-        let reading_stats_comics = crate::statistics_parser::StatisticsParser::calculate_stats(
+        let reading_stats_comics = crate::koreader::StatisticsParser::calculate_stats(
             &mut comics_stats_data,
             &self.time_config,
         );
@@ -340,7 +340,7 @@ impl SiteGenerator {
                     .collect();
 
                 let all_sessions =
-                    crate::session_calculator::aggregate_session_durations(&year_page_stats);
+                    crate::koreader::session::aggregate_session_durations(&year_page_stats);
                 let session_count = all_sessions.len() as i64;
                 let longest_session_duration = all_sessions.iter().max().copied().unwrap_or(0);
                 let average_session_duration = if session_count > 0 {
@@ -577,7 +577,7 @@ impl SiteGenerator {
             }
 
             // Generate share images for social media
-            let share_data = crate::share_image::ShareImageData {
+            let share_data = crate::share::ShareImageData {
                 year: *year,
                 books_read: summary.total_books as u32,
                 reading_time_hours: summary.total_time_hours as u32,
@@ -602,18 +602,18 @@ impl SiteGenerator {
             fs::create_dir_all(&assets_recap_dir)?;
 
             let share_image_paths: Vec<std::path::PathBuf> = [
-                crate::share_image::ShareFormat::Story,
-                crate::share_image::ShareFormat::Square,
-                crate::share_image::ShareFormat::Banner,
+                crate::share::ShareFormat::Story,
+                crate::share::ShareFormat::Square,
+                crate::share::ShareFormat::Banner,
             ]
             .into_iter()
             .map(|format| assets_recap_dir.join(format!("{}_{}", year, format.filename())))
             .collect();
 
             let share_tasks: Vec<_> = [
-                crate::share_image::ShareFormat::Story,
-                crate::share_image::ShareFormat::Square,
-                crate::share_image::ShareFormat::Banner,
+                crate::share::ShareFormat::Story,
+                crate::share::ShareFormat::Square,
+                crate::share::ShareFormat::Banner,
             ]
             .into_iter()
             .filter_map(|format| {
@@ -631,7 +631,7 @@ impl SiteGenerator {
                 if should_generate {
                     let share_data = share_data.clone();
                     Some(tokio::task::spawn_blocking(move || {
-                        if let Err(e) = crate::share_image::generate_share_image(
+                        if let Err(e) = crate::share::generate_share_image(
                             &share_data,
                             format,
                             &output_path,

@@ -4,40 +4,27 @@ use log::info;
 use regex::Regex;
 use std::path::PathBuf;
 
-mod calendar;
-mod comic_parser;
 mod config;
-mod epub_parser;
-mod fb2_parser;
-mod file_watcher;
 mod i18n;
-mod library_scanner;
-mod lua_parser;
-mod mobi_parser;
+mod koreader;
+mod library;
 mod models;
-mod partial_md5;
-mod read_completion_analyzer;
-mod session_calculator;
-mod share_image;
+mod parsers;
+mod server;
+mod share;
 mod site_generator;
-mod statistics;
-mod statistics_parser;
 mod templates;
 mod time_config;
 mod utils;
-mod version_notifier;
-mod web_server;
 
 #[cfg(test)]
 mod tests;
 
 use crate::config::SiteConfig;
-use crate::file_watcher::FileWatcher;
-use crate::library_scanner::MetadataLocation;
+use crate::library::{FileWatcher, MetadataLocation};
+use crate::server::{create_version_notifier, WebServer};
 use crate::site_generator::SiteGenerator;
 use crate::time_config::TimeConfig;
-use crate::version_notifier::create_version_notifier;
-use crate::web_server::WebServer;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

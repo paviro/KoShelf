@@ -3,13 +3,9 @@ use log::{debug, info, warn};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use crate::comic_parser::ComicParser;
-use crate::epub_parser::EpubParser;
-use crate::fb2_parser::Fb2Parser;
-use crate::lua_parser::LuaParser;
-use crate::mobi_parser::MobiParser;
+use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
+use crate::koreader::{LuaParser, calculate_partial_md5};
 use crate::models::{LibraryItem, LibraryItemFormat};
-use crate::partial_md5::calculate_partial_md5;
 use crate::utils::generate_book_id;
 
 /// Configuration for where to find KOReader metadata

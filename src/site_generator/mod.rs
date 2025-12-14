@@ -21,12 +21,10 @@ pub use cache_manifest::CacheManifestBuilder;
 
 use crate::config::SiteConfig;
 use crate::i18n::Translations;
-use crate::library_scanner::scan_library;
+use crate::library::scan_library;
 use crate::models::BookStatus;
 use crate::models::ContentType;
-use crate::partial_md5::calculate_partial_md5;
-use crate::statistics::StatisticsCalculator;
-use crate::statistics_parser::StatisticsParser;
+use crate::koreader::{calculate_partial_md5, StatisticsCalculator, StatisticsParser};
 use anyhow::Result;
 use log::info;
 use std::collections::HashMap;
