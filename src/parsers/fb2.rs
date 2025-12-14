@@ -101,15 +101,15 @@ impl Fb2Parser {
         let mut archive = ZipArchive::new(file)
             .with_context(|| format!("Failed to read FB2 zip archive: {:?}", path))?;
 
-        // Find the .fb2 file inside the archive
+        // Find the .fb2 or .xml file inside the archive
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i)?;
             let entry_name = entry.name().to_lowercase();
-            if entry_name.ends_with(".fb2") {
+            if entry_name.ends_with(".fb2") || entry_name.ends_with(".xml") {
                 let mut content = String::new();
                 entry.read_to_string(&mut content)?;
                 debug!(
-                    "Extracted FB2 from zip: {} ({} bytes)",
+                    "Extracted FB2 or XML from zip: {} ({} bytes)",
                     entry.name(),
                     content.len()
                 );
@@ -117,7 +117,7 @@ impl Fb2Parser {
             }
         }
 
-        Err(anyhow!("No .fb2 file found inside zip archive: {:?}", path))
+        Err(anyhow!("No .fb2 or .xml file found inside zip archive: {:?}", path))
     }
 
     fn parse_fb2_metadata(fb2_xml: &str) -> Result<(BookInfo, Option<String>)> {
