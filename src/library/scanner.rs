@@ -1,11 +1,13 @@
 use anyhow::{Result, bail};
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::time::Instant;
 
-use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
 use crate::koreader::{LuaParser, calculate_partial_md5};
 use crate::models::{LibraryItem, LibraryItemFormat};
+use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
 use crate::utils::generate_book_id;
 
 /// Configuration for where to find KOReader metadata
@@ -168,12 +170,23 @@ pub async fn scan_library(
     library_paths: &[PathBuf],
     metadata_location: &MetadataLocation,
 ) -> Result<(Vec<LibraryItem>, HashSet<String>)> {
-    info!("Scanning {} library paths", library_paths.len());
+    info!("Scanning {} library paths...", library_paths.len());
+    let start = Instant::now();
     let epub_parser = EpubParser::new();
     let fb2_parser = Fb2Parser::new();
     let comic_parser = ComicParser::new();
     let mobi_parser = MobiParser::new();
     let lua_parser = LuaParser::new();
+
+    // Set up spinner for scanning progress
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.cyan} {msg}")
+            .unwrap(),
+    );
+    spinner.set_message("Scanning library...");
+    spinner.enable_steady_tick(std::time::Duration::from_millis(100));
 
     // Pre-build metadata indices for external storage modes
     let docsettings_index = match metadata_location {
@@ -191,7 +204,7 @@ pub async fn scan_library(
 
     // Walk through all library paths and scan for books/comics
     for library_path in library_paths {
-        info!("Scanning library path: {:?}", library_path);
+        debug!("Scanning library path: {:?}", library_path);
 
         for entry in walkdir::WalkDir::new(library_path) {
             let entry = entry?;
@@ -324,14 +337,21 @@ pub async fn scan_library(
             };
 
             books.push(book);
+
+            // Update spinner with current count
+            spinner.set_message(format!("Scanning library... {} items found", books.len()));
         }
     }
 
+    // Clear spinner and log summary
+    spinner.finish_and_clear();
+    let elapsed = start.elapsed();
     info!(
-        "Found {} items ({} books, {} comics)!",
+        "Found {} items ({} books, {} comics) in {:.1}s",
         books.len(),
         books.iter().filter(|b| b.is_book()).count(),
-        books.iter().filter(|b| b.is_comic()).count()
+        books.iter().filter(|b| b.is_comic()).count(),
+        elapsed.as_secs_f64()
     );
     Ok((books, library_md5s))
 }
