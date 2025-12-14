@@ -100,18 +100,6 @@ impl SiteGenerator {
                 calendar_css.as_bytes(),
             )?;
 
-            let calendar_js = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js"));
-            self.write_asset(
-                self.js_dir().join("event-calendar.min.js"),
-                calendar_js.as_bytes(),
-            )?;
-
-            let calendar_map = include_str!(concat!(env!("OUT_DIR"), "/event-calendar.min.js.map"));
-            self.write_asset(
-                self.js_dir().join("event-calendar.min.js.map"),
-                calendar_map.as_bytes(),
-            )?;
-
             let calendar_init_js_content = include_str!(concat!(env!("OUT_DIR"), "/calendar.js"));
             self.write_asset(
                 self.js_dir().join("calendar.js"),

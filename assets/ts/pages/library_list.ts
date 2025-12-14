@@ -1,9 +1,9 @@
 // KoInsight - Reading Tracker Interface
-import { LazyImageLoader } from './lazy-loading.js';
-import { SectionToggle } from './section-toggle.js';
-import { translation } from './i18n.js';
-import { initBookCardTilt } from './tilt-effect.js';
-import { StorageManager } from './storage-manager.js';
+import { LazyImageLoader } from '../components/lazy-loading.js';
+import { SectionToggle } from '../components/section-toggle.js';
+import { translation } from '../shared/i18n.js';
+import { initBookCardTilt } from '../components/tilt-effect.js';
+import { StorageManager } from '../shared/storage-manager.js';
 
 declare global {
     interface Window {

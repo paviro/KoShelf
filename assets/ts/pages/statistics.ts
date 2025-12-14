@@ -3,10 +3,10 @@
  * Handles loading and displaying reading statistics
  */
 
-import { translation } from './i18n.js';
+import { translation } from '../shared/i18n.js';
 // The statistics page also includes the reading heatmap.
 // Importing it here ensures it is bundled and initialized with the page.
-import './heatmap.js';
+import '../components/heatmap.js';
 
 interface WeekData {
     read_time: number;

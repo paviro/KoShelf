@@ -1,8 +1,8 @@
 // Section Toggle Module
 // Handles collapsible sections with data-driven configuration
 
-import { translation } from './i18n.js';
-import { StorageManager } from './storage-manager.js';
+import { translation } from '../shared/i18n.js';
+import { StorageManager } from '../shared/storage-manager.js';
 
 interface SectionData {
     section: HTMLElement;
