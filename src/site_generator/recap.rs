@@ -532,6 +532,11 @@ impl SiteGenerator {
                 self.cache_manifest
                     .register_file(path, &self.output_dir, &content);
             }
+            let svg_path = path.with_extension("svg");
+            if let Ok(content) = fs::read(&svg_path) {
+                self.cache_manifest
+                    .register_file(&svg_path, &self.output_dir, &content);
+            }
         }
 
         Ok(())
