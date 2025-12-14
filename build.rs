@@ -67,8 +67,20 @@ fn main() {
 
     if !skip_node_build {
         // Compile CSS bundles
-        compile_tailwind_css(&out_dir);
-        compile_css("calendar", "assets/css/calendar.css", &out_dir);
+        compile_tailwind_css(
+            &out_dir,
+            "Tailwind",
+            Path::new("assets/css/input.css"),
+            "compiled_style.css",
+        );
+
+        let compiled_calendar = compile_tailwind_css(
+            &out_dir,
+            "calendar Tailwind",
+            Path::new("assets/css/calendar.css"),
+            "compiled_calendar.css",
+        );
+        bundle_css_with_esbuild("calendar", &compiled_calendar, &out_dir);
 
         // Compile TypeScript with esbuild
         compile_typescript(&out_dir);
@@ -125,17 +137,22 @@ fn write_if_changed(path: &Path, bytes: &[u8]) -> io::Result<bool> {
     }
 }
 
-/// Compile Tailwind CSS from input.css to compiled_style.css
-fn compile_tailwind_css(out_dir: &str) {
-    let input = Path::new("assets/css/input.css");
+/// Compile a Tailwind CSS entrypoint into OUT_DIR.
+/// Returns the output file path in OUT_DIR.
+fn compile_tailwind_css(
+    out_dir: &str,
+    display_name: &str,
+    input: &Path,
+    out_filename: &str,
+) -> std::path::PathBuf {
     if !input.exists() {
-        panic!("assets/css/input.css not found (required for Tailwind CSS)");
+        panic!("{} not found (required for {} styling)", input.display(), display_name);
     }
 
-    eprintln!("Compiling Tailwind CSS...");
+    eprintln!("Compiling {} CSS...", display_name);
     // Use OUT_DIR for intermediates to avoid collisions across parallel builds.
-    let tmp_path = Path::new(out_dir).join("compiled_style.css.tmp");
-    let dest_path = Path::new(out_dir).join("compiled_style.css");
+    let tmp_path = Path::new(out_dir).join(format!("{}.tmp", out_filename));
+    let dest_path = Path::new(out_dir).join(out_filename);
 
     let output = Command::new("npx")
         .args([
@@ -151,27 +168,32 @@ fn compile_tailwind_css(out_dir: &str) {
 
     if !output.status.success() {
         panic!(
-            "Tailwind CSS compilation failed:\nstderr: {}",
+            "{} CSS compilation failed:\nstderr: {}",
+            display_name,
             String::from_utf8_lossy(&output.stderr)
         );
     }
 
-    // Copy to output directory (but avoid rewriting identical output).
     let css_bytes = fs::read(&tmp_path).expect("Failed to read generated CSS");
-    let _wrote = write_if_changed(&dest_path, &css_bytes).expect("Failed to write CSS to output directory");
-
+    let _wrote = write_if_changed(&dest_path, &css_bytes)
+        .expect("Failed to write generated CSS to output directory");
     let _ = fs::remove_file(&tmp_path);
-    eprintln!("Tailwind CSS compilation completed");
+
+    eprintln!("{} CSS compilation completed", display_name);
+    dest_path
 }
 
 /// Bundle and minify a CSS file using esbuild
 /// - `name`: Display name for logging (e.g., "calendar")
 /// - `input_path`: Path to the source CSS file
 /// - `out_dir`: Output directory for the bundled file
-fn compile_css(name: &str, input_path: &str, out_dir: &str) {
-    let entry = Path::new(input_path);
-    if !entry.exists() {
-        panic!("{} not found (required for {} styling)", input_path, name);
+fn bundle_css_with_esbuild(name: &str, input_path: &Path, out_dir: &str) {
+    if !input_path.exists() {
+        panic!(
+            "{} not found (required for {} styling)",
+            input_path.display(),
+            name
+        );
     }
 
     eprintln!("Bundling {} CSS...", name);
@@ -182,7 +204,7 @@ fn compile_css(name: &str, input_path: &str, out_dir: &str) {
     let output = Command::new("npx")
         .args([
             "esbuild",
-            input_path,
+            &input_path.to_string_lossy(),
             "--bundle",
             "--minify",
             "--loader:.css=css",
