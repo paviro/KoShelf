@@ -2,6 +2,9 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
 
+const WEBP_QUALITY: f32 = 85.0;
+const WEBP_METHOD: i32 = 1;
+
 // Embed SVG templates at compile time
 const STORY_TEMPLATE: &str = include_str!("../../assets/share_story.svg");
 const SQUARE_TEMPLATE: &str = include_str!("../../assets/share_square.svg");
@@ -48,7 +51,7 @@ impl ShareFormat {
     pub fn dimensions(&self) -> (u32, u32) {
         match self {
             ShareFormat::Story => (1260, 2240),
-            ShareFormat::Square => (2160, 2160),
+            ShareFormat::Square => (1500, 1500),
             ShareFormat::Banner => (2400, 1260),
         }
     }
@@ -106,13 +109,26 @@ pub fn generate_share_image(
 
     // Encode as WebP and write to file
     let encoder = webp::Encoder::from_rgba(pixmap.data(), width, height);
-    let webp_data = encoder.encode(90.0); // 90% quality for good balance of size/quality
+    let mut config =
+        webp::WebPConfig::new().map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
+    config.lossless = 0;
+    config.quality = WEBP_QUALITY;
+    config.method = WEBP_METHOD;
+    config.thread_level = 1;
+    config.alpha_compression = 1;
+    config.alpha_filtering = 1;
+    config.alpha_quality = WEBP_QUALITY.round() as i32;
+
+    let webp_data = encoder
+        .encode_advanced(&config)
+        .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
     std::fs::write(output_path, &*webp_data).context("Failed to write WebP file")?;
 
-    // Also generate SVG file
+    // Also generate SVG file (reuse the parsed tree instead of parsing again)
     let svg_path = output_path.with_extension("svg");
-    generate_share_svg(data, format, &svg_path)?;
+    let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
+    std::fs::write(svg_path, svg_output).context("Failed to write SVG file")?;
 
     log::debug!("Finished creating share image: {:?}", output_path);
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="2160" height="2160" viewBox="0 0 2160 2160">
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1500" viewBox="0 0 2160 2160">
   <defs>
     <!-- Subtle grain filter -->
     <filter id="grain">
