@@ -52,6 +52,7 @@ impl Fb2Parser {
     }
 
     /// Read FB2 content, handling both plain .fb2 and .fb2.zip files
+    /// Also detects .fb2 files that are actually ZIP archives (by checking magic bytes)
     fn read_fb2_content(path: &Path) -> Result<String> {
         let filename = path
             .file_name()
@@ -59,38 +60,64 @@ impl Fb2Parser {
             .unwrap_or("")
             .to_lowercase();
 
-        if filename.ends_with(".fb2.zip") {
-            // Extract FB2 from zip archive
-            let file = File::open(path)
-                .with_context(|| format!("Failed to open FB2 zip file: {:?}", path))?;
-            let mut archive = ZipArchive::new(file)
-                .with_context(|| format!("Failed to read FB2 zip archive: {:?}", path))?;
-
-            // Find the .fb2 file inside the archive
-            for i in 0..archive.len() {
-                let mut entry = archive.by_index(i)?;
-                let entry_name = entry.name().to_lowercase();
-                if entry_name.ends_with(".fb2") {
-                    let mut content = String::new();
-                    entry.read_to_string(&mut content)?;
-                    debug!(
-                        "Extracted FB2 from zip: {} ({} bytes)",
-                        entry.name(),
-                        content.len()
-                    );
-                    return Ok(content);
-                }
-            }
-
-            Err(anyhow!("No .fb2 file found inside zip archive: {:?}", path))
+        // Check if it's explicitly a .fb2.zip file or if the .fb2 file is actually a ZIP archive
+        let is_zip = if filename.ends_with(".fb2.zip") {
+            true
         } else {
-            // Plain .fb2 file
+            // Check magic bytes for ZIP signature (PK\x03\x04)
+            Self::is_zip_file(path)?
+        };
+
+        if is_zip {
+            Self::extract_fb2_from_zip(path)
+        } else {
+            // Plain .fb2 file (XML)
             let mut file =
                 File::open(path).with_context(|| format!("Failed to open FB2 file: {:?}", path))?;
             let mut content = String::new();
             file.read_to_string(&mut content)?;
             Ok(content)
         }
+    }
+
+    /// Check if a file is a ZIP archive by reading the magic bytes
+    fn is_zip_file(path: &Path) -> Result<bool> {
+        let mut file =
+            File::open(path).with_context(|| format!("Failed to open file: {:?}", path))?;
+        let mut magic = [0u8; 4];
+        match file.read_exact(&mut magic) {
+            Ok(_) => {
+                // ZIP magic bytes: PK\x03\x04
+                Ok(magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04)
+            }
+            Err(_) => Ok(false), // File too small, not a ZIP
+        }
+    }
+
+    /// Extract FB2 content from a ZIP archive
+    fn extract_fb2_from_zip(path: &Path) -> Result<String> {
+        let file = File::open(path)
+            .with_context(|| format!("Failed to open FB2 zip file: {:?}", path))?;
+        let mut archive = ZipArchive::new(file)
+            .with_context(|| format!("Failed to read FB2 zip archive: {:?}", path))?;
+
+        // Find the .fb2 file inside the archive
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i)?;
+            let entry_name = entry.name().to_lowercase();
+            if entry_name.ends_with(".fb2") {
+                let mut content = String::new();
+                entry.read_to_string(&mut content)?;
+                debug!(
+                    "Extracted FB2 from zip: {} ({} bytes)",
+                    entry.name(),
+                    content.len()
+                );
+                return Ok(content);
+            }
+        }
+
+        Err(anyhow!("No .fb2 file found inside zip archive: {:?}", path))
     }
 
     fn parse_fb2_metadata(fb2_xml: &str) -> Result<(BookInfo, Option<String>)> {
