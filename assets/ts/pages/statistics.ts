@@ -122,15 +122,6 @@ class StatisticsManager {
             });
         });
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (event) => {
-            const target = event.target as Node;
-            if (!weekSelectorWrapper?.contains(target) && !weekOptions?.contains(target)) {
-                weekOptions?.classList.add('hidden');
-                dropdownArrow?.classList.remove('rotate-180');
-            }
-        });
-
         // Mark first option as active if none is selected
         if (
             weekOptionElements.length > 0 &&

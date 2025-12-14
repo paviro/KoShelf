@@ -14,12 +14,4 @@ document.addEventListener('DOMContentLoaded', () => {
     shareDropdownButton?.addEventListener('click', () => {
         shareDropdownMenu?.classList.toggle('hidden');
     });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        const target = e.target as Node;
-        if (!shareDropdownButton?.contains(target) && !shareDropdownMenu?.contains(target)) {
-            shareDropdownMenu?.classList.add('hidden');
-        }
-    });
 });
