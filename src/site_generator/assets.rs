@@ -4,9 +4,10 @@ use super::SiteGenerator;
 use crate::models::{LibraryItem, StatisticsData};
 use anyhow::{Context, Result};
 use futures::future;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 use std::fs;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
 
 impl SiteGenerator {
     pub(crate) async fn create_directories(
@@ -202,11 +203,15 @@ impl SiteGenerator {
     }
 
     pub(crate) async fn generate_covers(&self, items: &[LibraryItem]) -> Result<()> {
-        info!("Generating book covers...");
+        info!("Extracting and converting book covers...");
+        let start = Instant::now();
 
         // Collect all cover generation tasks and their paths for manifest registration
         let mut tasks = Vec::new();
         let mut all_cover_paths = Vec::new();
+
+        // Channel to track progress from spawned tasks
+        let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
 
         for book in items {
             if let Some(ref cover_data) = book.book_info.cover_data {
@@ -228,6 +233,7 @@ impl SiteGenerator {
                 };
 
                 if should_generate {
+                    let tx = progress_tx.clone();
                     // Spawn a task for each cover generation
                     let task = tokio::task::spawn_blocking(move || -> Result<()> {
                         let img = image::load_from_memory(&cover_data)
@@ -255,6 +261,9 @@ impl SiteGenerator {
                         fs::write(&cover_path, &*webp_data)
                             .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
 
+                        // Signal progress
+                        let _ = tx.send(());
+
                         Ok(())
                     });
 
@@ -263,16 +272,57 @@ impl SiteGenerator {
             }
         }
 
-        // Wait for all cover generation tasks to complete
-        let results = future::join_all(tasks).await;
+        let total_covers = tasks.len();
 
-        // Check for any errors
-        for (i, result) in results.into_iter().enumerate() {
-            match result {
-                Ok(Ok(())) => {} // Success
-                Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
-                Err(e) => return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i))),
+        // Only show progress bar if there's actual work to do
+        if total_covers > 0 {
+            // Set up progress bar
+            let pb = ProgressBar::new(total_covers as u64);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
+                    .unwrap()
+                    .progress_chars("━╸─"),
+            );
+            pb.set_message("Extracting and converting covers:");
+
+            // Drop our sender so the channel closes when all tasks complete
+            drop(progress_tx);
+
+            // Spawn a task to update progress bar as tasks complete
+            let pb_clone = pb.clone();
+            let progress_task = tokio::task::spawn_blocking(move || {
+                while progress_rx.recv().is_ok() {
+                    pb_clone.inc(1);
+                }
+            });
+
+            // Wait for all cover generation tasks to complete
+            let results = future::join_all(tasks).await;
+
+            // Wait for progress tracking to finish
+            let _ = progress_task.await;
+
+            // Clear the progress bar
+            pb.finish_and_clear();
+
+            // Check for any errors
+            for (i, result) in results.into_iter().enumerate() {
+                match result {
+                    Ok(Ok(())) => {} // Success
+                    Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
+                    Err(e) => {
+                        return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i)))
+                    }
+                }
             }
+
+            let elapsed = start.elapsed();
+            info!(
+                "Extracted and converted {} covers in {:.1}s",
+                total_covers,
+                elapsed.as_secs_f64()
+            );
         }
 
         // Register all covers in cache manifest

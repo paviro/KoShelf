@@ -12,7 +12,8 @@ use chrono::Datelike;
 use log::info;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::time::SystemTime;
+use std::time::{Instant, SystemTime};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use super::utils::NavContext;
 
@@ -597,7 +598,7 @@ impl SiteGenerator {
                 .unwrap_or(SystemTime::UNIX_EPOCH);
 
             // Generate all three formats in parallel using spawn_blocking (only if needed)
-            info!("Generating share images for {}...", year);
+            info!("Rendering share images for {}...", year);
             let assets_recap_dir = self.output_dir.join("assets").join("recap");
             fs::create_dir_all(&assets_recap_dir)?;
 
@@ -609,6 +610,11 @@ impl SiteGenerator {
             .into_iter()
             .map(|format| assets_recap_dir.join(format!("{}_{}", year, format.filename())))
             .collect();
+
+            let start = Instant::now();
+
+            // Channel to track progress from spawned tasks
+            let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
 
             let share_tasks: Vec<_> = [
                 crate::share::ShareFormat::Story,
@@ -630,6 +636,7 @@ impl SiteGenerator {
 
                 if should_generate {
                     let share_data = share_data.clone();
+                    let tx = progress_tx.clone();
                     Some(tokio::task::spawn_blocking(move || {
                         if let Err(e) = crate::share::generate_share_image(
                             &share_data,
@@ -638,6 +645,8 @@ impl SiteGenerator {
                         ) {
                             log::warn!("Failed to generate share image {:?}: {}", output_path, e);
                         }
+                        // Signal progress
+                        let _ = tx.send(());
                     }))
                 } else {
                     None
@@ -645,9 +654,50 @@ impl SiteGenerator {
             })
             .collect();
 
-            // Wait for all share image generation tasks to complete
-            for task in share_tasks {
-                let _ = task.await;
+            let total_tasks = share_tasks.len();
+
+            // Only show progress bar if there's actual work to do
+            if total_tasks > 0 {
+                // Set up progress bar
+                let pb = ProgressBar::new(total_tasks as u64);
+                pb.set_style(
+                    ProgressStyle::default_bar()
+                        .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
+                        .unwrap()
+                        .progress_chars("━╸─"),
+                );
+                pb.set_message(format!("Rendering share images for {}:", year));
+
+                // Drop our sender so the channel closes when all tasks complete
+                drop(progress_tx);
+
+                // Spawn a task to update progress bar as tasks complete
+                let pb_clone = pb.clone();
+                let progress_task = tokio::task::spawn_blocking(move || {
+                    while progress_rx.recv().is_ok() {
+                        pb_clone.inc(1);
+                    }
+                });
+
+                // Wait for all share image generation tasks to complete
+                for task in share_tasks {
+                    let _ = task.await;
+                }
+
+                // Wait for progress tracking to finish
+                let _ = progress_task.await;
+
+                // Clear the progress bar
+                pb.finish_and_clear();
+                
+                let elapsed = start.elapsed();
+                info!(
+                    "Rendered share images for {} in {:.1}s",
+                    year,
+                    elapsed.as_secs_f64()
+                );
+            } else {
+                 drop(progress_tx);
             }
 
             // Register share images in cache manifest
