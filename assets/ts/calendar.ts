@@ -660,10 +660,19 @@ function scrollCurrentDayIntoView(): void {
         const containerCenter = containerLeft + (containerRect.width / 2);
         const scrollOffset = todayCenter - containerCenter;
 
-        calendarContainer.scrollBy({
-            left: scrollOffset,
-            behavior: 'smooth'
-        });
+        // Clamp desired scroll position to valid range to prevent overshooting
+        const currentScroll = calendarContainer.scrollLeft;
+        const maxScrollLeft = calendarContainer.scrollWidth - calendarContainer.clientWidth;
+        const desiredScroll = Math.max(0, Math.min(currentScroll + scrollOffset, maxScrollLeft));
+        const clampedOffset = desiredScroll - currentScroll;
+
+        // Only scroll if there's a meaningful offset after clamping
+        if (Math.abs(clampedOffset) > 1) {
+            calendarContainer.scrollBy({
+                left: clampedOffset,
+                behavior: 'smooth'
+            });
+        }
     }
 }
 
