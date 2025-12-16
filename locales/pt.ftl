@@ -197,7 +197,6 @@ recap-empty =
     .finish-reading = Termine de ler no KoReader para ver seu resumo.
     .info-question = Por que meu resumo não está aparecendo?
     .info-answer = O KoShelf usa estatísticas de leitura para detectar conclusões, o que permite o rastreamento de releituras. Apenas marcar um livro como "concluído" sem dados de leitura não fará com que ele apareça aqui.
-# TODO: Traduzir as seguintes strings
 stats-empty =
     .nothing-here = Nada aqui ainda
     .start-reading = Comece a ler com o KoReader para ver suas estatísticas aqui.
