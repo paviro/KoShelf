@@ -190,7 +190,6 @@ more = Mais
 period = Período
 sessions = Sessões
 yearly-summary = Resumo Anual { $count }
-
 recap-empty =
     .nothing-here = Nada aqui ainda
     .try-switching = Tente mudar o escopo ou o ano acima.
