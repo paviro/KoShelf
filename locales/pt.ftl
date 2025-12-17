@@ -190,19 +190,17 @@ more = Mais
 period = Período
 sessions = Sessões
 yearly-summary = Resumo Anual { $count }
-# TODO: Translate the following strings
 recap-empty =
-    .nothing-here = Nothing here yet
-    .try-switching = Try switching scope or year above.
-    .finish-reading = Finish reading in KoReader to see your recap.
-    .info-question = Why isn't my recap showing up?
-    .info-answer = KoShelf uses reading statistics to detect completions, which allows tracking re-reads. Simply marking a book as "finished" without reading data will not make it appear here.
-# TODO: Translate the following strings
+    .nothing-here = Nada aqui ainda
+    .try-switching = Tente mudar o escopo ou o ano acima.
+    .finish-reading = Termine de ler no KoReader para ver seu resumo.
+    .info-question = Por que meu resumo não está aparecendo?
+    .info-answer = O KoShelf usa estatísticas de leitura para detectar conclusões, o que permite o rastreamento de releituras. Apenas marcar um livro como "concluído" sem dados de leitura não fará com que ele apareça aqui.
 stats-empty =
-    .nothing-here = Nothing here yet
-    .start-reading = Start reading with KoReader to see your statistics here.
-    .info-question = How does reading tracking work?
-    .info-answer = KoReader automatically tracks your reading sessions, including time spent and pages read. Sync your statistics database to KoShelf to see your activity visualized here.
+    .nothing-here = Nada aqui ainda
+    .start-reading = Comece a ler com o KoReader para ver suas estatísticas aqui.
+    .info-question = Como funciona o rastreamento de leitura?
+    .info-answer = O KoReader rastreia automaticamente suas sessões de leitura, incluindo tempo gasto e páginas lidas. Sincronize seu banco de dados de estatísticas com o KoShelf para ver sua atividade visualizada aqui.
 
 # Navigation and sorting
 sort-order =
