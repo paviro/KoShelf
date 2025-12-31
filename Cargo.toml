@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "1.7.3"
+version = "1.7.4"
 description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
@@ -14,17 +14,29 @@ clap = { version = "4.5.40", features = ["derive"] }
 # Error handling
 anyhow = "1.0.98"
 # Async
-tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] }
+tokio = { version = "1.45.1", features = [
+    "macros",
+    "rt-multi-thread",
+    "net",
+    "signal",
+    "time",
+    "sync",
+] }
 # File system
 walkdir = "2.5.0"
 # File system watching
 notify = "8.0.0"
 # Temporary directories
-tempfile = "3.20.0" 
+tempfile = "3.20.0"
 # EPUB and .fb2.zip parsing
 zip = "6"
 # Image processing
-image = { version = "0.25.6", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
+image = { version = "0.25.6", default-features = false, features = [
+    "jpeg",
+    "png",
+    "webp",
+    "gif",
+] }
 webp = "0.3.1"
 # Lua parsing (use LuaJIT to match KoReader's runtime)
 mlua = { version = "0.11.5", features = ["luajit", "vendored"] }
@@ -47,7 +59,12 @@ ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.4"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "cors", "compression-gzip", "compression-br"] }
+tower-http = { version = "0.6", features = [
+    "fs",
+    "cors",
+    "compression-gzip",
+    "compression-br",
+] }
 # Futures utilities
 futures = "0.3"
 # SQLite database access
