@@ -11,23 +11,23 @@
 //! 1. **Page stats are sorted by time** and grouped into "reading progressions"
 //!
 //! 2. **A progression becomes a valid completion** when:
-//!    - At least `min_completion_percentage` (75%) of pages were visited
+//!    - At least `min_completion_percentage` (78%) of pages were visited 
+//!      (we never have stats for all pages even if all were read)
 //!    - Pages from the beginning (`min_early_percentage`, first 20%) were read
 //!    - Pages from the end (`min_late_percentage`, last 2%) were read
 //!
-//! 3. **Progressions are split (detecting a re-read)** only when ALL conditions are met:
-//!    - The current progression is already a valid completion
-//!    - Reading jumps back to early pages (within `min_early_percentage`)
+//! 3. **Progressions are split** when ALL conditions are met:
+//!    - Reading jumps backwards to early pages (within `min_early_percentage`)
 //!    - The remaining reading from that point would form a valid completion on its own
 //!
 //! ## Key Behaviors
 //!
 //! - **Re-reading a chapter then continuing**: No split occurs because the remaining
-//!   pages from the restart wouldn't form a complete read (missing the middle).
+//!   pages from the restart wouldn't form a complete read (missing the middle parts).
 //!
 //! - **Abandoned reads**: If a user starts reading, stops partway, then restarts from
-//!   the beginning and finishes, only the completed read counts. The abandoned portion
-//!   gets included in the progression but doesn't prevent completion detection.
+//!   the beginning and finishes, a split occurs. Only the second portion (the successful
+//!   read-through) counts as a completion with accurate reading time.
 //!
 //! - **True re-reads**: When a user finishes a book, then starts again from the beginning
 //!   and reads through again, two separate completions are detected.
@@ -53,7 +53,7 @@ pub struct CompletionConfig {
 impl Default for CompletionConfig {
     fn default() -> Self {
         Self {
-            min_completion_percentage: 0.75, // Must read 75% of the book
+            min_completion_percentage: 0.78, // Must read 78% of the book
             min_early_percentage: 0.20,      // Must read 20% from beginning
             min_late_percentage: 0.02,       // Must read 2% from end
         }
@@ -114,8 +114,7 @@ impl ReadingProgression {
     }
 
     /// Check if this progression qualifies as a valid completion
-    /// Set `log` to true for detailed debug output (use false during grouping to avoid spam)
-    fn is_valid_completion(&self, total_pages: i64, config: &CompletionConfig, log: bool) -> bool {
+    fn is_valid_completion(&self, total_pages: i64, config: &CompletionConfig) -> bool {
         if total_pages <= 0 {
             return false;
         }
@@ -124,13 +123,6 @@ impl ReadingProgression {
         let pages_covered = self.pages_visited.len() as i64;
         let completion_percentage = pages_covered as f64 / total_pages as f64;
         if completion_percentage < config.min_completion_percentage {
-            if log {
-                debug!(
-                    "Progression doesn't meet minimum completion percentage: {:.2}% < {:.2}%",
-                    completion_percentage * 100.0,
-                    config.min_completion_percentage * 100.0
-                );
-            }
             return false;
         }
 
@@ -147,17 +139,7 @@ impl ReadingProgression {
             .iter()
             .any(|&page| page >= late_threshold);
 
-        if !has_early_pages || !has_late_pages {
-            if log {
-                debug!(
-                    "Progression doesn't span from beginning to end (early: {}, late: {})",
-                    has_early_pages, has_late_pages
-                );
-            }
-            return false;
-        }
-
-        true
+        has_early_pages && has_late_pages
     }
 }
 
@@ -214,25 +196,55 @@ impl ReadCompletionDetector {
 
         // Evaluate each progression for completion
         let mut completions = Vec::new();
-        for progression in progressions {
-            if let Some(completion) = self.evaluate_progression(&progression, total_pages) {
+        let early_threshold = self.config.early_threshold(total_pages);
+        let late_threshold = self.config.late_threshold(total_pages);
+        // Track best progression: (coverage%, pages, has_early, has_late)
+        let mut best_progression: Option<(f64, usize, bool, bool)> = None;
+        
+        for progression in &progressions {
+            let pages = progression.pages_visited.len();
+            let coverage = pages as f64 / total_pages as f64;
+            if best_progression.map_or(true, |(best, _, _, _)| coverage > best) {
+                let has_early = progression.pages_visited.iter().any(|&p| p <= early_threshold);
+                let has_late = progression.pages_visited.iter().any(|&p| p >= late_threshold);
+                best_progression = Some((coverage, pages, has_early, has_late));
+            }
+            
+            if let Some(completion) = self.evaluate_progression(progression, total_pages) {
                 completions.push(completion);
             }
         }
 
-        debug!(
-            "Detected {} completions for book {}",
-            completions.len(),
-            book.title
-        );
+        // Log helpful info about why no completions were found
+        if completions.is_empty() && !progressions.is_empty() {
+            if let Some((coverage, pages, has_early, has_late)) = best_progression {
+                debug!(
+                    "No valid completions for '{}': best progression covered {:.1}% ({}/{} pages, need {:.0}%), early pages: {}, late pages: {}",
+                    book.title,
+                    coverage * 100.0,
+                    pages,
+                    total_pages,
+                    self.config.min_completion_percentage * 100.0,
+                    if has_early { "✓" } else { "✗" },
+                    if has_late { "✓" } else { "✗" },
+                );
+            }
+        } else if !completions.is_empty() {
+            debug!(
+                "Detected {} completion(s) for '{}'",
+                completions.len(),
+                book.title
+            );
+        }
         BookCompletions::new(completions)
     }
 
     /// Group page stats into reading progressions based on re-read detection.
-    /// A split only occurs when:
-    /// 1. The current progression is a valid completion
-    /// 2. Reading restarts from early pages (within min_early_percentage)
-    /// 3. The remaining stats from that point would form a valid completion on their own
+    /// A split occurs when:
+    /// 1. Reading restarts from early pages (within min_early_percentage)
+    /// 2. The remaining stats from that point would form a valid completion on their own
+    /// 
+    /// This handles both abandoned reads (split off incomplete portion) and true re-reads.
     fn group_into_progressions(
         &self,
         sorted_stats: &[PageStat],
@@ -245,24 +257,33 @@ impl ReadCompletionDetector {
         let early_page_threshold = self.config.early_threshold(total_pages);
 
         for (i, stat) in sorted_stats.iter().enumerate() {
-            // Check if we should start a new progression:
-            // Only split if current is a valid completion AND page jumps back to early pages
-            // AND the remaining reading from here forms a valid completion
-            let should_split = if !current_progression.is_empty()
-                && current_progression.is_valid_completion(total_pages, &self.config, false)
-                && stat.page <= early_page_threshold
-            {
-                // Check if remaining stats (from this point forward) form a valid completion
-                let remaining_would_complete = ReadingProgression::from_stats(&sorted_stats[i..])
-                    .is_valid_completion(total_pages, &self.config, false);
+            // Detect a restart: jumping back to very early pages after reading started.
+            // A split occurs when ALL conditions are met:
+            // - Current page is in first 5% of the book (restart_threshold)
+            // - Previous page was beyond early threshold (actual backwards jump, not just flipping back a few pages)
+            // - Current progression already contains early pages (real read attempt, not just previewing)
+            // - Remaining reading from this point would form a valid completion
+            let restart_threshold = (total_pages as f64 * 0.05) as i64; // First 5% of book
+            let prev_page = if i > 0 { sorted_stats[i - 1].page } else { 0 };
+            let is_jumping_back = prev_page > early_page_threshold;
+            let already_started_reading = current_progression.pages_visited.iter().any(|&p| p <= early_page_threshold);
+            
+            let is_likely_restart = !current_progression.is_empty()
+                && stat.page <= restart_threshold
+                && is_jumping_back
+                && already_started_reading;
 
-                if remaining_would_complete {
+            let should_split = if is_likely_restart {
+                // Check if remaining stats (from this point forward) form a valid completion
+                let remaining_valid = ReadingProgression::from_stats(&sorted_stats[i..])
+                    .is_valid_completion(total_pages, &self.config);
+                if remaining_valid {
                     debug!(
-                        "Re-read detected: page {} is early (threshold: {}), remaining stats form valid completion, splitting",
-                        stat.page, early_page_threshold
+                        "Split detected: restarting at page {} (prev page was {})",
+                        stat.page, prev_page
                     );
                 }
-                remaining_would_complete
+                remaining_valid
             } else {
                 false
             };
@@ -290,7 +311,7 @@ impl ReadCompletionDetector {
         total_pages: i64,
     ) -> Option<ReadCompletion> {
         // Use shared validation logic with logging enabled for final evaluation
-        if !progression.is_valid_completion(total_pages, &self.config, true) {
+        if !progression.is_valid_completion(total_pages, &self.config) {
             return None;
         }
 
