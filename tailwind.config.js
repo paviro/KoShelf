@@ -42,18 +42,19 @@ module.exports = {
           900: '#0c4a6e',
         },
         'dark': {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          850: '#172033',
-          900: '#0f172a',
-          950: '#020617',
+          50: '#f9fafb',
+          100: '#f3f4f6',
+          200: '#e5e7eb',
+          300: '#d1d5db',
+          400: '#9ca3af',
+          500: '#6b7280',
+          600: '#4b5563',
+          700: '#374151',
+          800: '#1f2937',
+          850: '#1a222e',
+          900: '#111827',
+          925: '#0a0f1a',
+          950: '#030712',
         }
       },
       aspectRatio: {
@@ -64,10 +65,10 @@ module.exports = {
       },
       // Calendar specific variables
       calendar: {
-        darkBg: '#0f172a',          // dark.900
-        darkBorder: '#334155',      // dark.700
-        darkAccent: '#475569',      // dark.600
-        darkButtonBg: '#1e293b',    // dark.800
+        darkBg: '#111827',          // dark.900
+        darkBorder: '#374151',      // dark.700
+        darkAccent: '#4b5563',      // dark.600
+        darkButtonBg: '#1f2937',    // dark.800
         buttonActive: '#0284c7',    // primary.600
         buttonActiveBorder: '#0369a1', // primary.700
         primaryLighter: 'rgba(14, 165, 233, 0.1)', // primary.500 with opacity

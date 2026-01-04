@@ -1,6 +1,6 @@
 {% if navbar_items.len() > 1 %}
 <nav class="lg:hidden fixed bottom-4 left-8 right-8 z-50">
-    <div class="bg-white/75 dark:bg-dark-850/75 backdrop-blur-sm border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl update-hidden">
+    <div class="bg-white/75 dark:bg-dark-950/75 backdrop-blur-sm border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl update-hidden">
         <div id="mobileNavScroll" class="flex items-center justify-around overflow-x-auto scrollbar-hide">
             {% for nav_item in navbar_items %}
             <a {% if nav_item.id.is_some() %}id="{{ nav_item.id.as_ref().unwrap() }}"{% endif %} onclick="if (typeof smartBack === 'function' && ('{{ nav_item.href }}' === '/' || '{{ nav_item.href }}' === '/comics/' || '{{ nav_item.href }}' === '/calendar/')) { smartBack(event, '{{ nav_item.href }}'); }" href="{{ nav_item.href }}" class="nav-item {% if nav_item.is_active %}nav-item-active{% endif %} flex flex-col items-center py-1.5 px-2 rounded-xl min-w-fit">
@@ -22,7 +22,7 @@
         })();
     </script>
     
-    <div class="bg-white/90 dark:bg-dark-850/90 backdrop-blur-md border border-primary-500/30 shadow-2xl rounded-2xl p-3 hidden update-visible">
+    <div class="bg-white/90 dark:bg-dark-950/90 backdrop-blur-md border border-primary-500/30 shadow-2xl rounded-2xl p-3 hidden update-visible">
         <button onclick="window.location.reload()" class="w-full flex items-center justify-between group">
             <div class="flex items-center space-x-3">
                  <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center text-primary-600 dark:text-primary-400">
