@@ -1914,7 +1914,7 @@ checksum = "a3c2a6c0b4b5637c41719973ef40c6a1cf564f9db6958350de6193fbee9c23f5"
 
 [[package]]
 name = "koshelf"
-version = "1.7.4"
+version = "1.7.5"
 dependencies = [
  "ammonia",
  "anyhow",
