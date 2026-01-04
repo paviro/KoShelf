@@ -61,6 +61,9 @@ export class TooltipManager {
     static attach(cell: HTMLElement, content: string): void {
         this.init(); // Ensure initialized
 
+        // Always update the content (e.g., when year changes in heatmap)
+        cell.dataset.tooltipContent = content;
+
         // Prevent duplicate listeners if heatmap re-initializes
         if (cell.dataset.tooltipAttached === '1') return;
         cell.dataset.tooltipAttached = '1';
@@ -71,7 +74,9 @@ export class TooltipManager {
                 // On mobile/click, we might want to toggle, but for now we just show.
             }
 
-            this.show(cell, content);
+            // Read content from data attribute to get the latest value
+            const currentContent = cell.dataset.tooltipContent || '';
+            this.show(cell, currentContent);
         };
 
         // Mouse enter (Desktop)

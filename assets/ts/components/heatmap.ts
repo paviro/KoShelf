@@ -105,6 +105,12 @@ class ActivityHeatmap {
         // Add click handlers to existing year options
         this.setupYearOptionHandlers();
 
+        // Mark the first year option as selected initially
+        const firstYearOption = document.querySelector<HTMLElement>('.year-option');
+        if (firstYearOption) {
+            this.updateActiveYearOption(firstYearOption);
+        }
+
         // Handle dropdown toggle
         yearSelectorWrapper.addEventListener('click', () => {
             yearOptions.classList.toggle('hidden');
