@@ -20,7 +20,7 @@ data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else 
 
             <!-- Mobile Search Input (hidden by default, shown when search is active) -->
             <div id="mobileSearchContainer" class="lg:hidden flex-1 mr-3 hidden">
-                <input type="text" placeholder="{{ translation.get("search-placeholder") }}" class="w-full bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm" id="mobileSearchInput">
+                <input type="text" placeholder="{{ translation.get("search-placeholder") }}" class="w-full bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm" id="mobileSearchInput">
             </div>
 
             <!-- Desktop Page Title -->
@@ -31,18 +31,18 @@ data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else 
             <div class="flex items-center space-x-3 md:space-x-4">
                 <!-- Desktop search input -->
                 <div class="relative hidden sm:block">
-                    <input type="text" placeholder="{{ translation.get("search-placeholder") }}" class="bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200 shadow-sm w-40 sm:w-48 md:w-64 text-sm md:text-base backdrop-blur-sm" id="searchInput">
+                    <input type="text" placeholder="{{ translation.get("search-placeholder") }}" class="bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200 shadow-sm w-40 sm:w-48 md:w-64 text-sm md:text-base backdrop-blur-sm" id="searchInput">
                 </div>
 
                 <!-- Mobile search button (hidden when search is active) -->
-                <button id="mobileSearchButton" class="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" type="button" title="{{ translation.get("search.aria-label") }}" aria-label="{{ translation.get("search.aria-label") }}">
+                <button id="mobileSearchButton" class="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" type="button" title="{{ translation.get("search.aria-label") }}" aria-label="{{ translation.get("search.aria-label") }}">
                     <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                 </button>
 
                 <!-- Mobile search close button (hidden by default, shown when search is active) -->
-                <button id="mobileSearchClose" class="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm hidden" type="button" title="{{ translation.get("close-search.aria-label") }}" aria-label="{{ translation.get("close-search.aria-label") }}">
+                <button id="mobileSearchClose" class="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm hidden" type="button" title="{{ translation.get("close-search.aria-label") }}" aria-label="{{ translation.get("close-search.aria-label") }}">
                     <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -52,7 +52,7 @@ data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else 
                 <div id="mobileFilterControls" class="flex items-center space-x-2">
                     <!-- Dropdown Filter Button -->
                     <div class="relative" id="filterDropdownWrapper">
-                        <button id="filterDropdownButton" class="dropdown-trigger flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button" title="{{ translation.get("filter.all-aria") }}" aria-label="{{ translation.get("filter.all-aria") }}">
+                        <button id="filterDropdownButton" class="dropdown-trigger flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm" type="button" title="{{ translation.get("filter.all-aria") }}" aria-label="{{ translation.get("filter.all-aria") }}">
                             <!-- Filter icon for mobile (gray by default, JS changes color when filtered) -->
                             <svg id="filterIcon" class="sm:hidden w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -62,13 +62,13 @@ data-section-toggle-kind="{% if details_base_path == "/comics/" %}comics{% else 
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
-                        <div id="filterDropdownMenu" class="dropdown-menu-right hidden w-36 md:w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
-                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="all">{{ translation.get("filter.all") }}</button>
-                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="reading">{{ translation.get("filter.reading") }}</button>
-                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="completed">{{ translation.get("filter.completed") }}</button>
-                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30" data-filter="abandoned">{{ translation.get("status.on-hold") }}</button>
+                        <div id="filterDropdownMenu" class="dropdown-menu-right hidden w-max min-w-[10rem] bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden backdrop-blur-md">
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30 whitespace-nowrap" data-filter="all">{{ translation.get("filter.all") }}</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30 whitespace-nowrap" data-filter="reading">{{ translation.get("filter.reading") }}</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30 whitespace-nowrap" data-filter="completed">{{ translation.get("filter.completed") }}</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 border-b border-gray-200/30 dark:border-dark-700/30 whitespace-nowrap" data-filter="abandoned">{{ translation.get("status.on-hold") }}</button>
                             {% if !unread_books.is_empty() %}
-                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200" data-filter="unread">{{ translation.get("filter.unread") }}</button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 whitespace-nowrap" data-filter="unread">{{ translation.get("filter.unread") }}</button>
                             {% endif %}
                         </div>
                     </div>

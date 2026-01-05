@@ -20,7 +20,7 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Year Selector (shared styling with statistics) -->
                 <div class="relative">
-                    <div id="yearSelectorWrapper" class="dropdown-trigger flex items-center justify-center sm:justify-between bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg w-10 sm:w-auto sm:px-4 h-10 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-all duration-200 text-sm md:text-base backdrop-blur-sm">
+                    <div id="yearSelectorWrapper" class="dropdown-trigger flex items-center justify-center sm:justify-between bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg w-10 sm:w-auto sm:px-4 h-10 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-all duration-200 text-sm md:text-base backdrop-blur-sm">
                         <div class="flex items-center space-x-0 sm:space-x-3">
                             <svg class="w-4 h-4 text-gray-600 dark:text-gray-300 sm:text-green-400 sm:dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -35,7 +35,7 @@
                     </div>
                     
                     <!-- Dropdown Options -->
-                    <div id="yearOptions" class="dropdown-menu z-30 max-h-60 overflow-y-auto bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl hidden w-40 overflow-hidden">
+                    <div id="yearOptions" class="dropdown-menu z-30 max-h-60 overflow-y-auto bg-white dark:bg-dark-800/10 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl hidden w-40 overflow-hidden">
                         {% for y in available_years %}
                             <div class="year-option px-4 py-2 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if *y == year %}bg-green-50 dark:bg-dark-700 text-green-900 dark:text-white{% endif %}"
                                  data-year="{{ y }}">
@@ -53,14 +53,14 @@
                 </div>
                 
                 <!-- Share/Download Button -->
-                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" title="{{ translation.get("download.recap-label") }}" aria-label="{{ translation.get("download.recap-label") }}">
+                <button id="shareButton" class="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" title="{{ translation.get("download.recap-label") }}" aria-label="{{ translation.get("download.recap-label") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"></path>
                     </svg>
                 </button>
 
                 <!-- Sort Button -->
-                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" title="{{ translation.get("sort-order.newest-first") }}" aria-label="{{ translation.get("sort-order.newest-first") }}">
+                <button id="sortToggle" class="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm" title="{{ translation.get("sort-order.newest-first") }}" aria-label="{{ translation.get("sort-order.newest-first") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"></path>
                     </svg>
@@ -69,7 +69,7 @@
                 {% if show_type_filter %}
                 <!-- Scope Selector -->
                 <details class="relative">
-                    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                    <summary class="list-none [&::-webkit-details-marker]:hidden flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
                         <!-- Filter icon for mobile (gray when all, primary when filtered) -->
                         <svg class="sm:hidden w-5 h-5 {% if recap_scope == "all" %}text-gray-600 dark:text-gray-300{% else %}text-primary-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -83,7 +83,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </summary>
-                    <div class="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                    <div id="shareDropdownMenu" class="dropdown-menu-right hidden absolute right-0 mt-2 w-48 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden backdrop-blur-md">
                         <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year }}/">{{ translation.get("filter.all") }}</a>
                         <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year }}/books/">{{ translation.get("books") }}</a>
                         <a class="block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="/recap/{{ year }}/comics/">{{ translation.get("comics") }}</a>
@@ -98,12 +98,12 @@
 {% block content %}
 
     <!-- Share Modal -->
-    <div id="shareModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
-        <div id="shareModalCard" class="bg-gray-100 dark:bg-dark-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-700/50 transform transition-all duration-300 scale-95 opacity-0">
+    <div id="shareModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div id="shareModalCard" class="bg-white/95 dark:bg-dark-900/70 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200/70 dark:border-dark-600/50 transform transition-all duration-300 scale-95 opacity-0">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
                 <h3 id="shareModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">{{ translation.get("download.recap-label") }}</h3>
-                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-dark-800 transition-colors" title="{{ translation.get("close.aria-label") }}" aria-label="{{ translation.get("close.aria-label") }}">
+                <button id="shareModalClose" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 transition-colors" title="{{ translation.get("close.aria-label") }}" aria-label="{{ translation.get("close.aria-label") }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -129,7 +129,7 @@
                         <button data-share-url="/assets/recap/{{ year }}_share_story.webp" data-share-filename="koshelf_{{ year }}_story.webp" class="share-webp-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
                             <span class="share-btn-text">{{ translation.get("download") }}</span>
                         </button>
-                        <a href="/assets/recap/{{ year }}_share_story.svg" download="koshelf_{{ year }}_story.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-600 dark:text-gray-400 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
+                        <a href="/assets/recap/{{ year }}_share_story.svg" download="koshelf_{{ year }}_story.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-700 dark:text-gray-200 hover:text-purple-700 dark:hover:text-purple-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-purple-300 dark:hover:border-purple-700/50">
                             SVG
                         </a>
                     </div>
@@ -152,7 +152,7 @@
                         <button data-share-url="/assets/recap/{{ year }}_share_square.webp" data-share-filename="koshelf_{{ year }}_square.webp" class="share-webp-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
                             <span class="share-btn-text">{{ translation.get("download") }}</span>
                         </button>
-                        <a href="/assets/recap/{{ year }}_share_square.svg" download="koshelf_{{ year }}_square.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-600 dark:text-gray-400 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
+                        <a href="/assets/recap/{{ year }}_share_square.svg" download="koshelf_{{ year }}_square.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-200 hover:text-blue-700 dark:hover:text-blue-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-blue-300 dark:hover:border-blue-700/50">
                             SVG
                         </a>
                     </div>
@@ -175,7 +175,7 @@
                         <button data-share-url="/assets/recap/{{ year }}_share_banner.webp" data-share-filename="koshelf_{{ year }}_banner.webp" class="share-webp-btn flex-1 px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-700 dark:text-gray-200 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
                             <span class="share-btn-text">{{ translation.get("download") }}</span>
                         </button>
-                        <a href="/assets/recap/{{ year }}_share_banner.svg" download="koshelf_{{ year }}_banner.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
+                        <a href="/assets/recap/{{ year }}_share_banner.svg" download="koshelf_{{ year }}_banner.svg" class="px-4 py-2 text-sm font-medium text-center bg-gray-100 dark:bg-dark-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-700 dark:text-gray-200 hover:text-green-700 dark:hover:text-green-300 rounded-lg transition-colors border border-gray-200/70 dark:border-dark-600/50 hover:border-green-300 dark:hover:border-green-700/50">
                             SVG
                         </a>
                     </div>

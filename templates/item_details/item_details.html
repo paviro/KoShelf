@@ -40,7 +40,7 @@ data-section-toggle-kind="{% if book.is_comic() %}comics{% else %}books{% endif 
         <div class="flex items-center space-x-2">
             <!-- Share Dropdown -->
             <div class="relative" id="shareDropdownWrapper">
-                <button id="shareDropdownButton" class="p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors" type="button" title="{{ translation.get("share") }}" aria-label="{{ translation.get("share") }}">
+                <button id="shareDropdownButton" class="dropdown-trigger p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors" type="button" title="{{ translation.get("share") }}" aria-label="{{ translation.get("share") }}">
                     <!-- Download Icon (Heroicons) -->
                     <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
@@ -48,7 +48,7 @@ data-section-toggle-kind="{% if book.is_comic() %}comics{% else %}books{% endif 
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12"/>
                     </svg>
                 </button>
-                <div id="shareDropdownMenu" class="dropdown-menu-right hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
+                <div id="shareDropdownMenu" class="dropdown-menu-right hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden backdrop-blur-md">
                     {% if book.is_comic() %}
                         <a href="/comics/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
                         <a href="/comics/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>

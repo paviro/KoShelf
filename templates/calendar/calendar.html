@@ -30,12 +30,12 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Navigation Buttons -->
                 <div class="flex items-center space-x-1">
-                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm" title="{{ translation.get("previous-month.aria-label") }}" aria-label="{{ translation.get("previous-month.aria-label") }}">
+                    <button id="prevBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm" title="{{ translation.get("previous-month.aria-label") }}" aria-label="{{ translation.get("previous-month.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </button>
-                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm" title="{{ translation.get("next-month.aria-label") }}" aria-label="{{ translation.get("next-month.aria-label") }}">
+                    <button id="nextBtn" class="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm" title="{{ translation.get("next-month.aria-label") }}" aria-label="{{ translation.get("next-month.aria-label") }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -43,7 +43,7 @@
                 </div>
 
                 <!-- Today Button (hidden on small screens) -->
-                <button id="todayBtn" class="hidden sm:flex px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg font-medium text-sm md:text-base transition-colors duration-200 items-center justify-center backdrop-blur-sm">
+                <button id="todayBtn" class="hidden sm:flex px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg font-medium text-sm md:text-base transition-colors duration-200 items-center justify-center backdrop-blur-sm">
                     {{ translation.get("today") }}
                 </button>
 
@@ -51,7 +51,7 @@
                 <!-- Scope Selector (match Statistics dropdown styling) -->
                 <div class="flex items-center">
                     <details id="calendarFilterDropdown" class="relative">
-                        <summary class="dropdown-trigger list-none [&::-webkit-details-marker]:hidden flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
+                        <summary class="dropdown-trigger list-none [&::-webkit-details-marker]:hidden flex items-center justify-center sm:justify-start space-x-0 sm:space-x-2 w-10 sm:w-auto sm:px-4 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 text-gray-900 dark:text-white rounded-lg cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-sm md:text-base backdrop-blur-sm">
                             <!-- Filter icon for mobile (gray by default, JS changes color when filtered) -->
                             <svg id="calendarFilterIcon" class="sm:hidden w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -61,7 +61,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
                         </summary>
-                        <div class="dropdown-menu-right w-40 bg-white dark:bg-dark-800/90 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-30 overflow-hidden">
+                        <div id="calendarViewOptions" class="dropdown-menu-right z-30 absolute right-0 mt-2 w-48 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl hidden overflow-hidden backdrop-blur-md">
                             <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="all">{{ translation.get("filter.all") }}</a>
                             <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="book">{{ translation.get("books") }}</a>
                             <a class="calendar-filter-btn block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50" href="#" data-calendar-filter="comic">{{ translation.get("comics") }}</a>
