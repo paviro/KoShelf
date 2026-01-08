@@ -285,12 +285,12 @@ datetime =
     .short-current-year = %-d %b
     .short-with-year = %-d %b %Y
 
-# Time units: h=hours, m=minutes, d=days
+# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
+    .w = тиж
+    .d = дн
     .h = год
     .m = хв
-    .d = дн
-
 today = Сьогодні
 of-the-year = року
 of = з

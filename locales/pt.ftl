@@ -261,11 +261,12 @@ datetime =
     .short-current-year = %d de %b
     .short-with-year = %d %b %Y
 
-# Time units: h=hours, m=minutes, d=days
+# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
+    .w = sem
+    .d = d
     .h = h
     .m = m
-    .d = d
 today = Hoje
 of-the-year = do ano
 of = de
