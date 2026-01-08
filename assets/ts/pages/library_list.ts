@@ -222,28 +222,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Show/hide sections based on content and filter
+        // Show/hide sections based on content and filter, and update badge counts
         if (readingSection) {
             const shouldShowReading =
                 readingVisible > 0 && (filter === 'all' || filter === 'reading');
             readingSection.style.display = shouldShowReading ? 'block' : 'none';
+            const readingBadge = readingSection.querySelector('span[class*="bg-gradient"]');
+            if (readingBadge) readingBadge.textContent = String(readingVisible);
         }
 
         if (completedSection) {
             const shouldShowCompleted =
                 completedVisible > 0 && (filter === 'all' || filter === 'completed');
             completedSection.style.display = shouldShowCompleted ? 'block' : 'none';
+            const completedBadge = completedSection.querySelector('span[class*="bg-gradient"]');
+            if (completedBadge) completedBadge.textContent = String(completedVisible);
         }
 
         if (abandonedSection) {
             const shouldShowAbandoned =
                 abandonedVisible > 0 && (filter === 'all' || filter === 'abandoned');
             abandonedSection.style.display = shouldShowAbandoned ? 'block' : 'none';
+            const abandonedBadge = abandonedSection.querySelector('span[class*="bg-gradient"]');
+            if (abandonedBadge) abandonedBadge.textContent = String(abandonedVisible);
         }
 
         if (unreadSection) {
             const shouldShowUnread = unreadVisible > 0 && (filter === 'all' || filter === 'unread');
             unreadSection.style.display = shouldShowUnread ? 'block' : 'none';
+            const unreadBadge = unreadSection.querySelector('span[class*="bg-gradient"]');
+            if (unreadBadge) unreadBadge.textContent = String(unreadVisible);
         }
 
         updateEmptyState(readingVisible + completedVisible + abandonedVisible + unreadVisible);
