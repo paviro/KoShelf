@@ -21,9 +21,17 @@
                 </div>
                 <div class="text-center @[140px]:text-left">
                     <div id="overallTotalReadTime" class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                        {% let hours = reading_stats.total_read_time / 3600 %}
+                        {% let total_hours = reading_stats.total_read_time / 3600 %}
+                        {% let total_days = total_hours / 24 %}
+                        {% let weeks = total_days / 7 %}
+                        {% let days = total_days % 7 %}
+                        {% let hours = total_hours % 24 %}
                         {% let minutes = (reading_stats.total_read_time % 3600) / 60 %}
-                        {% if hours > 0 %}
+                        {% if weeks > 0 %}
+                            {{ weeks }}{{ translation.get("units.w") }} {{ days }}{{ translation.get("units.d") }} {{ hours }}{{ translation.get("units.h") }} {{ minutes }}{{ translation.get("units.m") }}
+                        {% else if days > 0 %}
+                            {{ days }}{{ translation.get("units.d") }} {{ hours }}{{ translation.get("units.h") }} {{ minutes }}{{ translation.get("units.m") }}
+                        {% else if hours > 0 %}
                             {{ hours }}{{ translation.get("units.h") }} {{ minutes }}{{ translation.get("units.m") }}
                         {% else %}
                             {{ minutes }}{{ translation.get("units.m") }}
