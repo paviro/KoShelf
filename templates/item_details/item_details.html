@@ -48,7 +48,7 @@ data-section-toggle-kind="{% if book.is_comic() %}comics{% else %}books{% endif 
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12"/>
                     </svg>
                 </button>
-                <div id="shareDropdownMenu" class="dropdown-menu-right hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden backdrop-blur-md">
+                <div id="shareDropdownMenu" class="dropdown-menu-right hidden absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden">
                     {% if book.is_comic() %}
                         <a href="/comics/{{ book.id }}/details.md" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">Markdown</a>
                         <a href="/comics/{{ book.id }}/details.json" download class="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200">JSON</a>
