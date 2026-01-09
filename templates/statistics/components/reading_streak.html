@@ -16,7 +16,7 @@
     </div>
     
     <div id="reading-streakContainer" class="mb-8">
-        <div class="bg-white dark:bg-dark-800 rounded-xl p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/30">
+        <div class="bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
         <!-- Fixed weekday labels and scrollable content -->
         <div class="flex">
             <!-- Fixed weekday labels -->
@@ -55,7 +55,7 @@
                         {% for week in (0..53) %}
                             <div class="grid grid-rows-7 gap-1 sm:gap-1 md:gap-1 xl:gap-1.5">
                                 {% for day in (0..7) %}
-                                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 rounded-sm activity-cell bg-gray-200 dark:bg-dark-700" 
+                                    <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 rounded-sm activity-cell bg-gray-100 dark:bg-dark-800" 
                                          data-week="{{ week }}" 
                                          data-day="{{ day }}"></div>
                                 {% endfor %}
@@ -69,7 +69,7 @@
         <!-- Fixed legend -->
         <div class="flex items-center justify-end mt-4 space-x-2 text-xs">
             <span class="text-gray-500 dark:text-dark-400">{{ translation.get("less") }}</span>
-            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-gray-200 dark:bg-dark-700"></div>
+            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-gray-100 dark:bg-dark-800"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-100 dark:bg-green-900"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-300 dark:bg-green-700"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-500 dark:bg-green-500"></div>
@@ -80,34 +80,34 @@
         
         <!-- Reading Streak Stats -->
         <div class="w-full mt-3 sm:mt-3 md:mt-4">
-        <div class="flex flex-row w-full rounded-xl shadow-lg overflow-hidden gap-0">
-            <!-- Current Streak (left - primary blue tint) -->
-            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start bg-gradient-to-br from-primary-50 to-primary-100/80 dark:from-primary-800/40 dark:to-primary-900/30 border border-primary-200/80 dark:border-primary-700/30 rounded-l-xl border-r-0 p-3 md:p-4 lg:p-6 xl:p-6">
+        <div class="flex flex-row w-full rounded-lg shadow-lg overflow-hidden gap-0">
+            <!-- Current Streak (left - blue tint) -->
+            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-start bg-gradient-to-br from-primary-50 to-primary-100/80 dark:from-primary-900/40 dark:to-dark-900 border border-primary-200/80 dark:border-primary-900/50 rounded-l-lg border-r-0 p-3 md:p-4 lg:p-6 xl:p-6">
                 <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
                     <div class="flex items-baseline justify-center lg:justify-start mb-2 lg:mb-0 lg:mr-2">
                         <span id="currentStreakDays" class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-primary-600 dark:text-white drop-shadow-sm leading-none"
                               data-last-streak-date="{% match reading_stats.current_streak.end_date %}{% when Some with (end_date) %}{{ end_date }}{% when None %}{% endmatch %}">{{ reading_stats.current_streak.days }}</span>
-                        <span id="currentStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-500 dark:text-primary-100 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.current_streak.days) }}</span>
+                        <span id="currentStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-500 dark:text-primary-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.current_streak.days) }}</span>
                     </div>
                     <div class="flex items-center lg:ml-6">
                         <div>
-                            <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-primary-600 dark:text-primary-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">{{ translation.get("streak.current") }}</div>
+                            <div class="text-xs md:text-sm lg:text-base xl:text-base font-bold text-primary-600 dark:text-primary-300 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">{{ translation.get("streak.current") }}</div>
                             {% match reading_stats.current_streak.date_range_display(translation) %}
                             {% when Some with (date_range) %}
-                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-100/80">{{ date_range }}</div>
+                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-200/70">{{ date_range }}</div>
                             {% when None %}
-                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-100/80"></div>
+                                <div id="currentStreakDateRange" class="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-200/70"></div>
                             {% endmatch %}
                         </div>
                     </div>
                 </div>
             </div>
             <!-- Longest Streak (right - gray tint) -->
-            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-end bg-gradient-to-br from-gray-50 to-gray-100/80 dark:from-dark-700/60 dark:to-dark-800/80 border border-gray-200/80 dark:border-dark-600/40 rounded-r-xl border-l-0 p-3 md:p-4 lg:p-6 xl:p-6">
+            <div class="flex-1 flex flex-col lg:flex-row items-center lg:items-center justify-center lg:justify-end bg-gradient-to-br from-gray-50 to-gray-100/80 dark:from-dark-800 dark:to-dark-900 border border-gray-200/80 dark:border-dark-700/50 rounded-r-lg border-l-0 p-3 md:p-4 lg:p-6 xl:p-6">
                 <div class="flex flex-col lg:flex-row items-center lg:items-center w-full lg:w-auto">
                     <div class="flex items-baseline justify-center lg:justify-end mb-2 lg:mb-0 lg:mr-2">
                         <span id="longestStreakDays" class="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-gray-700 dark:text-white drop-shadow-sm leading-none">{{ reading_stats.longest_streak.days }}</span>
-                        <span id="longestStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-600 dark:text-dark-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.longest_streak.days) }}</span>
+                        <span id="longestStreakDaysText" class="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-600 dark:text-gray-400 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">{{ translation.get_with_num("days_label", reading_stats.longest_streak.days) }}</span>
                     </div>
                     <div class="flex items-center lg:ml-6">
                         <div>
