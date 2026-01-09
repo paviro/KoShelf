@@ -323,7 +323,7 @@ class ActivityHeatmap {
         activityObj: ActivityData,
     ): void {
         const colorClasses = [
-            ['bg-gray-200', 'dark:bg-dark-700'], // 0 (no activity)
+            ['bg-gray-100', 'dark:bg-dark-800'], // 0 (no activity)
             ['bg-green-100', 'dark:bg-green-900'], // 1 (low)
             ['bg-green-300', 'dark:bg-green-700'], // 2 (medium)
             ['bg-green-500', 'dark:bg-green-500'], // 3 (high)
