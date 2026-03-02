@@ -5,16 +5,11 @@
 
 import { translation } from '../shared/i18n.js';
 import { TooltipManager } from './tooltip-manager.js';
-
-interface ActivityEntry {
-    date: string;
-    pages_read: number;
-    read_time: number;
-}
-
-interface ActivityConfig {
-    max_scale_seconds: number | null;
-}
+import {
+    loadYearlyActivity,
+    type ActivityConfig,
+    type DailyActivityEntry,
+} from '../shared/statistics-data-loader.js';
 
 interface ActivityData {
     pages: number;
@@ -22,10 +17,11 @@ interface ActivityData {
 }
 
 class ActivityHeatmap {
-    private activityData: ActivityEntry[] | null = null;
+    private activityData: DailyActivityEntry[] | null = null;
     private activityConfig: ActivityConfig | null = null;
     private availableYears: number[] = [];
     private currentYear: number | null = null;
+    private loadRequestId = 0;
     private isInitialized = false;
     private resizeObserver: ResizeObserver | null = null;
     private basePath = '/assets/json/statistics';
@@ -71,25 +67,24 @@ class ActivityHeatmap {
 
     // Load activity data for a specific year
     private async loadYearData(year: number): Promise<void> {
+        const currentLoadRequestId = ++this.loadRequestId;
+
         try {
-            const response = await fetch(`${this.basePath}/daily_activity_${year}.json`);
-            if (!response.ok) {
-                throw new Error(`Failed to load activity data for ${year}`);
-            }
+            const yearlyActivity = await loadYearlyActivity(this.basePath, year);
 
-            const jsonResponse = (await response.json()) as {
-                data: ActivityEntry[];
-                config: ActivityConfig;
-            };
+            if (currentLoadRequestId !== this.loadRequestId) return;
 
-            this.activityData = jsonResponse.data;
-            this.activityConfig = jsonResponse.config;
+            this.activityData = yearlyActivity.data;
+            this.activityConfig = yearlyActivity.config ?? { max_scale_seconds: null };
 
             this.currentYear = year;
         } catch (error) {
+            if (currentLoadRequestId !== this.loadRequestId) return;
+
             console.error(`Error loading activity data for ${year}:`, error);
             this.activityData = [];
             this.activityConfig = { max_scale_seconds: null };
+            this.currentYear = year;
         }
     }
 
@@ -231,7 +226,7 @@ class ActivityHeatmap {
     }
 
     // Process activity data and find maximum activity level
-    private processActivityData(activityData: ActivityEntry[]): {
+    private processActivityData(activityData: DailyActivityEntry[]): {
         activityMap: Map<string, ActivityData>;
         maxActivity: number;
     } {

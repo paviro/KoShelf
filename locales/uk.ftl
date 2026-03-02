@@ -141,6 +141,7 @@ pages-label = { $count ->
 reading-statistics = Статистика читання
 overall-statistics = Загальна статистика
 weekly-statistics = Тижнева статистика
+yearly-statistics = Річна статистика
 total-read-time = Загальний час читання
 total-pages-read = Всього прочитано сторінок
 pages-per-hour = Сторінок/година
@@ -315,4 +316,3 @@ minutes_label = { $count ->
     [many] хвилин
    *[other] хвилин
 }
-

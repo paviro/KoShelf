@@ -125,6 +125,7 @@ pages-label = { $count ->
 reading-statistics = Estatísticas de Leitura
 overall-statistics = Estatísticas Gerais
 weekly-statistics = Estatísticas Semanais
+yearly-statistics = Estatísticas Anuais
 total-read-time = Tempo Total de Leitura
 total-pages-read = Total de Páginas Lidas
 pages-per-hour = Páginas/Hora
