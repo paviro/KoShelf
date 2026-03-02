@@ -458,7 +458,7 @@ class HoverPreviewManager {
             <div data-preview-title class="text-[1rem] font-semibold leading-tight tracking-tight text-gray-900 dark:text-white"></div>
             <div data-preview-author class="mt-1 text-[11px] font-medium uppercase tracking-[0.05em] text-gray-500 dark:text-gray-300 hidden"></div>
             <div data-preview-series class="mt-2 w-fit rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-gray-600 dark:border-dark-500 dark:bg-dark-800 dark:text-gray-300 hidden"></div>
-            <div data-preview-description class="mt-3 border-t border-gray-200/80 pt-2.5 text-[12px] leading-relaxed text-gray-700/95 line-clamp-5 dark:border-dark-600/80 dark:text-gray-200 hidden"></div>
+            <div data-preview-description class="mt-3 border-t border-gray-200/80 pt-2.5 text-[13px] leading-relaxed text-gray-700/95 line-clamp-5 dark:border-dark-600/80 dark:text-gray-200 hidden"></div>
         `;
 
         document.body.appendChild(this.previewElement);
