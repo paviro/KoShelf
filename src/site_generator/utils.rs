@@ -3,9 +3,11 @@
 use chrono::Datelike;
 
 use super::SiteGenerator;
+use crate::models::StatisticsData;
 use crate::templates::NavItem;
 use anyhow::Result;
-use minify_html::{Cfg, minify};
+use minify_html::{minify, Cfg};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -72,6 +74,40 @@ pub(crate) fn format_day_month(iso: &str, translations: &crate::i18n::Translatio
     } else {
         iso.to_string()
     }
+}
+
+/// Parse completion end date into `(year, year_month)` where `year_month` is `YYYY-MM`.
+pub(crate) fn completion_year_and_month(end_date: &str) -> Option<(i32, String)> {
+    let year_str = end_date.get(0..4)?;
+    let year_month = end_date.get(0..7)?.to_string();
+    let year = year_str.parse::<i32>().ok()?;
+    Some((year, year_month))
+}
+
+/// Count completion entries grouped by completion year.
+pub(crate) fn completion_counts_by_year(stats_data: &StatisticsData) -> HashMap<i32, i64> {
+    let mut completion_counts: HashMap<i32, i64> = HashMap::new();
+
+    for book in &stats_data.books {
+        let Some(completions) = &book.completions else {
+            continue;
+        };
+
+        for completion in &completions.entries {
+            if let Some((year, _)) = completion_year_and_month(&completion.end_date) {
+                *completion_counts.entry(year).or_insert(0) += 1;
+            }
+        }
+    }
+
+    completion_counts
+}
+
+/// List completion years sorted descending (newest first).
+pub(crate) fn completion_years_desc(stats_data: &StatisticsData) -> Vec<i32> {
+    let mut years: Vec<i32> = completion_counts_by_year(stats_data).into_keys().collect();
+    years.sort_by(|a, b| b.cmp(a));
+    years
 }
 
 impl SiteGenerator {

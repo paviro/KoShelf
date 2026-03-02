@@ -1,7 +1,7 @@
 //! Yearly recap page generation with share images.
 
 use super::SiteGenerator;
-use super::utils::{format_day_month, format_duration};
+use super::utils::{completion_year_and_month, format_day_month, format_duration};
 use crate::models::{
     ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
     StatisticsData, YearlySummary,
@@ -141,24 +141,16 @@ fn group_completions_by_year_month(
 ) -> (YearMonthItems, Vec<i32>) {
     // Build year -> month (YYYY-MM) -> Vec<RecapItem>
     let mut year_month_items: YearMonthItems = HashMap::new();
-    let mut years: Vec<i32> = Vec::new();
+    let mut year_set: HashSet<i32> = HashSet::new();
 
     for sb in &stats_data.books {
         if let Some(comps) = &sb.completions {
             for c in &comps.entries {
-                if c.end_date.len() < 7 {
+                let Some((year, ym)) = completion_year_and_month(&c.end_date) else {
                     continue;
-                }
-                let year_str = &c.end_date[0..4];
-                let ym = c.end_date[0..7].to_string(); // YYYY-MM
-                let year: i32 = match year_str.parse() {
-                    Ok(v) => v,
-                    Err(_) => continue,
                 };
 
-                if !years.contains(&year) {
-                    years.push(year);
-                }
+                year_set.insert(year);
 
                 // Enrich from LibraryItem when possible
                 let (
@@ -251,6 +243,7 @@ fn group_completions_by_year_month(
         }
     }
 
+    let mut years: Vec<i32> = year_set.into_iter().collect();
     years.sort_by(|a, b| b.cmp(a)); // newest first
     (year_month_items, years)
 }

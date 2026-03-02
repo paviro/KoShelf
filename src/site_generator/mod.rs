@@ -30,7 +30,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use utils::{NavContext, UiContext};
+use utils::{NavContext, UiContext, completion_years_desc};
 
 #[derive(Debug)]
 struct GenerationContext {
@@ -128,25 +128,9 @@ impl SiteGenerator {
 
     fn recap_latest_href(stats_data: Option<&StatisticsData>) -> Option<String> {
         let sd = stats_data?;
-        let mut years: Vec<i32> = Vec::new();
-        for b in &sd.books {
-            if let Some(cs) = &b.completions {
-                for c in &cs.entries {
-                    if c.end_date.len() >= 4
-                        && let Ok(y) = c.end_date[0..4].parse::<i32>()
-                        && !years.contains(&y)
-                    {
-                        years.push(y);
-                    }
-                }
-            }
-        }
-        if years.is_empty() {
-            None
-        } else {
-            years.sort_by(|a, b| b.cmp(a));
-            Some(format!("/recap/{}/", years[0]))
-        }
+        completion_years_desc(sd)
+            .first()
+            .map(|latest_year| format!("/recap/{}/", latest_year))
     }
 
     async fn build_generation_context(&self) -> Result<GenerationContext> {
