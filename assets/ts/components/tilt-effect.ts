@@ -81,12 +81,11 @@ export function initTilt(options: TiltOptions): void {
         element.style.transform = 'translateZ(0)';
 
         // Find overlays if enabled
-        let overlayContainer: HTMLElement | null = null;
         let badgeOverlays: NodeListOf<HTMLElement> | null = null;
         let progressBar: HTMLElement | null = null;
 
         if (opts.enableOverlays && opts.overlayContainer) {
-            overlayContainer = element.querySelector<HTMLElement>(opts.overlayContainer);
+            const overlayContainer = element.querySelector<HTMLElement>(opts.overlayContainer);
             if (overlayContainer) {
                 overlayContainer.style.transformStyle = 'preserve-3d';
                 overlayContainer.style.backfaceVisibility = 'hidden';

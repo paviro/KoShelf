@@ -194,8 +194,8 @@ export class TooltipManager {
         const placement: Placement = candidates[0]?.placement ?? 'top';
 
         // Initial placement calculation
-        let top = 0;
-        let left = 0;
+        let top: number;
+        let left: number;
 
         if (placement === 'top') {
             top = cellRect.top - tooltipRect.height - gap - arrowSize;

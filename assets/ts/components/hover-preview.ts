@@ -352,8 +352,8 @@ class HoverPreviewManager {
         placementScores.sort((a, b) => b.score - a.score);
         const placement = placementScores[0]?.placement ?? 'right';
 
-        let left = 0;
-        let top = 0;
+        let left: number;
+        let top: number;
 
         const cardCenterX = cardRect.left + cardRect.width / 2;
         const cardCenterY = cardRect.top + cardRect.height / 2;
