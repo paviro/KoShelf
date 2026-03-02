@@ -6,7 +6,7 @@ use super::SiteGenerator;
 use crate::models::StatisticsData;
 use crate::templates::NavItem;
 use anyhow::Result;
-use minify_html::{minify, Cfg};
+use minify_html::{Cfg, minify};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
