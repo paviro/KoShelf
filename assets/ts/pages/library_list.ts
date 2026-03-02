@@ -3,6 +3,7 @@ import { LazyImageLoader } from '../components/lazy-loading.js';
 import { SectionToggle } from '../components/section-toggle.js';
 import { translation } from '../shared/i18n.js';
 import { initBookCardTilt } from '../components/tilt-effect.js';
+import { hideBookCardHoverPreview, initBookCardHoverPreview } from '../components/hover-preview.js';
 import { StorageManager } from '../shared/storage-manager.js';
 
 const FILTER_ARIA_MAP = {
@@ -92,6 +93,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize 3D tilt effect on book cards
     initBookCardTilt();
 
+    // Initialize hover preview for book/comic cards
+    initBookCardHoverPreview();
+
     // Make it globally available for debugging or external control
     window.bookListSections = sectionToggle;
 
@@ -175,6 +179,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function filterBooks(searchTerm: string, filter: string): void {
+        hideBookCardHoverPreview();
+
         let readingVisible = 0;
         let completedVisible = 0;
         let abandonedVisible = 0;
