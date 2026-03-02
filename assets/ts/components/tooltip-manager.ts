@@ -143,7 +143,8 @@ export class TooltipManager {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const padding = 8; // Padding from screen edges
-        const gap = 8; // Gap between arrow tip and cell
+        const customGap = Number.parseFloat(cell.dataset.tooltipGap || '');
+        const gap = Number.isFinite(customGap) ? customGap : 8; // Gap between arrow tip and cell
         const arrowSize = 6; // Must match CSS border-width for the arrow
 
         // Ensure tooltip is measurable and constrained to viewport width

@@ -5,6 +5,8 @@
 
 import { translation } from '../shared/i18n.js';
 import { SectionToggle } from '../components/section-toggle.js';
+import { DateFormatter, DataFormatter } from '../shared/statistics-formatters.js';
+import { YearlyStatsChart } from '../components/yearly-stats-chart.js';
 // The statistics page also includes the reading heatmap.
 // Importing it here ensures it is bundled and initialized with the page.
 import '../components/heatmap.js';
@@ -21,6 +23,7 @@ interface WeekData {
 class StatisticsManager {
     private loadingIndicator: HTMLElement | null = null;
     private weekStats: HTMLElement | null = null;
+    private yearlyStatsChart = new YearlyStatsChart();
     private isInitialized = false;
     private statsJsonBasePath = '/assets/json/statistics';
 
@@ -41,6 +44,9 @@ class StatisticsManager {
 
         // Initialize week selector
         this.initializeWeekSelector();
+
+        // Initialize yearly statistics chart and selector
+        this.yearlyStatsChart.init(this.statsJsonBasePath);
 
         // Validate and reset current streak if needed
         this.validateCurrentStreak();
@@ -141,35 +147,23 @@ class StatisticsManager {
         selectedOption: HTMLElement,
     ): void {
         allOptions.forEach((el) => {
-            // Remove both light and dark mode active classes
+            // Remove active classes
             el.classList.remove(
                 'bg-primary-50',
                 'dark:bg-dark-700',
                 'text-primary-900',
                 'dark:text-white',
-                'bg-green-50',
-                'text-green-900',
             );
-            // Reset to default text color
+            // Reset default text color
             el.classList.add('text-gray-600', 'dark:text-dark-200');
         });
 
-        // Add appropriate active classes based on the context (week or year selector)
-        if (selectedOption.closest('#weekOptions')) {
-            selectedOption.classList.add(
-                'bg-primary-50',
-                'dark:bg-dark-700',
-                'text-primary-900',
-                'dark:text-white',
-            );
-        } else {
-            selectedOption.classList.add(
-                'bg-green-50',
-                'dark:bg-dark-700',
-                'text-green-900',
-                'dark:text-white',
-            );
-        }
+        selectedOption.classList.add(
+            'bg-primary-50',
+            'dark:bg-dark-700',
+            'text-primary-900',
+            'dark:text-white',
+        );
         selectedOption.classList.remove('text-gray-600', 'dark:text-dark-200');
     }
 
@@ -297,7 +291,7 @@ class StatisticsManager {
 
             // Update the day/days text
             if (daysTextElement) {
-                daysTextElement.textContent = 'days';
+                daysTextElement.textContent = translation.get('days_label', 0);
             }
 
             // Clear the date range
@@ -305,99 +299,6 @@ class StatisticsManager {
                 dateRangeElement.textContent = '';
             }
         }
-    }
-}
-
-// Date formatting utilities
-class DateFormatter {
-    // Parse ISO date string and return a Date object
-    static parseISODate(dateStr: string): Date {
-        try {
-            return new Date(dateStr);
-        } catch {
-            console.error('Error parsing date:', dateStr);
-            return new Date(); // Return current date as fallback
-        }
-    }
-
-    // Format date as "D Month" (e.g. "17 March")
-    static formatDateNice(dateObj: Date): string {
-        const monthKeys = [
-            'january',
-            'february',
-            'march',
-            'april',
-            'may',
-            'june',
-            'july',
-            'august',
-            'september',
-            'october',
-            'november',
-            'december',
-        ];
-        return `${dateObj.getDate()} ${translation.get(monthKeys[dateObj.getMonth()])}`;
-    }
-
-    // Format a date range nicely (e.g. "17-23 March" or "28 Feb - 5 March")
-    static formatDateRange(startDateStr: string, endDateStr: string): string {
-        const startDate = this.parseISODate(startDateStr);
-        const endDate = this.parseISODate(endDateStr);
-
-        const startDay = startDate.getDate();
-        const startMonth = startDate.getMonth();
-        const endDay = endDate.getDate();
-        const endMonth = endDate.getMonth();
-        const startYear = startDate.getFullYear();
-        const endYear = endDate.getFullYear();
-
-        const monthKeys = [
-            'january.short',
-            'february.short',
-            'march.short',
-            'april.short',
-            'may.short',
-            'june.short',
-            'july.short',
-            'august.short',
-            'september.short',
-            'october.short',
-            'november.short',
-            'december.short',
-        ];
-        const months = monthKeys.map((k) => translation.get(k));
-
-        // If same month
-        if (startMonth === endMonth && startYear === endYear) {
-            return `${startDay}-${endDay} ${months[startMonth]}`;
-        }
-        // Different months
-        else {
-            return `${startDay} ${months[startMonth]} - ${endDay} ${months[endMonth]}`;
-        }
-    }
-}
-
-// Data formatting utilities
-class DataFormatter {
-    // Format read time from seconds to hours and minutes
-    static formatReadTime(seconds: number | null | undefined): string {
-        if (seconds === null || seconds === undefined) {
-            return '--';
-        }
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else {
-            return `${minutes}m`;
-        }
-    }
-
-    // Format average pages with one decimal place
-    static formatAvgPages(avg: number): string {
-        return (Math.floor(avg * 10) / 10).toFixed(1);
     }
 }
 

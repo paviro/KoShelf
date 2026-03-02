@@ -1,0 +1,126 @@
+<!-- Yearly Stats Section -->
+<section data-name="yearly-stats" data-default-visible="true">
+    <div
+        class="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50"
+    >
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-2 h-6 md:h-8 bg-gradient-to-b from-violet-400 to-violet-600 rounded-full"
+            ></div>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                {{ translation.get("yearly-statistics") }}
+            </h2>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <!-- Year Selector -->
+            <div class="relative">
+                <div
+                    id="yearlyStatsYearSelectorWrapper"
+                    class="dropdown-trigger flex items-center justify-center sm:justify-between bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg w-10 sm:w-auto sm:px-4 h-10 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-all duration-200 text-sm md:text-base backdrop-blur-sm"
+                >
+                    <div class="flex items-center space-x-0 sm:space-x-3">
+                        <svg
+                            class="w-5 h-5 text-gray-600 dark:text-gray-300 sm:text-violet-400 sm:dark:text-violet-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            ></path>
+                        </svg>
+                        <span
+                            id="selectedYearlyStatsText"
+                            class="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm"
+                        >
+                            {% if available_years.len() > 0 %}
+                            <span class="font-bold">{{ available_years[0] }}</span>
+                            {% else %}
+                            <span class="font-bold">--</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <svg
+                        class="hidden sm:block w-4 h-4 text-gray-400 dark:text-dark-400 transition-transform duration-200 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        ></path>
+                    </svg>
+                </div>
+
+                <!-- Dropdown Options -->
+                <div
+                    id="yearlyStatsYearOptions"
+                    class="dropdown-menu-right z-30 max-h-60 overflow-y-auto bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl hidden w-40 overflow-hidden backdrop-blur-md"
+                >
+                    {% for year in available_years %}
+                    <div
+                        class="yearly-stats-year-option px-4 py-2 cursor-pointer text-gray-600 dark:text-dark-200 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if loop.index0 == 0 %}bg-green-50 dark:bg-dark-700 text-green-900 dark:text-white{% endif %}"
+                        data-year="{{ year }}"
+                    >
+                        <div class="flex items-center">
+                            <svg
+                                class="w-4 h-4 text-violet-400 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                            <span class="font-bold">{{ year }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Toggle Button -->
+            {% include "components/toggle_button.html" %}
+        </div>
+    </div>
+
+    <div id="yearly-statsContainer" class="mb-8">
+        <div
+            class="relative bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70 overflow-hidden"
+        >
+            <div
+                id="yearlyStatsLoadingIndicator"
+                class="absolute inset-0 bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px] hidden z-10"
+            ></div>
+
+            <div
+                id="yearlyStatsEmptyState"
+                class="hidden rounded-lg border border-dashed border-gray-300/80 dark:border-dark-700 p-8 text-center text-sm text-gray-500 dark:text-dark-300"
+            >
+                {{ translation.get("stats-empty.nothing-here") }}
+            </div>
+
+            <div id="yearlyStatsChart" class="transition-opacity duration-300">
+                <div class="overflow-x-auto scrollbar-hide">
+                    <div class="min-w-[680px] lg:min-w-0">
+                        <div
+                            id="yearlyStatsBars"
+                            class="h-56 sm:h-64 lg:h-72 grid grid-cols-12 gap-2 sm:gap-3 items-end"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
