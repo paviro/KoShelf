@@ -11,7 +11,7 @@
 //! 1. **Page stats are sorted by time** and grouped into "reading progressions"
 //!
 //! 2. **A progression becomes a valid completion** when:
-//!    - At least `min_completion_percentage` (78%) of pages were visited 
+//!    - At least `min_completion_percentage` (78%) of pages were visited
 //!      (we never have stats for all pages even if all were read)
 //!    - Pages from the beginning (`min_early_percentage`, first 20%) were read
 //!    - Pages from the end (`min_late_percentage`, last 2%) were read
@@ -200,16 +200,22 @@ impl ReadCompletionDetector {
         let late_threshold = self.config.late_threshold(total_pages);
         // Track best progression: (coverage%, pages, has_early, has_late)
         let mut best_progression: Option<(f64, usize, bool, bool)> = None;
-        
+
         for progression in &progressions {
             let pages = progression.pages_visited.len();
             let coverage = pages as f64 / total_pages as f64;
             if best_progression.map_or(true, |(best, _, _, _)| coverage > best) {
-                let has_early = progression.pages_visited.iter().any(|&p| p <= early_threshold);
-                let has_late = progression.pages_visited.iter().any(|&p| p >= late_threshold);
+                let has_early = progression
+                    .pages_visited
+                    .iter()
+                    .any(|&p| p <= early_threshold);
+                let has_late = progression
+                    .pages_visited
+                    .iter()
+                    .any(|&p| p >= late_threshold);
                 best_progression = Some((coverage, pages, has_early, has_late));
             }
-            
+
             if let Some(completion) = self.evaluate_progression(progression, total_pages) {
                 completions.push(completion);
             }
@@ -243,7 +249,7 @@ impl ReadCompletionDetector {
     /// A split occurs when:
     /// 1. Reading restarts from early pages (within min_early_percentage)
     /// 2. The remaining stats from that point would form a valid completion on their own
-    /// 
+    ///
     /// This handles both abandoned reads (split off incomplete portion) and true re-reads.
     fn group_into_progressions(
         &self,
@@ -266,8 +272,11 @@ impl ReadCompletionDetector {
             let restart_threshold = (total_pages as f64 * 0.05) as i64; // First 5% of book
             let prev_page = if i > 0 { sorted_stats[i - 1].page } else { 0 };
             let is_jumping_back = prev_page > early_page_threshold;
-            let already_started_reading = current_progression.pages_visited.iter().any(|&p| p <= early_page_threshold);
-            
+            let already_started_reading = current_progression
+                .pages_visited
+                .iter()
+                .any(|&p| p <= early_page_threshold);
+
             let is_likely_restart = !current_progression.is_empty()
                 && stat.page <= restart_threshold
                 && is_jumping_back
