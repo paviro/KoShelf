@@ -58,6 +58,29 @@ export class DataFormatter {
         return `${minutes}m`;
     }
 
+    // Format read time from seconds to days, hours and minutes
+    static formatReadTimeWithDays(seconds: number | null | undefined): string {
+        if (seconds === null || seconds === undefined) {
+            return '--';
+        }
+
+        const totalMinutes = Math.floor(seconds / 60);
+        const totalHours = Math.floor(totalMinutes / 60);
+        const days = Math.floor(totalHours / 24);
+        const hours = totalHours % 24;
+        const minutes = totalMinutes % 60;
+
+        if (days > 0) {
+            return `${days}${translation.get('units.d')} ${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+        }
+
+        if (hours > 0) {
+            return `${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+        }
+
+        return `${minutes}${translation.get('units.m')}`;
+    }
+
     // Format average pages with one decimal place
     static formatAvgPages(avg: number): string {
         return (Math.floor(avg * 10) / 10).toFixed(1);

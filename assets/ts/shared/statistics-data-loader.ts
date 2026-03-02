@@ -8,9 +8,14 @@ export interface ActivityConfig {
     max_scale_seconds: number | null;
 }
 
+export interface YearlyActivitySummary {
+    completed_count: number;
+}
+
 export interface YearlyActivityResponse {
     data: DailyActivityEntry[];
     config?: ActivityConfig;
+    summary: YearlyActivitySummary;
 }
 
 const yearlyActivityCache = new Map<string, Promise<YearlyActivityResponse>>();
@@ -33,9 +38,14 @@ export async function loadYearlyActivity(
             }
 
             const jsonResponse = (await response.json()) as YearlyActivityResponse;
+            const completedCount = jsonResponse.summary?.completed_count;
+
             return {
                 data: Array.isArray(jsonResponse.data) ? jsonResponse.data : [],
                 config: jsonResponse.config,
+                summary: {
+                    completed_count: typeof completedCount === 'number' ? completedCount : 0,
+                },
             };
         });
 

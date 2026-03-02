@@ -15,6 +15,12 @@ interface MonthlyReadStats {
     active_days: number;
 }
 
+interface YearlySummaryStats {
+    read_time: number;
+    completed_count: number;
+    active_days: number;
+}
+
 export class YearlyStatsChart {
     private statsJsonBasePath = '/assets/json/statistics';
     private requestId = 0;
@@ -37,6 +43,7 @@ export class YearlyStatsChart {
         if (yearOptionElements.length === 0) {
             emptyState?.classList.remove('hidden');
             this.updateYearlyChart(this.createEmptyMonthlyStats(), null);
+            this.updateYearlySummaryCards(this.createEmptyYearlySummary());
             return;
         }
 
@@ -67,6 +74,7 @@ export class YearlyStatsChart {
         );
         if (Number.isNaN(defaultYear) || defaultYear <= 0) {
             this.updateYearlyChart(this.createEmptyMonthlyStats(), null);
+            this.updateYearlySummaryCards(this.createEmptyYearlySummary());
             return;
         }
 
@@ -167,11 +175,18 @@ export class YearlyStatsChart {
             if (currentRequestId !== this.requestId) return;
 
             const monthlyStats = this.aggregateMonthlyStats(yearlyActivity.data);
+            const yearlySummary = this.summarizeYearlyStats(
+                monthlyStats,
+                yearlyActivity.summary.completed_count,
+            );
+
+            this.updateYearlySummaryCards(yearlySummary);
             this.updateYearlyChart(monthlyStats, year);
         } catch (error) {
             if (currentRequestId !== this.requestId) return;
 
             console.error(`Error loading yearly data for ${year}:`, error);
+            this.updateYearlySummaryCards(this.createEmptyYearlySummary());
             this.updateYearlyChart(this.createEmptyMonthlyStats(), year);
         } finally {
             if (currentRequestId === this.requestId) {
@@ -186,6 +201,48 @@ export class YearlyStatsChart {
             pages_read: 0,
             active_days: 0,
         }));
+    }
+
+    private createEmptyYearlySummary(): YearlySummaryStats {
+        return {
+            read_time: 0,
+            completed_count: 0,
+            active_days: 0,
+        };
+    }
+
+    private summarizeYearlyStats(
+        monthlyStats: MonthlyReadStats[],
+        completedCount: number,
+    ): YearlySummaryStats {
+        const summary = this.createEmptyYearlySummary();
+
+        monthlyStats.forEach((monthStats) => {
+            summary.read_time += monthStats.read_time;
+            summary.active_days += monthStats.active_days;
+        });
+
+        summary.completed_count = Math.max(Math.floor(completedCount), 0);
+
+        return summary;
+    }
+
+    private updateYearlySummaryCards(summary: YearlySummaryStats): void {
+        const yearlyReadTime = document.getElementById('yearlyStatsReadTime');
+        const yearlyCompletedCount = document.getElementById('yearlyStatsCompletedCount');
+        const yearlyActiveDays = document.getElementById('yearlyStatsActiveDays');
+
+        if (yearlyReadTime) {
+            yearlyReadTime.textContent = DataFormatter.formatReadTimeWithDays(summary.read_time);
+        }
+
+        if (yearlyCompletedCount) {
+            yearlyCompletedCount.textContent = String(summary.completed_count);
+        }
+
+        if (yearlyActiveDays) {
+            yearlyActiveDays.textContent = String(summary.active_days);
+        }
     }
 
     private aggregateMonthlyStats(dailyActivity: DailyActivityEntry[]): MonthlyReadStats[] {
@@ -231,7 +288,9 @@ export class YearlyStatsChart {
             const monthLabel = translation.get(monthKeyAt(index));
             const valueLabel = DataFormatter.formatReadTime(readTime);
             const pagesLabel = translation.get('pages', monthStats.pages_read);
-            const activeDaysLabel = translation.get('active-days', monthStats.active_days);
+            const activeDaysLabel = translation
+                .get('active-days', monthStats.active_days)
+                .toLocaleLowerCase(translation.getLanguage());
             const tooltip = year
                 ? `${monthLabel} ${year}: ${valueLabel}`
                 : `${monthLabel}: ${valueLabel}`;

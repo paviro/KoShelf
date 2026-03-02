@@ -7,10 +7,11 @@ use crate::templates::{StatsEmptyTemplate, StatsTemplate};
 use anyhow::Result;
 use askama::Template;
 use log::info;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use super::utils::UiContext;
+use super::utils::{UiContext, completion_counts_by_year};
 
 impl SiteGenerator {
     pub(crate) async fn generate_statistics_page(
@@ -28,12 +29,17 @@ impl SiteGenerator {
 
         // Calculate reading stats for ALL content
         let reading_stats_all = StatisticsParser::calculate_stats(stats_data, &self.time_config);
+        let completion_counts_all = completion_counts_by_year(stats_data);
 
         // Export JSON for ALL scope into a dedicated folder to keep `/assets/json/statistics/` tidy.
         let all_dir = self.statistics_json_dir().join("all");
         fs::create_dir_all(&all_dir)?;
         let available_years = self
-            .export_daily_activity_by_year_to_dir(&reading_stats_all.daily_activity, &all_dir)
+            .export_daily_activity_by_year_to_dir(
+                &reading_stats_all.daily_activity,
+                &all_dir,
+                &completion_counts_all,
+            )
             .await?;
         self.export_week_stats_to_dir(&reading_stats_all.weeks, &all_dir)?;
 
@@ -201,6 +207,7 @@ impl SiteGenerator {
         &self,
         daily_activity: &[crate::models::DailyStats],
         output_dir: &Path,
+        completion_counts_by_year: &HashMap<i32, i64>,
     ) -> Result<Vec<i32>> {
         // Group daily stats by year
         let mut activity_by_year: std::collections::HashMap<i32, Vec<&crate::models::DailyStats>> =
@@ -223,12 +230,16 @@ impl SiteGenerator {
         for (year, year_data) in activity_by_year {
             let filename = format!("daily_activity_{}.json", year);
             let file_path = output_dir.join(filename);
+            let completed_count = completion_counts_by_year.get(&year).copied().unwrap_or(0);
 
             // Wrap the data with configuration information
             let json_data = serde_json::json!({
                 "data": year_data,
                 "config": {
                     "max_scale_seconds": self.heatmap_scale_max
+                },
+                "summary": {
+                    "completed_count": completed_count
                 }
             });
 
@@ -257,6 +268,7 @@ impl SiteGenerator {
     ) -> Result<(ReadingStats, Vec<i32>)> {
         let mut data = data.clone();
         let reading_stats = StatisticsParser::calculate_stats(&mut data, &self.time_config);
+        let completion_counts = completion_counts_by_year(&data);
 
         let subdir = match content_type {
             ContentType::Book => self.statistics_json_dir().join("books"),
@@ -265,7 +277,11 @@ impl SiteGenerator {
         fs::create_dir_all(&subdir)?;
 
         let years = self
-            .export_daily_activity_by_year_to_dir(&reading_stats.daily_activity, &subdir)
+            .export_daily_activity_by_year_to_dir(
+                &reading_stats.daily_activity,
+                &subdir,
+                &completion_counts,
+            )
             .await?;
         self.export_week_stats_to_dir(&reading_stats.weeks, &subdir)?;
 
