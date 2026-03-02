@@ -204,7 +204,7 @@ impl ReadCompletionDetector {
         for progression in &progressions {
             let pages = progression.pages_visited.len();
             let coverage = pages as f64 / total_pages as f64;
-            if best_progression.map_or(true, |(best, _, _, _)| coverage > best) {
+            if best_progression.is_none_or(|(best, _, _, _)| coverage > best) {
                 let has_early = progression
                     .pages_visited
                     .iter()

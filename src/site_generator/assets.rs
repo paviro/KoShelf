@@ -226,7 +226,7 @@ impl SiteGenerator {
                             // Signal progress
                             let _ = tx.send(());
 
-                            Ok((cover_path, (&*webp_data).to_vec()))
+                            Ok((cover_path, webp_data.to_vec()))
                         });
 
                     tasks.push(task);
