@@ -1,4 +1,5 @@
 use crate::models::BookInfo;
+use crate::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use quick_xml::Reader;
@@ -276,7 +277,13 @@ impl ComicParser {
                             b"Title" => title = Some(text),
                             b"Series" => series = Some(text),
                             b"Number" => number = Some(text),
-                            b"Summary" => summary = Some(text),
+                            b"Summary" => {
+                                let cleaned = sanitize_html(&text);
+                                let trimmed = cleaned.trim();
+                                if !trimmed.is_empty() {
+                                    summary = Some(trimmed.to_string());
+                                }
+                            }
                             b"Publisher" => publisher = Some(text),
                             b"LanguageISO" => language = Some(text),
                             b"Writer" => {
@@ -405,5 +412,43 @@ impl ComicParser {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ComicParser;
+
+    #[test]
+    fn comic_info_summary_is_sanitized() {
+        let xml = r#"
+            <ComicInfo>
+                <Title>Test Comic</Title>
+                <Summary><![CDATA[<p>Hello <strong>world</strong></p><script>alert('x')</script>]]></Summary>
+            </ComicInfo>
+        "#;
+
+        let parsed = ComicParser::parse_comic_info_xml(xml).expect("comic info should parse");
+
+        let description = parsed
+            .description
+            .expect("sanitized non-empty summary should be retained");
+        assert!(description.contains("Hello"));
+        assert!(description.contains("world"));
+        assert!(!description.contains("<script"));
+    }
+
+    #[test]
+    fn comic_info_empty_summary_is_ignored() {
+        let xml = r#"
+            <ComicInfo>
+                <Title>Test Comic</Title>
+                <Summary>   </Summary>
+            </ComicInfo>
+        "#;
+
+        let parsed = ComicParser::parse_comic_info_xml(xml).expect("comic info should parse");
+
+        assert!(parsed.description.is_none());
     }
 }
