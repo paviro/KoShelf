@@ -29,7 +29,7 @@ notify = "8.0.0"
 # Temporary directories
 tempfile = "3.20.0"
 # EPUB and .fb2.zip parsing
-zip = "6"
+zip = "8.1.0"
 # Image processing
 image = { version = "0.25.6", default-features = false, features = [
     "jpeg",
@@ -44,7 +44,7 @@ mlua = { version = "0.11.5", features = ["luajit", "vendored"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0"
 # Templating
-askama = "0.14.0"
+askama = "0.15.4"
 # Date/time
 chrono = { version = "0.4.41", features = ["serde", "std", "unstable-locales"] }
 # Logging
@@ -53,7 +53,7 @@ env_logger = "0.11.8"
 # Progress bars
 indicatif = "0.18"
 # XML parsing
-quick-xml = "0.38"
+quick-xml = "0.39.2"
 # HTML sanitization
 ammonia = "4.1.2"
 # Web server (for live server mode)
@@ -68,20 +68,20 @@ tower-http = { version = "0.6", features = [
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
 minify-html = "0.18"
 chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"
-resvg = "0.45.1"
+resvg = "0.47"
 base64 = "0.22"
 include_dir = "0.7.4"
 unic-langid = "0.9"
 # ICU4X for localized language display names
 icu_displaynames = "0.11"
 icu_locid = "1.4"
-fluent = "0.16"
-fluent-bundle = "0.15"
+fluent = "0.17"
+fluent-bundle = "0.16"
 intl-memoizer = "0.5"
 
 [target.'cfg(not(windows))'.dependencies]
@@ -94,7 +94,7 @@ ureq = "3.1.4"
 [dev-dependencies]
 ureq = { version = "3.1.4", features = ["json"] }
 rayon = "1.11.0"
-fluent-syntax = "0.11"
+fluent-syntax = "0.12"
 
 [profile.release]
 opt-level = 3
