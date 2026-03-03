@@ -95,136 +95,138 @@
         </div>
     </div>
 
-    <div class="mb-4 sm:mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div
-            class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
-        >
-            <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 rounded-lg bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 flex items-center justify-center flex-shrink-0"
-                >
-                    <svg
-                        class="w-5 h-5 text-primary-600 dark:text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                    </svg>
-                </div>
-                <div>
-                    <div
-                        id="yearlyStatsReadTime"
-                        class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-                    >
-                        0m
-                    </div>
-                    <div class="text-sm text-gray-500 dark:text-dark-400">
-                        {{ translation.get("total-read-time") }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div
-            class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
-        >
-            <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 rounded-lg bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600 flex items-center justify-center flex-shrink-0"
-                >
-                    <svg
-                        class="w-5 h-5 text-indigo-600 dark:text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                        ></path>
-                    </svg>
-                </div>
-                <div>
-                    <div
-                        id="yearlyStatsCompletedCount"
-                        class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-                    >
-                        0
-                    </div>
-                    <div class="text-sm text-gray-500 dark:text-dark-400">
-                        {{ translation.get("completed-books") }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div
-            class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
-        >
-            <div class="flex items-center gap-3">
-                <div
-                    class="w-10 h-10 rounded-lg bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center flex-shrink-0"
-                >
-                    <svg
-                        class="w-5 h-5 text-green-600 dark:text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        ></path>
-                    </svg>
-                </div>
-                <div>
-                    <div
-                        id="yearlyStatsActiveDays"
-                        class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-                    >
-                        0
-                    </div>
-                    <div class="text-sm text-gray-500 dark:text-dark-400">
-                        {{ translation.get_with_num("active-days", 2) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="yearly-statsContainer" class="mb-8">
-        <div
-            class="relative bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70 overflow-hidden"
-        >
+    <div id="yearly-statsContainer">
+        <div class="mb-4 sm:mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div
-                id="yearlyStatsLoadingIndicator"
-                class="absolute inset-0 bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px] hidden z-10"
-            ></div>
-
-            <div
-                id="yearlyStatsEmptyState"
-                class="hidden rounded-lg border border-dashed border-gray-300/80 dark:border-dark-700 p-8 text-center text-sm text-gray-500 dark:text-dark-300"
+                class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
             >
-                {{ translation.get("stats-empty.nothing-here") }}
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <svg
+                            class="w-5 h-5 text-primary-600 dark:text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            id="yearlyStatsReadTime"
+                            class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+                        >
+                            0m
+                        </div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">
+                            {{ translation.get("total-read-time") }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="yearlyStatsChart" class="transition-opacity duration-300">
-                <div class="overflow-x-auto scrollbar-hide">
-                    <div class="min-w-[680px] lg:min-w-0">
+            <div
+                class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <svg
+                            class="w-5 h-5 text-indigo-600 dark:text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                            ></path>
+                        </svg>
+                    </div>
+                    <div>
                         <div
-                            id="yearlyStatsBars"
-                            class="h-56 sm:h-64 lg:h-72 grid grid-cols-12 gap-2 sm:gap-3 items-end"
-                        ></div>
+                            id="yearlyStatsCompletedCount"
+                            class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+                        >
+                            0
+                        </div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">
+                            {{ translation.get("completed-books") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center flex-shrink-0"
+                    >
+                        <svg
+                            class="w-5 h-5 text-green-600 dark:text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            ></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div
+                            id="yearlyStatsActiveDays"
+                            class="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+                        >
+                            0
+                        </div>
+                        <div class="text-sm text-gray-500 dark:text-dark-400">
+                            {{ translation.get_with_num("active-days", 2) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <div
+                class="relative bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70 overflow-hidden"
+            >
+                <div
+                    id="yearlyStatsLoadingIndicator"
+                    class="absolute inset-0 bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px] hidden z-10"
+                ></div>
+
+                <div
+                    id="yearlyStatsEmptyState"
+                    class="hidden rounded-lg border border-dashed border-gray-300/80 dark:border-dark-700 p-8 text-center text-sm text-gray-500 dark:text-dark-300"
+                >
+                    {{ translation.get("stats-empty.nothing-here") }}
+                </div>
+
+                <div id="yearlyStatsChart" class="transition-opacity duration-300">
+                    <div class="overflow-x-auto scrollbar-hide">
+                        <div class="min-w-[680px] lg:min-w-0">
+                            <div
+                                id="yearlyStatsBars"
+                                class="h-56 sm:h-64 lg:h-72 grid grid-cols-12 gap-2 sm:gap-3 items-end"
+                            ></div>
+                        </div>
                     </div>
                 </div>
             </div>
