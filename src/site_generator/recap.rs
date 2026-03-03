@@ -7,6 +7,7 @@ use crate::models::{
     ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
     StatisticsData, YearlySummary,
 };
+use crate::runtime::ContractSnapshot;
 use crate::templates::{RecapEmptyTemplate, RecapTemplate};
 use anyhow::Result;
 use askama::Template;
@@ -412,48 +413,8 @@ impl SiteGenerator {
         let valid_years: HashSet<String> =
             current_years.iter().map(|year| year.to_string()).collect();
 
-        self.cleanup_stale_recap_year_json_files(&valid_years)?;
         self.cleanup_stale_recap_year_directories(&valid_years)?;
         self.cleanup_stale_recap_share_assets(&valid_years)?;
-
-        Ok(())
-    }
-
-    fn cleanup_stale_recap_year_json_files(&self, valid_years: &HashSet<String>) -> Result<()> {
-        let years_dir = self.data_recap_dir().join("years");
-        if !years_dir.exists() {
-            return Ok(());
-        }
-
-        let entries = fs::read_dir(&years_dir)?;
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-
-            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                continue;
-            }
-
-            let Some(stem) = path.file_stem().and_then(|name| name.to_str()) else {
-                continue;
-            };
-
-            if !stem.chars().all(|ch| ch.is_ascii_digit()) {
-                continue;
-            }
-
-            if !valid_years.contains(stem) {
-                info!("Removing stale recap year data file: {:?}", path);
-                if let Err(error) = fs::remove_file(&path) {
-                    warn!(
-                        "Failed to remove stale recap year data file {:?}: {}",
-                        path, error
-                    );
-                }
-            }
-        }
 
         Ok(())
     }
@@ -679,6 +640,7 @@ impl SiteGenerator {
         stats_data: &mut StatisticsData,
         books: &[LibraryItem],
         nav: NavContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!("Generating recap pages...");
         let show_type_filter = nav.show_type_filter();
@@ -719,9 +681,11 @@ impl SiteGenerator {
             years_books,
             years_comics,
         );
-        self.write_registered_json_pretty(self.data_recap_dir().join("index.json"), &recap_index)?;
+        snapshot.recap_index = Some(recap_index);
 
         if years.is_empty() {
+            snapshot.recap_years.clear();
+
             // No completions → render empty state page
             let template = RecapEmptyTemplate {
                 site_title: self.site_title.clone(),
@@ -755,6 +719,7 @@ impl SiteGenerator {
         // (No recap JSON exports needed anymore; we render per-scope pages instead.)
 
         // Render each year page (All + Books + Comics)
+        let mut recap_years_payload = HashMap::new();
         for year in years.iter() {
             let months_map = year_month_items.get(year).cloned().unwrap_or_default();
             let monthly = build_monthly_recaps(
@@ -929,12 +894,9 @@ impl SiteGenerator {
                 ),
                 mappers::map_recap_year_scope(&monthly.comics, &summary_comics, Some(share_assets)),
             );
-            let year_json_path = self
-                .data_recap_dir()
-                .join("years")
-                .join(format!("{}.json", year));
-            self.write_registered_json_pretty(year_json_path, &year_response)?;
+            recap_years_payload.insert(year.to_string(), year_response);
         }
+        snapshot.recap_years = recap_years_payload;
 
         let current_years: HashSet<i32> = years.iter().copied().collect();
         self.cleanup_stale_recap_outputs(&current_years)?;

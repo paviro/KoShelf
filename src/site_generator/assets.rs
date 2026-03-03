@@ -3,6 +3,7 @@
 use super::SiteGenerator;
 use crate::contracts::{mappers, site::SiteCapabilities};
 use crate::models::{LibraryItem, StatisticsData};
+use crate::runtime::ContractSnapshot;
 use crate::templates::NotFoundTemplate;
 use anyhow::{Context, Result};
 use askama::Template;
@@ -22,18 +23,11 @@ impl SiteGenerator {
     ) -> Result<()> {
         fs::create_dir_all(&self.output_dir)?;
 
-        // New transport-contract static data root.
-        fs::create_dir_all(self.data_dir())?;
-
         // Create content and covers dirs only when there are items to show.
         if !items.is_empty() {
             fs::create_dir_all(self.books_dir())?; // may be unused when only comics exist; harmless
             fs::create_dir_all(self.comics_dir())?;
             fs::create_dir_all(self.covers_dir())?;
-
-            // New /data library outputs.
-            fs::create_dir_all(self.data_books_dir())?;
-            fs::create_dir_all(self.data_comics_dir())?;
         }
 
         // Always create assets directories for CSS/JS/icons as they're always needed
@@ -43,15 +37,6 @@ impl SiteGenerator {
 
         // Create directories based on what we have
         if stats_data.is_some() {
-            // Create /data directories for the future scoped contracts.
-            fs::create_dir_all(self.data_statistics_dir())?;
-            fs::create_dir_all(self.data_statistics_dir().join("weeks"))?;
-            fs::create_dir_all(self.data_statistics_dir().join("years"))?;
-            fs::create_dir_all(self.data_calendar_dir())?;
-            fs::create_dir_all(self.data_calendar_dir().join("months"))?;
-            fs::create_dir_all(self.data_recap_dir())?;
-            fs::create_dir_all(self.data_recap_dir().join("years"))?;
-
             // Recap pages directory (static HTML)
             fs::create_dir_all(self.recap_dir())?;
 
@@ -71,6 +56,7 @@ impl SiteGenerator {
         &self,
         items: &[LibraryItem],
         stats_data: &Option<StatisticsData>,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         // Write the pre-compiled CSS (always needed for basic styling)
         let css_content = include_str!(concat!(env!("OUT_DIR"), "/compiled_style.css"));
@@ -136,7 +122,7 @@ impl SiteGenerator {
         let locales_response =
             mappers::map_locales_response(meta.clone(), &self.translations.raw_json())
                 .context("Failed to build /data/locales.json")?;
-        self.write_registered_json_pretty(self.data_dir().join("locales.json"), &locales_response)?;
+        snapshot.locales = Some(locales_response);
 
         // New /data/site.json contract payload.
         let has_books = items.iter().any(|item| item.is_book());
@@ -151,10 +137,10 @@ impl SiteGenerator {
                 has_statistics,
                 has_recap: has_statistics,
                 supports_api: self.is_internal_server,
-                supports_static_data: true,
+                supports_static_data: self.should_emit_static_data(),
             },
         );
-        self.write_registered_json_pretty(self.data_dir().join("site.json"), &site_response)?;
+        snapshot.site = Some(site_response);
 
         // Always emit list contracts so API/static endpoints are present even when empty.
         let books: Vec<LibraryItem> = items
@@ -166,7 +152,7 @@ impl SiteGenerator {
             mappers::build_meta(version.clone(), generated_at.clone()),
             &books,
         );
-        self.write_registered_json_pretty(self.data_dir().join("books.json"), &books_response)?;
+        snapshot.books = Some(books_response);
 
         let comics: Vec<LibraryItem> = items
             .iter()
@@ -175,7 +161,7 @@ impl SiteGenerator {
             .collect();
         let comics_response =
             mappers::map_library_list_response(mappers::build_meta(version, generated_at), &comics);
-        self.write_registered_json_pretty(self.data_dir().join("comics.json"), &comics_response)?;
+        snapshot.comics = Some(comics_response);
 
         // PWA manifest
         let manifest_content = include_str!("../../assets/manifest.json");

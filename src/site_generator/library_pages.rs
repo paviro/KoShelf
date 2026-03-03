@@ -4,6 +4,7 @@ use super::SiteGenerator;
 use crate::contracts::mappers;
 use crate::koreader::BookStatistics;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
+use crate::runtime::ContractSnapshot;
 use crate::templates::{ItemDetailMarkdownTemplate, ItemDetailTemplate, LibraryListTemplate};
 use anyhow::Result;
 use askama::Template;
@@ -76,22 +77,6 @@ impl SiteGenerator {
         }
     }
 
-    fn write_contract_list(&self, content_type: ContentType, items: &[LibraryItem]) -> Result<()> {
-        let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
-
-        let filtered_items: Vec<LibraryItem> = items
-            .iter()
-            .filter(|item| item.content_type() == content_type)
-            .cloned()
-            .collect();
-
-        let response = mappers::map_library_list_response(meta, &filtered_items);
-        let path = self
-            .data_dir()
-            .join(format!("{}.json", Self::content_slug(content_type)));
-        self.write_registered_json_pretty(path, &response)
-    }
-
     async fn generate_content_list(
         &self,
         content_type: ContentType,
@@ -105,7 +90,6 @@ impl SiteGenerator {
         );
 
         let buckets = StatusBuckets::from_items(items);
-        self.write_contract_list(content_type, items)?;
 
         let template = LibraryListTemplate {
             site_title: self.site_title.clone(),
@@ -147,6 +131,7 @@ impl SiteGenerator {
         items: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
         ui: &UiContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!(
             "Generating {} detail pages...",
@@ -221,11 +206,18 @@ impl SiteGenerator {
                 item_stats.clone(),
                 session_stats,
             );
-            fs::create_dir_all(self.data_content_dir(content_type))?;
-            let data_item_path = self
-                .data_content_dir(content_type)
-                .join(format!("{}.json", item.id));
-            self.write_registered_json_pretty(data_item_path, &contract_detail)?;
+            match content_type {
+                ContentType::Book => {
+                    snapshot
+                        .book_details
+                        .insert(item.id.clone(), contract_detail);
+                }
+                ContentType::Comic => {
+                    snapshot
+                        .comic_details
+                        .insert(item.id.clone(), contract_detail);
+                }
+            }
         }
 
         Ok(())
@@ -377,8 +369,9 @@ impl SiteGenerator {
         books: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
         ui: &UiContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
-        self.generate_content_pages(ContentType::Book, books, stats_data, ui)
+        self.generate_content_pages(ContentType::Book, books, stats_data, ui, snapshot)
             .await
     }
 
@@ -387,8 +380,9 @@ impl SiteGenerator {
         comics: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
         ui: &UiContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
-        self.generate_content_pages(ContentType::Comic, comics, stats_data, ui)
+        self.generate_content_pages(ContentType::Comic, comics, stats_data, ui, snapshot)
             .await
     }
 }

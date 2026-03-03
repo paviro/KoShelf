@@ -6,8 +6,16 @@ import { HashRouter } from 'react-router-dom';
 import { App } from './App';
 import { translation } from './shared/i18n';
 
-if (import.meta.env.DEV) {
+const SERVER_MODE_STORAGE_KEY = 'koshelf_server_mode';
+
+if (window.__KOSHELF_SERVER_MODE !== 'external') {
     window.__KOSHELF_SERVER_MODE = 'internal';
+
+    try {
+        localStorage.setItem(SERVER_MODE_STORAGE_KEY, JSON.stringify('internal'));
+    } catch {
+        // Ignore storage write failures.
+    }
 }
 
 const queryClient = new QueryClient({

@@ -24,10 +24,13 @@ use crate::i18n::Translations;
 use crate::koreader::{StatisticsCalculator, StatisticsParser, calculate_partial_md5};
 use crate::library::scan_library;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
+use crate::runtime::ContractSnapshot;
 use anyhow::Result;
 use log::info;
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use utils::{NavContext, UiContext, completion_years_desc};
@@ -141,6 +144,129 @@ impl SiteGenerator {
         self.data_dir().join("recap")
     }
 
+    fn should_emit_static_data(&self) -> bool {
+        !self.is_internal_server
+    }
+
+    fn write_optional_snapshot_json<T: Serialize>(
+        &self,
+        path: PathBuf,
+        value: Option<&T>,
+    ) -> Result<()> {
+        if let Some(value) = value {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            self.write_registered_json_pretty(path, value)
+        } else {
+            match fs::remove_file(&path) {
+                Ok(_) => Ok(()),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(error) => Err(error.into()),
+            }
+        }
+    }
+
+    fn cleanup_stale_snapshot_json_files(
+        &self,
+        directory: &Path,
+        valid_stems: &HashSet<&str>,
+    ) -> Result<()> {
+        if !directory.exists() {
+            return Ok(());
+        }
+
+        let entries = fs::read_dir(directory)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            if let Some(stem) = path.file_stem().and_then(|name| name.to_str())
+                && !valid_stems.contains(stem)
+            {
+                fs::remove_file(path)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn write_snapshot_json_map<T: Serialize>(
+        &self,
+        directory: PathBuf,
+        values: &HashMap<String, T>,
+    ) -> Result<()> {
+        fs::create_dir_all(&directory)?;
+
+        for (key, value) in values {
+            let path = directory.join(format!("{}.json", key));
+            self.write_registered_json_pretty(path, value)?;
+        }
+
+        let valid_stems: HashSet<&str> = values.keys().map(String::as_str).collect();
+        self.cleanup_stale_snapshot_json_files(&directory, &valid_stems)
+    }
+
+    fn write_snapshot_static_data(&self, snapshot: &ContractSnapshot) -> Result<()> {
+        fs::create_dir_all(self.data_dir())?;
+
+        self.write_optional_snapshot_json(
+            self.data_dir().join("site.json"),
+            snapshot.site.as_ref(),
+        )?;
+        self.write_optional_snapshot_json(
+            self.data_dir().join("locales.json"),
+            snapshot.locales.as_ref(),
+        )?;
+        self.write_optional_snapshot_json(
+            self.data_dir().join("books.json"),
+            snapshot.books.as_ref(),
+        )?;
+        self.write_optional_snapshot_json(
+            self.data_dir().join("comics.json"),
+            snapshot.comics.as_ref(),
+        )?;
+
+        self.write_snapshot_json_map(self.data_books_dir(), &snapshot.book_details)?;
+        self.write_snapshot_json_map(self.data_comics_dir(), &snapshot.comic_details)?;
+
+        self.write_optional_snapshot_json(
+            self.data_statistics_dir().join("index.json"),
+            snapshot.statistics_index.as_ref(),
+        )?;
+        self.write_snapshot_json_map(
+            self.data_statistics_dir().join("weeks"),
+            &snapshot.statistics_weeks,
+        )?;
+        self.write_snapshot_json_map(
+            self.data_statistics_dir().join("years"),
+            &snapshot.statistics_years,
+        )?;
+
+        self.write_optional_snapshot_json(
+            self.data_calendar_dir().join("months.json"),
+            snapshot.calendar_months.as_ref(),
+        )?;
+        self.write_snapshot_json_map(
+            self.data_calendar_dir().join("months"),
+            &snapshot.calendar_by_month,
+        )?;
+
+        self.write_optional_snapshot_json(
+            self.data_recap_dir().join("index.json"),
+            snapshot.recap_index.as_ref(),
+        )?;
+        self.write_snapshot_json_map(self.data_recap_dir().join("years"), &snapshot.recap_years)?;
+
+        Ok(())
+    }
+
     fn recap_latest_href(stats_data: Option<&StatisticsData>) -> Option<String> {
         let sd = stats_data?;
         completion_years_desc(sd)
@@ -252,9 +378,10 @@ impl SiteGenerator {
         })
     }
 
-    pub async fn generate(&self) -> Result<()> {
+    pub async fn generate(&self) -> Result<ContractSnapshot> {
         info!("Generating static site in: {:?}", self.output_dir);
         let mut ctx = self.build_generation_context().await?;
+        let mut snapshot = ContractSnapshot::default();
         let ui = UiContext {
             recap_latest_href: ctx.recap_latest_href.clone(),
             nav: ctx.nav,
@@ -265,7 +392,7 @@ impl SiteGenerator {
             .await?;
 
         // Copy static assets
-        self.copy_static_assets(&ctx.all_items, &ctx.stats_data)
+        self.copy_static_assets(&ctx.all_items, &ctx.stats_data, &mut snapshot)
             .await?;
 
         // Generate covers for all items (books and comics)
@@ -281,11 +408,11 @@ impl SiteGenerator {
         self.cleanup_stale_covers(&ctx.all_items)?;
 
         // Generate individual book pages
-        self.generate_book_pages(&ctx.books, &mut ctx.stats_data, &ui)
+        self.generate_book_pages(&ctx.books, &mut ctx.stats_data, &ui, &mut snapshot)
             .await?;
 
         // Generate individual comic pages (always at /comics/<id>/)
-        self.generate_comic_pages(&ctx.comics, &mut ctx.stats_data, &ui)
+        self.generate_comic_pages(&ctx.comics, &mut ctx.stats_data, &ui, &mut snapshot)
             .await?;
 
         // Generate list pages with conditional routing:
@@ -305,16 +432,20 @@ impl SiteGenerator {
 
         if let Some(ref mut stats_data) = ctx.stats_data {
             // Generate statistics page (render to root if no items at all)
-            self.generate_statistics_page(stats_data, ctx.all_items.is_empty(), &ui)
+            self.generate_statistics_page(stats_data, ctx.all_items.is_empty(), &ui, &mut snapshot)
                 .await?;
 
             // Generate calendar page if we have statistics data
-            self.generate_calendar_page(stats_data, &ctx.all_items, &ui)
+            self.generate_calendar_page(stats_data, &ctx.all_items, &ui, &mut snapshot)
                 .await?;
 
             // Generate recap pages (static yearly)
-            self.generate_recap_pages(stats_data, &ctx.all_items, ctx.nav)
+            self.generate_recap_pages(stats_data, &ctx.all_items, ctx.nav, &mut snapshot)
                 .await?;
+        }
+
+        if self.should_emit_static_data() {
+            self.write_snapshot_static_data(&snapshot)?;
         }
 
         // Write cache manifest for PWA smart caching
@@ -323,6 +454,6 @@ impl SiteGenerator {
 
         info!("Static site generation completed!");
 
-        Ok(())
+        Ok(snapshot)
     }
 }

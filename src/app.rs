@@ -1,12 +1,12 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
 use crate::library::{FileWatcher, MetadataLocation};
-use crate::runtime::{ContractSnapshot, create_snapshot_store};
+use crate::runtime::create_snapshot_store;
 use crate::server::{WebServer, create_version_notifier};
 use crate::site_generator::SiteGenerator;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
-use log::{info, warn};
+use log::info;
 use tempfile::TempDir;
 
 enum RunMode {
@@ -117,7 +117,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     let site_generator = SiteGenerator::new(config.clone());
 
     // Generate initial site
-    site_generator.generate().await?;
+    let initial_snapshot = site_generator.generate().await?;
 
     match plan.mode {
         RunMode::StaticExport => Ok(()),
@@ -136,17 +136,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             let version_notifier = create_version_notifier();
             let snapshot_store = create_snapshot_store();
             let serve_react_shell = env_flag("KOSHELF_USE_REACT_SHELL");
-
-            let data_dir = plan.output_dir.join("data");
-            match ContractSnapshot::load_from_data_dir(&data_dir) {
-                Ok(snapshot) => snapshot_store.replace(snapshot),
-                Err(error) => {
-                    warn!(
-                        "Failed to load initial runtime snapshot from {:?}: {}",
-                        data_dir, error
-                    );
-                }
-            }
+            snapshot_store.replace(initial_snapshot);
 
             // Start file watcher with version notifier
             let file_watcher = FileWatcher::new(

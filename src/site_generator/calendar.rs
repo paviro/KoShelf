@@ -4,54 +4,22 @@ use super::SiteGenerator;
 use crate::contracts::mappers;
 use crate::koreader::CalendarGenerator;
 use crate::models::{LibraryItem, StatisticsData};
+use crate::runtime::ContractSnapshot;
 use crate::templates::CalendarTemplate;
 use anyhow::Result;
 use askama::Template;
-use log::{info, warn};
-use std::collections::HashSet;
-use std::fs;
+use log::info;
+use std::collections::HashMap;
 
 use super::utils::UiContext;
 
 impl SiteGenerator {
-    fn cleanup_stale_calendar_month_data(&self, valid_month_keys: &HashSet<String>) -> Result<()> {
-        let months_dir = self.data_calendar_dir().join("months");
-        if !months_dir.exists() {
-            return Ok(());
-        }
-
-        let entries = fs::read_dir(&months_dir)?;
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-
-            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                continue;
-            }
-
-            if let Some(stem) = path.file_stem().and_then(|name| name.to_str())
-                && !valid_month_keys.contains(stem)
-            {
-                info!("Removing stale calendar month data file: {:?}", path);
-                if let Err(error) = fs::remove_file(&path) {
-                    warn!(
-                        "Failed to remove stale calendar month data file {:?}: {}",
-                        path, error
-                    );
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     pub(crate) async fn generate_calendar_page(
         &self,
         stats_data: &mut StatisticsData,
         books: &[LibraryItem],
         ui: &UiContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!("Generating calendar page...");
 
@@ -63,25 +31,17 @@ impl SiteGenerator {
         let mut available_months: Vec<String> = calendar_months.keys().cloned().collect();
         available_months.sort_by(|a, b| b.cmp(a));
 
-        let valid_month_keys: HashSet<String> = available_months.iter().cloned().collect();
-        self.cleanup_stale_calendar_month_data(&valid_month_keys)?;
-
         let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
         let data_months = mappers::map_calendar_months_response(meta.clone(), available_months);
-        self.write_registered_json_pretty(
-            self.data_calendar_dir().join("months.json"),
-            &data_months,
-        )?;
+        snapshot.calendar_months = Some(data_months);
 
         // Individual month files
+        let mut month_payloads = HashMap::new();
         for (ym, month_data) in &calendar_months {
             let contract_month = mappers::map_calendar_month_response(meta.clone(), month_data);
-            let data_month_path = self
-                .data_calendar_dir()
-                .join("months")
-                .join(format!("{}.json", ym));
-            self.write_registered_json_pretty(data_month_path, &contract_month)?;
+            month_payloads.insert(ym.clone(), contract_month);
         }
+        snapshot.calendar_by_month = month_payloads;
 
         // Create the template
         let template = CalendarTemplate {

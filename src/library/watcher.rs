@@ -1,7 +1,7 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
-use crate::runtime::{ContractSnapshot, SharedSnapshotStore};
+use crate::runtime::SharedSnapshotStore;
 use crate::server::version::SharedVersionNotifier;
 use crate::site_generator::SiteGenerator;
 use anyhow::Result;
@@ -117,27 +117,13 @@ impl FileWatcher {
 
                     info!("Starting delayed site rebuild after quiet period");
 
-                    // Invalidate any previously published in-memory snapshot.
-                    // Rebuild currently writes fresh contract data to disk and snapshot repopulation
-                    // will be added in the runtime-backed API phase.
-                    if let Some(ref snapshot_store) = snapshot_store_clone {
-                        snapshot_store.clear();
-                    }
-
                     // Create new site generator and regenerate everything
                     let site_generator = SiteGenerator::new(config_clone.clone());
 
                     match site_generator.generate().await {
-                        Ok(_) => {
+                        Ok(snapshot) => {
                             if let Some(ref snapshot_store) = snapshot_store_clone {
-                                let data_dir = config_clone.output_dir.join("data");
-                                match ContractSnapshot::load_from_data_dir(&data_dir) {
-                                    Ok(snapshot) => snapshot_store.replace(snapshot),
-                                    Err(error) => warn!(
-                                        "Failed to reload runtime snapshot from {:?}: {}",
-                                        data_dir, error
-                                    ),
-                                }
+                                snapshot_store.replace(snapshot);
                             }
 
                             info!("Delayed site rebuild completed successfully");

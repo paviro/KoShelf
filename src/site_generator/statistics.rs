@@ -4,11 +4,12 @@ use super::SiteGenerator;
 use crate::contracts::mappers;
 use crate::koreader::StatisticsParser;
 use crate::models::{ContentType, ReadingStats, StatisticsData};
+use crate::runtime::ContractSnapshot;
 use crate::templates::{StatsEmptyTemplate, StatsTemplate};
 use anyhow::Result;
 use askama::Template;
-use log::{info, warn};
-use std::collections::{HashMap, HashSet};
+use log::info;
+use std::collections::HashMap;
 use std::fs;
 
 use super::utils::{UiContext, completion_counts_by_year};
@@ -19,6 +20,7 @@ impl SiteGenerator {
         stats_data: &mut StatisticsData,
         render_to_root: bool,
         ui: &UiContext,
+        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         let show_type_filter = ui.nav.show_type_filter();
         if render_to_root {
@@ -52,7 +54,8 @@ impl SiteGenerator {
 
         let available_years_all =
             mappers::available_years_from_stats(&reading_stats_all, &completion_counts_all);
-        self.export_statistics_contract_data(
+        self.populate_statistics_snapshot(
+            snapshot,
             &available_years_all,
             &reading_stats_all,
             &completion_counts_all,
@@ -60,7 +63,7 @@ impl SiteGenerator {
             &completion_counts_books,
             &reading_stats_comics_for_contract,
             &completion_counts_comics,
-        )?;
+        );
 
         // Render per-type views when both types exist in the site.
         let (
@@ -225,63 +228,10 @@ impl SiteGenerator {
         by_key
     }
 
-    fn cleanup_stale_statistics_data(
-        &self,
-        valid_week_keys: &HashSet<String>,
-        valid_years: &HashSet<String>,
-    ) -> Result<()> {
-        self.cleanup_stale_json_files(
-            self.data_statistics_dir().join("weeks"),
-            valid_week_keys,
-            "statistics week",
-        )?;
-        self.cleanup_stale_json_files(
-            self.data_statistics_dir().join("years"),
-            valid_years,
-            "statistics year",
-        )
-    }
-
-    fn cleanup_stale_json_files(
-        &self,
-        directory: std::path::PathBuf,
-        valid_stems: &HashSet<String>,
-        label: &str,
-    ) -> Result<()> {
-        if !directory.exists() {
-            return Ok(());
-        }
-
-        let entries = fs::read_dir(&directory)?;
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-
-            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                continue;
-            }
-
-            if let Some(stem) = path.file_stem().and_then(|name| name.to_str())
-                && !valid_stems.contains(stem)
-            {
-                info!("Removing stale {} data file: {:?}", label, path);
-                if let Err(error) = fs::remove_file(&path) {
-                    warn!(
-                        "Failed to remove stale {} data file {:?}: {}",
-                        label, path, error
-                    );
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     #[allow(clippy::too_many_arguments)]
-    fn export_statistics_contract_data(
+    fn populate_statistics_snapshot(
         &self,
+        snapshot: &mut ContractSnapshot,
         available_years: &[i32],
         reading_stats_all: &ReadingStats,
         completion_counts_all: &HashMap<i32, i64>,
@@ -289,7 +239,7 @@ impl SiteGenerator {
         completion_counts_books: &HashMap<i32, i64>,
         reading_stats_comics: &ReadingStats,
         completion_counts_comics: &HashMap<i32, i64>,
-    ) -> Result<()> {
+    ) {
         let max_scale_seconds = self.heatmap_scale_max.map(i64::from).unwrap_or(0);
         let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
 
@@ -301,24 +251,12 @@ impl SiteGenerator {
             reading_stats_comics,
             max_scale_seconds,
         );
-
-        let valid_week_keys: HashSet<String> = index_response
-            .available_weeks
-            .iter()
-            .map(|week| week.week_key.clone())
-            .collect();
-        let valid_years: HashSet<String> = available_years
-            .iter()
-            .map(|year| year.to_string())
-            .collect();
-        self.cleanup_stale_statistics_data(&valid_week_keys, &valid_years)?;
-
-        let index_path = self.data_statistics_dir().join("index.json");
-        self.write_registered_json_pretty(index_path, &index_response)?;
+        snapshot.statistics_index = Some(index_response.clone());
 
         let all_weeks = Self::week_stats_by_key(&reading_stats_all.weeks);
         let books_weeks = Self::week_stats_by_key(&reading_stats_books.weeks);
         let comics_weeks = Self::week_stats_by_key(&reading_stats_comics.weeks);
+        let mut week_payloads = HashMap::new();
 
         for week in &index_response.available_weeks {
             let week_response = mappers::map_statistics_week_response(
@@ -328,13 +266,11 @@ impl SiteGenerator {
                 books_weeks.get(&week.week_key),
                 comics_weeks.get(&week.week_key),
             );
-
-            let week_path = self
-                .data_statistics_dir()
-                .join("weeks")
-                .join(format!("{}.json", week.week_key));
-            self.write_registered_json_pretty(week_path, &week_response)?;
+            week_payloads.insert(week.week_key.clone(), week_response);
         }
+        snapshot.statistics_weeks = week_payloads;
+
+        let mut year_payloads = HashMap::new();
 
         for year in available_years {
             let year_response = mappers::map_statistics_year_response(
@@ -348,14 +284,8 @@ impl SiteGenerator {
                 completion_counts_comics,
                 max_scale_seconds,
             );
-
-            let year_path = self
-                .data_statistics_dir()
-                .join("years")
-                .join(format!("{}.json", year));
-            self.write_registered_json_pretty(year_path, &year_response)?;
+            year_payloads.insert(year.to_string(), year_response);
         }
-
-        Ok(())
+        snapshot.statistics_years = year_payloads;
     }
 }

@@ -5,12 +5,12 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
-use serde_json::Value;
-use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::ServerState;
 use crate::contracts::common::{MonthKey, Scope, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
+use crate::runtime::ContractSnapshot;
 
 #[derive(Debug, Deserialize)]
 pub struct ScopeQuery {
@@ -26,6 +26,10 @@ fn internal_error() -> Response {
         StatusCode::INTERNAL_SERVER_ERROR,
         ApiErrorCode::InternalServerError,
     )
+}
+
+fn not_found() -> Response {
+    api_error(StatusCode::NOT_FOUND, ApiErrorCode::NotFound)
 }
 
 fn parse_scope(query: ScopeQuery) -> Result<Scope, Response> {
@@ -47,122 +51,80 @@ fn validate_year_key(value: &str) -> Result<YearKey, Response> {
     YearKey::parse(value).map_err(|_| api_error(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidYear))
 }
 
-async fn read_data_json(state: &ServerState, relative_path: PathBuf) -> Result<Value, Response> {
-    let file_path = state.site_dir.join("data").join(relative_path);
-
-    let content = tokio::fs::read_to_string(&file_path)
-        .await
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                api_error(StatusCode::NOT_FOUND, ApiErrorCode::NotFound)
-            } else {
-                internal_error()
-            }
-        })?;
-
-    serde_json::from_str::<Value>(&content).map_err(|_| internal_error())
-}
-
-fn project_scope(value: Value, scope: Scope) -> Value {
-    let mut root = match value {
-        Value::Object(map) => map,
-        other => return other,
-    };
-
-    let Some(Value::Object(scopes)) = root.remove("scopes") else {
-        return Value::Object(root);
-    };
-
-    let selected = scopes
-        .get(scope.as_str())
-        .cloned()
-        .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-
-    if let Value::Object(selected_scope) = selected {
-        for (key, value) in selected_scope {
-            root.insert(key, value);
-        }
-    }
-
-    Value::Object(root)
-}
-
-async fn serve_data_json(state: &ServerState, relative_path: PathBuf) -> Response {
-    match read_data_json(state, relative_path).await {
-        Ok(value) => (StatusCode::OK, Json(value)).into_response(),
-        Err(response) => response,
-    }
-}
-
-async fn serve_data_json_scoped(
-    state: &ServerState,
-    relative_path: PathBuf,
-    scope: Scope,
-) -> Response {
-    match read_data_json(state, relative_path).await {
-        Ok(value) => (StatusCode::OK, Json(project_scope(value, scope))).into_response(),
-        Err(response) => response,
-    }
+fn runtime_snapshot(state: &ServerState) -> Result<Arc<ContractSnapshot>, Response> {
+    state.snapshot_store.get().ok_or_else(internal_error)
 }
 
 pub async fn site(State(state): State<ServerState>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(site) = snapshot.site.as_ref()
-    {
-        return (StatusCode::OK, Json(site.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("site.json")).await
+    match snapshot.site.as_ref() {
+        Some(site) => (StatusCode::OK, Json(site.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn locales(State(state): State<ServerState>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(locales) = snapshot.locales.as_ref()
-    {
-        return (StatusCode::OK, Json(locales.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("locales.json")).await
+    match snapshot.locales.as_ref() {
+        Some(locales) => (StatusCode::OK, Json(locales.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn books(State(state): State<ServerState>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(books) = snapshot.books.as_ref()
-    {
-        return (StatusCode::OK, Json(books.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("books.json")).await
+    match snapshot.books.as_ref() {
+        Some(books) => (StatusCode::OK, Json(books.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn book_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(book) = snapshot.book_details.get(&id)
-    {
-        return (StatusCode::OK, Json(book.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("books").join(format!("{}.json", id))).await
+    match snapshot.book_details.get(&id) {
+        Some(book) => (StatusCode::OK, Json(book.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn comics(State(state): State<ServerState>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(comics) = snapshot.comics.as_ref()
-    {
-        return (StatusCode::OK, Json(comics.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("comics.json")).await
+    match snapshot.comics.as_ref() {
+        Some(comics) => (StatusCode::OK, Json(comics.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn comic_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(comic) = snapshot.comic_details.get(&id)
-    {
-        return (StatusCode::OK, Json(comic.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("comics").join(format!("{}.json", id))).await
+    match snapshot.comic_details.get(&id) {
+        Some(comic) => (StatusCode::OK, Json(comic.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn statistics_index(
@@ -174,18 +136,15 @@ pub async fn statistics_index(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(index) = snapshot.statistics_index.as_ref()
-    {
-        return (StatusCode::OK, Json(index.scoped(scope))).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json_scoped(
-        &state,
-        PathBuf::from("statistics").join("index.json"),
-        scope,
-    )
-    .await
+    match snapshot.statistics_index.as_ref() {
+        Some(index) => (StatusCode::OK, Json(index.scoped(scope))).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn statistics_week(
@@ -202,20 +161,15 @@ pub async fn statistics_week(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(week) = snapshot.statistics_weeks.get(week_key.as_str())
-    {
-        return (StatusCode::OK, Json(week.scoped(scope))).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json_scoped(
-        &state,
-        PathBuf::from("statistics")
-            .join("weeks")
-            .join(format!("{}.json", week_key.as_str())),
-        scope,
-    )
-    .await
+    match snapshot.statistics_weeks.get(week_key.as_str()) {
+        Some(week) => (StatusCode::OK, Json(week.scoped(scope))).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn statistics_year(
@@ -232,30 +186,27 @@ pub async fn statistics_year(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(year_stats) = snapshot.statistics_years.get(year.as_str())
-    {
-        return (StatusCode::OK, Json(year_stats.scoped(scope))).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json_scoped(
-        &state,
-        PathBuf::from("statistics")
-            .join("years")
-            .join(format!("{}.json", year.as_str())),
-        scope,
-    )
-    .await
+    match snapshot.statistics_years.get(year.as_str()) {
+        Some(year_stats) => (StatusCode::OK, Json(year_stats.scoped(scope))).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn calendar_months(State(state): State<ServerState>) -> Response {
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(months) = snapshot.calendar_months.as_ref()
-    {
-        return (StatusCode::OK, Json(months.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(&state, PathBuf::from("calendar").join("months.json")).await
+    match snapshot.calendar_months.as_ref() {
+        Some(months) => (StatusCode::OK, Json(months.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn calendar_month(
@@ -267,19 +218,15 @@ pub async fn calendar_month(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(month) = snapshot.calendar_by_month.get(month_key.as_str())
-    {
-        return (StatusCode::OK, Json(month.clone())).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json(
-        &state,
-        PathBuf::from("calendar")
-            .join("months")
-            .join(format!("{}.json", month_key.as_str())),
-    )
-    .await
+    match snapshot.calendar_by_month.get(month_key.as_str()) {
+        Some(month) => (StatusCode::OK, Json(month.clone())).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn recap_index(
@@ -291,13 +238,15 @@ pub async fn recap_index(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(index) = snapshot.recap_index.as_ref()
-    {
-        return (StatusCode::OK, Json(index.scoped(scope))).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json_scoped(&state, PathBuf::from("recap").join("index.json"), scope).await
+    match snapshot.recap_index.as_ref() {
+        Some(index) => (StatusCode::OK, Json(index.scoped(scope))).into_response(),
+        None => not_found(),
+    }
 }
 
 pub async fn recap_year(
@@ -314,18 +263,13 @@ pub async fn recap_year(
         Err(response) => return response,
     };
 
-    if let Some(snapshot) = state.snapshot_store.get()
-        && let Some(year_recap) = snapshot.recap_years.get(year.as_str())
-    {
-        return (StatusCode::OK, Json(year_recap.scoped(scope))).into_response();
-    }
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
 
-    serve_data_json_scoped(
-        &state,
-        PathBuf::from("recap")
-            .join("years")
-            .join(format!("{}.json", year.as_str())),
-        scope,
-    )
-    .await
+    match snapshot.recap_years.get(year.as_str()) {
+        Some(year_recap) => (StatusCode::OK, Json(year_recap.scoped(scope))).into_response(),
+        None => not_found(),
+    }
 }
