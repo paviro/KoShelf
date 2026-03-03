@@ -243,6 +243,7 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
                         </div>
 
                         <div
+                            key={yearData?.year ?? selectedYear ?? 'none'}
                             className="grid grid-cols-53 gap-1 w-full"
                             id="heatmapGrid"
                             ref={heatmapGridRef}
@@ -323,6 +324,14 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
                                                                 const timeoutId = window.setTimeout(
                                                                     () => {
                                                                         if (!element.isConnected) {
+                                                                            return;
+                                                                        }
+
+                                                                        if (
+                                                                            element.dataset
+                                                                                .animationToken !==
+                                                                            tokenKey
+                                                                        ) {
                                                                             return;
                                                                         }
 
