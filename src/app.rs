@@ -56,13 +56,6 @@ fn metadata_location(cli: &Cli) -> MetadataLocation {
     }
 }
 
-fn env_flag(name: &str) -> bool {
-    matches!(
-        std::env::var(name).as_deref(),
-        Ok("1") | Ok("true") | Ok("TRUE") | Ok("yes") | Ok("YES") | Ok("on") | Ok("ON")
-    )
-}
-
 /// Run KoShelf with the provided CLI args.
 ///
 /// `src/main.rs` is responsible for logging init and Clap argument parsing.
@@ -135,7 +128,6 @@ pub async fn run(cli: Cli) -> Result<()> {
             // Create shared version notifier for long-polling
             let version_notifier = create_version_notifier();
             let snapshot_store = create_snapshot_store();
-            let serve_react_shell = env_flag("KOSHELF_USE_REACT_SHELL");
             snapshot_store.replace(initial_snapshot);
 
             // Start file watcher with version notifier
@@ -151,7 +143,6 @@ pub async fn run(cli: Cli) -> Result<()> {
                 cli.port,
                 version_notifier,
                 snapshot_store,
-                serve_react_shell,
             );
 
             // Run both file watcher and web server concurrently

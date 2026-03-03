@@ -27,7 +27,6 @@ pub struct WebServer {
     port: u16,
     version_notifier: SharedVersionNotifier,
     snapshot_store: SharedSnapshotStore,
-    serve_react_shell: bool,
 }
 
 impl WebServer {
@@ -36,20 +35,16 @@ impl WebServer {
         port: u16,
         version_notifier: SharedVersionNotifier,
         snapshot_store: SharedSnapshotStore,
-        serve_react_shell: bool,
     ) -> Self {
         Self {
             site_dir,
             port,
             version_notifier,
             snapshot_store,
-            serve_react_shell,
         }
     }
 
     pub async fn run(self) -> Result<()> {
-        let serve_react_shell = self.serve_react_shell;
-
         let state = ServerState {
             site_dir: self.site_dir.clone(),
             version_notifier: self.version_notifier.clone(),
@@ -82,14 +77,12 @@ impl WebServer {
             .route("/api/recap/years/{year}", get(api::recap_year))
             // Long-poll endpoint for version changes
             .route("/api/events/version", get(version_poll_handler))
+            // Embedded React shell mounted under /app.
+            .route("/app", get(react_shell_index_handler))
+            .route("/app/", get(react_shell_index_handler))
+            .route("/app/index.html", get(react_shell_index_handler))
+            .route("/react-assets/{*path}", get(react_shell_asset_handler))
             .with_state(state);
-
-        if serve_react_shell {
-            app = app
-                .route("/", get(react_shell_index_handler))
-                .route("/index.html", get(react_shell_index_handler))
-                .route("/react-assets/{*path}", get(react_shell_asset_handler));
-        }
 
         app = app
             .fallback_service(ServeDir::new(&self.site_dir).not_found_service(not_found_service))
@@ -105,11 +98,7 @@ impl WebServer {
             "Web server running on http://localhost:{}, binding to: 0.0.0.0",
             self.port
         );
-        if serve_react_shell {
-            info!("Embedded React shell enabled at /");
-        } else {
-            info!("Embedded React shell disabled; serving legacy root route");
-        }
+        info!("Embedded React shell mounted at /app");
 
         axum::serve(listener, app).await?;
 
