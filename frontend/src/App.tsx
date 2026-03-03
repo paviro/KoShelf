@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 
-import { AppRoutes } from './app/AppRoutes';
-import { AppShell } from './features/layout/AppShell';
-import { buildNavItems } from './features/layout/shell-nav';
+import { AppRoutes } from './app/routes/AppRoutes';
+import { AppShell } from './app/shell/AppShell';
+import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { RecapIndexResponse, SiteResponse } from './shared/contracts';
 

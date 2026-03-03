@@ -1,4 +1,4 @@
-import { api, type ScopeValue } from './api';
+import { api, type ScopeValue } from '../../../shared/api';
 
 export type StatisticsScope = ScopeValue;
 

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { LuBookOpen, LuCalendarDays, LuClock3 } from 'react-icons/lu';
 
 import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
-} from '../../../shared/horizontal-scroll';
-import { LoadingSpinner } from '../../../shared/components/LoadingSpinner';
-import { DataFormatter } from '../../../shared/statistics-formatters';
-import { monthKeyAt, toShortMonthKey } from '../../../shared/statistics-months';
+} from '../../../shared/lib/dom/horizontal-scroll';
+import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { DataFormatter } from '../lib/formatters';
+import { monthKeyAt, toShortMonthKey } from '../lib/months';
 import { translation } from '../../../shared/i18n';
 import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
 import {
@@ -14,15 +15,9 @@ import {
     type SectionName,
     type YearlySummaryStats,
 } from '../model/statistics-model';
-import { StatBadgeCard } from './StatBadgeCard';
-import { StatisticsSection } from './StatisticsSection';
-import { YearSelector } from './YearSelector';
-
-const CLOCK_ICON = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0';
-const BOOK_ICON =
-    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253';
-const CALENDAR_ICON =
-    'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z';
+import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
+import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 
 type YearlyStatsSectionProps = {
     visible: boolean;
@@ -73,8 +68,8 @@ export function YearlyStatsSection({
     }, [selectedYear, yearlyMonthlyStats]);
 
     return (
-        <StatisticsSection
-            sectionName="yearly-stats"
+        <CollapsibleSection
+            sectionKey="yearly-stats"
             accentClass="bg-gradient-to-b from-violet-400 to-violet-600"
             title={translation.get('yearly-statistics')}
             visible={visible}
@@ -92,9 +87,9 @@ export function YearlyStatsSection({
             }
         >
             <div className="mb-4 sm:mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <StatBadgeCard
+                <MetricCard
                     variant="compact"
-                    iconPath={CLOCK_ICON}
+                    icon={LuClock3}
                     iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
                     valueId="yearlyStatsReadTime"
@@ -102,9 +97,9 @@ export function YearlyStatsSection({
                     label={translation.get('total-read-time')}
                 />
 
-                <StatBadgeCard
+                <MetricCard
                     variant="compact"
-                    iconPath={BOOK_ICON}
+                    icon={LuBookOpen}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     valueId="yearlyStatsCompletedCount"
@@ -112,9 +107,9 @@ export function YearlyStatsSection({
                     label={translation.get('completed-books')}
                 />
 
-                <StatBadgeCard
+                <MetricCard
                     variant="compact"
-                    iconPath={CALENDAR_ICON}
+                    icon={LuCalendarDays}
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
                     valueId="yearlyStatsActiveDays"
@@ -228,6 +223,6 @@ export function YearlyStatsSection({
                     </div>
                 </div>
             </div>
-        </StatisticsSection>
+        </CollapsibleSection>
     );
 }

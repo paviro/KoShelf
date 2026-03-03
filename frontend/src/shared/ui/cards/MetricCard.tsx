@@ -1,26 +1,27 @@
 import type { ReactNode } from 'react';
+import type { IconType } from 'react-icons';
 
-type StatBadgeCardVariant = 'responsive' | 'compact';
+type MetricCardVariant = 'responsive' | 'compact';
 
-type StatBadgeCardProps = {
-    iconPath: string;
+type MetricCardProps = {
+    icon: IconType;
     iconContainerClassName: string;
     iconClassName: string;
     value: ReactNode;
     label: ReactNode;
     valueId?: string;
-    variant?: StatBadgeCardVariant;
+    variant?: MetricCardVariant;
 };
 
-export function StatBadgeCard({
-    iconPath,
+export function MetricCard({
+    icon: Icon,
     iconContainerClassName,
     iconClassName,
     value,
     label,
     valueId,
     variant = 'responsive',
-}: StatBadgeCardProps) {
+}: MetricCardProps) {
     if (variant === 'compact') {
         return (
             <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
@@ -28,19 +29,7 @@ export function StatBadgeCard({
                     <div
                         className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
                     >
-                        <svg
-                            className={`w-5 h-5 ${iconClassName}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d={iconPath}
-                            ></path>
-                        </svg>
+                        <Icon className={`w-5 h-5 ${iconClassName}`} aria-hidden="true" />
                     </div>
                     <div>
                         <div
@@ -62,19 +51,7 @@ export function StatBadgeCard({
                 <div
                     className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
                 >
-                    <svg
-                        className={`w-5 h-5 ${iconClassName}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d={iconPath}
-                        ></path>
-                    </svg>
+                    <Icon className={`w-5 h-5 ${iconClassName}`} aria-hidden="true" />
                 </div>
                 <div className="text-center @[140px]:text-left">
                     <div

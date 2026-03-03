@@ -5,7 +5,7 @@ import {
     loadStatisticsWeek,
     loadStatisticsYear,
     type StatisticsScope,
-} from '../../../shared/statistics-data-loader';
+} from '../api/statistics-data';
 
 export function useStatisticsIndexQuery(scope: StatisticsScope) {
     return useQuery({

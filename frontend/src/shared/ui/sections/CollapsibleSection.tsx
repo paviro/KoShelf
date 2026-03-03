@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
+import { LuChevronDown } from 'react-icons/lu';
 
-import { translation } from '../../../shared/i18n';
-import type { SectionName } from '../model/statistics-model';
+import { translation } from '../../i18n';
 
 type ToggleButtonProps = {
     visible: boolean;
@@ -18,26 +18,17 @@ function ToggleButton({ visible, onClick }: ToggleButtonProps) {
             <span className="hidden sm:inline text-sm text-gray-600 dark:text-dark-300">
                 {visible ? translation.get('toggle.hide') : translation.get('toggle.show')}
             </span>
-            <svg
+            <LuChevronDown
                 className="w-4 h-4 text-gray-600 dark:text-gray-300 transform transition-transform duration-200"
                 style={{ transform: visible ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                ></path>
-            </svg>
+                aria-hidden="true"
+            />
         </button>
     );
 }
 
-type StatisticsSectionProps = {
-    sectionName: SectionName;
+type CollapsibleSectionProps = {
+    sectionKey: string;
     accentClass: string;
     title: string;
     visible: boolean;
@@ -46,17 +37,17 @@ type StatisticsSectionProps = {
     children: ReactNode;
 };
 
-export function StatisticsSection({
-    sectionName,
+export function CollapsibleSection({
+    sectionKey,
     accentClass,
     title,
     visible,
     onToggle,
     controls,
     children,
-}: StatisticsSectionProps) {
+}: CollapsibleSectionProps) {
     return (
-        <section data-name={sectionName} data-default-visible="true">
+        <section data-name={sectionKey} data-default-visible="true">
             <div className="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center space-x-3">
                     <div className={`w-2 h-6 md:h-8 rounded-full ${accentClass}`}></div>
@@ -70,7 +61,7 @@ export function StatisticsSection({
                 </div>
             </div>
 
-            <div id={`${sectionName}Container`} className={visible ? '' : 'hidden'}>
+            <div id={`${sectionKey}Container`} className={visible ? '' : 'hidden'}>
                 {children}
             </div>
         </section>

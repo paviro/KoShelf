@@ -1,12 +1,9 @@
-import type {
-    StatisticsIndexResponse,
-    StatisticsYearResponse,
-} from '../../../shared/statistics-data-loader';
+import type { StatisticsIndexResponse, StatisticsYearResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 import { formatStreakDateRange, type SectionName } from '../model/statistics-model';
 import { HeatmapSection } from './HeatmapSection';
-import { StatisticsSection } from './StatisticsSection';
-import { YearSelector } from './YearSelector';
+import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
+import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 
 type ReadingStreakSectionProps = {
     visible: boolean;
@@ -30,8 +27,8 @@ export function ReadingStreakSection({
     longestStreak,
 }: ReadingStreakSectionProps) {
     return (
-        <StatisticsSection
-            sectionName="reading-streak"
+        <CollapsibleSection
+            sectionKey="reading-streak"
             accentClass="bg-gradient-to-b from-green-400 to-green-600"
             title={translation.get('reading-streak')}
             visible={visible}
@@ -107,6 +104,6 @@ export function ReadingStreakSection({
                     </div>
                 </div>
             </div>
-        </StatisticsSection>
+        </CollapsibleSection>
     );
 }

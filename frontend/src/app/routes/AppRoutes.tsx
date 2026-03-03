@@ -1,8 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { PlaceholderPage } from '../pages/PlaceholderPage';
-import { StatisticsPage } from '../pages/StatisticsPage';
-import { translation } from '../shared/i18n';
+import { RoutePlaceholder } from './RoutePlaceholder';
+import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
+import { translation } from '../../shared/i18n';
 
 type PlaceholderRoute = {
     path: string;
@@ -26,14 +26,14 @@ export function AppRoutes() {
     return (
         <Routes>
             <Route path="/" element={<Navigate to="/statistics" replace />} />
-            <Route path="/statistics" element={<StatisticsPage />} />
-            <Route path="/statistics/:scope" element={<StatisticsPage />} />
+            <Route path="/statistics" element={<StatisticsRoute />} />
+            <Route path="/statistics/:scope" element={<StatisticsRoute />} />
 
             {PLACEHOLDER_ROUTES.map((route) => (
                 <Route
                     key={route.path}
                     path={route.path}
-                    element={<PlaceholderPage title={translation.get(route.titleKey)} />}
+                    element={<RoutePlaceholder title={translation.get(route.titleKey)} />}
                 />
             ))}
 

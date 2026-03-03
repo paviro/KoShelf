@@ -2,10 +2,10 @@ import type {
     DailyActivityEntry,
     StatisticsIndexWeek,
     StatisticsScope,
-} from '../../../shared/statistics-data-loader';
-import { DateFormatter } from '../../../shared/statistics-formatters';
+} from '../api/statistics-data';
+import { DateFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
-import { monthKeyAt } from '../../../shared/statistics-months';
+import { monthKeyAt } from '../lib/months';
 
 export const SECTION_NAMES = [
     'overall-stats',

@@ -2,33 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { PageContent } from '../features/layout/PageContent';
-import { PageHeader } from '../features/layout/PageHeader';
-import { OverallStatsSection } from '../features/statistics/components/OverallStatsSection';
-import { ReadingStreakSection } from '../features/statistics/components/ReadingStreakSection';
-import { ScopeFilter } from '../features/statistics/components/ScopeFilter';
-import { WeeklyStatsSection } from '../features/statistics/components/WeeklyStatsSection';
-import { YearlyStatsSection } from '../features/statistics/components/YearlyStatsSection';
-import { usePersistentSectionState } from '../features/statistics/hooks/usePersistentSectionState';
+import { PageContent } from '../../../shared/ui/layout/PageContent';
+import { PageHeader } from '../../../shared/ui/layout/PageHeader';
+import { OverallStatsSection } from '../sections/OverallStatsSection';
+import { ReadingStreakSection } from '../sections/ReadingStreakSection';
+import { ScopeFilter } from '../components/ScopeFilter';
+import { WeeklyStatsSection } from '../sections/WeeklyStatsSection';
+import { YearlyStatsSection } from '../sections/YearlyStatsSection';
+import { usePersistentSectionState } from '../hooks/usePersistentSectionState';
 import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
     useStatisticsYearQuery,
-} from '../features/statistics/hooks/useStatisticsQueries';
+} from '../hooks/useStatisticsQueries';
 import {
     aggregateMonthlyStats,
     isCurrentStreakActive,
     normalizeScope,
     summarizeYearlyStats,
-} from '../features/statistics/model/statistics-model';
-import { api } from '../shared/api';
-import { LoadingSpinner } from '../shared/components/LoadingSpinner';
-import type { SiteResponse } from '../shared/contracts';
-import type {
-    StatisticsWeekResponse,
-    StatisticsYearResponse,
-} from '../shared/statistics-data-loader';
-import { translation } from '../shared/i18n';
+} from '../model/statistics-model';
+import { api } from '../../../shared/api';
+import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import type { SiteResponse } from '../../../shared/contracts';
+import type { StatisticsWeekResponse, StatisticsYearResponse } from '../api/statistics-data';
+import { translation } from '../../../shared/i18n';
 
 const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     week_key: '',
@@ -44,7 +41,7 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
 
 const PAGE_SPINNER_DELAY_MS = 120;
 
-export function StatisticsPage() {
+export function StatisticsRoute() {
     const params = useParams();
     const scope = normalizeScope(params.scope);
     const hasInitializedScopeRef = useRef(false);

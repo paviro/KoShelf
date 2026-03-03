@@ -1,5 +1,5 @@
-import { translation } from './i18n';
-import { monthKeyAt, toShortMonthKey } from './statistics-months';
+import { translation } from '../../../shared/i18n';
+import { monthKeyAt, toShortMonthKey } from './months';
 
 export class DateFormatter {
     static parseISODate(dateStr: string): Date {

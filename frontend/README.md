@@ -7,6 +7,12 @@ Current decisions reflected here:
 - Router mode: `HashRouter`
 - Data fetching: TanStack Query
 - Target mount in serve mode: `/`
+- Icon set convention for migrated React UI: Lucide icons via `react-icons/lu`
+
+## Migration conventions
+
+- Prefer Lucide icons from `react-icons/lu` when replacing legacy/custom SVG icons.
+- For new shared UI primitives, use Lucide first and keep icon usage consistent across features.
 
 ## Commands
 

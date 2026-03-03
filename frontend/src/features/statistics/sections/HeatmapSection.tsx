@@ -3,10 +3,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
-} from '../../../shared/horizontal-scroll';
-import { DataFormatter } from '../../../shared/statistics-formatters';
-import { monthKeyAt, toShortMonthKey } from '../../../shared/statistics-months';
-import type { StatisticsYearResponse } from '../../../shared/statistics-data-loader';
+} from '../../../shared/lib/dom/horizontal-scroll';
+import { DataFormatter } from '../lib/formatters';
+import { monthKeyAt, toShortMonthKey } from '../lib/months';
+import type { StatisticsYearResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
 import {

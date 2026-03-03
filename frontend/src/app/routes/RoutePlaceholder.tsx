@@ -1,11 +1,11 @@
-import { PageContent } from '../features/layout/PageContent';
-import { PageHeader } from '../features/layout/PageHeader';
+import { PageContent } from '../../shared/ui/layout/PageContent';
+import { PageHeader } from '../../shared/ui/layout/PageHeader';
 
-type PlaceholderPageProps = {
+type RoutePlaceholderProps = {
     title: string;
 };
 
-export function PlaceholderPage({ title }: PlaceholderPageProps) {
+export function RoutePlaceholder({ title }: RoutePlaceholderProps) {
     return (
         <>
             <PageHeader title={title} />

@@ -18,6 +18,8 @@ export function ShellMobileNav({ navItems, currentPath }: ShellMobileNavProps) {
                 <div className="flex items-center justify-around overflow-x-auto scrollbar-hide">
                     {navItems.map((item) => {
                         const active = isActivePath(currentPath, item.href);
+                        const ItemIcon = item.icon;
+
                         return (
                             <Link
                                 key={item.href}
@@ -25,19 +27,7 @@ export function ShellMobileNav({ navItems, currentPath }: ShellMobileNavProps) {
                                 to={item.href}
                                 className={`nav-item flex flex-col items-center py-1.5 px-2 rounded-xl min-w-fit ${active ? 'nav-item-active' : ''}`}
                             >
-                                <svg
-                                    className="w-4 h-4 mb-0.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d={item.iconSvg}
-                                    ></path>
-                                </svg>
+                                <ItemIcon className="w-4 h-4 mb-0.5" aria-hidden="true" />
                                 <span className="text-xs">{item.label}</span>
                             </Link>
                         );

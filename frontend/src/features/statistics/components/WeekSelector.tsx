@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LuCalendarDays, LuChevronDown, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
-import type { StatisticsIndexWeek } from '../../../shared/statistics-data-loader';
-import { useClickOutside } from '../../../shared/hooks/useClickOutside';
-import { DateFormatter } from '../../../shared/statistics-formatters';
+import type { StatisticsIndexWeek } from '../api/statistics-data';
+import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
+import { DateFormatter } from '../lib/formatters';
 import { getWeekYearOrder } from '../model/statistics-model';
+import {
+    DROPDOWN_PANEL_BASE_CLASSNAME,
+    DROPDOWN_TRIGGER_BASE_CLASSNAME,
+} from '../../../shared/ui/dropdown/dropdown-styles';
 
 type WeekSelectorProps = {
     weeks: StatisticsIndexWeek[];
@@ -59,22 +64,13 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                     }
                     setOpen((current) => !current);
                 }}
-                className="dropdown-trigger flex items-center justify-center sm:justify-between bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg w-10 sm:w-auto sm:px-4 h-10 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-all duration-200 text-sm md:text-base backdrop-blur-sm"
+                className={`${DROPDOWN_TRIGGER_BASE_CLASSNAME} w-10 sm:w-auto sm:px-4`}
             >
                 <div className="flex items-center space-x-0 sm:space-x-3 min-w-0">
-                    <svg
+                    <LuCalendarDays
                         className="w-5 h-5 text-gray-600 dark:text-gray-300 sm:text-primary-400 sm:dark:text-primary-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        ></path>
-                    </svg>
+                        aria-hidden="true"
+                    />
                     <span
                         id="selectedWeekText"
                         className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm truncate"
@@ -89,25 +85,16 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                         )}
                     </span>
                 </div>
-                <svg
+                <LuChevronDown
                     id="dropdownArrow"
                     className="hidden sm:block w-4 h-4 text-gray-400 dark:text-dark-400 transition-transform duration-200 ml-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                    ></path>
-                </svg>
+                    aria-hidden="true"
+                />
             </button>
 
             <div
                 id="weekOptions"
-                className={`dropdown-menu-right z-30 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl w-56 sm:w-64 max-w-[calc(100vw-1rem)] overflow-hidden backdrop-blur-md ${open ? '' : 'hidden'}`}
+                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} w-56 sm:w-64 max-w-[calc(100vw-1rem)] ${open ? '' : 'hidden'}`}
             >
                 <div
                     id="weekYearList"
@@ -132,34 +119,16 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center">
-                                        <svg
+                                        <LuCalendarDays
                                             className="w-4 h-4 text-primary-400 mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            ></path>
-                                        </svg>
+                                            aria-hidden="true"
+                                        />
                                         <span className="font-semibold">{year}</span>
                                     </div>
-                                    <svg
+                                    <LuChevronRight
                                         className="w-4 h-4 text-gray-400 dark:text-dark-400"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7 7"
-                                        ></path>
-                                    </svg>
+                                        aria-hidden="true"
+                                    />
                                 </div>
                             </button>
                         );
@@ -175,19 +144,7 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                             aria-label="Back to years"
                             onClick={() => setView('years')}
                         >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15 19l-7-7 7-7"
-                                ></path>
-                            </svg>
+                            <LuChevronLeft className="w-4 h-4" aria-hidden="true" />
                         </button>
                         <span
                             id="weekYearTitle"
@@ -221,19 +178,10 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                                     }}
                                 >
                                     <div className="flex items-center">
-                                        <svg
+                                        <LuCalendarDays
                                             className="w-4 h-4 text-primary-400 mr-2 flex-shrink-0"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            ></path>
-                                        </svg>
+                                            aria-hidden="true"
+                                        />
                                         <span className="week-date-display">
                                             {DateFormatter.formatDateRange(
                                                 week.start_date,

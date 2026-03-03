@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { StatisticsScope } from '../../../shared/statistics-data-loader';
+import type { StatisticsScope } from '../api/statistics-data';
 import { StorageManager } from '../../../shared/storage-manager';
 import {
     SECTION_NAMES,
