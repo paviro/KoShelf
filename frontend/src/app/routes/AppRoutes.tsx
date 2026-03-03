@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { RoutePlaceholder } from './RoutePlaceholder';
 import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
 import { CalendarRoute } from '../../features/calendar/routes/CalendarRoute';
+import { LibraryListRoute } from '../../features/library/routes/LibraryListRoute';
 import { translation } from '../../shared/i18n';
 
 type PlaceholderRoute = {
@@ -11,10 +12,8 @@ type PlaceholderRoute = {
 };
 
 const PLACEHOLDER_ROUTES: PlaceholderRoute[] = [
-    { path: '/books', titleKey: 'books' },
     { path: '/books/:id', titleKey: 'books' },
     { path: '/books/:id/:slug', titleKey: 'books' },
-    { path: '/comics', titleKey: 'comics' },
     { path: '/comics/:id', titleKey: 'comics' },
     { path: '/comics/:id/:slug', titleKey: 'comics' },
     { path: '/recap', titleKey: 'recap' },
@@ -22,13 +21,37 @@ const PLACEHOLDER_ROUTES: PlaceholderRoute[] = [
     { path: '/recap/:year/:scope', titleKey: 'recap' },
 ];
 
-export function AppRoutes() {
+type AppRoutesProps = {
+    defaultRoute: '/books' | '/comics' | '/statistics';
+    siteLoaded: boolean;
+};
+
+function RootRedirect({
+    defaultRoute,
+    siteLoaded,
+}: {
+    defaultRoute: AppRoutesProps['defaultRoute'];
+    siteLoaded: boolean;
+}) {
+    if (!siteLoaded) {
+        return null;
+    }
+
+    return <Navigate to={defaultRoute} replace />;
+}
+
+export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
     return (
         <Routes>
-            <Route path="/" element={<Navigate to="/statistics" replace />} />
+            <Route
+                path="/"
+                element={<RootRedirect defaultRoute={defaultRoute} siteLoaded={siteLoaded} />}
+            />
             <Route path="/statistics" element={<StatisticsRoute />} />
             <Route path="/statistics/:scope" element={<StatisticsRoute />} />
             <Route path="/calendar" element={<CalendarRoute />} />
+            <Route path="/books" element={<LibraryListRoute collection="books" />} />
+            <Route path="/comics" element={<LibraryListRoute collection="comics" />} />
 
             {PLACEHOLDER_ROUTES.map((route) => (
                 <Route
@@ -38,7 +61,7 @@ export function AppRoutes() {
                 />
             ))}
 
-            <Route path="*" element={<Navigate to="/statistics" replace />} />
+            <Route path="*" element={<Navigate to={defaultRoute} replace />} />
         </Routes>
     );
 }

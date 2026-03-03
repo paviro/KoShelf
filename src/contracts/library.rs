@@ -30,6 +30,8 @@ pub struct LibraryListItem {
     pub progress_percentage: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rating: Option<u32>,
+    #[serde(default)]
+    pub annotation_count: usize,
     pub cover_url: String,
     pub content_type: LibraryContentType,
 }

@@ -7,6 +7,18 @@ import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { RecapIndexResponse, SiteResponse } from './shared/contracts';
 
+function resolveDefaultRoute(site: SiteResponse | undefined): '/books' | '/comics' | '/statistics' {
+    if (site?.capabilities.has_books) {
+        return '/books';
+    }
+
+    if (site?.capabilities.has_comics) {
+        return '/comics';
+    }
+
+    return '/statistics';
+}
+
 export function App() {
     const location = useLocation();
 
@@ -23,6 +35,7 @@ export function App() {
 
     const site = siteQuery.data;
     const navItems = buildNavItems(site, recapQuery.data);
+    const defaultRoute = resolveDefaultRoute(site);
 
     return (
         <AppShell
@@ -33,7 +46,10 @@ export function App() {
             version={site?.meta.version}
         >
             <div className="min-h-full">
-                <AppRoutes />
+                <AppRoutes
+                    defaultRoute={defaultRoute}
+                    siteLoaded={siteQuery.isSuccess || siteQuery.isError}
+                />
             </div>
         </AppShell>
     );

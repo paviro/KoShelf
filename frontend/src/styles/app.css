@@ -223,7 +223,6 @@
 
     .book-card {
         @apply relative bg-white dark:bg-dark-800 rounded-lg overflow-hidden transition-all duration-[250ms];
-        /* hover:shadow, hover:scale, hover:translate now handled by tilt-effect.ts */
     }
 
     .book-progress-bar {

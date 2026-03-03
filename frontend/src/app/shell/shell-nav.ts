@@ -85,6 +85,12 @@ export function isActivePath(currentPath: string, href: string): boolean {
     if (href === '/statistics') {
         return currentPath.startsWith('/statistics');
     }
+    if (href === '/books') {
+        return currentPath.startsWith('/books');
+    }
+    if (href === '/comics') {
+        return currentPath.startsWith('/comics');
+    }
     if (href.startsWith('/recap')) {
         return currentPath.startsWith('/recap');
     }

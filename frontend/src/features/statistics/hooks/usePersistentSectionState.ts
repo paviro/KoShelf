@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { StatisticsScope } from '../api/statistics-data';
 import { StorageManager } from '../../../shared/storage-manager';
-import {
-    SECTION_NAMES,
-    defaultSectionState,
-    type SectionName,
-    type SectionVisibilityState,
-} from '../model/statistics-model';
+import { usePersistentVisibilityState } from '../../../shared/lib/state/usePersistentVisibilityState';
+import { SECTION_NAMES, defaultSectionState, type SectionName } from '../model/statistics-model';
 
 function statsSectionStorageKey(
     scope: StatisticsScope,
@@ -20,38 +16,18 @@ function statsSectionStorageKey(
     return StorageManager.KEYS.STATS_ALL_SECTIONS;
 }
 
-function buildStateFromStorage(
-    storageKey: ReturnType<typeof statsSectionStorageKey>,
-): SectionVisibilityState {
-    const persisted = StorageManager.get<Record<string, boolean>>(storageKey, {});
-    const next = defaultSectionState();
-
-    for (const sectionName of SECTION_NAMES) {
-        if (typeof persisted?.[sectionName] === 'boolean') {
-            next[sectionName] = persisted[sectionName];
-        }
-    }
-
-    return next;
-}
-
 export function usePersistentSectionState(scope: StatisticsScope) {
     const storageKey = useMemo(() => statsSectionStorageKey(scope), [scope]);
-    const [state, setState] = useState<SectionVisibilityState>(() =>
-        buildStateFromStorage(storageKey),
-    );
+    const defaults = useMemo(() => defaultSectionState(), []);
 
-    useEffect(() => {
-        setState(buildStateFromStorage(storageKey));
-    }, [storageKey]);
+    const { state, toggle } = usePersistentVisibilityState({
+        storageKey,
+        sectionKeys: SECTION_NAMES,
+        defaults,
+    });
 
-    const toggle = (sectionName: SectionName): void => {
-        setState((current) => {
-            const next = { ...current, [sectionName]: !current[sectionName] };
-            StorageManager.set(storageKey, next);
-            return next;
-        });
+    return {
+        state,
+        toggle: (sectionName: SectionName) => toggle(sectionName),
     };
-
-    return { state, toggle };
 }

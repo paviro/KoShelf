@@ -87,6 +87,7 @@ pub fn map_library_list_item(item: &LibraryItem) -> LibraryListItem {
         status: map_library_status(item.status()),
         progress_percentage: item.progress_percentage(),
         rating: item.rating(),
+        annotation_count: item.annotation_count(),
         cover_url: format!("/assets/covers/{}.webp", item.id),
         content_type: map_library_content_type(item.content_type()),
     }
