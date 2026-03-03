@@ -7,6 +7,7 @@ use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
+use tower_http::set_status::SetStatus;
 use tower_http::services::{ServeDir, ServeFile};
 
 pub struct WebServer {
@@ -25,8 +26,11 @@ impl WebServer {
     }
 
     pub async fn run(self) -> Result<()> {
-        // Create a 404 page service
-        let not_found_service = ServeFile::new("templates/404.html");
+        // Serve the generated static 404 page.
+        let not_found_service = SetStatus::new(
+            ServeFile::new(self.site_dir.join("404.html")),
+            StatusCode::NOT_FOUND,
+        );
 
         let app = Router::new()
             // Long-poll endpoint for version changes

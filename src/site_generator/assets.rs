@@ -2,7 +2,9 @@
 
 use super::SiteGenerator;
 use crate::models::{LibraryItem, StatisticsData};
+use crate::templates::NotFoundTemplate;
 use anyhow::{Context, Result};
+use askama::Template;
 use futures::future;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
@@ -126,6 +128,13 @@ impl SiteGenerator {
             self.output_dir.join("manifest.json"),
             manifest_content.as_bytes(),
         )?;
+
+        // Render a static 404 page from the Askama template.
+        let not_found_html = NotFoundTemplate {
+            site_title: self.site_title.clone(),
+        }
+        .render()?;
+        self.write_minify_html(self.output_dir.join("404.html"), &not_found_html)?;
 
         let sw_content = include_str!(concat!(env!("OUT_DIR"), "/service-worker.js"));
         fs::write(self.output_dir.join("service-worker.js"), sw_content)?;
