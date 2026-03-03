@@ -152,6 +152,7 @@ average-pages-day = Average Pages/Day
 most-pages-in-day = Most Pages in a Day
 longest-daily-reading = Longest Daily Reading
 reading-completions = Reading Completions
+completed-books = Completed Books
 statistics-from-koreader = Statistics from KoReader reading sessions
 reading-time = Reading Time
 pages-read = Pages Read
@@ -182,6 +183,10 @@ best-month = Best Month
 active-days = { $count ->
     [one] Active Day
    *[other] Active Days
+}
+active-days-tooltip = { $count ->
+    [one] active day
+   *[other] active days
 }
 toggle =
     .hide = Hide

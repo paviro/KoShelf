@@ -170,6 +170,7 @@ average-pages-day = Средние страницы/день
 most-pages-in-day = Больше всего страниц за день
 longest-daily-reading = Самое длинное чтение за день
 reading-completions = Завершённые чтения
+completed-books = Завершённые книги
 statistics-from-koreader = Статистика из сессий чтения KoReader
 reading-time = Время чтения
 pages-read = Прочитано страниц
@@ -206,6 +207,12 @@ active-days = { $count ->
     [few] Активных дня
     [many] Активных дней
    *[other] Активных дней
+}
+active-days-tooltip = { $count ->
+    [one] активный день
+    [few] активных дня
+    [many] активных дней
+   *[other] активных дней
 }
 toggle =
     .hide = Скрыть
