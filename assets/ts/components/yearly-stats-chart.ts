@@ -288,9 +288,7 @@ export class YearlyStatsChart {
             const monthLabel = translation.get(monthKeyAt(index));
             const valueLabel = DataFormatter.formatReadTime(readTime);
             const pagesLabel = translation.get('pages', monthStats.pages_read);
-            const activeDaysLabel = translation
-                .get('active-days', monthStats.active_days)
-                .toLocaleLowerCase(translation.getLanguage());
+            const activeDaysLabel = translation.get('active-days-tooltip', monthStats.active_days);
             const tooltip = year
                 ? `${monthLabel} ${year}: ${valueLabel}`
                 : `${monthLabel}: ${valueLabel}`;

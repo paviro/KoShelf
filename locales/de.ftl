@@ -125,7 +125,7 @@ pages-label = { $count ->
 reading-statistics = Lesestatistiken
 overall-statistics = Gesamtstatistiken
 weekly-statistics = Wochenstatistiken
-yearly-statistics = Jaehrliche Statistiken
+yearly-statistics = Jährliche Statistiken
 total-read-time = Gesamte Lesezeit
 total-pages-read = Gesamte gelesene Seiten
 pages-per-hour = Seiten/Stunde
@@ -152,6 +152,7 @@ average-pages-day = Ø Seiten/Tag
 most-pages-in-day = Meiste Seiten an einem Tag
 longest-daily-reading = Längste tägliche Lesezeit
 reading-completions = Abgeschlossene Lesungen
+completed-books = Abgeschlossene Bücher
 statistics-from-koreader = Statistiken aus KoReader Lese-Sitzungen
 reading-time = Lesezeit
 pages-read = Gelesene Seiten
@@ -182,6 +183,10 @@ best-month = Bester Monat
 active-days = { $count ->
     [one] Aktiver Tag
    *[other] Aktive Tage
+}
+active-days-tooltip = { $count ->
+    [one] aktiver Tag
+   *[other] aktive Tage
 }
 toggle =
     .hide = Ausblenden

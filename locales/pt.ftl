@@ -152,6 +152,7 @@ average-pages-day = Média de Páginas/Dia
 most-pages-in-day = Mais Páginas em um Dia
 longest-daily-reading = Maior Leitura Diária
 reading-completions = Leituras Concluídas
+completed-books = Livros Concluídos
 statistics-from-koreader = Estatísticas das sessões de leitura do KoReader
 reading-time = Tempo de Leitura
 pages-read = Páginas Lidas
@@ -182,6 +183,10 @@ best-month = Melhor Mês
 active-days = { $count ->
     [one] Dia Ativo
    *[other] Dias Ativos
+}
+active-days-tooltip = { $count ->
+    [one] dia ativo
+   *[other] dias ativos
 }
 toggle =
     .hide = Ocultar
