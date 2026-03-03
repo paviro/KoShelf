@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
 
+import './styles/app.css';
 import { App } from './App';
 import { translation } from './shared/i18n';
 

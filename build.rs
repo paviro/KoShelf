@@ -14,6 +14,8 @@ fn main() {
     println!("cargo:rerun-if-changed=frontend/vite.config.ts");
     println!("cargo:rerun-if-changed=frontend/tsconfig.json");
     println!("cargo:rerun-if-changed=frontend/tsconfig.node.json");
+    println!("cargo:rerun-if-changed=frontend/postcss.config.cjs");
+    println!("cargo:rerun-if-changed=frontend/tailwind.config.cjs");
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=package.json");
     println!("cargo:rerun-if-changed=package-lock.json");

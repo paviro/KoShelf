@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import '../../../styles/calendar.css';
 import { CalendarEventModal } from '../components/CalendarEventModal';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { CalendarHeader } from '../components/CalendarHeader';
@@ -28,7 +29,6 @@ import { translation } from '../../../shared/i18n';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
 
-const CALENDAR_STYLESHEET_ID = 'koshelf-calendar-stylesheet';
 const FALLBACK_LOCALE = 'en-US';
 
 function safeFormatDateLabel(
@@ -104,26 +104,6 @@ export function CalendarRoute() {
             document.title = `${translation.get('calendar')} - ${siteQuery.data.title}`;
         }
     }, [siteQuery.data]);
-
-    useEffect(() => {
-        let createdStylesheet = false;
-        let stylesheet = document.getElementById(CALENDAR_STYLESHEET_ID) as HTMLLinkElement | null;
-
-        if (!stylesheet) {
-            stylesheet = document.createElement('link');
-            stylesheet.id = CALENDAR_STYLESHEET_ID;
-            stylesheet.rel = 'stylesheet';
-            stylesheet.href = '/assets/css/calendar.css';
-            document.head.appendChild(stylesheet);
-            createdStylesheet = true;
-        }
-
-        return () => {
-            if (createdStylesheet) {
-                stylesheet?.remove();
-            }
-        };
-    }, []);
 
     const locale = translation.getLanguage() || 'en-US';
 
