@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareDropdownMenu = document.getElementById('shareDropdownMenu');
 
     shareDropdownButton?.addEventListener('click', () => {
+        const shouldOpen = shareDropdownMenu?.classList.contains('hidden') ?? false;
         shareDropdownMenu?.classList.toggle('hidden');
+        shareDropdownButton.setAttribute('aria-expanded', String(shouldOpen));
     });
 });

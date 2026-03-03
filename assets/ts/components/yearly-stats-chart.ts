@@ -55,9 +55,14 @@ export class YearlyStatsChart {
 
         emptyState?.classList.add('hidden');
 
+        const setYearSelectorExpanded = (expanded: boolean): void => {
+            yearSelectorWrapper?.setAttribute('aria-expanded', String(expanded));
+        };
+
         if (yearSelectorWrapper && yearOptions) {
             yearSelectorWrapper.addEventListener('click', () => {
                 yearOptions.classList.toggle('hidden');
+                setYearSelectorExpanded(!yearOptions.classList.contains('hidden'));
             });
         }
 
@@ -71,6 +76,7 @@ export class YearlyStatsChart {
                 void this.loadYearlyData(selectedYear);
 
                 yearOptions?.classList.add('hidden');
+                setYearSelectorExpanded(false);
             });
         });
 

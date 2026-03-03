@@ -151,6 +151,10 @@ class StatisticsManager {
 
         const yearOptionElements = this.buildWeekYearOptions(weekYearList, yearOrder);
 
+        const setWeekSelectorExpanded = (expanded: boolean): void => {
+            weekSelectorWrapper.setAttribute('aria-expanded', String(expanded));
+        };
+
         const showYearList = (): void => {
             weekYearWeeksView.classList.add('hidden');
             weekYearList.classList.remove('hidden');
@@ -180,10 +184,12 @@ class StatisticsManager {
                     showYearList();
                 }
                 weekOptions.classList.remove('hidden');
+                setWeekSelectorExpanded(true);
                 return;
             }
 
             weekOptions.classList.add('hidden');
+            setWeekSelectorExpanded(false);
         });
 
         weekYearBackButton?.addEventListener('click', () => {
@@ -225,6 +231,7 @@ class StatisticsManager {
 
                 // Close dropdown.
                 weekOptions?.classList.add('hidden');
+                setWeekSelectorExpanded(false);
             });
         });
     }
@@ -242,9 +249,10 @@ class StatisticsManager {
         container.replaceChildren();
 
         return years.map((year) => {
-            const yearOption = document.createElement('div');
+            const yearOption = document.createElement('button');
+            yearOption.type = 'button';
             yearOption.className =
-                'week-year-option px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200';
+                'week-year-option w-full text-left px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200';
             yearOption.setAttribute('data-week-year', year);
             yearOption.innerHTML =
                 '<div class="flex items-center justify-between">' +

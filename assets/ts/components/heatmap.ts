@@ -116,6 +116,10 @@ class ActivityHeatmap {
 
         if (!yearSelectorWrapper || !yearOptions) return;
 
+        const setYearSelectorExpanded = (expanded: boolean): void => {
+            yearSelectorWrapper.setAttribute('aria-expanded', String(expanded));
+        };
+
         // Add click handlers to existing year options
         this.setupYearOptionHandlers();
 
@@ -128,6 +132,7 @@ class ActivityHeatmap {
         // Handle dropdown toggle
         yearSelectorWrapper.addEventListener('click', () => {
             yearOptions.classList.toggle('hidden');
+            setYearSelectorExpanded(!yearOptions.classList.contains('hidden'));
         });
     }
 
@@ -148,6 +153,9 @@ class ActivityHeatmap {
 
                     // Close dropdown
                     document.getElementById('yearOptions')?.classList.add('hidden');
+                    document
+                        .getElementById('yearSelectorWrapper')
+                        ?.setAttribute('aria-expanded', 'false');
                 }
             });
         });
