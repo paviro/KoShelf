@@ -5,6 +5,7 @@ import { translation } from '../shared/i18n.js';
 import { initBookCardTilt } from '../components/tilt-effect.js';
 import { hideBookCardHoverPreview, initBookCardHoverPreview } from '../components/hover-preview.js';
 import { StorageManager } from '../shared/storage-manager.js';
+import { setActiveOption } from '../shared/active-option.js';
 
 const FILTER_ARIA_MAP = {
     all: 'filter.all-aria',
@@ -12,6 +13,11 @@ const FILTER_ARIA_MAP = {
     completed: 'filter.completed-aria',
     abandoned: 'filter.on-hold-aria',
     unread: 'filter.unread-aria',
+} as const;
+
+const LEGACY_FILTER_BUTTON_CLASS_STATE = {
+    active: ['filter-button-active'],
+    inactive: [],
 } as const;
 
 function getFilterAriaKey(filterType: string): string {
@@ -167,8 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     filterButtons.forEach((button) => {
         button.addEventListener('click', function (this: HTMLElement) {
             // Update filter button states
-            filterButtons.forEach((btn) => btn.classList.remove('filter-button-active'));
-            this.classList.add('filter-button-active');
+            setActiveOption(filterButtons, this, LEGACY_FILTER_BUTTON_CLASS_STATE);
 
             currentFilter = this.dataset.filter || 'all';
             // Persist the filter selection
@@ -432,8 +437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `[data-filter="${currentFilter}"]`,
         );
         if (legacyFilterButton) {
-            filterButtons.forEach((btn) => btn.classList.remove('filter-button-active'));
-            legacyFilterButton.classList.add('filter-button-active');
+            setActiveOption(filterButtons, legacyFilterButton, LEGACY_FILTER_BUTTON_CLASS_STATE);
         }
 
         // Apply the filter

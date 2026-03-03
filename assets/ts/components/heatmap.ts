@@ -5,6 +5,7 @@
 
 import { translation } from '../shared/i18n.js';
 import { TooltipManager } from './tooltip-manager.js';
+import { setActiveOption } from '../shared/active-option.js';
 import {
     loadYearlyActivity,
     type ActivityConfig,
@@ -25,6 +26,11 @@ const HEATMAP_COLOR_CLASSES = [
 ] as const;
 
 const HEATMAP_ALL_COLOR_CLASSES = HEATMAP_COLOR_CLASSES.flat();
+
+const HEATMAP_YEAR_SELECTOR_CLASS_STATE = {
+    active: ['bg-dark-700', 'text-white'],
+    inactive: ['text-dark-200'],
+} as const;
 
 class ActivityHeatmap {
     private activityData: DailyActivityEntry[] | null = null;
@@ -167,13 +173,7 @@ class ActivityHeatmap {
     // Update active year option in dropdown
     private updateActiveYearOption(selectedOption: HTMLElement): void {
         const allOptions = document.querySelectorAll<HTMLElement>('.year-option');
-        allOptions.forEach((opt) => {
-            opt.classList.remove('bg-dark-700', 'text-white');
-            opt.classList.add('text-dark-200');
-        });
-
-        selectedOption.classList.add('bg-dark-700', 'text-white');
-        selectedOption.classList.remove('text-dark-200');
+        setActiveOption(allOptions, selectedOption, HEATMAP_YEAR_SELECTOR_CLASS_STATE);
     }
 
     // Update selected year text

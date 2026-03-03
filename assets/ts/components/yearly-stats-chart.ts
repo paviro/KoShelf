@@ -1,6 +1,7 @@
 import { TooltipManager } from './tooltip-manager.js';
 import { translation } from '../shared/i18n.js';
 import { DataFormatter } from '../shared/statistics-formatters.js';
+import { setActiveOption } from '../shared/active-option.js';
 import {
     STATISTICS_MONTH_KEYS,
     monthKeyAt,
@@ -20,6 +21,11 @@ interface YearlySummaryStats {
     completed_count: number;
     active_days: number;
 }
+
+const YEARLY_SELECTOR_CLASS_STATE = {
+    active: ['bg-green-50', 'dark:bg-dark-700', 'text-green-900', 'dark:text-white'],
+    inactive: ['text-gray-600', 'dark:text-dark-200'],
+} as const;
 
 export class YearlyStatsChart {
     private statsJsonBasePath = '/assets/json/statistics';
@@ -134,23 +140,7 @@ export class YearlyStatsChart {
         allOptions: NodeListOf<HTMLElement>,
         selectedOption: HTMLElement,
     ): void {
-        allOptions.forEach((el) => {
-            el.classList.remove(
-                'bg-green-50',
-                'dark:bg-dark-700',
-                'text-green-900',
-                'dark:text-white',
-            );
-            el.classList.add('text-gray-600', 'dark:text-dark-200');
-        });
-
-        selectedOption.classList.add(
-            'bg-green-50',
-            'dark:bg-dark-700',
-            'text-green-900',
-            'dark:text-white',
-        );
-        selectedOption.classList.remove('text-gray-600', 'dark:text-dark-200');
+        setActiveOption(allOptions, selectedOption, YEARLY_SELECTOR_CLASS_STATE);
     }
 
     private setYearlyStatsLoadingState(isLoading: boolean): void {
