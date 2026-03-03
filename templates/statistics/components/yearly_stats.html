@@ -225,8 +225,11 @@
                 </div>
 
                 <div id="yearlyStatsChart" class="transition-opacity duration-300">
-                    <div class="overflow-x-auto overflow-y-hidden scrollbar-hide">
-                        <div class="min-w-[680px] lg:min-w-0">
+                    <div
+                        id="yearlyStatsScrollContainer"
+                        class="overflow-x-auto overflow-y-hidden scrollbar-hide"
+                    >
+                        <div id="yearlyStatsChartContent" class="min-w-[680px] lg:min-w-0">
                             <div
                                 id="yearlyStatsBars"
                                 class="h-56 sm:h-64 lg:h-72 grid grid-cols-12 gap-2 sm:gap-3 items-end"

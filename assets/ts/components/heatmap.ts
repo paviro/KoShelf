@@ -7,6 +7,10 @@ import { translation } from '../shared/i18n.js';
 import { TooltipManager } from './tooltip-manager.js';
 import { setActiveOption } from '../shared/active-option.js';
 import {
+    scrollToHorizontalOverflowRatio,
+    scrollToHorizontalPosition,
+} from '../shared/horizontal-scroll.js';
+import {
     loadYearlyActivity,
     type ActivityConfig,
     type DailyActivityEntry,
@@ -455,24 +459,10 @@ class ActivityHeatmap {
         const today = new Date();
         const currentWeek = this.calculateCurrentWeek(today);
 
-        // Get container dimensions
-        const containerWidth = scrollContainer.clientWidth;
-        const heatmapWidth = heatmapContainer.scrollWidth;
+        const weekWidth = heatmapContainer.scrollWidth / 53;
+        const targetPosition = currentWeek * weekWidth;
 
-        // Only scroll if content overflows
-        if (heatmapWidth > containerWidth) {
-            // Calculate week width (approximate)
-            const weekWidth = heatmapWidth / 53;
-
-            // Position current week at 70% from the left (towards the right)
-            const targetPosition = currentWeek * weekWidth - containerWidth * 0.7;
-
-            // Ensure we don't scroll past the beginning or end
-            const maxScroll = heatmapWidth - containerWidth;
-            const scrollPosition = Math.max(0, Math.min(targetPosition, maxScroll));
-
-            scrollContainer.scrollLeft = scrollPosition;
-        }
+        scrollToHorizontalPosition(scrollContainer, heatmapContainer, targetPosition, 0.7);
     }
 
     // Scroll to end of year for past years
@@ -482,16 +472,7 @@ class ActivityHeatmap {
 
         if (!scrollContainer || !heatmapContainer) return;
 
-        // Get container dimensions
-        const containerWidth = scrollContainer.clientWidth;
-        const heatmapWidth = heatmapContainer.scrollWidth;
-
-        // Only scroll if content overflows
-        if (heatmapWidth > containerWidth) {
-            // Scroll to show the end of the year (rightmost part)
-            const maxScroll = heatmapWidth - containerWidth;
-            scrollContainer.scrollLeft = maxScroll * 0.8; // Show 80% towards the end
-        }
+        scrollToHorizontalOverflowRatio(scrollContainer, heatmapContainer, 0.8);
     }
 
     // Calculate which week the current date falls into

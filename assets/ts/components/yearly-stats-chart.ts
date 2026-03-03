@@ -8,6 +8,10 @@ import {
     toShortMonthKey,
     type StatisticsMonthKey,
 } from '../shared/statistics-months.js';
+import {
+    scrollToHorizontalOverflowRatio,
+    scrollToHorizontalPosition,
+} from '../shared/horizontal-scroll.js';
 import { loadYearlyActivity, type DailyActivityEntry } from '../shared/statistics-data-loader.js';
 
 interface MonthlyReadStats {
@@ -178,12 +182,14 @@ export class YearlyStatsChart {
 
             this.updateYearlySummaryCards(yearlySummary);
             this.updateYearlyChart(monthlyStats, year);
+            this.scrollToRelevantMonth(year);
         } catch (error) {
             if (currentRequestId !== this.requestId) return;
 
             console.error(`Error loading yearly data for ${year}:`, error);
             this.updateYearlySummaryCards(this.createEmptyYearlySummary());
             this.updateYearlyChart(this.createEmptyMonthlyStats(), year);
+            this.scrollToRelevantMonth(year);
         } finally {
             if (currentRequestId === this.requestId) {
                 this.setYearlyStatsLoadingState(false);
@@ -294,6 +300,24 @@ export class YearlyStatsChart {
             TooltipManager.attach(bar, tooltipWithStats);
             bar.classList.add('cursor-pointer');
             bar.setAttribute('aria-label', tooltipWithStats);
+        });
+    }
+
+    private scrollToRelevantMonth(year: number): void {
+        const scrollContainer = document.getElementById('yearlyStatsScrollContainer');
+        const chartContent = document.getElementById('yearlyStatsChartContent');
+
+        if (!scrollContainer || !chartContent) return;
+
+        requestAnimationFrame(() => {
+            if (year === new Date().getFullYear()) {
+                const monthWidth = chartContent.scrollWidth / 12;
+                const targetPosition = new Date().getMonth() * monthWidth;
+                scrollToHorizontalPosition(scrollContainer, chartContent, targetPosition, 0.7);
+                return;
+            }
+
+            scrollToHorizontalOverflowRatio(scrollContainer, chartContent, 0.8);
         });
     }
 }
