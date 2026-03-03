@@ -7,6 +7,17 @@ const RECONNECT_DELAY_MS = 5000;
 const POLL_INTERVAL_MS = 10000;
 const SERVER_MODE: string = '{{SERVER_MODE}}'; // Injected at build time
 
+declare global {
+    interface Window {
+        __KOSHELF_SERVER_MODE?: 'internal' | 'external';
+    }
+}
+
+const runtimeServerMode: 'internal' | 'external' =
+    SERVER_MODE === 'internal' ? 'internal' : 'external';
+window.__KOSHELF_SERVER_MODE = runtimeServerMode;
+StorageManager.set(KEYS.SERVER_MODE, runtimeServerMode);
+
 // Version tracking state
 let initialVersion: string | null = StorageManager.get<string>(KEYS.VERSION);
 let lastNotifiedVersion: string | null = null; // Track which version we last triggered an update for

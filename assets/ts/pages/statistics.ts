@@ -8,17 +8,21 @@ import { SectionToggle } from '../components/section-toggle.js';
 import { DateFormatter, DataFormatter } from '../shared/statistics-formatters.js';
 import { setActiveOption } from '../shared/active-option.js';
 import { YearlyStatsChart } from '../components/yearly-stats-chart.js';
+import { loadStatisticsWeek, type StatisticsScope } from '../shared/statistics-data-loader.js';
 // The statistics page also includes the reading heatmap.
 // Importing it here ensures it is bundled and initialized with the page.
 import '../components/heatmap.js';
 
 interface WeekData {
+    week_key?: string;
+    start_date?: string;
+    end_date?: string;
     read_time: number;
     pages_read: number;
     avg_pages_per_day: number;
     avg_read_time_per_day: number;
-    longest_session_duration: number;
-    average_session_duration: number;
+    longest_session_duration: number | null;
+    average_session_duration: number | null;
 }
 
 const WEEK_SELECTOR_CLASS_STATE = {
@@ -31,7 +35,7 @@ class StatisticsManager {
     private weekStats: HTMLElement | null = null;
     private yearlyStatsChart = new YearlyStatsChart();
     private isInitialized = false;
-    private statsJsonBasePath = '/assets/json/statistics';
+    private statsScope: StatisticsScope = 'all';
 
     // Initialize the statistics module
     init(): void {
@@ -41,9 +45,10 @@ class StatisticsManager {
         this.loadingIndicator = document.getElementById('statsLoadingIndicator');
         this.weekStats = document.querySelector('.week-stats');
 
-        // JSON base path comes from server-rendered page scope
-        const base = document.body.getAttribute('data-stats-json-base');
-        if (base) this.statsJsonBasePath = base;
+        const scope = document.body.getAttribute('data-section-toggle-kind');
+        if (scope === 'books' || scope === 'comics') {
+            this.statsScope = scope;
+        }
 
         // Format all week date displays
         this.formatWeekDateDisplays();
@@ -52,7 +57,7 @@ class StatisticsManager {
         this.initializeWeekSelector();
 
         // Initialize yearly statistics chart and selector
-        this.yearlyStatsChart.init(this.statsJsonBasePath);
+        this.yearlyStatsChart.init(this.statsScope);
 
         // Validate and reset current streak if needed
         this.validateCurrentStreak();
@@ -207,7 +212,8 @@ class StatisticsManager {
         // Handle option selection.
         weekOptionElements.forEach((option) => {
             option.addEventListener('click', () => {
-                const selectedIndex = option.getAttribute('data-week-index');
+                const selectedWeekKey =
+                    option.getAttribute('data-week-key') || option.getAttribute('data-start-date');
                 const startDate = option.getAttribute('data-start-date');
                 const endDate = option.getAttribute('data-end-date');
 
@@ -225,8 +231,8 @@ class StatisticsManager {
                 this.updateActiveYearOption(yearOptionElements, selectedYear);
 
                 // Load and display the selected week data.
-                if (selectedIndex) {
-                    void this.loadWeekData(selectedIndex);
+                if (selectedWeekKey) {
+                    void this.loadWeekData(selectedWeekKey);
                 }
 
                 // Close dropdown.
@@ -305,7 +311,7 @@ class StatisticsManager {
     }
 
     // Load week data and update UI
-    async loadWeekData(weekIndex: string): Promise<void> {
+    async loadWeekData(weekKey: string): Promise<void> {
         try {
             // Start transition out and show loading indicator
             if (this.weekStats) {
@@ -317,11 +323,7 @@ class StatisticsManager {
             // Wait for transition out to complete before fetching
             await new Promise((resolve) => setTimeout(resolve, 200));
 
-            const response = await fetch(`${this.statsJsonBasePath}/week_${weekIndex}.json`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const weekData = (await response.json()) as WeekData;
+            const weekData = (await loadStatisticsWeek(this.statsScope, weekKey)) as WeekData;
 
             // Update UI with the loaded data
             this.updateWeekStats(weekData);

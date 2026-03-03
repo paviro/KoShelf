@@ -5,15 +5,28 @@
 
 import { FluentBundle, FluentResource } from '@fluent/bundle';
 import type { FluentVariable } from '@fluent/bundle';
+import { api } from './api.js';
 
 let bundle: FluentBundle | null = null;
 let loadPromise: Promise<void> | null = null;
 
+interface LocalesPayload {
+    language: string;
+    resources: string[];
+    meta?: {
+        version?: string;
+        generated_at?: string;
+    };
+}
+
+async function fetchLocalesPayload(): Promise<LocalesPayload> {
+    return api.locales.get<LocalesPayload>();
+}
+
 async function load(): Promise<void> {
     if (bundle) return;
     try {
-        const res = await fetch('/assets/json/locales.json');
-        const data = (await res.json()) as { language: string; resources: string[] };
+        const data = await fetchLocalesPayload();
 
         // Initialize bundle with the language from the server
         bundle = new FluentBundle(data.language);

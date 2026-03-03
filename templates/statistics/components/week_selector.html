@@ -86,6 +86,7 @@
                     type="button"
                     class="week-option w-full text-left px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if index == 0 %}bg-primary-50 dark:bg-dark-700 text-primary-900 dark:text-white{% endif %}"
                     data-week-index="{{ index }}"
+                    data-week-key="{{ week.start_date }}"
                     data-start-date="{{ week.start_date }}"
                     data-end-date="{{ week.end_date }}"
                     data-week-year="{{ week.start_date.chars().take(4).collect::<String>() }}"

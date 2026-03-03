@@ -12,7 +12,11 @@ import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
 } from '../shared/horizontal-scroll.js';
-import { loadYearlyActivity, type DailyActivityEntry } from '../shared/statistics-data-loader.js';
+import {
+    loadYearlyActivity,
+    type DailyActivityEntry,
+    type StatisticsScope,
+} from '../shared/statistics-data-loader.js';
 
 interface MonthlyReadStats {
     read_time: number;
@@ -32,11 +36,11 @@ const YEARLY_SELECTOR_CLASS_STATE = {
 } as const;
 
 export class YearlyStatsChart {
-    private statsJsonBasePath = '/assets/json/statistics';
+    private statsScope: StatisticsScope = 'all';
     private requestId = 0;
 
-    init(statsJsonBasePath: string): void {
-        this.statsJsonBasePath = statsJsonBasePath;
+    init(statsScope: StatisticsScope): void {
+        this.statsScope = statsScope;
 
         const barsContainer = document.getElementById('yearlyStatsBars');
         if (!barsContainer) return;
@@ -170,7 +174,7 @@ export class YearlyStatsChart {
         this.setYearlyStatsLoadingState(true);
 
         try {
-            const yearlyActivity = await loadYearlyActivity(this.statsJsonBasePath, year);
+            const yearlyActivity = await loadYearlyActivity(this.statsScope, year);
 
             if (currentRequestId !== this.requestId) return;
 
@@ -224,7 +228,7 @@ export class YearlyStatsChart {
             summary.active_days += monthStats.active_days;
         });
 
-        summary.completed_count = Math.max(Math.floor(completedCount), 0);
+        summary.completed_count = completedCount;
 
         return summary;
     }

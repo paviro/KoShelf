@@ -1,3 +1,5 @@
+import { api } from '../shared/api.js';
+
 interface PreviewCardData {
     title: string;
     author: string;
@@ -6,15 +8,14 @@ interface PreviewCardData {
 }
 
 interface DetailsPayloadItem {
-    title?: string | null;
-    authors?: string[] | string | null;
+    title: string;
+    authors: string[];
     series?: string | null;
     description?: string | null;
 }
 
 interface DetailsPayload {
-    book?: DetailsPayloadItem;
-    comic?: DetailsPayloadItem;
+    item: DetailsPayloadItem;
 }
 
 const SHOW_DELAY_MS = 160;
@@ -228,8 +229,8 @@ class HoverPreviewManager {
     }
 
     private async loadPreviewData(card: HTMLElement): Promise<PreviewCardData> {
-        const detailsUrl = this.getDetailsUrl(card);
-        if (!detailsUrl) {
+        const detailsHref = this.getDetailsHref(card);
+        if (!detailsHref) {
             return {
                 title: '',
                 author: '',
@@ -238,24 +239,14 @@ class HoverPreviewManager {
             };
         }
 
-        const cacheKey = detailsUrl.toString();
+        const cacheKey = detailsHref;
         if (this.detailsCache.has(cacheKey)) {
-            return (
-                this.detailsCache.get(cacheKey) || {
-                    title: '',
-                    author: '',
-                    series: '',
-                    description: '',
-                }
-            );
+            return this.detailsCache.get(cacheKey)!;
         }
 
         try {
-            const response = await fetch(detailsUrl.toString(), {
-                method: 'GET',
-                headers: { Accept: 'application/json' },
-            });
-            if (!response.ok) {
+            const payload = await api.library.getByHref<DetailsPayload>(detailsHref);
+            if (!payload) {
                 return {
                     title: '',
                     author: '',
@@ -264,14 +255,13 @@ class HoverPreviewManager {
                 };
             }
 
-            const payload = (await response.json()) as DetailsPayload;
-            const item = payload.book || payload.comic;
+            const item = payload.item;
 
             const data: PreviewCardData = {
-                title: this.clean(item?.title || ''),
-                author: this.formatAuthors(item?.authors),
-                series: this.clean(item?.series || ''),
-                description: typeof item?.description === 'string' ? item.description : '',
+                title: this.clean(item.title),
+                author: this.formatAuthors(item.authors),
+                series: this.clean(item.series || ''),
+                description: item.description || '',
             };
 
             this.detailsCache.set(cacheKey, data);
@@ -286,18 +276,15 @@ class HoverPreviewManager {
         }
     }
 
-    private getDetailsUrl(card: HTMLElement): URL | null {
+    private getDetailsHref(card: HTMLElement): string | null {
         const link = card.querySelector<HTMLAnchorElement>('a[href]');
         const href = link?.getAttribute('href');
         if (!href) return null;
-        return new URL('details.json', new URL(href, window.location.origin));
+        return href;
     }
 
-    private formatAuthors(authors: string[] | string | null | undefined): string {
-        if (Array.isArray(authors)) {
-            return this.clean(authors.filter(Boolean).join(', '));
-        }
-        return this.clean(authors || '');
+    private formatAuthors(authors: string[]): string {
+        return this.clean(authors.filter(Boolean).join(', '));
     }
 
     private positionPreview(card: HTMLElement, preview: HTMLElement): void {

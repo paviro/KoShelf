@@ -18,6 +18,8 @@ interface BroadcastMessage {
 // Bump cache name when we make major asset pipeline changes.
 // This forces a clean slate for users stuck with stale cached JS files.
 const CACHE_NAME = 'koshelf-cache-v2';
+const API_CACHE_NAME = 'koshelf-api-v1';
+const ACTIVE_CACHE_NAMES: string[] = [CACHE_NAME, API_CACHE_NAME];
 const MANIFEST_URL = '/cache-manifest.json';
 const BATCH_SIZE = 10;
 
@@ -60,6 +62,11 @@ async function broadcast(message: BroadcastMessage): Promise<void> {
 function shouldSkipCache(url: string): boolean {
     const pathname = new URL(url).pathname;
     return SKIP_CACHE_PATTERNS.some((pattern) => pathname.endsWith(pattern));
+}
+
+function isApiRequest(url: string): boolean {
+    const pathname = new URL(url).pathname;
+    return pathname.startsWith('/api/');
 }
 
 function toFullUrl(urlPath: string): string {
@@ -210,7 +217,9 @@ sw.addEventListener('activate', (event) => {
             // Clean up old cache versions
             const cacheNames = await caches.keys();
             await Promise.all(
-                cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
+                cacheNames
+                    .filter((name) => !ACTIVE_CACHE_NAMES.includes(name))
+                    .map((name) => caches.delete(name)),
             );
             await sw.clients.claim();
         })(),
@@ -229,6 +238,10 @@ sw.addEventListener('fetch', (event) => {
 });
 
 async function handleFetch(request: Request): Promise<Response> {
+    if (isApiRequest(request.url)) {
+        return handleApiFetch(request);
+    }
+
     const cache = await caches.open(CACHE_NAME);
 
     // Normalize URL for cache matching (handles /foo/index.html -> /foo/ mapping)
@@ -271,6 +284,39 @@ async function handleFetch(request: Request): Promise<Response> {
     }
 }
 
+async function handleApiFetch(request: Request): Promise<Response> {
+    const apiCache = await caches.open(API_CACHE_NAME);
+
+    try {
+        const response = await fetch(request);
+
+        if (response.ok) {
+            await apiCache.put(request.url, response.clone());
+        }
+
+        return response;
+    } catch {
+        const cached = await apiCache.match(request.url, { ignoreVary: true });
+        if (cached) {
+            return cached;
+        }
+
+        return new Response(
+            JSON.stringify({
+                error: {
+                    code: 'offline',
+                    message: 'Offline and no cached API response available',
+                },
+            }),
+            {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'application/json' },
+            },
+        );
+    }
+}
+
 interface MessageEventData {
     type: string;
 }
@@ -284,7 +330,7 @@ sw.addEventListener('message', (event) => {
         CLEAR_CACHE: () =>
             event.waitUntil(
                 (async () => {
-                    await caches.delete(CACHE_NAME);
+                    await Promise.all([caches.delete(CACHE_NAME), caches.delete(API_CACHE_NAME)]);
                     broadcast({ type: 'CACHE_CLEARED' });
                 })(),
             ),

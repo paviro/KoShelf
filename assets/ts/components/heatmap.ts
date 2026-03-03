@@ -14,6 +14,7 @@ import {
     loadYearlyActivity,
     type ActivityConfig,
     type DailyActivityEntry,
+    type StatisticsScope,
 } from '../shared/statistics-data-loader.js';
 
 interface ActivityData {
@@ -30,6 +31,7 @@ const HEATMAP_COLOR_CLASSES = [
 ] as const;
 
 const HEATMAP_ALL_COLOR_CLASSES = HEATMAP_COLOR_CLASSES.flat();
+const HEATMAP_MAX_ACTIVITY_LEVEL = HEATMAP_COLOR_CLASSES.length - 1;
 
 const HEATMAP_YEAR_SELECTOR_CLASS_STATE = {
     active: ['bg-dark-700', 'text-white'],
@@ -44,7 +46,7 @@ class ActivityHeatmap {
     private loadRequestId = 0;
     private isInitialized = false;
     private resizeObserver: ResizeObserver | null = null;
-    private basePath = '/assets/json/statistics';
+    private statsScope: StatisticsScope = 'all';
     private shouldAnimateYearTransition = false;
     private cellAnimationTimeoutIds: number[] = [];
 
@@ -56,9 +58,10 @@ class ActivityHeatmap {
             // Load translations
             await translation.init();
 
-            // JSON base path comes from server-rendered page scope
-            const base = document.body.getAttribute('data-stats-json-base');
-            if (base) this.basePath = base;
+            const scope = document.body.getAttribute('data-section-toggle-kind');
+            if (scope === 'books' || scope === 'comics') {
+                this.statsScope = scope;
+            }
 
             // Get available years from the template-rendered year options
             this.getAvailableYearsFromTemplate();
@@ -93,12 +96,12 @@ class ActivityHeatmap {
         const currentLoadRequestId = ++this.loadRequestId;
 
         try {
-            const yearlyActivity = await loadYearlyActivity(this.basePath, year);
+            const yearlyActivity = await loadYearlyActivity(this.statsScope, year);
 
             if (currentLoadRequestId !== this.loadRequestId) return;
 
             this.activityData = yearlyActivity.data;
-            this.activityConfig = yearlyActivity.config ?? { max_scale_seconds: null };
+            this.activityConfig = yearlyActivity.config;
 
             this.currentYear = year;
         } catch (error) {
@@ -251,11 +254,9 @@ class ActivityHeatmap {
         });
 
         // Use custom max scale if provided
-        if (
-            this.activityConfig?.max_scale_seconds !== null &&
-            this.activityConfig?.max_scale_seconds !== undefined
-        ) {
-            maxActivity = this.activityConfig.max_scale_seconds;
+        const configuredMaxScale = this.activityConfig?.max_scale_seconds;
+        if (configuredMaxScale !== null && configuredMaxScale !== undefined) {
+            maxActivity = configuredMaxScale;
         }
 
         return { activityMap, maxActivity };
@@ -319,15 +320,26 @@ class ActivityHeatmap {
 
     // Normalize activity level to 0-4 range
     private normalizeActivityLevel(activity: number, maxActivity: number): number {
-        let activityLevel = 0;
-        if (activity > 0) {
-            if (maxActivity <= 4) {
-                activityLevel = activity;
-            } else {
-                activityLevel = Math.min(4, Math.ceil((activity / maxActivity) * 4));
-            }
+        if (!Number.isFinite(activity) || activity <= 0) {
+            return 0;
         }
-        return activityLevel;
+
+        if (!Number.isFinite(maxActivity) || maxActivity <= 0) {
+            return HEATMAP_MAX_ACTIVITY_LEVEL;
+        }
+
+        if (maxActivity <= HEATMAP_MAX_ACTIVITY_LEVEL) {
+            return Math.min(HEATMAP_MAX_ACTIVITY_LEVEL, Math.max(1, Math.ceil(activity)));
+        }
+
+        const scaledLevel = Math.ceil((activity / maxActivity) * HEATMAP_MAX_ACTIVITY_LEVEL);
+        return Math.min(HEATMAP_MAX_ACTIVITY_LEVEL, Math.max(1, scaledLevel));
+    }
+
+    private getHeatmapColorClasses(activityLevel: number): readonly string[] {
+        const normalizedLevel = Number.isFinite(activityLevel) ? Math.round(activityLevel) : 0;
+        const clampedLevel = Math.min(HEATMAP_MAX_ACTIVITY_LEVEL, Math.max(0, normalizedLevel));
+        return HEATMAP_COLOR_CLASSES[clampedLevel] ?? HEATMAP_COLOR_CLASSES[0];
     }
 
     // Apply styling and interactions to a heatmap cell
@@ -339,6 +351,8 @@ class ActivityHeatmap {
         shouldAnimate = false,
         animationDelay = 0,
     ): void {
+        const activityColorClasses = this.getHeatmapColorClasses(activityLevel);
+
         cell.getAnimations().forEach((animation) => animation.cancel());
         HEATMAP_ALL_COLOR_CLASSES.forEach((cls) => cell.classList.remove(cls));
 
@@ -347,13 +361,13 @@ class ActivityHeatmap {
 
             const timeoutId = window.setTimeout(() => {
                 HEATMAP_COLOR_CLASSES[0].forEach((cls) => cell.classList.remove(cls));
-                HEATMAP_COLOR_CLASSES[activityLevel].forEach((cls) => cell.classList.add(cls));
+                activityColorClasses.forEach((cls) => cell.classList.add(cls));
                 this.applyCellTransitionAnimation(cell);
             }, animationDelay);
 
             this.cellAnimationTimeoutIds.push(timeoutId);
         } else {
-            HEATMAP_COLOR_CLASSES[activityLevel].forEach((cls) => cell.classList.add(cls));
+            activityColorClasses.forEach((cls) => cell.classList.add(cls));
         }
 
         // Prepare tooltip content

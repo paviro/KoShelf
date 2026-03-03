@@ -7,6 +7,7 @@ import type { Calendar } from '@event-calendar/core';
 
 import { showModal, hideModal, setupModalCloseHandlers } from '../components/modal-utils.js';
 import { translation } from '../shared/i18n.js';
+import { api } from '../shared/api.js';
 
 type ContentFilter = 'all' | 'book' | 'comic';
 type ContentType = 'book' | 'comic';
@@ -47,13 +48,13 @@ interface RawEvent {
     total_pages_read: number;
 }
 
-interface BookInfo {
-    title?: string;
-    authors?: string[];
+interface CalendarItem {
+    title: string;
+    authors: string[];
     item_path?: string;
     item_cover?: string;
-    color?: string;
-    content_type?: ContentType;
+    color: string;
+    content_type: ContentType;
 }
 
 interface MonthlyStats {
@@ -63,17 +64,47 @@ interface MonthlyStats {
     days_read_pct: number;
 }
 
+interface ScopedMonthlyStats {
+    all: MonthlyStats;
+    books: MonthlyStats;
+    comics: MonthlyStats;
+}
+
+interface CalendarMonthsResponse {
+    months: string[];
+}
+
 interface MonthData {
     events: RawEvent[];
-    books: Record<string, BookInfo>;
-    stats?: MonthlyStats;
-    stats_books?: MonthlyStats;
-    stats_comics?: MonthlyStats;
+    items: Record<string, CalendarItem>;
+    stats: ScopedMonthlyStats;
+}
+
+function createEmptyMonthlyStats(): MonthlyStats {
+    return {
+        books_read: 0,
+        pages_read: 0,
+        time_read: 0,
+        days_read_pct: 0,
+    };
+}
+
+function createEmptyMonthData(): MonthData {
+    const emptyStats = createEmptyMonthlyStats();
+    return {
+        events: [],
+        items: {},
+        stats: {
+            all: { ...emptyStats },
+            books: { ...emptyStats },
+            comics: { ...emptyStats },
+        },
+    };
 }
 
 let calendar: Calendar | null = null;
 let currentEvents: RawEvent[] = [];
-let currentBooks: Record<string, BookInfo> = {};
+let currentBooks: Record<string, CalendarItem> = {};
 const monthlyDataCache = new Map<string, MonthData>(); // Cache for monthly data: month -> {events, books}
 let availableMonths: string[] = []; // List of months that have data
 let currentDisplayedMonth: string | null = null;
@@ -145,13 +176,8 @@ if (document.readyState === 'loading') {
 // Load the list of available months
 async function loadAvailableMonths(): Promise<void> {
     try {
-        const response = await fetch('/assets/json/calendar/available_months.json');
-        if (response.ok) {
-            availableMonths = (await response.json()) as string[];
-        } else {
-            console.warn('Could not load available months list');
-            availableMonths = [];
-        }
+        const payload = await api.calendar.months.list<CalendarMonthsResponse>();
+        availableMonths = payload.months;
     } catch (error) {
         console.warn('Error loading available months:', error);
         availableMonths = [];
@@ -212,16 +238,10 @@ async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
         // Check if this month has data available
         if (availableMonths.length > 0 && !availableMonths.includes(targetMonth)) {
             // No data available for this month - this is expected for future months
-            return { events: [], books: {} }; // Return empty data instead of null
+            return createEmptyMonthData();
         }
 
-        const response = await fetch(`/assets/json/calendar/${targetMonth}.json`);
-        if (!response.ok) {
-            console.error(`Failed to load calendar data for ${targetMonth}:`, response.status);
-            return { events: [], books: {} };
-        }
-
-        const calendarData = (await response.json()) as MonthData;
+        const calendarData = await api.calendar.months.get<MonthData>(targetMonth);
 
         // Cache the loaded data
         monthlyDataCache.set(targetMonth, calendarData);
@@ -229,7 +249,7 @@ async function fetchMonthData(targetMonth: string | null): Promise<MonthData> {
         return calendarData;
     } catch (error) {
         console.error(`Error loading calendar data for ${targetMonth}:`, error);
-        return { events: [], books: {} };
+        return createEmptyMonthData();
     }
 }
 
@@ -295,26 +315,26 @@ function getFilteredRawEvents(evts: RawEvent[]): RawEvent[] {
 
 function mapEvents(evts: RawEvent[]): Array<Calendar.EventInput> {
     return evts.map((ev) => {
-        const book = currentBooks[ev.item_id] || {};
-        const content_type: ContentType = book.content_type === 'comic' ? 'comic' : 'book';
+        const book = currentBooks[ev.item_id];
+        const content_type: ContentType = book?.content_type === 'comic' ? 'comic' : 'book';
         const extendedProps: EventExtendedProps = {
             ...ev,
-            book_title: book.title || translation.get('unknown-book'),
-            authors: book.authors || [],
-            item_path: book.item_path,
-            item_cover: book.item_cover,
-            color: book.color,
+            book_title: book?.title ?? translation.get('unknown-book'),
+            authors: book?.authors ?? [],
+            item_path: book?.item_path,
+            item_cover: book?.item_cover,
+            color: book?.color,
             content_type,
             md5: ev.item_id,
         };
 
         const input: Calendar.EventInput = {
             id: ev.item_id,
-            title: book.title || translation.get('unknown-book'),
+            title: book?.title ?? translation.get('unknown-book'),
             start: ev.start,
             end: ev.end || ev.start,
             allDay: true,
-            backgroundColor: book.color || getEventColor(ev),
+            backgroundColor: book?.color ?? getEventColor(ev),
             textColor: '#ffffff',
             extendedProps,
         };
@@ -418,9 +438,9 @@ function getEventColor(event: RawEvent): string {
         '#6366F1',
     ];
 
-    const book = currentBooks[event.item_id] || {};
+    const book = currentBooks[event.item_id];
     let hash = 0;
-    const str = (book.title || '') + (event.item_id || '');
+    const str = (book?.title ?? '') + (event.item_id || '');
     for (let i = 0; i < str.length; i++) {
         hash = (hash << 5) - hash + str.charCodeAt(i);
         hash |= 0; // Convert to 32-bit int
@@ -468,7 +488,7 @@ function showEventModal(_title: string, event: EventExtendedProps): void {
     const pagesReadEl = document.getElementById('modalPagesRead');
 
     if (authorEl) {
-        authorEl.textContent = event.authors?.length
+        authorEl.textContent = event.authors.length
             ? event.authors.join(', ')
             : translation.get('unknown-author');
     }
@@ -592,15 +612,14 @@ function updateMonthlyStats(currentDate: Date): void {
     let timeRead = 0;
     let daysPct = 0;
 
-    const pickStats = (): MonthlyStats | undefined => {
-        if (!monthData) return undefined;
-        if (currentContentFilter === 'book') return monthData.stats_books || monthData.stats;
-        if (currentContentFilter === 'comic') return monthData.stats_comics || monthData.stats;
-        return monthData.stats;
-    };
+    if (monthData) {
+        const stats =
+            currentContentFilter === 'book'
+                ? monthData.stats.books
+                : currentContentFilter === 'comic'
+                  ? monthData.stats.comics
+                  : monthData.stats.all;
 
-    const stats = pickStats();
-    if (stats) {
         ({
             books_read: booksRead,
             pages_read: pagesRead,
@@ -703,14 +722,14 @@ function refreshAggregatedData(): void {
     const seenKeys = new Set<string>();
 
     for (const [, monthData] of monthlyDataCache) {
-        for (const ev of monthData.events || []) {
+        for (const ev of monthData.events) {
             const key = `${ev.item_id}|${ev.start}|${ev.end || ''}`;
             if (!seenKeys.has(key)) {
                 seenKeys.add(key);
                 currentEvents.push(ev);
             }
         }
-        Object.assign(currentBooks, monthData.books || {});
+        Object.assign(currentBooks, monthData.items);
     }
 }
 
