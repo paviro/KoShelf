@@ -15,9 +15,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const options = document.getElementById('yearOptions');
 
     if (wrapper && options) {
+        const setYearSelectorExpanded = (expanded: boolean): void => {
+            wrapper.setAttribute('aria-expanded', String(expanded));
+        };
+
         // Toggle dropdown
         wrapper.addEventListener('click', () => {
             options.classList.toggle('hidden');
+            setYearSelectorExpanded(!options.classList.contains('hidden'));
         });
 
         // Navigate when selecting a year (keep current scope)
@@ -27,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             opt.addEventListener('click', () => {
                 const y = opt.getAttribute('data-year');
                 if (y) {
+                    setYearSelectorExpanded(false);
                     window.location.href = `/recap/${y}/${scopePath}`;
                 }
             });

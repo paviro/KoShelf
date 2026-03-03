@@ -1,7 +1,11 @@
 <!-- Week Selector -->
 <div class="relative">
-    <div
+    <button
         id="weekSelectorWrapper"
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-controls="weekOptions"
         class="dropdown-trigger flex items-center justify-center sm:justify-between bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg w-10 sm:w-auto sm:px-4 h-10 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-all duration-200 text-sm md:text-base backdrop-blur-sm"
     >
         <div class="flex items-center space-x-0 sm:space-x-3 min-w-0">
@@ -41,7 +45,7 @@
                 d="M19 9l-7 7-7-7"
             ></path>
         </svg>
-    </div>
+    </button>
 
     <!-- Dropdown Options -->
     <div
@@ -78,8 +82,9 @@
 
             <div id="weekYearWeekList" class="max-h-56 overflow-y-auto">
                 {% for (index, week) in reading_stats.weeks.iter().enumerate() %}
-                <div
-                    class="week-option px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if index == 0 %}bg-primary-50 dark:bg-dark-700 text-primary-900 dark:text-white{% endif %}"
+                <button
+                    type="button"
+                    class="week-option w-full text-left px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 {% if index == 0 %}bg-primary-50 dark:bg-dark-700 text-primary-900 dark:text-white{% endif %}"
                     data-week-index="{{ index }}"
                     data-start-date="{{ week.start_date }}"
                     data-end-date="{{ week.end_date }}"
@@ -101,7 +106,7 @@
                         </svg>
                         <span class="week-date-display"></span>
                     </div>
-                </div>
+                </button>
                 {% endfor %}
             </div>
         </div>

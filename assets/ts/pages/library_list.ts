@@ -351,7 +351,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedFilterLabel = document.getElementById('selectedFilterLabel');
 
     filterDropdownButton?.addEventListener('click', () => {
+        const shouldOpen = filterDropdownMenu?.classList.contains('hidden') ?? false;
         filterDropdownMenu?.classList.toggle('hidden');
+        filterDropdownButton.setAttribute('aria-expanded', String(shouldOpen));
     });
 
     filterDropdownMenu?.addEventListener('click', (e) => {
@@ -377,6 +379,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             filterBooks(searchTerm, currentFilter);
 
             filterDropdownMenu.classList.add('hidden');
+            filterDropdownButton?.setAttribute('aria-expanded', 'false');
         }
     });
 
