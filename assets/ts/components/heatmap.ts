@@ -16,6 +16,16 @@ interface ActivityData {
     read: number;
 }
 
+const HEATMAP_COLOR_CLASSES = [
+    ['bg-gray-100', 'dark:bg-dark-800'],
+    ['bg-green-100', 'dark:bg-green-900'],
+    ['bg-green-300', 'dark:bg-green-700'],
+    ['bg-green-500', 'dark:bg-green-500'],
+    ['bg-green-600', 'dark:bg-green-300'],
+] as const;
+
+const HEATMAP_ALL_COLOR_CLASSES = HEATMAP_COLOR_CLASSES.flat();
+
 class ActivityHeatmap {
     private activityData: DailyActivityEntry[] | null = null;
     private activityConfig: ActivityConfig | null = null;
@@ -25,6 +35,8 @@ class ActivityHeatmap {
     private isInitialized = false;
     private resizeObserver: ResizeObserver | null = null;
     private basePath = '/assets/json/statistics';
+    private shouldAnimateYearTransition = false;
+    private cellAnimationTimeoutIds: number[] = [];
 
     // Initialize the heatmap module
     async init(): Promise<void> {
@@ -48,6 +60,7 @@ class ActivityHeatmap {
             if (this.availableYears.length > 0) {
                 this.currentYear = this.availableYears[0]; // Most recent year first
                 await this.loadYearData(this.currentYear);
+                this.shouldAnimateYearTransition = !this.isBackForwardNavigation();
                 this.initializeHeatmap();
             }
 
@@ -139,8 +152,7 @@ class ActivityHeatmap {
         if (year === this.currentYear) return;
 
         try {
-            // Show loading state
-            this.showLoadingState();
+            this.shouldAnimateYearTransition = this.currentYear !== null;
 
             // Load new year data
             await this.loadYearData(year);
@@ -149,8 +161,6 @@ class ActivityHeatmap {
             this.initializeHeatmap();
         } catch (error) {
             console.error(`Error selecting year ${year}:`, error);
-        } finally {
-            this.hideLoadingState();
         }
     }
 
@@ -171,22 +181,6 @@ class ActivityHeatmap {
         const selectedYearText = document.getElementById('selectedYearText');
         if (selectedYearText) {
             selectedYearText.innerHTML = `<span class="font-bold">${year}</span>`;
-        }
-    }
-
-    // Show loading state
-    private showLoadingState(): void {
-        const heatmapGrid = document.getElementById('heatmapGrid');
-        if (heatmapGrid) {
-            heatmapGrid.style.opacity = '0.5';
-        }
-    }
-
-    // Hide loading state
-    private hideLoadingState(): void {
-        const heatmapGrid = document.getElementById('heatmapGrid');
-        if (heatmapGrid) {
-            heatmapGrid.style.opacity = '1';
         }
     }
 
@@ -258,6 +252,9 @@ class ActivityHeatmap {
     // Fill heatmap cells with activity data
     private fillHeatmapCells(activityMap: Map<string, ActivityData>, maxActivity: number): void {
         const cells = document.querySelectorAll<HTMLElement>('.activity-cell');
+        const shouldAnimate = this.shouldAnimateYearTransition && !this.prefersReducedMotion();
+
+        this.clearPendingCellPopIns();
 
         cells.forEach((cell) => {
             if (this.currentYear === null) return;
@@ -272,8 +269,19 @@ class ActivityHeatmap {
 
             // Normalize and apply activity level
             const activityLevel = this.normalizeActivityLevel(activity, maxActivity);
-            this.applyCellStyling(cell, activityLevel, dateStr, activityObj);
+            const shouldAnimateCell = shouldAnimate && activityLevel > 0;
+            const animationDelay = shouldAnimateCell ? this.calculateCellAnimationDelay() : 0;
+            this.applyCellStyling(
+                cell,
+                activityLevel,
+                dateStr,
+                activityObj,
+                shouldAnimateCell,
+                animationDelay,
+            );
         });
+
+        this.shouldAnimateYearTransition = false;
     }
 
     // Calculate the date represented by a heatmap cell for a specific year
@@ -316,20 +324,25 @@ class ActivityHeatmap {
         activityLevel: number,
         dateStr: string,
         activityObj: ActivityData,
+        shouldAnimate = false,
+        animationDelay = 0,
     ): void {
-        const colorClasses = [
-            ['bg-gray-100', 'dark:bg-dark-800'], // 0 (no activity)
-            ['bg-green-100', 'dark:bg-green-900'], // 1 (low)
-            ['bg-green-300', 'dark:bg-green-700'], // 2 (medium)
-            ['bg-green-500', 'dark:bg-green-500'], // 3 (high)
-            ['bg-green-600', 'dark:bg-green-300'], // 4 (very high)
-        ];
+        cell.getAnimations().forEach((animation) => animation.cancel());
+        HEATMAP_ALL_COLOR_CLASSES.forEach((cls) => cell.classList.remove(cls));
 
-        // Remove all possible color classes
-        colorClasses.flat().forEach((cls) => cell.classList.remove(cls));
+        if (shouldAnimate) {
+            HEATMAP_COLOR_CLASSES[0].forEach((cls) => cell.classList.add(cls));
 
-        // Add both light and dark mode classes for the current activity level
-        colorClasses[activityLevel].forEach((cls) => cell.classList.add(cls));
+            const timeoutId = window.setTimeout(() => {
+                HEATMAP_COLOR_CLASSES[0].forEach((cls) => cell.classList.remove(cls));
+                HEATMAP_COLOR_CLASSES[activityLevel].forEach((cls) => cell.classList.add(cls));
+                this.applyCellTransitionAnimation(cell);
+            }, animationDelay);
+
+            this.cellAnimationTimeoutIds.push(timeoutId);
+        } else {
+            HEATMAP_COLOR_CLASSES[activityLevel].forEach((cls) => cell.classList.add(cls));
+        }
 
         // Prepare tooltip content
         const readLabel = DateUtils.formatDuration(activityObj.read);
@@ -342,8 +355,72 @@ class ActivityHeatmap {
         this.addCellHoverEffects(cell);
     }
 
+    private clearPendingCellPopIns(): void {
+        this.cellAnimationTimeoutIds.forEach((timeoutId) => {
+            window.clearTimeout(timeoutId);
+        });
+        this.cellAnimationTimeoutIds = [];
+    }
+
+    private applyCellTransitionAnimation(cell: HTMLElement): void {
+        if (typeof cell.animate !== 'function') {
+            return;
+        }
+
+        cell.getAnimations().forEach((animation) => animation.cancel());
+
+        cell.animate(
+            [
+                { transform: 'scale(0.62)', filter: 'saturate(0.88) brightness(0.99)' },
+                {
+                    transform: 'scale(1.2)',
+                    filter: 'saturate(1.22) brightness(1.04)',
+                    offset: 0.52,
+                },
+                {
+                    transform: 'scale(0.97)',
+                    filter: 'saturate(1.03) brightness(1.01)',
+                    offset: 0.78,
+                },
+                { transform: 'scale(1)', filter: 'saturate(1) brightness(1)' },
+            ],
+            {
+                duration: 280,
+                easing: 'cubic-bezier(0.2, 0.9, 0.24, 1.1)',
+                fill: 'both',
+            },
+        );
+    }
+
+    private calculateCellAnimationDelay(): number {
+        return Math.floor(Math.random() * 340);
+    }
+
+    private prefersReducedMotion(): boolean {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    private isBackForwardNavigation(): boolean {
+        const navigationEntry = performance.getEntriesByType('navigation')[0] as
+            | PerformanceNavigationTiming
+            | undefined;
+
+        if (navigationEntry) {
+            return navigationEntry.type === 'back_forward';
+        }
+
+        return (
+            typeof performance !== 'undefined' &&
+            'navigation' in performance &&
+            performance.navigation.type === 2
+        );
+    }
+
     // Add hover effects to a cell
     private addCellHoverEffects(cell: HTMLElement): void {
+        if (cell.dataset.hoverEffectsBound === 'true') return;
+        cell.dataset.hoverEffectsBound = 'true';
+
         cell.addEventListener('mouseover', function (this: HTMLElement) {
             this.classList.add('ring-1', 'ring-inset', 'ring-gray-900', 'dark:ring-white', 'z-10');
         });
@@ -445,6 +522,8 @@ class ActivityHeatmap {
 
     // Cleanup method
     destroy(): void {
+        this.clearPendingCellPopIns();
+
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
