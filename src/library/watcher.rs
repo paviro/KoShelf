@@ -1,6 +1,7 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
+use crate::runtime::{ContractSnapshot, SharedSnapshotStore};
 use crate::server::version::SharedVersionNotifier;
 use crate::site_generator::SiteGenerator;
 use anyhow::Result;
@@ -13,6 +14,7 @@ use tokio::time::sleep;
 pub struct FileWatcher {
     config: SiteConfig,
     version_notifier: Option<SharedVersionNotifier>,
+    snapshot_store: Option<SharedSnapshotStore>,
 }
 
 impl std::ops::Deref for FileWatcher {
@@ -23,10 +25,15 @@ impl std::ops::Deref for FileWatcher {
 }
 
 impl FileWatcher {
-    pub fn new(config: SiteConfig, version_notifier: Option<SharedVersionNotifier>) -> Self {
+    pub fn new(
+        config: SiteConfig,
+        version_notifier: Option<SharedVersionNotifier>,
+        snapshot_store: Option<SharedSnapshotStore>,
+    ) -> Self {
         Self {
             config,
             version_notifier,
+            snapshot_store,
         }
     }
 
@@ -91,6 +98,7 @@ impl FileWatcher {
         // Clone the config and version notifier for the rebuild task
         let config_clone = self.config.clone();
         let version_notifier_clone = self.version_notifier.clone();
+        let snapshot_store_clone = self.snapshot_store.clone();
 
         // Spawn delayed rebuild task
         // NOTE: Site generation uses non-Send types (e.g. mlua::Lua, Rc-based translations),
@@ -109,11 +117,29 @@ impl FileWatcher {
 
                     info!("Starting delayed site rebuild after quiet period");
 
+                    // Invalidate any previously published in-memory snapshot.
+                    // Rebuild currently writes fresh contract data to disk and snapshot repopulation
+                    // will be added in the runtime-backed API phase.
+                    if let Some(ref snapshot_store) = snapshot_store_clone {
+                        snapshot_store.clear();
+                    }
+
                     // Create new site generator and regenerate everything
                     let site_generator = SiteGenerator::new(config_clone.clone());
 
                     match site_generator.generate().await {
                         Ok(_) => {
+                            if let Some(ref snapshot_store) = snapshot_store_clone {
+                                let data_dir = config_clone.output_dir.join("data");
+                                match ContractSnapshot::load_from_data_dir(&data_dir) {
+                                    Ok(snapshot) => snapshot_store.replace(snapshot),
+                                    Err(error) => warn!(
+                                        "Failed to reload runtime snapshot from {:?}: {}",
+                                        data_dir, error
+                                    ),
+                                }
+                            }
+
                             info!("Delayed site rebuild completed successfully");
 
                             // Notify long-polling clients that a new version is available

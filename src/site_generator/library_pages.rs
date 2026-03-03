@@ -1,6 +1,7 @@
 //! Content list and detail page generation (books + comics).
 
 use super::SiteGenerator;
+use crate::contracts::mappers;
 use crate::koreader::BookStatistics;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::templates::{ItemDetailMarkdownTemplate, ItemDetailTemplate, LibraryListTemplate};
@@ -68,38 +69,27 @@ impl SiteGenerator {
         }
     }
 
-    fn write_list_manifest(
-        &self,
-        content_type: ContentType,
-        buckets: &StatusBuckets,
-    ) -> Result<()> {
-        use serde_json::json;
+    fn data_content_dir(&self, content_type: ContentType) -> std::path::PathBuf {
+        match content_type {
+            ContentType::Book => self.data_books_dir(),
+            ContentType::Comic => self.data_comics_dir(),
+        }
+    }
 
-        let slug = Self::content_slug(content_type);
-        let to_manifest_entry = |b: &LibraryItem| {
-            json!({
-                "id": b.id.clone(),
-                "title": b.book_info.title.clone(),
-                "authors": b.book_info.authors.clone(),
-                "json_path": format!("/{}/{}/details.json", slug, b.id),
-                "html_path":  format!("/{}/{}/index.html",  slug, b.id),
-            })
-        };
+    fn write_contract_list(&self, content_type: ContentType, items: &[LibraryItem]) -> Result<()> {
+        let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
 
-        let manifest = json!({
-            "content_type": match content_type { ContentType::Book => "book", ContentType::Comic => "comic" },
-            "reading": buckets.reading.iter().map(to_manifest_entry).collect::<Vec<_>>(),
-            "completed": buckets.completed.iter().map(to_manifest_entry).collect::<Vec<_>>(),
-            "abandoned": buckets.abandoned.iter().map(to_manifest_entry).collect::<Vec<_>>(),
-            "new": buckets.unread.iter().map(to_manifest_entry).collect::<Vec<_>>(),
-            "generated_at": self.get_last_updated(),
-        });
+        let filtered_items: Vec<LibraryItem> = items
+            .iter()
+            .filter(|item| item.content_type() == content_type)
+            .cloned()
+            .collect();
 
-        fs::create_dir_all(self.content_dir(content_type))?;
-        let list_json_path = self.content_dir(content_type).join("list.json");
-        let list_json_content = serde_json::to_string_pretty(&manifest)?;
-        self.write_registered_string(list_json_path, &list_json_content)?;
-        Ok(())
+        let response = mappers::map_library_list_response(meta, &filtered_items);
+        let path = self
+            .data_dir()
+            .join(format!("{}.json", Self::content_slug(content_type)));
+        self.write_registered_json_pretty(path, &response)
     }
 
     async fn generate_content_list(
@@ -115,7 +105,7 @@ impl SiteGenerator {
         );
 
         let buckets = StatusBuckets::from_items(items);
-        self.write_list_manifest(content_type, &buckets)?;
+        self.write_contract_list(content_type, items)?;
 
         let template = LibraryListTemplate {
             site_title: self.site_title.clone(),
@@ -223,124 +213,19 @@ impl SiteGenerator {
             let md_path = item_dir.join("details.md");
             self.write_registered_string(md_path, &markdown)?;
 
-            // Generate JSON export (not used by the frontend code - only for the user's convenience)
-            let mut root = serde_json::Map::new();
-            root.insert(
-                "content_type".to_string(),
-                serde_json::Value::String(match content_type {
-                    ContentType::Book => "book".to_string(),
-                    ContentType::Comic => "comic".to_string(),
-                }),
+            // New contract-based static data output for frontend `/data` mode.
+            let contract_meta = mappers::build_meta(self.get_version(), self.get_last_updated());
+            let contract_detail = mappers::map_library_detail_response(
+                contract_meta,
+                item,
+                item_stats.clone(),
+                session_stats,
             );
-
-            let mut item_obj = serde_json::Map::new();
-            item_obj.insert(
-                "title".to_string(),
-                serde_json::Value::String(item.book_info.title.clone()),
-            );
-            item_obj.insert(
-                "authors".to_string(),
-                serde_json::to_value(item.book_info.authors.clone())?,
-            );
-            item_obj.insert(
-                "series".to_string(),
-                serde_json::to_value(item.series_display())?,
-            );
-            item_obj.insert(
-                "language".to_string(),
-                serde_json::to_value(item.language())?,
-            );
-            item_obj.insert(
-                "publisher".to_string(),
-                serde_json::to_value(item.publisher())?,
-            );
-            item_obj.insert(
-                "description".to_string(),
-                serde_json::to_value(item.book_info.description.clone())?,
-            );
-            item_obj.insert("rating".to_string(), serde_json::to_value(item.rating())?);
-            item_obj.insert(
-                "review_note".to_string(),
-                serde_json::to_value(item.review_note().cloned())?,
-            );
-            item_obj.insert(
-                "status".to_string(),
-                serde_json::Value::String(item.status().to_string()),
-            );
-            item_obj.insert(
-                "progress_percentage".to_string(),
-                serde_json::to_value(item.progress_percentage())?,
-            );
-            item_obj.insert(
-                "subjects".to_string(),
-                serde_json::to_value(item.subjects())?,
-            );
-            item_obj.insert(
-                "identifiers".to_string(),
-                serde_json::to_value(
-                    item.identifiers()
-                        .iter()
-                        .map(|id| {
-                            serde_json::json!({
-                                "scheme": id.scheme,
-                                "value": id.value,
-                                "display_scheme": id.display_scheme(),
-                                "url": id.url()
-                            })
-                        })
-                        .collect::<Vec<_>>(),
-                )?,
-            );
-
-            let item_key = match content_type {
-                ContentType::Book => "book",
-                ContentType::Comic => "comic",
-            };
-            root.insert(item_key.to_string(), serde_json::Value::Object(item_obj));
-
-            let annotations = item
-                .koreader_metadata
-                .as_ref()
-                .map(|m| m.annotations.clone())
-                .unwrap_or_default();
-            let bookmarks = item
-                .koreader_metadata
-                .as_ref()
-                .map(|m| {
-                    m.annotations
-                        .iter()
-                        .filter(|a| a.is_bookmark())
-                        .cloned()
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-
-            root.insert(
-                "annotations".to_string(),
-                serde_json::to_value(annotations)?,
-            );
-            root.insert("bookmarks".to_string(), serde_json::to_value(bookmarks)?);
-
-            root.insert(
-                "statistics".to_string(),
-                serde_json::json!({
-                    "item_stats": item_stats,
-                    "session_stats": session_stats,
-                    "completions": item_stats.as_ref().and_then(|s| s.completions.as_ref()),
-                }),
-            );
-            root.insert(
-                "export_info".to_string(),
-                serde_json::json!({
-                    "generated_by": "KoShelf",
-                    "version": self.get_version(),
-                    "generated_at": self.get_last_updated(),
-                }),
-            );
-
-            let json_str = serde_json::to_string_pretty(&serde_json::Value::Object(root))?;
-            let json_path = item_dir.join("details.json");
-            self.write_registered_string(json_path, &json_str)?;
+            fs::create_dir_all(self.data_content_dir(content_type))?;
+            let data_item_path = self
+                .data_content_dir(content_type)
+                .join(format!("{}.json", item.id));
+            self.write_registered_json_pretty(data_item_path, &contract_detail)?;
         }
 
         Ok(())
@@ -348,7 +233,8 @@ impl SiteGenerator {
 
     /// Clean up book directories for books that no longer exist in the library
     pub(crate) fn cleanup_stale_books(&self, books: &[LibraryItem]) -> Result<()> {
-        self.cleanup_stale_content_dirs(self.books_dir(), books, "book")
+        self.cleanup_stale_content_dirs(self.books_dir(), books, "book")?;
+        self.cleanup_stale_content_data_files(ContentType::Book, books, "book")
     }
 
     /// Clean up cover files for books that no longer exist in the library
@@ -390,7 +276,48 @@ impl SiteGenerator {
 
     /// Clean up comic directories for comics that no longer exist in the library
     pub(crate) fn cleanup_stale_comics(&self, comics: &[LibraryItem]) -> Result<()> {
-        self.cleanup_stale_content_dirs(self.comics_dir(), comics, "comic")
+        self.cleanup_stale_content_dirs(self.comics_dir(), comics, "comic")?;
+        self.cleanup_stale_content_data_files(ContentType::Comic, comics, "comic")
+    }
+
+    fn cleanup_stale_content_data_files(
+        &self,
+        content_type: ContentType,
+        items: &[LibraryItem],
+        label: &str,
+    ) -> Result<()> {
+        let data_dir = self.data_content_dir(content_type);
+        if !data_dir.exists() {
+            return Ok(());
+        }
+
+        let current_ids: HashSet<String> = items.iter().map(|item| item.id.clone()).collect();
+        let entries = fs::read_dir(&data_dir)?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            if let Some(file_stem) = path.file_stem().and_then(|name| name.to_str())
+                && !current_ids.contains(file_stem)
+            {
+                info!("Removing stale {} data file: {:?}", label, path);
+                if let Err(error) = fs::remove_file(&path) {
+                    warn!(
+                        "Failed to remove stale {} data file {:?}: {}",
+                        label, path, error
+                    );
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn cleanup_stale_content_dirs(

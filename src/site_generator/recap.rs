@@ -2,6 +2,7 @@
 
 use super::SiteGenerator;
 use super::utils::{completion_year_and_month, format_day_month, format_duration};
+use crate::contracts::{mappers, recap::RecapShareAssets};
 use crate::models::{
     ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
     StatisticsData, YearlySummary,
@@ -11,7 +12,7 @@ use anyhow::Result;
 use askama::Template;
 use chrono::Datelike;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::info;
+use log::{info, warn};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::time::{Instant, SystemTime};
@@ -398,7 +399,145 @@ fn compute_yearly_summary(
     }
 }
 
+fn recap_share_assets_for_year(year: i32) -> RecapShareAssets {
+    RecapShareAssets {
+        story_url: format!("/assets/recap/{}_share_story.webp", year),
+        square_url: format!("/assets/recap/{}_share_square.webp", year),
+        banner_url: format!("/assets/recap/{}_share_banner.webp", year),
+    }
+}
+
 impl SiteGenerator {
+    fn cleanup_stale_recap_outputs(&self, current_years: &HashSet<i32>) -> Result<()> {
+        let valid_years: HashSet<String> =
+            current_years.iter().map(|year| year.to_string()).collect();
+
+        self.cleanup_stale_recap_year_json_files(&valid_years)?;
+        self.cleanup_stale_recap_year_directories(&valid_years)?;
+        self.cleanup_stale_recap_share_assets(&valid_years)?;
+
+        Ok(())
+    }
+
+    fn cleanup_stale_recap_year_json_files(&self, valid_years: &HashSet<String>) -> Result<()> {
+        let years_dir = self.data_recap_dir().join("years");
+        if !years_dir.exists() {
+            return Ok(());
+        }
+
+        let entries = fs::read_dir(&years_dir)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            let Some(stem) = path.file_stem().and_then(|name| name.to_str()) else {
+                continue;
+            };
+
+            if !stem.chars().all(|ch| ch.is_ascii_digit()) {
+                continue;
+            }
+
+            if !valid_years.contains(stem) {
+                info!("Removing stale recap year data file: {:?}", path);
+                if let Err(error) = fs::remove_file(&path) {
+                    warn!(
+                        "Failed to remove stale recap year data file {:?}: {}",
+                        path, error
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn cleanup_stale_recap_year_directories(&self, valid_years: &HashSet<String>) -> Result<()> {
+        let recap_dir = self.recap_dir();
+        if !recap_dir.exists() {
+            return Ok(());
+        }
+
+        let entries = fs::read_dir(&recap_dir)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            let Some(dir_name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+
+            if !dir_name.chars().all(|ch| ch.is_ascii_digit()) {
+                continue;
+            }
+
+            if !valid_years.contains(dir_name) {
+                info!("Removing stale recap year directory: {:?}", path);
+                if let Err(error) = fs::remove_dir_all(&path) {
+                    warn!(
+                        "Failed to remove stale recap year directory {:?}: {}",
+                        path, error
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn cleanup_stale_recap_share_assets(&self, valid_years: &HashSet<String>) -> Result<()> {
+        let assets_recap_dir = self.output_dir.join("assets").join("recap");
+        if !assets_recap_dir.exists() {
+            return Ok(());
+        }
+
+        let entries = fs::read_dir(&assets_recap_dir)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
+                continue;
+            };
+            if extension != "webp" && extension != "svg" {
+                continue;
+            }
+
+            let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            let Some((year_prefix, _)) = file_name.split_once('_') else {
+                continue;
+            };
+
+            if !year_prefix.chars().all(|ch| ch.is_ascii_digit()) {
+                continue;
+            }
+
+            if !valid_years.contains(year_prefix) {
+                info!("Removing stale recap share asset: {:?}", path);
+                if let Err(error) = fs::remove_file(&path) {
+                    warn!(
+                        "Failed to remove stale recap share asset {:?}: {}",
+                        path, error
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     async fn render_share_images_for_year(&self, year: i32, summary: &YearlySummary) -> Result<()> {
         // Generate share images for social media
         let share_data = crate::share::ShareImageData {
@@ -570,6 +709,17 @@ impl SiteGenerator {
 
         let (year_month_items, years) =
             group_completions_by_year_month(stats_data, &md5_to_book, &self.translations);
+        let years_books = mappers::years_for_content_type(&year_month_items, ContentType::Book);
+        let years_comics = mappers::years_for_content_type(&year_month_items, ContentType::Comic);
+
+        let recap_meta = mappers::build_meta(self.get_version(), self.get_last_updated());
+        let recap_index = mappers::map_recap_index_response(
+            recap_meta.clone(),
+            years.clone(),
+            years_books,
+            years_comics,
+        );
+        self.write_registered_json_pretty(self.data_recap_dir().join("index.json"), &recap_index)?;
 
         if years.is_empty() {
             // No completions → render empty state page
@@ -590,6 +740,9 @@ impl SiteGenerator {
             fs::create_dir_all(&recap_dir)?;
             let path = recap_dir.join("index.html");
             self.write_minify_html(path, &html)?;
+
+            let current_years: HashSet<i32> = HashSet::new();
+            self.cleanup_stale_recap_outputs(&current_years)?;
 
             return Ok(());
         }
@@ -763,7 +916,28 @@ impl SiteGenerator {
             }
 
             self.render_share_images_for_year(*year, &summary).await?;
+
+            let share_assets = recap_share_assets_for_year(*year);
+            let year_response = mappers::map_recap_year_response(
+                recap_meta.clone(),
+                *year,
+                mappers::map_recap_year_scope(&monthly.all, &summary, Some(share_assets.clone())),
+                mappers::map_recap_year_scope(
+                    &monthly.books,
+                    &summary_books,
+                    Some(share_assets.clone()),
+                ),
+                mappers::map_recap_year_scope(&monthly.comics, &summary_comics, Some(share_assets)),
+            );
+            let year_json_path = self
+                .data_recap_dir()
+                .join("years")
+                .join(format!("{}.json", year));
+            self.write_registered_json_pretty(year_json_path, &year_response)?;
         }
+
+        let current_years: HashSet<i32> = years.iter().copied().collect();
+        self.cleanup_stale_recap_outputs(&current_years)?;
 
         Ok(())
     }

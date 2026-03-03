@@ -97,8 +97,6 @@ pub struct StatsTemplate {
     pub stats_scope: String,
     /// Whether we should show the Books/Comics filter UI (only when both exist).
     pub show_type_filter: bool,
-    /// Base path for stats JSON (e.g. "/assets/json/statistics", "/assets/json/statistics/books")
-    pub stats_json_base_path: String,
     pub reading_stats: ReadingStats,
     pub available_years: Vec<i32>,
     pub version: String,

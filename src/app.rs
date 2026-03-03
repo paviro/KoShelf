@@ -1,11 +1,12 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
 use crate::library::{FileWatcher, MetadataLocation};
+use crate::runtime::{ContractSnapshot, create_snapshot_store};
 use crate::server::{WebServer, create_version_notifier};
 use crate::site_generator::SiteGenerator;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
-use log::info;
+use log::{info, warn};
 use tempfile::TempDir;
 
 enum RunMode {
@@ -53,6 +54,13 @@ fn metadata_location(cli: &Cli) -> MetadataLocation {
     } else {
         MetadataLocation::InBookFolder
     }
+}
+
+fn env_flag(name: &str) -> bool {
+    matches!(
+        std::env::var(name).as_deref(),
+        Ok("1") | Ok("true") | Ok("TRUE") | Ok("yes") | Ok("YES") | Ok("on") | Ok("ON")
+    )
 }
 
 /// Run KoShelf with the provided CLI args.
@@ -116,7 +124,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Starting file watcher mode for static output");
-            let file_watcher = FileWatcher::new(config, None);
+            let file_watcher = FileWatcher::new(config, None, None);
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -126,12 +134,35 @@ pub async fn run(cli: Cli) -> Result<()> {
         RunMode::Serve => {
             // Create shared version notifier for long-polling
             let version_notifier = create_version_notifier();
+            let snapshot_store = create_snapshot_store();
+            let serve_react_shell = env_flag("KOSHELF_USE_REACT_SHELL");
+
+            let data_dir = plan.output_dir.join("data");
+            match ContractSnapshot::load_from_data_dir(&data_dir) {
+                Ok(snapshot) => snapshot_store.replace(snapshot),
+                Err(error) => {
+                    warn!(
+                        "Failed to load initial runtime snapshot from {:?}: {}",
+                        data_dir, error
+                    );
+                }
+            }
 
             // Start file watcher with version notifier
-            let file_watcher = FileWatcher::new(config, Some(version_notifier.clone()));
+            let file_watcher = FileWatcher::new(
+                config,
+                Some(version_notifier.clone()),
+                Some(snapshot_store.clone()),
+            );
 
             // Start web server with version notifier
-            let web_server = WebServer::new(plan.output_dir, cli.port, version_notifier);
+            let web_server = WebServer::new(
+                plan.output_dir,
+                cli.port,
+                version_notifier,
+                snapshot_store,
+                serve_react_shell,
+            );
 
             // Run both file watcher and web server concurrently
             tokio::select! {

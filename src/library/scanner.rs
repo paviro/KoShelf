@@ -307,6 +307,35 @@ impl LibraryScanner {
             library_md5s.insert(md5);
         }
     }
+
+    fn canonical_item_id(
+        &self,
+        path: &std::path::Path,
+        title: &str,
+        koreader_metadata: Option<&KoReaderMetadata>,
+        book_md5: Option<&str>,
+    ) -> String {
+        if let Some(md5) =
+            koreader_metadata.and_then(|metadata| metadata.partial_md5_checksum.as_deref())
+        {
+            return md5.to_lowercase();
+        }
+
+        if let Some(md5) = book_md5 {
+            return md5.to_lowercase();
+        }
+
+        match calculate_partial_md5(path) {
+            Ok(md5) => md5.to_lowercase(),
+            Err(error) => {
+                warn!(
+                    "Failed to derive canonical md5 ID for {:?}: {}. Falling back to title ID.",
+                    path, error
+                );
+                generate_book_id(title)
+            }
+        }
+    }
 }
 
 pub async fn scan_library(
@@ -358,9 +387,15 @@ pub async fn scan_library(
             let (metadata_path, book_md5) = scanner.locate_metadata_path_and_md5(path, format);
             let koreader_metadata = scanner.parse_koreader_metadata(metadata_path).await;
             scanner.collect_md5_for_item(&mut library_md5s, path, &koreader_metadata, &book_md5);
+            let item_id = scanner.canonical_item_id(
+                path,
+                &book_info.title,
+                koreader_metadata.as_ref(),
+                book_md5.as_deref(),
+            );
 
             let book = LibraryItem {
-                id: generate_book_id(&book_info.title),
+                id: item_id,
                 book_info,
                 koreader_metadata,
                 file_path: path.to_path_buf(),

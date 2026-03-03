@@ -1,15 +1,15 @@
 //! Statistics page generation and JSON export.
 
 use super::SiteGenerator;
+use crate::contracts::mappers;
 use crate::koreader::StatisticsParser;
 use crate::models::{ContentType, ReadingStats, StatisticsData};
 use crate::templates::{StatsEmptyTemplate, StatsTemplate};
 use anyhow::Result;
 use askama::Template;
-use log::info;
-use std::collections::HashMap;
+use log::{info, warn};
+use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
 
 use super::utils::{UiContext, completion_counts_by_year};
 
@@ -31,42 +31,57 @@ impl SiteGenerator {
         let reading_stats_all = StatisticsParser::calculate_stats(stats_data, &self.time_config);
         let completion_counts_all = completion_counts_by_year(stats_data);
 
-        // Export JSON for ALL scope into a dedicated folder to keep `/assets/json/statistics/` tidy.
-        let all_dir = self.statistics_json_dir().join("all");
-        fs::create_dir_all(&all_dir)?;
-        let available_years = self
-            .export_daily_activity_by_year_to_dir(
-                &reading_stats_all.daily_activity,
-                &all_dir,
-                &completion_counts_all,
-            )
-            .await?;
-        self.export_week_stats_to_dir(&reading_stats_all.weeks, &all_dir)?;
+        // Build per-type stats for contract exports. We always compute these so `/data` can
+        // expose stable scoped payloads even when one content type is empty.
+        let books_data = stats_data.filtered_by_content_type(ContentType::Book);
+        let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
 
-        // Only export/render per-type views when we actually have both types in the site.
-        // If only one type exists, the "all" view is the only meaningful one.
+        let mut books_stats_data_for_contract = books_data.clone();
+        let reading_stats_books_for_contract = StatisticsParser::calculate_stats(
+            &mut books_stats_data_for_contract,
+            &self.time_config,
+        );
+        let completion_counts_books = completion_counts_by_year(&books_stats_data_for_contract);
+
+        let mut comics_stats_data_for_contract = comics_data.clone();
+        let reading_stats_comics_for_contract = StatisticsParser::calculate_stats(
+            &mut comics_stats_data_for_contract,
+            &self.time_config,
+        );
+        let completion_counts_comics = completion_counts_by_year(&comics_stats_data_for_contract);
+
+        let available_years_all =
+            mappers::available_years_from_stats(&reading_stats_all, &completion_counts_all);
+        self.export_statistics_contract_data(
+            &available_years_all,
+            &reading_stats_all,
+            &completion_counts_all,
+            &reading_stats_books_for_contract,
+            &completion_counts_books,
+            &reading_stats_comics_for_contract,
+            &completion_counts_comics,
+        )?;
+
+        // Render per-type views when both types exist in the site.
         let (
             reading_stats_books,
             available_years_books,
             reading_stats_comics,
             available_years_comics,
         ) = if show_type_filter {
-            // Also export separate JSON outputs for books and comics
-            let books_data = stats_data.filtered_by_content_type(ContentType::Book);
-            let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
-
-            let (reading_stats_books, available_years_books) = self
-                .export_stats_bundle(&books_data, ContentType::Book)
-                .await?;
-
-            let (reading_stats_comics, available_years_comics) = self
-                .export_stats_bundle(&comics_data, ContentType::Comic)
-                .await?;
+            let available_years_books = mappers::available_years_from_stats(
+                &reading_stats_books_for_contract,
+                &completion_counts_books,
+            );
+            let available_years_comics = mappers::available_years_from_stats(
+                &reading_stats_comics_for_contract,
+                &completion_counts_comics,
+            );
 
             (
-                Some(reading_stats_books),
+                Some(reading_stats_books_for_contract.clone()),
                 Some(available_years_books),
-                Some(reading_stats_comics),
+                Some(reading_stats_comics_for_contract.clone()),
                 Some(available_years_comics),
             )
         } else {
@@ -78,9 +93,8 @@ impl SiteGenerator {
                 site_title: self.site_title.clone(),
                 stats_scope: "all".to_string(),
                 show_type_filter,
-                stats_json_base_path: "/assets/json/statistics/all".to_string(),
                 reading_stats: reading_stats_all.clone(),
-                available_years,
+                available_years: available_years_all.clone(),
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap(
@@ -99,9 +113,8 @@ impl SiteGenerator {
                 site_title: self.site_title.clone(),
                 stats_scope: "all".to_string(),
                 show_type_filter,
-                stats_json_base_path: "/assets/json/statistics/all".to_string(),
                 reading_stats: reading_stats_all.clone(),
-                available_years,
+                available_years: available_years_all.clone(),
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap(
@@ -140,7 +153,6 @@ impl SiteGenerator {
                         site_title: self.site_title.clone(),
                         stats_scope: "books".to_string(),
                         show_type_filter,
-                        stats_json_base_path: "/assets/json/statistics/books".to_string(),
                         reading_stats: reading_stats_books.expect("books stats must exist"),
                         available_years: years_books,
                         version: self.get_version(),
@@ -181,7 +193,6 @@ impl SiteGenerator {
                         site_title: self.site_title.clone(),
                         stats_scope: "comics".to_string(),
                         show_type_filter,
-                        stats_json_base_path: "/assets/json/statistics/comics".to_string(),
                         reading_stats: reading_stats_comics.expect("comics stats must exist"),
                         available_years: years_comics,
                         version: self.get_version(),
@@ -202,89 +213,149 @@ impl SiteGenerator {
         Ok(())
     }
 
-    /// Export daily activity data grouped by year as separate JSON files and return available years
-    pub(crate) async fn export_daily_activity_by_year_to_dir(
-        &self,
-        daily_activity: &[crate::models::DailyStats],
-        output_dir: &Path,
-        completion_counts_by_year: &HashMap<i32, i64>,
-    ) -> Result<Vec<i32>> {
-        // Group daily stats by year
-        let mut activity_by_year: std::collections::HashMap<i32, Vec<&crate::models::DailyStats>> =
-            std::collections::HashMap::new();
+    fn week_stats_by_key(
+        weeks: &[crate::models::WeeklyStats],
+    ) -> HashMap<String, crate::models::WeeklyStats> {
+        let mut by_key = HashMap::new();
+        for week in weeks {
+            by_key
+                .entry(week.start_date.clone())
+                .or_insert_with(|| week.clone());
+        }
+        by_key
+    }
 
-        for day_stat in daily_activity {
-            // Extract year from date (format: yyyy-mm-dd)
-            if let Some(year_str) = day_stat.date.get(0..4)
-                && let Ok(year) = year_str.parse::<i32>()
+    fn cleanup_stale_statistics_data(
+        &self,
+        valid_week_keys: &HashSet<String>,
+        valid_years: &HashSet<String>,
+    ) -> Result<()> {
+        self.cleanup_stale_json_files(
+            self.data_statistics_dir().join("weeks"),
+            valid_week_keys,
+            "statistics week",
+        )?;
+        self.cleanup_stale_json_files(
+            self.data_statistics_dir().join("years"),
+            valid_years,
+            "statistics year",
+        )
+    }
+
+    fn cleanup_stale_json_files(
+        &self,
+        directory: std::path::PathBuf,
+        valid_stems: &HashSet<String>,
+        label: &str,
+    ) -> Result<()> {
+        if !directory.exists() {
+            return Ok(());
+        }
+
+        let entries = fs::read_dir(&directory)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+
+            if let Some(stem) = path.file_stem().and_then(|name| name.to_str())
+                && !valid_stems.contains(stem)
             {
-                activity_by_year.entry(year).or_default().push(day_stat);
+                info!("Removing stale {} data file: {:?}", label, path);
+                if let Err(error) = fs::remove_file(&path) {
+                    warn!(
+                        "Failed to remove stale {} data file {:?}: {}",
+                        label, path, error
+                    );
+                }
             }
         }
 
-        // Collect available years before consuming the map
-        let mut available_years: Vec<i32> = activity_by_year.keys().cloned().collect();
-        available_years.sort_by(|a, b| b.cmp(a)); // Sort descending (newest first)
-
-        // Export each year's data to a separate file
-        for (year, year_data) in activity_by_year {
-            let filename = format!("daily_activity_{}.json", year);
-            let file_path = output_dir.join(filename);
-            let completed_count = completion_counts_by_year.get(&year).copied().unwrap_or(0);
-
-            // Wrap the data with configuration information
-            let json_data = serde_json::json!({
-                "data": year_data,
-                "config": {
-                    "max_scale_seconds": self.heatmap_scale_max
-                },
-                "summary": {
-                    "completed_count": completed_count
-                }
-            });
-
-            self.write_registered_json_pretty(file_path, &json_data)?;
-        }
-
-        Ok(available_years)
-    }
-
-    fn export_week_stats_to_dir(
-        &self,
-        weeks: &[crate::models::WeeklyStats],
-        output_dir: &Path,
-    ) -> Result<()> {
-        for (index, week) in weeks.iter().enumerate() {
-            let file_path = output_dir.join(format!("week_{}.json", index));
-            self.write_registered_json_pretty(file_path, week)?;
-        }
         Ok(())
     }
 
-    async fn export_stats_bundle(
+    #[allow(clippy::too_many_arguments)]
+    fn export_statistics_contract_data(
         &self,
-        data: &StatisticsData,
-        content_type: ContentType,
-    ) -> Result<(ReadingStats, Vec<i32>)> {
-        let mut data = data.clone();
-        let reading_stats = StatisticsParser::calculate_stats(&mut data, &self.time_config);
-        let completion_counts = completion_counts_by_year(&data);
+        available_years: &[i32],
+        reading_stats_all: &ReadingStats,
+        completion_counts_all: &HashMap<i32, i64>,
+        reading_stats_books: &ReadingStats,
+        completion_counts_books: &HashMap<i32, i64>,
+        reading_stats_comics: &ReadingStats,
+        completion_counts_comics: &HashMap<i32, i64>,
+    ) -> Result<()> {
+        let max_scale_seconds = self.heatmap_scale_max.map(i64::from).unwrap_or(0);
+        let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
 
-        let subdir = match content_type {
-            ContentType::Book => self.statistics_json_dir().join("books"),
-            ContentType::Comic => self.statistics_json_dir().join("comics"),
-        };
-        fs::create_dir_all(&subdir)?;
+        let index_response = mappers::map_statistics_index_response(
+            meta.clone(),
+            available_years.to_vec(),
+            reading_stats_all,
+            reading_stats_books,
+            reading_stats_comics,
+            max_scale_seconds,
+        );
 
-        let years = self
-            .export_daily_activity_by_year_to_dir(
-                &reading_stats.daily_activity,
-                &subdir,
-                &completion_counts,
-            )
-            .await?;
-        self.export_week_stats_to_dir(&reading_stats.weeks, &subdir)?;
+        let valid_week_keys: HashSet<String> = index_response
+            .available_weeks
+            .iter()
+            .map(|week| week.week_key.clone())
+            .collect();
+        let valid_years: HashSet<String> = available_years
+            .iter()
+            .map(|year| year.to_string())
+            .collect();
+        self.cleanup_stale_statistics_data(&valid_week_keys, &valid_years)?;
 
-        Ok((reading_stats, years))
+        let index_path = self.data_statistics_dir().join("index.json");
+        self.write_registered_json_pretty(index_path, &index_response)?;
+
+        let all_weeks = Self::week_stats_by_key(&reading_stats_all.weeks);
+        let books_weeks = Self::week_stats_by_key(&reading_stats_books.weeks);
+        let comics_weeks = Self::week_stats_by_key(&reading_stats_comics.weeks);
+
+        for week in &index_response.available_weeks {
+            let week_response = mappers::map_statistics_week_response(
+                meta.clone(),
+                week.week_key.clone(),
+                all_weeks.get(&week.week_key),
+                books_weeks.get(&week.week_key),
+                comics_weeks.get(&week.week_key),
+            );
+
+            let week_path = self
+                .data_statistics_dir()
+                .join("weeks")
+                .join(format!("{}.json", week.week_key));
+            self.write_registered_json_pretty(week_path, &week_response)?;
+        }
+
+        for year in available_years {
+            let year_response = mappers::map_statistics_year_response(
+                meta.clone(),
+                *year,
+                reading_stats_all,
+                completion_counts_all,
+                reading_stats_books,
+                completion_counts_books,
+                reading_stats_comics,
+                completion_counts_comics,
+                max_scale_seconds,
+            );
+
+            let year_path = self
+                .data_statistics_dir()
+                .join("years")
+                .join(format!("{}.json", year));
+            self.write_registered_json_pretty(year_path, &year_response)?;
+        }
+
+        Ok(())
     }
 }

@@ -7,16 +7,25 @@ fn main() {
     rerun_if_changed_recursive(Path::new("assets"));
     rerun_if_changed_recursive(Path::new("templates"));
     rerun_if_changed_recursive(Path::new("src"));
+    rerun_if_changed_recursive(Path::new("frontend/src"));
+    println!("cargo:rerun-if-changed=frontend/index.html");
+    println!("cargo:rerun-if-changed=frontend/package.json");
+    println!("cargo:rerun-if-changed=frontend/package-lock.json");
+    println!("cargo:rerun-if-changed=frontend/vite.config.ts");
+    println!("cargo:rerun-if-changed=frontend/tsconfig.json");
+    println!("cargo:rerun-if-changed=frontend/tsconfig.node.json");
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=package.json");
     println!("cargo:rerun-if-changed=package-lock.json");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NODE_BUILD");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NPM_INSTALL");
+    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_REACT_BUILD");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_FONT_DOWNLOAD");
     println!("cargo:rerun-if-env-changed=KOSHELF_FONT_CACHE_DIR");
 
     let skip_node_build = env_flag("KOSHELF_SKIP_NODE_BUILD");
     let skip_npm_install = env_flag("KOSHELF_SKIP_NPM_INSTALL");
+    let skip_react_build = env_flag("KOSHELF_SKIP_REACT_BUILD");
     let skip_font_download = env_flag("KOSHELF_SKIP_FONT_DOWNLOAD");
 
     // Check if we have the node_modules and package.json for Tailwind
@@ -84,6 +93,9 @@ fn main() {
 
         // Compile TypeScript with esbuild
         compile_typescript(&out_dir);
+
+        // Compile optional React + Vite frontend scaffold
+        compile_react_frontend(&out_dir, skip_npm_install, skip_react_build);
     } else {
         eprintln!("Skipping Tailwind/CSS/TypeScript build (KOSHELF_SKIP_NODE_BUILD=1)");
     }
@@ -307,6 +319,115 @@ fn compile_typescript(out_dir: &str) {
     }
 
     eprintln!("TypeScript compilation completed successfully");
+}
+
+/// Build the optional React+Vite frontend scaffold and copy dist assets into OUT_DIR.
+fn compile_react_frontend(out_dir: &str, skip_npm_install: bool, skip_react_build: bool) {
+    let frontend_dir = Path::new("frontend");
+    let frontend_package = frontend_dir.join("package.json");
+
+    if !frontend_package.exists() {
+        eprintln!("No frontend/package.json found, skipping React frontend build");
+        return;
+    }
+
+    if skip_react_build {
+        eprintln!("Skipping React frontend build (KOSHELF_SKIP_REACT_BUILD=1)");
+        return;
+    }
+
+    let frontend_lock = frontend_dir.join("package-lock.json");
+    let frontend_node_modules = frontend_dir.join("node_modules");
+
+    let should_install = !frontend_node_modules.exists()
+        || (frontend_lock.exists()
+            && frontend_node_modules
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                < frontend_lock
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH));
+
+    if should_install {
+        if skip_npm_install {
+            panic!(
+                "frontend/node_modules missing/outdated but npm install is disabled (KOSHELF_SKIP_NPM_INSTALL). \
+                 Run `npm --prefix frontend ci`/`npm --prefix frontend install`, or unset the env var."
+            );
+        }
+
+        eprintln!("Installing frontend npm dependencies...");
+        let mut cmd = Command::new("npm");
+        cmd.args(["--prefix", "frontend"]);
+        if frontend_lock.exists() {
+            cmd.arg("ci");
+        } else {
+            cmd.arg("install");
+        }
+
+        let install_output = cmd
+            .output()
+            .expect("Failed to install frontend npm dependencies.");
+        if !install_output.status.success() {
+            panic!(
+                "frontend npm install failed:\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&install_output.stdout),
+                String::from_utf8_lossy(&install_output.stderr)
+            );
+        }
+    }
+
+    eprintln!("Building React frontend with Vite...");
+    let build_output = Command::new("npm")
+        .args(["--prefix", "frontend", "run", "build"])
+        .output()
+        .expect("Failed to run frontend build.");
+
+    if !build_output.status.success() {
+        panic!(
+            "React frontend build failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&build_output.stdout),
+            String::from_utf8_lossy(&build_output.stderr)
+        );
+    }
+
+    let dist_dir = frontend_dir.join("dist");
+    if !dist_dir.exists() {
+        panic!("frontend build completed but dist directory was not found");
+    }
+
+    let out_frontend_dir = Path::new(out_dir).join("frontend-dist");
+    copy_dir_recursive(&dist_dir, &out_frontend_dir)
+        .expect("Failed to copy frontend dist assets into OUT_DIR");
+
+    eprintln!(
+        "React frontend build completed and copied to {}",
+        out_frontend_dir.display()
+    );
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
+    if dst.exists() {
+        fs::remove_dir_all(dst)?;
+    }
+    fs::create_dir_all(dst)?;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else if src_path.is_file() {
+            let bytes = fs::read(&src_path)?;
+            fs::write(&dst_path, bytes)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Download Gelasio font files for SVG rendering

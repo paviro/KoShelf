@@ -116,14 +116,29 @@ impl SiteGenerator {
     pub(crate) fn icons_dir(&self) -> PathBuf {
         self.assets_dir().join("icons")
     }
-    pub(crate) fn json_dir(&self) -> PathBuf {
-        self.assets_dir().join("json")
+
+    pub(crate) fn data_dir(&self) -> PathBuf {
+        self.output_dir.join("data")
     }
-    pub(crate) fn statistics_json_dir(&self) -> PathBuf {
-        self.json_dir().join("statistics")
+
+    pub(crate) fn data_books_dir(&self) -> PathBuf {
+        self.data_dir().join("books")
     }
-    pub(crate) fn calendar_json_dir(&self) -> PathBuf {
-        self.json_dir().join("calendar")
+
+    pub(crate) fn data_comics_dir(&self) -> PathBuf {
+        self.data_dir().join("comics")
+    }
+
+    pub(crate) fn data_statistics_dir(&self) -> PathBuf {
+        self.data_dir().join("statistics")
+    }
+
+    pub(crate) fn data_calendar_dir(&self) -> PathBuf {
+        self.data_dir().join("calendar")
+    }
+
+    pub(crate) fn data_recap_dir(&self) -> PathBuf {
+        self.data_dir().join("recap")
     }
 
     fn recap_latest_href(stats_data: Option<&StatisticsData>) -> Option<String> {
