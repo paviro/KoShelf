@@ -51,7 +51,9 @@ export class SectionToggle {
             if (!sectionName) return;
 
             const defaultVisible = section.dataset.defaultVisible === 'true';
-            const button = section.querySelector('button');
+            const button =
+                section.querySelector<HTMLButtonElement>('button[data-section-toggle-button]') ||
+                section.querySelector<HTMLButtonElement>('button');
             const container = section.querySelector<HTMLElement>('[id$="Container"]');
             const chevron = button?.querySelector('svg');
             const buttonText = button?.querySelector('span');

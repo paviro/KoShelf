@@ -18,7 +18,11 @@ export class DateFormatter {
     }
 
     // Format a date range nicely (e.g. "17-23 March" or "28 Feb - 5 March")
-    static formatDateRange(startDateStr: string, endDateStr: string): string {
+    static formatDateRange(
+        startDateStr: string,
+        endDateStr: string,
+        monthStyle: 'short' | 'long' = 'short',
+    ): string {
         const startDate = this.parseISODate(startDateStr);
         const endDate = this.parseISODate(endDateStr);
 
@@ -29,8 +33,16 @@ export class DateFormatter {
         const startYear = startDate.getFullYear();
         const endYear = endDate.getFullYear();
 
-        const startMonthLabel = translation.get(toShortMonthKey(monthKeyAt(startMonth)));
-        const endMonthLabel = translation.get(toShortMonthKey(monthKeyAt(endMonth)));
+        const startMonthKey = monthKeyAt(startMonth);
+        const endMonthKey = monthKeyAt(endMonth);
+        const startMonthLabel =
+            monthStyle === 'long'
+                ? translation.get(startMonthKey)
+                : translation.get(toShortMonthKey(startMonthKey));
+        const endMonthLabel =
+            monthStyle === 'long'
+                ? translation.get(endMonthKey)
+                : translation.get(toShortMonthKey(endMonthKey));
 
         // If same month
         if (startMonth === endMonth && startYear === endYear) {

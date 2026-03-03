@@ -6,6 +6,7 @@
 import { translation } from '../shared/i18n.js';
 import { SectionToggle } from '../components/section-toggle.js';
 import { DateFormatter, DataFormatter } from '../shared/statistics-formatters.js';
+import { setActiveOption } from '../shared/active-option.js';
 import { YearlyStatsChart } from '../components/yearly-stats-chart.js';
 // The statistics page also includes the reading heatmap.
 // Importing it here ensures it is bundled and initialized with the page.
@@ -19,6 +20,11 @@ interface WeekData {
     longest_session_duration: number;
     average_session_duration: number;
 }
+
+const WEEK_SELECTOR_CLASS_STATE = {
+    active: ['bg-primary-50', 'dark:bg-dark-700', 'text-primary-900', 'dark:text-white'],
+    inactive: ['text-gray-600', 'dark:text-dark-200'],
+} as const;
 
 class StatisticsManager {
     private loadingIndicator: HTMLElement | null = null;
@@ -65,7 +71,7 @@ class StatisticsManager {
             const displayEl = option.querySelector('.week-date-display');
 
             if (displayEl && startDate && endDate) {
-                const formattedRange = DateFormatter.formatDateRange(startDate, endDate);
+                const formattedRange = DateFormatter.formatDateRange(startDate, endDate, 'long');
                 displayEl.textContent = formattedRange;
             }
         });
@@ -89,17 +95,110 @@ class StatisticsManager {
     private initializeWeekSelector(): void {
         const weekSelectorWrapper = document.getElementById('weekSelectorWrapper');
         const weekOptions = document.getElementById('weekOptions');
-        const weekOptionElements = document.querySelectorAll<HTMLElement>('.week-option');
+        const weekYearList = document.getElementById('weekYearList');
+        const weekYearWeeksView = document.getElementById('weekYearWeeksView');
+        const weekYearWeekList = document.getElementById('weekYearWeekList');
+        const weekYearBackButton = document.getElementById('weekYearBackButton');
+        const weekYearTitle = document.getElementById('weekYearTitle');
+        const weekOptionElements = Array.from(
+            document.querySelectorAll<HTMLElement>('.week-option'),
+        );
         const selectedWeekText = document.getElementById('selectedWeekText');
 
-        // Handle dropdown toggle
-        if (weekSelectorWrapper && weekOptions) {
-            weekSelectorWrapper.addEventListener('click', () => {
-                weekOptions.classList.toggle('hidden');
-            });
+        if (
+            !weekSelectorWrapper ||
+            !weekOptions ||
+            !weekYearList ||
+            !weekYearWeeksView ||
+            !weekYearWeekList ||
+            !weekYearTitle ||
+            weekOptionElements.length === 0
+        ) {
+            return;
         }
 
-        // Handle option selection
+        // Keep all week options in the weeks view container.
+        weekOptionElements.forEach((option) => {
+            weekYearWeekList.appendChild(option);
+        });
+
+        // Mark first option as active if none is selected.
+        if (!weekOptionElements.some((option) => option.classList.contains('bg-primary-50'))) {
+            weekOptionElements[0].classList.add(
+                'bg-primary-50',
+                'dark:bg-dark-700',
+                'text-primary-900',
+                'dark:text-white',
+            );
+            weekOptionElements[0].classList.remove('text-gray-600', 'dark:text-dark-200');
+        }
+
+        const yearOrder: string[] = [];
+        weekOptionElements.forEach((option) => {
+            const year = this.getWeekYear(option);
+            if (year && !yearOrder.includes(year)) {
+                yearOrder.push(year);
+            }
+        });
+
+        let selectedYear =
+            this.getWeekYear(
+                weekOptionElements.find((option) => option.classList.contains('bg-primary-50')) ||
+                    weekOptionElements[0],
+            ) ||
+            yearOrder[0] ||
+            null;
+
+        const yearOptionElements = this.buildWeekYearOptions(weekYearList, yearOrder);
+
+        const showYearList = (): void => {
+            weekYearWeeksView.classList.add('hidden');
+            weekYearList.classList.remove('hidden');
+            this.updateActiveYearOption(yearOptionElements, selectedYear);
+        };
+
+        const showWeeksForYear = (year: string): void => {
+            selectedYear = year;
+            weekYearTitle.textContent = year;
+
+            weekOptionElements.forEach((option) => {
+                option.classList.toggle('hidden', this.getWeekYear(option) !== year);
+            });
+
+            weekYearList.classList.add('hidden');
+            weekYearWeeksView.classList.remove('hidden');
+            weekYearWeekList.scrollTop = 0;
+        };
+
+        // Handle dropdown toggle.
+        weekSelectorWrapper.addEventListener('click', () => {
+            if (weekOptions.classList.contains('hidden')) {
+                if (selectedYear) {
+                    showWeeksForYear(selectedYear);
+                    this.updateActiveYearOption(yearOptionElements, selectedYear);
+                } else {
+                    showYearList();
+                }
+                weekOptions.classList.remove('hidden');
+                return;
+            }
+
+            weekOptions.classList.add('hidden');
+        });
+
+        weekYearBackButton?.addEventListener('click', () => {
+            showYearList();
+        });
+
+        yearOptionElements.forEach((yearOption) => {
+            yearOption.addEventListener('click', () => {
+                const year = yearOption.getAttribute('data-week-year');
+                if (!year) return;
+                showWeeksForYear(year);
+            });
+        });
+
+        // Handle option selection.
         weekOptionElements.forEach((option) => {
             option.addEventListener('click', () => {
                 const selectedIndex = option.getAttribute('data-week-index');
@@ -113,58 +212,68 @@ class StatisticsManager {
                     selectedWeekText.innerHTML = `<span class="font-bold">${formattedRange}</span> <span class="text-primary-400">${year}</span>`;
                 }
 
-                // Update active state in dropdown
-                this.updateActiveOption(weekOptionElements, option);
+                selectedYear = this.getWeekYear(option);
 
-                // Load and display the selected week data
+                // Update active state in dropdown.
+                this.updateActiveOption(weekOptionElements, option);
+                this.updateActiveYearOption(yearOptionElements, selectedYear);
+
+                // Load and display the selected week data.
                 if (selectedIndex) {
-                    this.loadWeekData(selectedIndex);
+                    void this.loadWeekData(selectedIndex);
                 }
 
-                // Close dropdown
+                // Close dropdown.
                 weekOptions?.classList.add('hidden');
             });
         });
+    }
 
-        // Mark first option as active if none is selected
-        if (
-            weekOptionElements.length > 0 &&
-            !weekOptionElements[0].classList.contains('bg-primary-50')
-        ) {
-            weekOptionElements[0].classList.add(
-                'bg-primary-50',
-                'dark:bg-dark-700',
-                'text-primary-900',
-                'dark:text-white',
-            );
-            weekOptionElements[0].classList.remove('text-gray-600', 'dark:text-dark-200');
-        }
+    private getWeekYear(option: HTMLElement): string | null {
+        const dataYear = option.getAttribute('data-week-year');
+        if (dataYear) return dataYear;
+
+        const startDate = option.getAttribute('data-start-date');
+        if (!startDate || startDate.length < 4) return null;
+        return startDate.substring(0, 4);
+    }
+
+    private buildWeekYearOptions(container: HTMLElement, years: string[]): HTMLElement[] {
+        container.replaceChildren();
+
+        return years.map((year) => {
+            const yearOption = document.createElement('div');
+            yearOption.className =
+                'week-year-option px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200';
+            yearOption.setAttribute('data-week-year', year);
+            yearOption.innerHTML =
+                '<div class="flex items-center justify-between">' +
+                '<div class="flex items-center">' +
+                '<svg class="w-4 h-4 text-primary-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>' +
+                '</svg>' +
+                `<span class="font-semibold">${year}</span>` +
+                '</div>' +
+                '<svg class="w-4 h-4 text-gray-400 dark:text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>' +
+                '</svg>' +
+                '</div>';
+
+            container.appendChild(yearOption);
+            return yearOption;
+        });
+    }
+
+    private updateActiveYearOption(allOptions: HTMLElement[], selectedYear: string | null): void {
+        const selectedOption =
+            allOptions.find((option) => option.getAttribute('data-week-year') === selectedYear) ||
+            null;
+        setActiveOption(allOptions, selectedOption, WEEK_SELECTOR_CLASS_STATE);
     }
 
     // Update active state for dropdown options
-    private updateActiveOption(
-        allOptions: NodeListOf<HTMLElement>,
-        selectedOption: HTMLElement,
-    ): void {
-        allOptions.forEach((el) => {
-            // Remove active classes
-            el.classList.remove(
-                'bg-primary-50',
-                'dark:bg-dark-700',
-                'text-primary-900',
-                'dark:text-white',
-            );
-            // Reset default text color
-            el.classList.add('text-gray-600', 'dark:text-dark-200');
-        });
-
-        selectedOption.classList.add(
-            'bg-primary-50',
-            'dark:bg-dark-700',
-            'text-primary-900',
-            'dark:text-white',
-        );
-        selectedOption.classList.remove('text-gray-600', 'dark:text-dark-200');
+    private updateActiveOption(allOptions: HTMLElement[], selectedOption: HTMLElement): void {
+        setActiveOption(allOptions, selectedOption, WEEK_SELECTOR_CLASS_STATE);
     }
 
     // Show loading indicator
