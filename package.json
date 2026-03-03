@@ -11,16 +11,16 @@
     "dependencies": {
         "@event-calendar/build": "^5.4.1",
         "@event-calendar/core": "^5.4.1",
-        "@fluent/bundle": "^0.18.0"
+        "@fluent/bundle": "^0.19.1"
     },
     "devDependencies": {
-        "@eslint/js": "^9.39.2",
+        "@eslint/js": "^10.0.1",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/line-clamp": "^0.4.4",
         "@tailwindcss/typography": "^0.5.10",
         "@types/event-calendar__core": "^5.0.0",
         "esbuild": "^0.27.1",
-        "eslint": "^9.39.2",
+        "eslint": "^10.0.2",
         "eslint-config-prettier": "^10.1.8",
         "prettier": "^3.7.4",
         "tailwindcss": "^3.4.0",
