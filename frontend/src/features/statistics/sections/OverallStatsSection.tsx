@@ -39,7 +39,7 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuFileText}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
-                    value={overview.total_page_reads}
+                    value={DataFormatter.formatCount(overview.total_page_reads)}
                     label={translation.get('total-pages-read')}
                 />
 
@@ -47,7 +47,7 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuFileText}
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
-                    value={overview.most_pages_in_day}
+                    value={DataFormatter.formatCount(overview.most_pages_in_day)}
                     label={translation.get('most-pages-in-day')}
                 />
 

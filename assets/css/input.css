@@ -3,6 +3,24 @@
 @tailwind utilities;
 
 @layer utilities {
+    .loading-reveal-delayed {
+        opacity: 0;
+        animation-name: loading-reveal;
+        animation-duration: 140ms;
+        animation-timing-function: ease-out;
+        animation-fill-mode: both;
+    }
+
+    @keyframes loading-reveal {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;

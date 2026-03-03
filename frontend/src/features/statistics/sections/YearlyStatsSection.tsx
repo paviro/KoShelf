@@ -103,7 +103,7 @@ export function YearlyStatsSection({
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     valueId="yearlyStatsCompletedCount"
-                    value={yearlySummary.completed_count}
+                    value={DataFormatter.formatCount(yearlySummary.completed_count)}
                     label={translation.get('completed-books')}
                 />
 
@@ -113,7 +113,7 @@ export function YearlyStatsSection({
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
                     valueId="yearlyStatsActiveDays"
-                    value={yearlySummary.active_days}
+                    value={DataFormatter.formatCount(yearlySummary.active_days)}
                     label={translation.get('active-days', yearlySummary.active_days)}
                 />
             </div>
@@ -179,8 +179,11 @@ export function YearlyStatsSection({
                                             'active-days-tooltip',
                                             stats.active_days,
                                         );
+                                        const formattedActiveDays = DataFormatter.formatCount(
+                                            stats.active_days,
+                                        );
                                         const tooltip = selectedYear
-                                            ? `${monthLabel} ${selectedYear}: ${valueLabel}, ${pagesLabel}, ${stats.active_days} ${activeDaysLabel}`
+                                            ? `${monthLabel} ${selectedYear}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`
                                             : `${monthLabel}: ${valueLabel}`;
 
                                         return (

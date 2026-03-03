@@ -5,6 +5,7 @@ import type {
 } from '../api/statistics-data';
 import { DateFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
+import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { monthKeyAt } from '../lib/months';
 
 export const SECTION_NAMES = [
@@ -47,38 +48,43 @@ export function defaultSectionState(): SectionVisibilityState {
 }
 
 export function formatReadTimeWithWeeks(seconds: number): string {
-    const totalHours = Math.floor(seconds / 3600);
+    if (!Number.isFinite(seconds)) {
+        return '--';
+    }
+
+    const normalizedSeconds = Math.max(0, Math.floor(seconds));
+    const totalHours = Math.floor(normalizedSeconds / 3600);
     const totalDays = Math.floor(totalHours / 24);
     const weeks = Math.floor(totalDays / 7);
     const days = totalDays % 7;
     const hours = totalHours % 24;
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const minutes = Math.floor((normalizedSeconds % 3600) / 60);
 
     if (weeks > 0) {
-        return `${weeks}${translation.get('units.w')} ${days}${translation.get('units.d')} ${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+        return `${formatNumber(weeks)}${translation.get('units.w')} ${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
     }
     if (days > 0) {
-        return `${days}${translation.get('units.d')} ${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+        return `${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
     }
     if (hours > 0) {
-        return `${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+        return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
     }
-    return `${minutes}${translation.get('units.m')}`;
+    return `${formatNumber(minutes)}${translation.get('units.m')}`;
 }
 
 export function formatSessionDuration(seconds: number | null): string {
-    if (seconds === null) {
+    if (seconds === null || !Number.isFinite(seconds)) {
         return '--';
     }
 
-    const minutes = Math.floor(seconds / 60);
+    const minutes = Math.max(0, Math.floor(seconds / 60));
     if (minutes >= 60) {
         const hours = Math.floor(minutes / 60);
         const remaining = minutes % 60;
-        return `${hours}${translation.get('units.h')} ${remaining}${translation.get('units.m')}`;
+        return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(remaining)}${translation.get('units.m')}`;
     }
 
-    return `${minutes}${translation.get('units.m')}`;
+    return `${formatNumber(minutes)}${translation.get('units.m')}`;
 }
 
 function tryFormatSingleDayRange(dateStr: string): string | null {

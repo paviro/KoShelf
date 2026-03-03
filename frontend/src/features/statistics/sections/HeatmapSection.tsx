@@ -193,7 +193,7 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
                 const activity = activityMap.map.get(dateIso) ?? { pages: 0, read: 0 };
                 const level = normalizeHeatmapLevel(activity.read, activityMap.maxActivity);
                 const colorClasses = HEATMAP_COLOR_CLASSES[level].join(' ');
-                const tooltip = `${dateIso}: ${DataFormatter.formatReadTime(activity.read)}, ${activity.pages} ${translation.get('pages-label', activity.pages)}`;
+                const tooltip = `${dateIso}: ${DataFormatter.formatReadTime(activity.read)}, ${DataFormatter.formatCount(activity.pages)} ${translation.get('pages-label', activity.pages)}`;
 
                 cellMap.set(`${week}-${day}`, {
                     classes: colorClasses,

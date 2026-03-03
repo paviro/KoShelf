@@ -113,7 +113,7 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                         iconClassName="text-indigo-600 dark:text-white"
                         valueId="weekPagesRead"
-                        value={weeklyStats.pages_read}
+                        value={DataFormatter.formatCount(weeklyStats.pages_read)}
                         label={translation.get('total-pages-read')}
                     />
 
@@ -131,12 +131,7 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                         iconClassName="text-green-600 dark:text-white"
                         valueId="weekAvgReadTimePerDay"
-                        value={
-                            <>
-                                {Math.floor(weeklyStats.avg_read_time_per_day / 60)}
-                                {translation.get('units.m')}
-                            </>
-                        }
+                        value={DataFormatter.formatMinutes(weeklyStats.avg_read_time_per_day / 60)}
                         label={translation.get('average-time-day')}
                     />
 

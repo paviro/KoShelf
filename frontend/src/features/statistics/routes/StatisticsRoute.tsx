@@ -39,8 +39,6 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     average_session_duration: null,
 };
 
-const PAGE_SPINNER_DELAY_MS = 120;
-
 export function StatisticsRoute() {
     const params = useParams();
     const scope = normalizeScope(params.scope);
@@ -65,7 +63,6 @@ export function StatisticsRoute() {
     const [displayedYearlyData, setDisplayedYearlyData] = useState<StatisticsYearResponse | null>(
         null,
     );
-    const [showPageLoadingSpinner, setShowPageLoadingSpinner] = useState(false);
 
     const effectiveSelectedWeekKey = selectedWeekKey ?? availableWeeks[0]?.week_key ?? null;
     const effectiveSelectedHeatmapYear = selectedHeatmapYear ?? availableYears[0] ?? null;
@@ -167,24 +164,6 @@ export function StatisticsRoute() {
         }
     }, [yearlyQuery.data]);
 
-    useEffect(() => {
-        let timerId: number | null = null;
-
-        if (statsIndexQuery.isLoading) {
-            timerId = window.setTimeout(() => {
-                setShowPageLoadingSpinner(true);
-            }, PAGE_SPINNER_DELAY_MS);
-        } else {
-            setShowPageLoadingSpinner(false);
-        }
-
-        return () => {
-            if (timerId !== null) {
-                window.clearTimeout(timerId);
-            }
-        };
-    }, [statsIndexQuery.isLoading]);
-
     const weeklyStats = displayedWeeklyStats;
 
     return (
@@ -195,7 +174,7 @@ export function StatisticsRoute() {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {statsIndexQuery.isLoading && showPageLoadingSpinner && (
+                {statsIndexQuery.isLoading && (
                     <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
                         <LoadingSpinner size="lg" srLabel="Loading statistics" />
                     </section>

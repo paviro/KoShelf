@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 type SpinnerSize = 'sm' | 'md' | 'lg';
 
 const SIZE_CLASSNAME: Record<SpinnerSize, string> = {
@@ -11,6 +13,8 @@ type LoadingSpinnerProps = {
     containerClassName?: string;
     spinnerClassName?: string;
     srLabel?: string;
+    delayed?: boolean;
+    delayMs?: number;
 };
 
 export function LoadingSpinner({
@@ -18,10 +22,17 @@ export function LoadingSpinner({
     containerClassName = '',
     spinnerClassName = '',
     srLabel = 'Loading',
+    delayed = true,
+    delayMs = 100,
 }: LoadingSpinnerProps) {
+    const delayedStyle: CSSProperties | undefined = delayed
+        ? { opacity: 0, animationDelay: `${Math.max(0, delayMs)}ms` }
+        : undefined;
+
     return (
         <div
-            className={`flex items-center justify-center ${containerClassName}`}
+            className={`flex items-center justify-center ${delayed ? 'loading-reveal-delayed' : ''} ${containerClassName}`}
+            style={delayedStyle}
             role="status"
             aria-live="polite"
             aria-label={srLabel}

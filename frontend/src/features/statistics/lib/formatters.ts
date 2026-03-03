@@ -1,13 +1,20 @@
 import { translation } from '../../../shared/i18n';
+import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { monthKeyAt, toShortMonthKey } from './months';
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+    return value !== null && value !== undefined && Number.isFinite(value);
+}
 
 export class DateFormatter {
     static parseISODate(dateStr: string): Date {
-        try {
-            return new Date(dateStr);
-        } catch {
+        const parsedDate = new Date(dateStr);
+
+        if (Number.isNaN(parsedDate.getTime())) {
             return new Date();
         }
+
+        return parsedDate;
     }
 
     static formatDateRange(
@@ -46,43 +53,70 @@ export class DateFormatter {
 
 export class DataFormatter {
     static formatReadTime(seconds: number | null | undefined): string {
-        if (seconds === null || seconds === undefined) {
+        if (!isFiniteNumber(seconds)) {
             return '--';
         }
 
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
+        const normalizedSeconds = Math.max(0, Math.floor(seconds));
+        const hours = Math.floor(normalizedSeconds / 3600);
+        const minutes = Math.floor((normalizedSeconds % 3600) / 60);
 
         if (hours > 0) {
-            return `${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+            return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
         }
 
-        return `${minutes}${translation.get('units.m')}`;
+        return `${formatNumber(minutes)}${translation.get('units.m')}`;
     }
 
     static formatReadTimeWithDays(seconds: number | null | undefined): string {
-        if (seconds === null || seconds === undefined) {
+        if (!isFiniteNumber(seconds)) {
             return '--';
         }
 
-        const totalMinutes = Math.floor(seconds / 60);
+        const normalizedSeconds = Math.max(0, Math.floor(seconds));
+        const totalMinutes = Math.floor(normalizedSeconds / 60);
         const totalHours = Math.floor(totalMinutes / 60);
         const days = Math.floor(totalHours / 24);
         const hours = totalHours % 24;
         const minutes = totalMinutes % 60;
 
         if (days > 0) {
-            return `${days}${translation.get('units.d')} ${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+            return `${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
         }
 
         if (hours > 0) {
-            return `${hours}${translation.get('units.h')} ${minutes}${translation.get('units.m')}`;
+            return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
         }
 
-        return `${minutes}${translation.get('units.m')}`;
+        return `${formatNumber(minutes)}${translation.get('units.m')}`;
+    }
+
+    static formatMinutes(minutes: number | null | undefined): string {
+        if (!isFiniteNumber(minutes)) {
+            return '--';
+        }
+
+        const normalizedMinutes = Math.max(0, Math.floor(minutes));
+        return `${formatNumber(normalizedMinutes)}${translation.get('units.m')}`;
+    }
+
+    static formatCount(value: number | null | undefined): string {
+        if (!isFiniteNumber(value)) {
+            return '--';
+        }
+
+        return formatNumber(value);
     }
 
     static formatAvgPages(avg: number): string {
-        return (Math.floor(avg * 10) / 10).toFixed(1);
+        if (!Number.isFinite(avg)) {
+            return '--';
+        }
+
+        const normalized = Math.floor(avg * 10) / 10;
+        return formatNumber(normalized, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+        });
     }
 }
