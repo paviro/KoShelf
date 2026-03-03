@@ -132,3 +132,9 @@ pub struct CalendarTemplate {
     pub navbar_items: Vec<NavItem>,
     pub translation: Rc<Translations>,
 }
+
+#[derive(Template)]
+#[template(path = "404.html", whitespace = "minimize")]
+pub struct NotFoundTemplate {
+    pub site_title: String,
+}
