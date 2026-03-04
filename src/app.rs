@@ -129,10 +129,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
 
         RunMode::Serve => {
-            info!(
-                "Running in serve mode with runtime snapshot refresh and media cache at: {:?}",
-                plan.output_dir
-            );
             let initial_generated_at = initial_snapshot
                 .generated_at()
                 .map(str::to_owned)
