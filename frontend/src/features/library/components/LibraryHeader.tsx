@@ -15,8 +15,8 @@ type LibraryHeaderProps = {
     mobileSearchOpen: boolean;
     onOpenMobileSearch: () => void;
     onCloseMobileSearch: () => void;
-    desktopSearchInputRef: RefObject<HTMLInputElement>;
-    mobileSearchInputRef: RefObject<HTMLInputElement>;
+    desktopSearchInputRef: RefObject<HTMLInputElement | null>;
+    mobileSearchInputRef: RefObject<HTMLInputElement | null>;
 };
 
 export function LibraryHeader({

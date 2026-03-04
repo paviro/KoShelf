@@ -8,7 +8,7 @@ type UseLazyImageSourceOptions = {
 };
 
 type UseLazyImageSourceResult = {
-    imageRef: RefObject<HTMLImageElement>;
+    imageRef: RefObject<HTMLImageElement | null>;
     resolvedSrc: string | undefined;
     isLoaded: boolean;
     hasError: boolean;
