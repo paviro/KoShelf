@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { IoIosStar, IoIosStarOutline } from 'react-icons/io';
-import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote } from 'react-icons/lu';
+import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote, LuStar } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import type { RecapItemResponse } from '../api/recap-data';
@@ -124,19 +123,15 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 {hasRating && (
                                     <div className="flex items-center gap-0.5 mt-2 md:hidden">
                                         {stars.map((filled, index) => (
-                                            filled ? (
-                                                <IoIosStar
-                                                    key={`mobile-star-${index}`}
-                                                    className="w-4 h-4 text-yellow-400"
-                                                    aria-hidden
-                                                />
-                                            ) : (
-                                                <IoIosStarOutline
-                                                    key={`mobile-star-${index}`}
-                                                    className="w-4 h-4 text-gray-300 dark:text-dark-600"
-                                                    aria-hidden
-                                                />
-                                            )
+                                            <LuStar
+                                                key={`mobile-star-${index}`}
+                                                className={`w-4 h-4 ${
+                                                    filled
+                                                        ? 'text-yellow-400 fill-yellow-400'
+                                                        : 'text-gray-300 dark:text-dark-500'
+                                                }`}
+                                                aria-hidden
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -145,19 +140,15 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             {hasRating && (
                                 <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
                                     {stars.map((filled, index) => (
-                                        filled ? (
-                                            <IoIosStar
-                                                key={`desktop-star-${index}`}
-                                                className="w-5 h-5 text-yellow-400"
-                                                aria-hidden
-                                            />
-                                        ) : (
-                                            <IoIosStarOutline
-                                                key={`desktop-star-${index}`}
-                                                className="w-5 h-5 text-gray-300 dark:text-dark-600"
-                                                aria-hidden
-                                            />
-                                        )
+                                        <LuStar
+                                            key={`desktop-star-${index}`}
+                                            className={`w-5 h-5 ${
+                                                filled
+                                                    ? 'text-yellow-400 fill-yellow-400'
+                                                    : 'text-gray-300 dark:text-dark-500'
+                                            }`}
+                                            aria-hidden
+                                        />
                                     ))}
                                 </div>
                             )}
