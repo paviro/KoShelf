@@ -23,7 +23,7 @@ pub struct CalendarItem {
     pub content_type: ContentType,
     pub color: String, // Color for the event
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub item_path: Option<String>, // Relative path to the item detail page, if available
+    pub item_id: Option<String>, // Canonical item identifier for detail navigation, if available
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_cover: Option<String>, // Relative path to the item cover image, if available
 }
@@ -69,7 +69,7 @@ impl CalendarItem {
         title: String,
         authors: Vec<String>,
         content_type: ContentType,
-        item_path: Option<String>,
+        item_id: Option<String>,
         item_cover: Option<String>,
     ) -> Self {
         // Generate a consistent color based on item title
@@ -80,7 +80,7 @@ impl CalendarItem {
             authors,
             content_type,
             color,
-            item_path,
+            item_id,
             item_cover,
         }
     }

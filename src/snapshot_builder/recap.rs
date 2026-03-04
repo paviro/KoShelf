@@ -157,7 +157,7 @@ fn group_completions_by_year_month(
                     rating,
                     review_note,
                     series_display,
-                    item_path,
+                    item_id,
                     item_cover,
                     content_type,
                 ) = if let Some(item) = md5_to_item.get(&sb.md5) {
@@ -166,10 +166,7 @@ fn group_completions_by_year_month(
                     let rating = item.rating();
                     let review_note = item.review_note().cloned();
                     let series_display = item.series_display();
-                    let item_path = Some(match item.content_type() {
-                        ContentType::Book => format!("/books/{}", item.id),
-                        ContentType::Comic => format!("/comics/{}", item.id),
-                    });
+                    let item_id = Some(item.id.clone());
                     let item_cover = Some(format!("/assets/covers/{}.webp", item.id));
                     (
                         title,
@@ -177,7 +174,7 @@ fn group_completions_by_year_month(
                         rating,
                         review_note,
                         series_display,
-                        item_path,
+                        item_id,
                         item_cover,
                         Some(item.content_type()),
                     )
@@ -216,7 +213,7 @@ fn group_completions_by_year_month(
                     rating,
                     review_note,
                     series_display,
-                    item_path,
+                    item_id,
                     item_cover,
                     content_type,
                     star_display: {

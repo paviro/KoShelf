@@ -27,7 +27,7 @@ pub struct CalendarItemResponse {
     pub content_type: LibraryContentType,
     pub color: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub item_path: Option<String>,
+    pub item_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_cover: Option<String>,
 }

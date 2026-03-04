@@ -433,7 +433,7 @@ pub fn map_calendar_month_response(
                     authors: item.authors.clone(),
                     content_type: map_library_content_type(item.content_type),
                     color: item.color.clone(),
-                    item_path: item.item_path.clone(),
+                    item_id: item.item_id.clone(),
                     item_cover: item.item_cover.clone(),
                 },
             )
@@ -468,7 +468,7 @@ fn map_recap_item(item: &crate::models::RecapItem) -> RecapItemResponse {
         rating: item.rating,
         review_note: item.review_note.clone(),
         series: item.series_display.clone(),
-        item_path: item.item_path.clone(),
+        item_id: item.item_id.clone(),
         item_cover: item.item_cover.clone(),
         content_type: map_optional_content_type(item.content_type),
     }

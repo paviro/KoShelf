@@ -59,7 +59,7 @@ pub struct RecapItemResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub series: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub item_path: Option<String>,
+    pub item_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_cover: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -203,7 +203,7 @@ mod tests {
                     rating: Some(5),
                     review_note: Some("note".to_string()),
                     series: None,
-                    item_path: Some("/books/id".to_string()),
+                    item_id: Some("id".to_string()),
                     item_cover: Some("/assets/covers/id.webp".to_string()),
                     content_type: Some(LibraryContentType::Book),
                 }],
