@@ -1,12 +1,11 @@
 import type { ScopeValue } from '../../../shared/api';
+import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
 import type {
     CalendarEventResponse,
     CalendarItemResponse,
     CalendarMonthResponse,
     CalendarMonthlyStats,
 } from '../api/calendar-data';
-
-export const CALENDAR_FILTER_STORAGE_KEY = 'koshelf_calendar_filter';
 
 type AggregatedCalendarData = {
     events: CalendarEventResponse[];
@@ -83,7 +82,7 @@ export function eventMatchesScope(
 
     const item = items[event.item_id];
     if (!item) {
-        return scope === 'books';
+        return false;
     }
 
     if (scope === 'books') {
@@ -137,29 +136,48 @@ export function formatDuration(totalSeconds: number): string {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
-export function loadInitialScope(): ScopeValue {
-    try {
-        const raw = localStorage.getItem(CALENDAR_FILTER_STORAGE_KEY);
-        if (raw === 'all') {
-            return 'all';
-        }
-        if (raw === 'books' || raw === 'book') {
-            return 'books';
-        }
-        if (raw === 'comics' || raw === 'comic') {
-            return 'comics';
-        }
-    } catch {
-        // Ignore storage read failures.
+export type CalendarViewState = {
+    scope: ScopeValue;
+    monthKey: string | null;
+};
+
+function normalizeCalendarScope(value: unknown): ScopeValue {
+    if (value === 'books' || value === 'book') {
+        return 'books';
+    }
+
+    if (value === 'comics' || value === 'comic') {
+        return 'comics';
     }
 
     return 'all';
 }
 
-export function persistScope(scope: ScopeValue): void {
-    try {
-        localStorage.setItem(CALENDAR_FILTER_STORAGE_KEY, scope);
-    } catch {
-        // Ignore storage write failures.
+function normalizeCalendarMonthKey(value: unknown): string | null {
+    if (typeof value !== 'string') {
+        return null;
     }
+
+    const trimmed = value.trim();
+    if (!/^\d{4}-\d{2}$/.test(trimmed)) {
+        return null;
+    }
+
+    return monthKey(parseMonthKey(trimmed));
+}
+
+export function loadInitialCalendarViewState(): CalendarViewState {
+    const persisted = readRouteState('calendar', 'session');
+
+    return {
+        scope: normalizeCalendarScope(persisted.scope),
+        monthKey: normalizeCalendarMonthKey(persisted.monthKey),
+    };
+}
+
+export function persistCalendarViewState(state: CalendarViewState): void {
+    patchRouteState('calendar', 'session', {
+        scope: normalizeCalendarScope(state.scope),
+        monthKey: normalizeCalendarMonthKey(state.monthKey),
+    });
 }

@@ -1,16 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
+import { listRouteIdForCollection } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
-import { StorageManager } from '../../../shared/storage-manager';
 import { useBookCardTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
-import {
-    consumeLibraryListScrollSnapshot,
-    isLibraryReturnToListState,
-} from '../../../shared/lib/navigation/library-scroll-restoration';
+import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
+import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
@@ -18,13 +16,12 @@ import { LibraryHeader } from '../components/LibraryHeader';
 import { LibrarySection } from '../components/LibrarySection';
 import { useLibraryHoverPreviewEffect } from '../hooks/useLibraryHoverPreviewEffect';
 import { useLibraryListQuery } from '../hooks/useLibraryQueries';
-import { useLibrarySectionState } from '../hooks/useLibrarySectionState';
 import {
     LIBRARY_FILTER_VALUES,
     LIBRARY_SECTION_KEYS,
     bucketLibraryItems,
+    defaultLibrarySectionState,
     itemMatchesSearch,
-    libraryFilterStorageKey,
     libraryTitleTranslationKey,
     normalizeLibraryFilterValue,
     normalizeSearchTerm,
@@ -62,17 +59,32 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     const location = useLocation();
     const navigate = useNavigate();
-    const navigationType = useNavigationType();
+    const routeId = useMemo(() => listRouteIdForCollection(collection), [collection]);
 
     const desktopSearchInputRef = useRef<HTMLInputElement>(null);
     const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-    const restoredLocationRef = useRef<string | null>(null);
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(() => {
+        const persistedState = readRouteState(routeId, 'session');
+        const persisted = persistedState.searchTerm;
+        const searchFromQuery = new URLSearchParams(location.search).get('search');
+        if (typeof searchFromQuery === 'string') {
+            return searchFromQuery;
+        }
+        return typeof persisted === 'string' ? persisted : '';
+    });
+    const [mobileSearchOpen, setMobileSearchOpen] = useState(() => {
+        const persistedState = readRouteState(routeId, 'session');
+        const persisted = persistedState.searchTerm;
+        const searchFromQuery = new URLSearchParams(location.search).get('search');
+        const initialSearchTerm = typeof searchFromQuery === 'string'
+            ? searchFromQuery
+            : (typeof persisted === 'string' ? persisted : '');
+        return initialSearchTerm.trim().length > 0 && window.innerWidth < 640;
+    });
     const [filterValue, setFilterValue] = useState<LibraryFilterValue>(() => {
-        const persisted = StorageManager.get<string>(libraryFilterStorageKey(collection), 'all');
-        return normalizeLibraryFilterValue(persisted, true);
+        const persisted = readRouteState(routeId, 'session').filterValue;
+        return normalizeLibraryFilterValue(typeof persisted === 'string' ? persisted : null, true);
     });
 
     const siteQuery = useQuery({
@@ -87,7 +99,12 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     );
 
     const hasUnreadItems = sectionBuckets.unread.length > 0;
-    const { state: sectionState, toggle: toggleSection } = useLibrarySectionState(collection);
+    const sectionDefaults = useMemo(() => defaultLibrarySectionState(), []);
+    const { state: sectionState, toggle: toggleSection } = useSectionVisibilityState<LibrarySectionKey>({
+        routeId,
+        sectionKeys: LIBRARY_SECTION_KEYS,
+        defaults: sectionDefaults,
+    });
 
     const filterOptions = useMemo<LibraryFilterValue[]>(() => {
         if (hasUnreadItems) {
@@ -97,30 +114,31 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         return LIBRARY_FILTER_VALUES.filter((filter) => filter !== 'unread');
     }, [hasUnreadItems]);
 
-    const [prevCollection, setPrevCollection] = useState(collection);
-    if (prevCollection !== collection) {
-        setPrevCollection(collection);
-        const persisted = StorageManager.get<string>(libraryFilterStorageKey(collection), 'all');
-        setFilterValue(normalizeLibraryFilterValue(persisted, true));
-        setSearchTerm('');
-        setMobileSearchOpen(false);
-    }
-
-    if (filterValue === 'unread' && !hasUnreadItems) {
-        setFilterValue('all');
-    }
+    const effectiveFilterValue: LibraryFilterValue =
+        filterValue === 'unread' && !hasUnreadItems ? 'all' : filterValue;
 
     useEffect(() => {
-        StorageManager.set(libraryFilterStorageKey(collection), filterValue);
-    }, [collection, filterValue]);
+        patchRouteState(routeId, 'session', { filterValue: effectiveFilterValue });
+    }, [effectiveFilterValue, routeId]);
 
-    const searchQuery = new URLSearchParams(location.search);
-    const querySearchParam = searchQuery.get('search');
-    if (querySearchParam !== null) {
+    useEffect(() => {
+        patchRouteState(routeId, 'session', { searchTerm });
+    }, [routeId, searchTerm]);
+
+    const querySearchParam = useMemo(() => {
+        const query = new URLSearchParams(location.search);
+        return query.get('search');
+    }, [location.search]);
+    if (querySearchParam !== null && querySearchParam !== searchTerm) {
         setSearchTerm(querySearchParam);
-        if (querySearchParam.trim().length > 0 && window.innerWidth < 640) {
-            setMobileSearchOpen(true);
-        }
+    }
+    if (
+        querySearchParam !== null &&
+        querySearchParam.trim().length > 0 &&
+        window.innerWidth < 640 &&
+        !mobileSearchOpen
+    ) {
+        setMobileSearchOpen(true);
     }
 
     useEffect(() => {
@@ -231,14 +249,14 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             LIBRARY_SECTION_KEYS.map((sectionKey) => {
                 const baseItems = sectionBuckets[sectionKey];
 
-                if (!sectionMatchesFilter(sectionKey, filterValue)) {
+                if (!sectionMatchesFilter(sectionKey, effectiveFilterValue)) {
                     return { sectionKey, items: [] };
                 }
 
                 const items = baseItems.filter((item) => itemMatchesSearch(item, normalizedSearch));
                 return { sectionKey, items };
             }),
-        [filterValue, normalizedSearch, sectionBuckets],
+        [effectiveFilterValue, normalizedSearch, sectionBuckets],
     );
 
     const visibleCardKey = useMemo(
@@ -261,50 +279,6 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
     const pageTitle = translation.get(libraryTitleTranslationKey(collection));
 
-    const shouldAttemptScrollRestore = useMemo(() => {
-        const query = new URLSearchParams(location.search);
-        if (query.has('search')) {
-            return false;
-        }
-
-        if (isLibraryReturnToListState(location.state, collection)) {
-            return true;
-        }
-
-        return navigationType === 'POP';
-    }, [collection, location.search, location.state, navigationType]);
-
-    useLayoutEffect(() => {
-        if (!shouldAttemptScrollRestore || listQuery.isLoading || listQuery.isError) {
-            return;
-        }
-
-        const restoreKey = `${collection}:${location.key}`;
-        if (restoredLocationRef.current === restoreKey) {
-            return;
-        }
-
-        restoredLocationRef.current = restoreKey;
-        const savedScrollY = consumeLibraryListScrollSnapshot(collection, location.pathname);
-        if (savedScrollY === null) {
-            return;
-        }
-
-        const html = document.documentElement;
-        html.style.overflow = 'hidden';
-        window.scrollTo({ top: savedScrollY, behavior: 'auto' });
-        requestAnimationFrame(() => {
-            html.style.overflow = '';
-        });
-    }, [
-        collection,
-        listQuery.isError,
-        listQuery.isLoading,
-        location.key,
-        location.pathname,
-        shouldAttemptScrollRestore,
-    ]);
-
     useEffect(() => {
         if (siteQuery.data?.title) {
             document.title = `${pageTitle} - ${siteQuery.data.title}`;
@@ -317,7 +291,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                 title={pageTitle}
                 searchTerm={searchTerm}
                 onSearchTermChange={setSearchTerm}
-                filterValue={filterValue}
+                filterValue={effectiveFilterValue}
                 filterOptions={filterOptions}
                 onFilterChange={setFilterValue}
                 mobileSearchOpen={mobileSearchOpen}

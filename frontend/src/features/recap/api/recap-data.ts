@@ -25,6 +25,7 @@ export interface RecapSummaryResponse {
 }
 
 export interface RecapItemResponse {
+    item_id?: string | null;
     title: string;
     authors: string[];
     start_date: string;
@@ -35,7 +36,6 @@ export interface RecapItemResponse {
     rating?: number | null;
     review_note?: string | null;
     series?: string | null;
-    item_path?: string | null;
     item_cover?: string | null;
     content_type?: RecapContentType | null;
 }

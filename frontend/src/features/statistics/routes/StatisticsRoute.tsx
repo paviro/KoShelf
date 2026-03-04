@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
@@ -9,22 +9,26 @@ import { ReadingStreakSection } from '../sections/ReadingStreakSection';
 import { ScopeFilter } from '../components/ScopeFilter';
 import { WeeklyStatsSection } from '../sections/WeeklyStatsSection';
 import { YearlyStatsSection } from '../sections/YearlyStatsSection';
-import { usePersistentSectionState } from '../hooks/usePersistentSectionState';
+import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
     useStatisticsYearQuery,
 } from '../hooks/useStatisticsQueries';
 import {
+    SECTION_NAMES,
     aggregateMonthlyStats,
+    defaultSectionState,
     isCurrentStreakActive,
-    normalizeScope,
+    persistStatisticsViewState,
+    readStoredStatisticsViewState,
     summarizeYearlyStats,
+    type SectionName,
 } from '../model/statistics-model';
 import { api } from '../../../shared/api';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import type { SiteResponse } from '../../../shared/contracts';
-import type { StatisticsWeekResponse, StatisticsYearResponse } from '../api/statistics-data';
+import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 
 const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
@@ -40,9 +44,9 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
 };
 
 export function StatisticsRoute() {
-    const params = useParams();
     const location = useLocation();
-    const scope = normalizeScope(params.scope);
+    const [initialViewState] = useState(() => readStoredStatisticsViewState());
+    const [scope, setScope] = useState(() => initialViewState.scope);
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -50,33 +54,47 @@ export function StatisticsRoute() {
     });
 
     const statsIndexQuery = useStatisticsIndexQuery(scope);
-    const { state: sectionState, toggle: toggleSection } = usePersistentSectionState(scope);
+    const sectionDefaults = useMemo(() => defaultSectionState(), []);
+    const { state: sectionState, toggle: toggleSection } = useSectionVisibilityState<SectionName>({
+        routeId: 'statistics',
+        sectionKeys: SECTION_NAMES,
+        defaults: sectionDefaults,
+    });
 
     const availableYears = useMemo(() => statsIndexQuery.data?.available_years ?? [], [statsIndexQuery.data?.available_years]);
     const availableWeeks = useMemo(() => statsIndexQuery.data?.available_weeks ?? [], [statsIndexQuery.data?.available_weeks]);
 
-    const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
-    const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<number | null>(null);
-    const [selectedYearlyYear, setSelectedYearlyYear] = useState<number | null>(null);
-    const [displayedWeeklyStats, setDisplayedWeeklyStats] =
-        useState<StatisticsWeekResponse>(EMPTY_WEEKLY_STATS);
-    const [displayedYearlyData, setDisplayedYearlyData] = useState<StatisticsYearResponse | null>(
-        null,
+    const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(
+        () => initialViewState.selectedWeekKey,
+    );
+    const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<number | null>(
+        () => initialViewState.selectedHeatmapYear,
+    );
+    const [selectedYearlyYear, setSelectedYearlyYear] = useState<number | null>(
+        () => initialViewState.selectedYearlyYear,
     );
 
-    const effectiveSelectedWeekKey = selectedWeekKey ?? availableWeeks[0]?.week_key ?? null;
-    const effectiveSelectedHeatmapYear = selectedHeatmapYear ?? availableYears[0] ?? null;
-    const effectiveSelectedYearlyYear = selectedYearlyYear ?? availableYears[0] ?? null;
+    const effectiveSelectedWeekKey = useMemo(() => {
+        if (selectedWeekKey && availableWeeks.some((week) => week.week_key === selectedWeekKey)) {
+            return selectedWeekKey;
+        }
 
-    const [prevScope, setPrevScope] = useState(scope);
-    if (prevScope !== scope) {
-        setPrevScope(scope);
-        setSelectedWeekKey(null);
-        setSelectedHeatmapYear(null);
-        setSelectedYearlyYear(null);
-        setDisplayedWeeklyStats(EMPTY_WEEKLY_STATS);
-        setDisplayedYearlyData(null);
-    }
+        return availableWeeks[0]?.week_key ?? null;
+    }, [availableWeeks, selectedWeekKey]);
+    const effectiveSelectedHeatmapYear = useMemo(() => {
+        if (selectedHeatmapYear !== null && availableYears.includes(selectedHeatmapYear)) {
+            return selectedHeatmapYear;
+        }
+
+        return availableYears[0] ?? null;
+    }, [availableYears, selectedHeatmapYear]);
+    const effectiveSelectedYearlyYear = useMemo(() => {
+        if (selectedYearlyYear !== null && availableYears.includes(selectedYearlyYear)) {
+            return selectedYearlyYear;
+        }
+
+        return availableYears[0] ?? null;
+    }, [availableYears, selectedYearlyYear]);
 
     useEffect(() => {
         document.body.dataset.sectionToggleScope = 'statistics';
@@ -94,14 +112,32 @@ export function StatisticsRoute() {
         }
     }, [siteQuery.data]);
 
+    useEffect(() => {
+        if (!statsIndexQuery.isSuccess) {
+            return;
+        }
+
+        persistStatisticsViewState({
+            scope,
+            selectedWeekKey: effectiveSelectedWeekKey,
+            selectedHeatmapYear: effectiveSelectedHeatmapYear,
+            selectedYearlyYear: effectiveSelectedYearlyYear,
+        });
+    }, [
+        effectiveSelectedHeatmapYear,
+        effectiveSelectedWeekKey,
+        effectiveSelectedYearlyYear,
+        scope,
+        statsIndexQuery.isSuccess,
+    ]);
+
     const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeekKey);
     const heatmapYearQuery = useStatisticsYearQuery(scope, effectiveSelectedHeatmapYear);
     const yearlyQuery = useStatisticsYearQuery(scope, effectiveSelectedYearlyYear);
-    const effectiveDisplayedYearlyData = displayedYearlyData ?? yearlyQuery.data ?? null;
+    const effectiveDisplayedYearlyData = yearlyQuery.data ?? null;
 
     const statsIndex = statsIndexQuery.data;
-    const weeklyLoading =
-        weekQuery.isFetching && (displayedWeeklyStats.week_key !== '' || weekQuery.isFetched);
+    const weeklyLoading = weekQuery.isFetching;
 
     const yearlyMonthlyStats = useMemo(
         () => aggregateMonthlyStats(effectiveDisplayedYearlyData?.daily_activity ?? []),
@@ -135,31 +171,21 @@ export function StatisticsRoute() {
     );
     const showPageEmptyState =
         Boolean(statsIndex) && availableYears.length === 0 && availableWeeks.length === 0;
-    const yearlyLoading = yearlyQuery.isFetching && effectiveDisplayedYearlyData === null;
+    const yearlyLoading = yearlyQuery.isFetching;
 
-    const [prevWeekData, setPrevWeekData] = useState(weekQuery.data);
-    if (weekQuery.data !== prevWeekData) {
-        setPrevWeekData(weekQuery.data);
-        if (weekQuery.data) {
-            setDisplayedWeeklyStats(weekQuery.data);
-        }
-    }
-
-    const [prevYearlyData, setPrevYearlyData] = useState(yearlyQuery.data);
-    if (yearlyQuery.data !== prevYearlyData) {
-        setPrevYearlyData(yearlyQuery.data);
-        if (yearlyQuery.data) {
-            setDisplayedYearlyData(yearlyQuery.data);
-        }
-    }
-
-    const weeklyStats = displayedWeeklyStats;
+    const weeklyStats = weekQuery.data ?? EMPTY_WEEKLY_STATS;
 
     return (
         <>
             <PageHeader
                 title={translation.get('reading-statistics')}
-                controls={<ScopeFilter showTypeFilter={showTypeFilter} scope={scope} />}
+                controls={
+                    <ScopeFilter
+                        showTypeFilter={showTypeFilter}
+                        scope={scope}
+                        onScopeChange={setScope}
+                    />
+                }
             />
 
             <PageContent className="space-y-6 md:space-y-8">

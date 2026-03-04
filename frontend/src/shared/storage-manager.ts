@@ -1,40 +1,47 @@
-type StorageKey = (typeof StorageManager.KEYS)[keyof typeof StorageManager.KEYS];
+function readFromStorage<T>(
+    storage: Storage,
+    key: string,
+    defaultValue: T | null,
+): T | null {
+    try {
+        const item = storage.getItem(key);
+        if (item === null) return defaultValue;
+        return JSON.parse(item) as T;
+    } catch {
+        return defaultValue;
+    }
+}
+
+function writeToStorage(storage: Storage, key: string, value: unknown): void {
+    try {
+        storage.setItem(key, JSON.stringify(value));
+    } catch {
+        // Ignore storage failures.
+    }
+}
 
 export class StorageManager {
     static readonly PREFIX = 'koshelf_';
 
-    static readonly KEYS = {
-        RECAP_FILTER: 'recap_filter',
-        STATS_FILTER: 'stats_filter',
-        LIBRARY_LIST_BOOKS_FILTER: 'library_list_books_filter',
-        LIBRARY_LIST_COMICS_FILTER: 'library_list_comics_filter',
-        LIBRARY_LIST_BOOKS_SECTIONS: 'library_list_books_sections',
-        LIBRARY_LIST_COMICS_SECTIONS: 'library_list_comics_sections',
-        ITEM_DETAIL_BOOKS_SECTIONS: 'item_detail_books_sections',
-        ITEM_DETAIL_COMICS_SECTIONS: 'item_detail_comics_sections',
-        STATS_ALL_SECTIONS: 'stats_all_sections',
-        STATS_BOOKS_SECTIONS: 'stats_books_sections',
-        STATS_COMICS_SECTIONS: 'stats_comics_sections',
-        RECAP_SORT_NEWEST: 'recap_sort_newest',
-        VERSION: 'version',
-        SERVER_MODE: 'server_mode',
-        RELOAD_COUNT: 'reload_count',
-        LAST_RELOAD: 'last_reload',
-    } as const;
-
-    static get<T>(key: StorageKey, defaultValue: T | null = null): T | null {
-        try {
-            const item = localStorage.getItem(this.PREFIX + key);
-            if (item === null) return defaultValue;
-            return JSON.parse(item) as T;
-        } catch {
-            return defaultValue;
-        }
+    static getByKey<T>(key: string, defaultValue: T | null = null): T | null {
+        return readFromStorage(localStorage, this.PREFIX + key, defaultValue);
     }
 
-    static set(key: StorageKey, value: unknown): void {
+    static setByKey(key: string, value: unknown): void {
+        writeToStorage(localStorage, this.PREFIX + key, value);
+    }
+
+    static getSessionByKey<T>(key: string, defaultValue: T | null = null): T | null {
+        return readFromStorage(sessionStorage, this.PREFIX + key, defaultValue);
+    }
+
+    static setSessionByKey(key: string, value: unknown): void {
+        writeToStorage(sessionStorage, this.PREFIX + key, value);
+    }
+
+    static removeSessionByKey(key: string): void {
         try {
-            localStorage.setItem(this.PREFIX + key, JSON.stringify(value));
+            sessionStorage.removeItem(this.PREFIX + key);
         } catch {
             // Ignore storage failures.
         }

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
     loadStatisticsIndex,
@@ -19,6 +19,7 @@ export function useStatisticsWeekQuery(scope: StatisticsScope, weekKey: string |
         queryKey: ['statistics-week', scope, weekKey],
         queryFn: () => loadStatisticsWeek(scope, weekKey ?? ''),
         enabled: Boolean(weekKey),
+        placeholderData: keepPreviousData,
     });
 }
 
@@ -27,5 +28,6 @@ export function useStatisticsYearQuery(scope: StatisticsScope, year: number | nu
         queryKey: ['statistics-year', scope, year],
         queryFn: () => loadStatisticsYear(scope, year ?? 0),
         enabled: Boolean(year),
+        placeholderData: keepPreviousData,
     });
 }

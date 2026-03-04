@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
@@ -13,13 +12,11 @@ import { RecapHeaderControls } from '../components/RecapHeaderControls';
 import { RecapShareModal } from '../components/RecapShareModal';
 import { useRecapIndexQuery, useRecapYearQuery } from '../hooks/useRecapQueries';
 import {
-    buildRecapPath,
-    isRecapScopeParamCanonical,
-    normalizeRecapScope,
     orderRecapMonths,
-    parseRecapYearParam,
-    persistRecapScope,
+    persistRecapViewState,
     persistRecapSortNewest,
+    readStoredRecapScope,
+    readStoredRecapYear,
     readRecapSortNewest,
     resolveLatestYear,
 } from '../model/recap-model';
@@ -27,22 +24,9 @@ import { RecapEmptyState } from '../sections/RecapEmptyState';
 import { RecapSummarySection } from '../sections/RecapSummarySection';
 import { RecapTimelineSection } from '../sections/RecapTimelineSection';
 
-function normalizePathname(pathname: string): string {
-    if (pathname.length > 1 && pathname.endsWith('/')) {
-        return pathname.slice(0, -1);
-    }
-
-    return pathname;
-}
-
 export function RecapRoute() {
-    const params = useParams();
-    const navigate = useNavigate();
-    const location = useLocation();
-
-    const scope = normalizeRecapScope(params.scope);
-
-    const requestedYear = parseRecapYearParam(params.year);
+    const [scope, setScope] = useState(() => readStoredRecapScope());
+    const [selectedYear, setSelectedYear] = useState<number | null>(() => readStoredRecapYear());
     const [sortNewestFirst, setSortNewestFirst] = useState(() => readRecapSortNewest());
     const [shareModalOpenKey, setShareModalOpenKey] = useState<string | null>(null);
 
@@ -54,29 +38,19 @@ export function RecapRoute() {
     const recapIndexQuery = useRecapIndexQuery(scope);
     const availableYears = useMemo(() => recapIndexQuery.data?.available_years ?? [], [recapIndexQuery.data?.available_years]);
     const latestYear = resolveLatestYear(availableYears, recapIndexQuery.data?.latest_year);
-    const yearForQuery = requestedYear ?? latestYear;
+    const yearForQuery = useMemo(() => {
+        if (selectedYear !== null && availableYears.includes(selectedYear)) {
+            return selectedYear;
+        }
+
+        return latestYear;
+    }, [availableYears, latestYear, selectedYear]);
 
     const shareResetKey = `${scope}:${yearForQuery}`;
     const shareModalOpen = shareModalOpenKey === shareResetKey;
 
     const recapYearQuery = useRecapYearQuery(scope, yearForQuery);
-    const [displayedRecapYear, setDisplayedRecapYear] = useState(recapYearQuery.data ?? null);
-
-    const [prevRecapYearData, setPrevRecapYearData] = useState(recapYearQuery.data);
-    if (recapYearQuery.data !== prevRecapYearData) {
-        setPrevRecapYearData(recapYearQuery.data);
-        if (recapYearQuery.data) {
-            setDisplayedRecapYear(recapYearQuery.data);
-        }
-    }
-
-    const [prevRecapScope, setPrevRecapScope] = useState(scope);
-    if (prevRecapScope !== scope) {
-        setPrevRecapScope(scope);
-        setDisplayedRecapYear(null);
-    }
-
-    const recapYear = displayedRecapYear ?? recapYearQuery.data ?? null;
+    const recapYear = recapYearQuery.data ?? null;
     const shareAssets = recapYear?.share_assets ?? null;
 
     const orderedMonths = useMemo(
@@ -94,8 +68,15 @@ export function RecapRoute() {
     useRecapCoverTiltEffect(`${scope}:${yearForQuery ?? 'none'}:${sortNewestFirst}:${visibleItemsKey}`);
 
     useEffect(() => {
-        persistRecapScope(scope);
-    }, [scope]);
+        if (!recapIndexQuery.isSuccess) {
+            return;
+        }
+
+        persistRecapViewState({
+            scope,
+            year: yearForQuery,
+        });
+    }, [recapIndexQuery.isSuccess, scope, yearForQuery]);
 
     useEffect(() => {
         if (!siteQuery.data?.title) {
@@ -106,64 +87,6 @@ export function RecapRoute() {
         const yearSuffix = titleYear ? ` ${titleYear}` : '';
         document.title = `${translation.get('recap')}${yearSuffix} - ${siteQuery.data.title}`;
     }, [recapYear?.year, siteQuery.data?.title, yearForQuery]);
-
-    useEffect(() => {
-        if (!recapIndexQuery.isSuccess) {
-            return;
-        }
-
-        const currentPath = normalizePathname(location.pathname);
-
-        if (params.year === undefined) {
-            const target = buildRecapPath(latestYear, scope);
-            if (currentPath !== target) {
-                navigate(target, { replace: true });
-            }
-            return;
-        }
-
-        if (requestedYear === null) {
-            const fallbackPath = buildRecapPath(latestYear, scope);
-            if (currentPath !== fallbackPath) {
-                navigate(fallbackPath, { replace: true });
-            }
-            return;
-        }
-
-        const scopeIsCanonical = isRecapScopeParamCanonical(params.scope) && params.scope !== 'all';
-        if (!scopeIsCanonical && params.scope !== undefined) {
-            const canonicalPath = buildRecapPath(requestedYear, scope);
-            if (currentPath !== canonicalPath) {
-                navigate(canonicalPath, { replace: true });
-            }
-            return;
-        }
-
-        if (scope === 'all' && availableYears.length === 0) {
-            const fallbackPath = buildRecapPath(null, 'all');
-            if (currentPath !== fallbackPath) {
-                navigate(fallbackPath, { replace: true });
-            }
-            return;
-        }
-
-        if (availableYears.length > 0 && !availableYears.includes(requestedYear)) {
-            const fallbackPath = buildRecapPath(latestYear, scope);
-            if (currentPath !== fallbackPath) {
-                navigate(fallbackPath, { replace: true });
-            }
-        }
-    }, [
-        availableYears,
-        latestYear,
-        location.pathname,
-        navigate,
-        params.scope,
-        params.year,
-        recapIndexQuery.isSuccess,
-        requestedYear,
-        scope,
-    ]);
 
     const showTypeFilter = Boolean(
         siteQuery.data?.capabilities.has_books && siteQuery.data?.capabilities.has_comics,
@@ -198,10 +121,10 @@ export function RecapRoute() {
                         years={availableYears}
                         selectedYear={yearForQuery}
                         onSelectYear={(nextYear) => {
-                            navigate(buildRecapPath(nextYear, scope));
+                            setSelectedYear(nextYear);
                         }}
                         onScopeChange={(nextScope) => {
-                            navigate(buildRecapPath(yearForQuery, nextScope));
+                            setScope(nextScope);
                         }}
                         sortNewestFirst={sortNewestFirst}
                         onToggleSort={() => {

@@ -1,7 +1,6 @@
 export type ServerMode = 'internal' | 'external';
 export type ScopeValue = 'all' | 'books' | 'comics';
 
-type LibraryCollection = 'books' | 'comics';
 type ContractRoute = {
     apiPath: string;
     dataPath: string;
@@ -126,21 +125,6 @@ async function requestScoped<T>(target: ContractRoute, scope: ScopeValue | undef
     return projectScopedPayload(payload, selectedScope) as T;
 }
 
-function parseLibraryHref(href: string): { collection: LibraryCollection; id: string } | null {
-    const url = new URL(href, window.location.origin);
-    const match = url.pathname.match(/^\/(books|comics)\/([^/]+)\/?/);
-    if (!match) return null;
-
-    const collection = match[1];
-    const id = match[2];
-
-    if ((collection !== 'books' && collection !== 'comics') || !id) {
-        return null;
-    }
-
-    return { collection, id };
-}
-
 export const api = {
     site: {
         async get<T>(): Promise<T> {
@@ -230,19 +214,6 @@ export const api = {
                     scope,
                 );
             },
-        },
-    },
-
-    library: {
-        async getByHref<T>(href: string): Promise<T | null> {
-            const parsed = parseLibraryHref(href);
-            if (!parsed) return null;
-
-            if (parsed.collection === 'books') {
-                return api.books.get<T>(parsed.id);
-            }
-
-            return api.comics.get<T>(parsed.id);
         },
     },
 };

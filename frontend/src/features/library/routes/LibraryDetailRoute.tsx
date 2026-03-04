@@ -1,16 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 
+import {
+    buildRoutePath,
+    detailRouteIdForCollection,
+    listRouteIdForCollection,
+} from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
-import { createLibraryReturnToListState } from '../../../shared/lib/navigation/library-scroll-restoration';
+import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-return-state';
+import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
-import { useLibraryDetailSectionState } from '../hooks/useLibraryDetailSectionState';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
+import {
+    LIBRARY_DETAIL_SECTION_KEYS,
+    defaultLibraryDetailSectionState,
+    type LibraryDetailSectionKey,
+} from '../model/library-detail-model';
 import type { LibraryCollection } from '../model/library-model';
 import { LibraryAdditionalInfoSection } from '../sections/LibraryAdditionalInfoSection';
 import { LibraryBookmarksSection } from '../sections/LibraryBookmarksSection';
@@ -29,6 +39,7 @@ function collectionTitle(collection: LibraryCollection): string {
 
 export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const params = useParams();
+    const location = useLocation();
     const id = params.id;
 
     const siteQuery = useQuery({
@@ -54,7 +65,13 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const hasReviewNote = item?.review_note !== null && item?.review_note !== undefined;
     const hasPublisher = item?.publisher !== null && item?.publisher !== undefined;
 
-    const { state: sectionState, toggle } = useLibraryDetailSectionState(collection);
+    const detailRouteId = useMemo(() => detailRouteIdForCollection(collection), [collection]);
+    const sectionDefaults = useMemo(() => defaultLibraryDetailSectionState(), []);
+    const { state: sectionState, toggle } = useSectionVisibilityState<LibraryDetailSectionKey>({
+        routeId: detailRouteId,
+        sectionKeys: LIBRARY_DETAIL_SECTION_KEYS,
+        defaults: sectionDefaults,
+    });
 
     useEffect(() => {
         if (!siteQuery.data?.title) {
@@ -70,12 +87,13 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     }, [collection, item?.title, siteQuery.data?.title]);
 
     if (!id) {
-        return <Navigate to={`/${collection}`} replace />;
+        return <Navigate to={buildRoutePath(listRouteIdForCollection(collection))} replace />;
     }
 
     const headerTitle = item?.title ?? collectionTitle(collection);
     const primaryAuthor = item?.authors[0];
-    const backHref = `/${collection}`;
+    const returnTo = resolveDetailReturnPath(location.state);
+    const backHref = returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
 
     return (
         <>
@@ -101,7 +119,6 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                         </p>
                         <Link
                             to={backHref}
-                            state={createLibraryReturnToListState(collection)}
                             className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                         >
                             {collectionTitle(collection)}

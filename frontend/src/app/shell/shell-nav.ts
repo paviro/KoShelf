@@ -7,12 +7,17 @@ import {
     LuClock3,
 } from 'react-icons/lu';
 
-import type { RecapIndexResponse, SiteResponse } from '../../shared/contracts';
+import type { SiteResponse } from '../../shared/contracts';
 import { translation } from '../../shared/i18n';
-import { StorageManager } from '../../shared/storage-manager';
+import {
+    matchRoute,
+    resolveMainRouteId,
+    type MainRouteId,
+} from '../routes/route-registry';
 
 export type NavItem = {
     id?: string;
+    routeId: MainRouteId;
     label: string;
     href: string;
     icon: IconType;
@@ -28,32 +33,7 @@ const ICONS = {
 
 export const BRAND_ICON = ICONS.books;
 
-function readStoredRecapScope(): 'all' | 'books' | 'comics' {
-    const raw = StorageManager.get<string>(StorageManager.KEYS.RECAP_FILTER, 'all');
-    if (raw === 'books' || raw === 'comics') {
-        return raw;
-    }
-
-    return 'all';
-}
-
-function buildRecapHref(latestYear: number | null | undefined): string {
-    if (!latestYear) {
-        return '/recap';
-    }
-
-    const scope = readStoredRecapScope();
-    if (scope === 'all') {
-        return `/recap/${latestYear}`;
-    }
-
-    return `/recap/${latestYear}/${scope}`;
-}
-
-export function buildNavItems(
-    site: SiteResponse | undefined,
-    recapIndex: RecapIndexResponse | undefined,
-): NavItem[] {
+export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
     if (!site) return [];
 
     const items: NavItem[] = [];
@@ -61,6 +41,7 @@ export function buildNavItems(
 
     if (capabilities.has_books) {
         items.push({
+            routeId: 'books-list',
             label: translation.get('books'),
             href: '/books',
             icon: ICONS.books,
@@ -69,6 +50,7 @@ export function buildNavItems(
 
     if (capabilities.has_comics) {
         items.push({
+            routeId: 'comics-list',
             label: translation.get('comics'),
             href: '/comics',
             icon: ICONS.comics,
@@ -78,12 +60,14 @@ export function buildNavItems(
     if (capabilities.has_statistics) {
         items.push({
             id: 'nav-statistics',
+            routeId: 'statistics',
             label: translation.get('statistics'),
             href: '/statistics',
             icon: ICONS.statistics,
         });
 
         items.push({
+            routeId: 'calendar',
             label: translation.get('calendar'),
             href: '/calendar',
             icon: ICONS.calendar,
@@ -91,11 +75,11 @@ export function buildNavItems(
     }
 
     if (capabilities.has_recap) {
-        const latestYear = recapIndex?.latest_year ?? recapIndex?.available_years?.[0];
         items.push({
             id: 'nav-recap',
+            routeId: 'recap',
             label: translation.get('recap'),
-            href: buildRecapHref(latestYear),
+            href: '/recap',
             icon: ICONS.recap,
         });
     }
@@ -103,18 +87,12 @@ export function buildNavItems(
     return items;
 }
 
-export function isActivePath(currentPath: string, href: string): boolean {
-    if (href === '/statistics') {
-        return currentPath.startsWith('/statistics');
+export function isActivePath(currentPath: string, routeId: MainRouteId): boolean {
+    const currentRoute = matchRoute(currentPath);
+    if (!currentRoute.routeId) {
+        return false;
     }
-    if (href === '/books') {
-        return currentPath.startsWith('/books');
-    }
-    if (href === '/comics') {
-        return currentPath.startsWith('/comics');
-    }
-    if (href.startsWith('/recap')) {
-        return currentPath.startsWith('/recap');
-    }
-    return currentPath === href;
+
+    const currentMainRoute = resolveMainRouteId(currentRoute.routeId);
+    return currentMainRoute === routeId;
 }

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { LuBookOpen, LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
+import { buildRoutePath, detailRouteIdForContentType } from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
+import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import type { CalendarEventResponse, CalendarItemResponse } from '../api/calendar-data';
@@ -19,7 +21,9 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
     const [coverFailed, setCoverFailed] = useState(false);
     const coverKey = `${event?.item_id}\0${item?.item_cover}`;
     const [prevCoverKey, setPrevCoverKey] = useState(coverKey);
+    const location = useLocation();
     const navigate = useNavigate();
+    const detailReturnState = createDetailReturnState(location.pathname, location.search);
 
     if (prevCoverKey !== coverKey) {
         setPrevCoverKey(coverKey);
@@ -35,7 +39,11 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
         ? item.authors.join(', ')
         : translation.get('unknown-author');
     const coverUrl = item?.item_cover?.trim() ? item.item_cover : null;
-    const canViewDetails = Boolean(item?.item_path);
+    const detailItemId = item?.item_id?.trim() ?? '';
+    const detailPath = item && detailItemId
+        ? buildRoutePath(detailRouteIdForContentType(item.content_type), { id: detailItemId })
+        : null;
+    const canViewDetails = Boolean(detailPath);
 
     return (
         <ModalShell
@@ -137,8 +145,8 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
                             className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                             onClick={() => {
                                 onClose();
-                                if (item?.item_path) {
-                                    navigate(item.item_path);
+                                if (detailPath) {
+                                    navigate(detailPath, { state: detailReturnState });
                                 }
                             }}
                         >

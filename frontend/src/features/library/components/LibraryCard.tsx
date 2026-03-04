@@ -1,12 +1,13 @@
-import { useMemo, type MouseEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { FaHighlighter, FaPause, FaStar } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 import { LuBookOpen } from 'react-icons/lu';
 
+import { buildRoutePath, detailRouteIdForCollection } from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
-import { saveLibraryListScrollSnapshot } from '../../../shared/lib/navigation/library-scroll-restoration';
+import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { LibraryListItem } from '../api/library-data';
 import type { LibraryCollection, LibrarySectionKey } from '../model/library-model';
 
@@ -33,7 +34,8 @@ function toProgressPercentage(progress: number | null | undefined): number {
 }
 
 export function LibraryCard({ item, collection, sectionKey }: LibraryCardProps) {
-    const detailPath = `/${collection}/${item.id}`;
+    const location = useLocation();
+    const detailPath = buildRoutePath(detailRouteIdForCollection(collection), { id: item.id });
     const primaryAuthor = item.authors[0];
     const annotationCount = item.annotation_count ?? 0;
     const progressPercentage = toProgressPercentage(item.progress_percentage);
@@ -48,21 +50,7 @@ export function LibraryCard({ item, collection, sectionKey }: LibraryCardProps) 
         }
         return item.title;
     }, [item.title, primaryAuthor]);
-
-    const handleOpenDetails = (event: MouseEvent<HTMLAnchorElement>): void => {
-        if (
-            event.defaultPrevented ||
-            event.button !== 0 ||
-            event.metaKey ||
-            event.altKey ||
-            event.ctrlKey ||
-            event.shiftKey
-        ) {
-            return;
-        }
-
-        saveLibraryListScrollSnapshot(collection);
-    };
+    const detailReturnState = createDetailReturnState(location.pathname, location.search);
 
     return (
         <article
@@ -75,9 +63,9 @@ export function LibraryCard({ item, collection, sectionKey }: LibraryCardProps) 
         >
             <Link
                 to={detailPath}
+                state={detailReturnState}
                 className="block"
                 aria-label={detailsAriaLabel}
-                onClick={handleOpenDetails}
             >
                 <div className="aspect-book bg-gray-200 dark:bg-dark-700 relative overflow-hidden">
                     {!hasError && (

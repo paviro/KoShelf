@@ -1,4 +1,3 @@
-import { StorageManager } from '../../../shared/storage-manager';
 import type { LibraryListItem } from '../api/library-data';
 
 export type LibraryCollection = 'books' | 'comics';
@@ -32,28 +31,6 @@ const LIBRARY_STATUS_FILTERS = new Set<LibraryFilterValue>(LIBRARY_FILTER_VALUES
 
 export function defaultLibrarySectionState(): LibrarySectionVisibilityState {
     return { ...DEFAULT_SECTION_STATE };
-}
-
-export function libraryFilterStorageKey(
-    collection: LibraryCollection,
-):
-    | typeof StorageManager.KEYS.LIBRARY_LIST_BOOKS_FILTER
-    | typeof StorageManager.KEYS.LIBRARY_LIST_COMICS_FILTER {
-    if (collection === 'comics') {
-        return StorageManager.KEYS.LIBRARY_LIST_COMICS_FILTER;
-    }
-    return StorageManager.KEYS.LIBRARY_LIST_BOOKS_FILTER;
-}
-
-export function librarySectionStorageKey(
-    collection: LibraryCollection,
-):
-    | typeof StorageManager.KEYS.LIBRARY_LIST_BOOKS_SECTIONS
-    | typeof StorageManager.KEYS.LIBRARY_LIST_COMICS_SECTIONS {
-    if (collection === 'comics') {
-        return StorageManager.KEYS.LIBRARY_LIST_COMICS_SECTIONS;
-    }
-    return StorageManager.KEYS.LIBRARY_LIST_BOOKS_SECTIONS;
 }
 
 export function libraryTitleTranslationKey(collection: LibraryCollection): 'books' | 'comics' {

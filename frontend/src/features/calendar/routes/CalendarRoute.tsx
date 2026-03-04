@@ -12,10 +12,11 @@ import {
     aggregateCalendarData,
     eventMatchesScope,
     isCurrentMonth,
-    loadInitialScope,
+    loadInitialCalendarViewState,
     monthKey,
     normalizeToMonthStart,
-    persistScope,
+    parseMonthKey,
+    persistCalendarViewState,
     resolveMonthlyStats,
     shiftMonth,
     shiftMonthKey,
@@ -44,9 +45,15 @@ function safeFormatDateLabel(
 }
 
 export function CalendarRoute() {
-    const [scope, setScope] = useState<ScopeValue>(() => loadInitialScope());
+    const [initialCalendarView] = useState(() => loadInitialCalendarViewState());
+    const [scope, setScope] = useState<ScopeValue>(() => initialCalendarView.scope);
+    const [persistMonthSelection, setPersistMonthSelection] = useState<boolean>(
+        () => initialCalendarView.monthKey !== null,
+    );
     const [displayedMonth, setDisplayedMonth] = useState<Date>(() =>
-        normalizeToMonthStart(new Date()),
+        initialCalendarView.monthKey
+            ? parseMonthKey(initialCalendarView.monthKey)
+            : normalizeToMonthStart(new Date()),
     );
     const [monthPickerOpen, setMonthPickerOpen] = useState(false);
     const [yearPickerOpen, setYearPickerOpen] = useState(false);
@@ -96,8 +103,11 @@ export function CalendarRoute() {
     const nextMonthQuery = useCalendarMonthQuery(nextMonthKey, nextMonthEnabled);
 
     useEffect(() => {
-        persistScope(scope);
-    }, [scope]);
+        persistCalendarViewState({
+            scope,
+            monthKey: persistMonthSelection ? displayedMonthKey : null,
+        });
+    }, [displayedMonthKey, persistMonthSelection, scope]);
 
     useEffect(() => {
         if (siteQuery.data?.title) {
@@ -144,6 +154,7 @@ export function CalendarRoute() {
     );
 
     const handleDisplayedMonthChange = useCallback((nextDate: Date) => {
+        setPersistMonthSelection(true);
         setDisplayedMonth((currentDate) => {
             const nextMonthKey = monthKey(nextDate);
             if (monthKey(currentDate) === nextMonthKey) {
@@ -157,6 +168,21 @@ export function CalendarRoute() {
     const handleEventSelect = useCallback((event: CalendarEventResponse) => {
         setSelectedEvent(event);
         setIsEventModalOpen(true);
+    }, []);
+
+    const handlePreviousMonth = useCallback(() => {
+        setPersistMonthSelection(true);
+        setDisplayedMonth((currentDate) => shiftMonth(currentDate, -1));
+    }, []);
+
+    const handleNextMonth = useCallback(() => {
+        setPersistMonthSelection(true);
+        setDisplayedMonth((currentDate) => shiftMonth(currentDate, 1));
+    }, []);
+
+    const handleToday = useCallback(() => {
+        setPersistMonthSelection(false);
+        setDisplayedMonth(normalizeToMonthStart(new Date()));
     }, []);
 
     useEffect(() => {
@@ -186,13 +212,9 @@ export function CalendarRoute() {
                     scope={scope}
                     showTypeFilter={showTypeFilter}
                     onScopeChange={setScope}
-                    onPreviousMonth={() =>
-                        setDisplayedMonth((currentDate) => shiftMonth(currentDate, -1))
-                    }
-                    onNextMonth={() =>
-                        setDisplayedMonth((currentDate) => shiftMonth(currentDate, 1))
-                    }
-                    onToday={() => setDisplayedMonth(normalizeToMonthStart(new Date()))}
+                    onPreviousMonth={handlePreviousMonth}
+                    onNextMonth={handleNextMonth}
+                    onToday={handleToday}
                     onOpenMonthPicker={() => setMonthPickerOpen(true)}
                     onOpenYearPicker={() => {
                         setYearPickerStartYear(displayedMonth.getFullYear() - 4);
@@ -240,6 +262,7 @@ export function CalendarRoute() {
                 locale={locale}
                 onClose={() => setMonthPickerOpen(false)}
                 onSelectMonth={(monthIndex) => {
+                    setPersistMonthSelection(true);
                     setDisplayedMonth(
                         (currentDate) =>
                             new Date(currentDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0),
@@ -255,6 +278,7 @@ export function CalendarRoute() {
                 onPreviousRange={() => setYearPickerStartYear((current) => current - 9)}
                 onNextRange={() => setYearPickerStartYear((current) => current + 9)}
                 onSelectYear={(year) => {
+                    setPersistMonthSelection(true);
                     setDisplayedMonth(
                         (currentDate) => new Date(year, currentDate.getMonth(), 1, 12, 0, 0, 0),
                     );

@@ -6,6 +6,7 @@ import type {
 import { DateFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
 import { monthKeyAt } from '../lib/months';
 
 export const SECTION_NAMES = [
@@ -31,11 +32,59 @@ export type YearlySummaryStats = {
     active_days: number;
 };
 
-export function normalizeScope(scope: string | undefined): StatisticsScope {
+export type StatisticsViewState = {
+    scope: StatisticsScope;
+    selectedWeekKey: string | null;
+    selectedHeatmapYear: number | null;
+    selectedYearlyYear: number | null;
+};
+
+function normalizeSelectedYear(year: unknown): number | null {
+    if (typeof year !== 'number' || !Number.isFinite(year)) {
+        return null;
+    }
+
+    const rounded = Math.floor(year);
+    if (rounded < 1900 || rounded > 9999) {
+        return null;
+    }
+
+    return rounded;
+}
+
+function normalizeSelectedWeekKey(weekKey: unknown): string | null {
+    if (typeof weekKey !== 'string') {
+        return null;
+    }
+
+    const trimmed = weekKey.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+export function normalizeScope(scope: unknown): StatisticsScope {
     if (scope === 'books' || scope === 'comics') {
         return scope;
     }
     return 'all';
+}
+
+export function readStoredStatisticsViewState(): StatisticsViewState {
+    const persisted = readRouteState('statistics', 'session');
+    return {
+        scope: normalizeScope(persisted.scope),
+        selectedWeekKey: normalizeSelectedWeekKey(persisted.selectedWeekKey),
+        selectedHeatmapYear: normalizeSelectedYear(persisted.selectedHeatmapYear),
+        selectedYearlyYear: normalizeSelectedYear(persisted.selectedYearlyYear),
+    };
+}
+
+export function persistStatisticsViewState(state: StatisticsViewState): void {
+    patchRouteState('statistics', 'session', {
+        scope: normalizeScope(state.scope),
+        selectedWeekKey: normalizeSelectedWeekKey(state.selectedWeekKey),
+        selectedHeatmapYear: normalizeSelectedYear(state.selectedHeatmapYear),
+        selectedYearlyYear: normalizeSelectedYear(state.selectedYearlyYear),
+    });
 }
 
 export function defaultSectionState(): SectionVisibilityState {

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 
-import type { LibraryCollection } from '../../shared/lib/navigation/library-scroll-restoration';
 import { ShellMobileNav } from './ShellMobileNav';
 import { ShellSidebar } from './ShellSidebar';
 import type { NavItem } from './shell-nav';
@@ -8,7 +7,6 @@ import type { NavItem } from './shell-nav';
 type AppShellProps = {
     navItems: NavItem[];
     currentPath: string;
-    currentDetailCollection: LibraryCollection | null;
     siteTitle: string;
     generatedAt?: string;
     version?: string;
@@ -18,7 +16,6 @@ type AppShellProps = {
 export function AppShell({
     navItems,
     currentPath,
-    currentDetailCollection,
     siteTitle,
     generatedAt,
     version,
@@ -29,7 +26,6 @@ export function AppShell({
             <ShellSidebar
                 navItems={navItems}
                 currentPath={currentPath}
-                currentDetailCollection={currentDetailCollection}
                 siteTitle={siteTitle}
                 generatedAt={generatedAt}
                 version={version}
@@ -37,7 +33,6 @@ export function AppShell({
             <ShellMobileNav
                 navItems={navItems}
                 currentPath={currentPath}
-                currentDetailCollection={currentDetailCollection}
             />
 
             <div className="min-h-full lg:ml-64">{children}</div>

@@ -1,9 +1,25 @@
-import { StorageManager } from '../../../shared/storage-manager';
+import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
 import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
 
-const RECAP_YEAR_PARAM_REGEX = /^\d{4}$/;
+export type RecapViewState = {
+    scope: RecapScope;
+    year: number | null;
+};
 
-export function normalizeRecapScope(scopeParam: string | undefined): RecapScope {
+function normalizeRecapYear(value: unknown): number | null {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return null;
+    }
+
+    const rounded = Math.floor(value);
+    if (rounded < 1900 || rounded > 9999) {
+        return null;
+    }
+
+    return rounded;
+}
+
+export function normalizeRecapScope(scopeParam: unknown): RecapScope {
     if (scopeParam === 'books' || scopeParam === 'comics') {
         return scopeParam;
     }
@@ -11,21 +27,19 @@ export function normalizeRecapScope(scopeParam: string | undefined): RecapScope 
     return 'all';
 }
 
-export function isRecapScopeParamCanonical(scopeParam: string | undefined): boolean {
-    return scopeParam === undefined || scopeParam === 'books' || scopeParam === 'comics';
+export function readStoredRecapViewState(): RecapViewState {
+    const persisted = readRouteState('recap', 'session');
+    return {
+        scope: normalizeRecapScope(persisted.scope),
+        year: normalizeRecapYear(persisted.year),
+    };
 }
 
-export function parseRecapYearParam(yearParam: string | undefined): number | null {
-    if (!yearParam || !RECAP_YEAR_PARAM_REGEX.test(yearParam)) {
-        return null;
-    }
-
-    const parsed = Number.parseInt(yearParam, 10);
-    if (!Number.isFinite(parsed)) {
-        return null;
-    }
-
-    return parsed;
+export function persistRecapViewState(state: RecapViewState): void {
+    patchRouteState('recap', 'session', {
+        scope: normalizeRecapScope(state.scope),
+        year: normalizeRecapYear(state.year),
+    });
 }
 
 export function resolveLatestYear(
@@ -39,37 +53,23 @@ export function resolveLatestYear(
     return availableYears[0] ?? null;
 }
 
-export function buildRecapPath(year: number | null, scope: RecapScope): string {
-    if (year === null) {
-        return '/recap';
-    }
-
-    if (scope === 'all') {
-        return `/recap/${year}`;
-    }
-
-    return `/recap/${year}/${scope}`;
-}
-
 export function readStoredRecapScope(): RecapScope {
-    const raw = StorageManager.get<string>(StorageManager.KEYS.RECAP_FILTER, 'all');
-    if (raw === 'books' || raw === 'comics') {
-        return raw;
-    }
-
-    return 'all';
+    return readStoredRecapViewState().scope;
 }
 
-export function persistRecapScope(scope: RecapScope): void {
-    StorageManager.set(StorageManager.KEYS.RECAP_FILTER, scope);
+export function readStoredRecapYear(): number | null {
+    return readStoredRecapViewState().year;
 }
 
 export function readRecapSortNewest(): boolean {
-    return StorageManager.get<boolean>(StorageManager.KEYS.RECAP_SORT_NEWEST, true) ?? true;
+    const persisted = readRouteState('recap', 'local');
+    return typeof persisted.sortNewestFirst === 'boolean' ? persisted.sortNewestFirst : true;
 }
 
 export function persistRecapSortNewest(value: boolean): void {
-    StorageManager.set(StorageManager.KEYS.RECAP_SORT_NEWEST, value);
+    patchRouteState('recap', 'local', {
+        sortNewestFirst: value,
+    });
 }
 
 export function orderRecapMonths(

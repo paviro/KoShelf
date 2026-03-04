@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
-import { createLibraryReturnToListState } from '../../../shared/lib/navigation/library-scroll-restoration';
 import type { LibraryCollection } from '../model/library-model';
 
 type LibraryDetailHeaderProps = {
@@ -35,7 +34,6 @@ export function LibraryDetailHeader({
                 <div className="lg:hidden flex items-center space-x-3 min-w-0 flex-1">
                     <Link
                         to={backHref}
-                        state={createLibraryReturnToListState(collection)}
                         className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0"
                         title={translation.get('go-back.aria-label')}
                         aria-label={translation.get('go-back.aria-label')}

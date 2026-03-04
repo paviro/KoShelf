@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { loadRecapIndex, loadRecapYear, type RecapScope } from '../api/recap-data';
 
@@ -14,5 +14,6 @@ export function useRecapYearQuery(scope: RecapScope, year: number | null) {
         queryKey: ['recap-year', scope, year],
         queryFn: () => loadRecapYear(scope, year ?? 0),
         enabled: year !== null,
+        placeholderData: keepPreviousData,
     });
 }

@@ -121,11 +121,6 @@ export function buildStarDisplay(rating: number | null | undefined): boolean[] {
 }
 
 export function resolveRecapSearchBasePath(item: RecapItemResponse): '/books' | '/comics' {
-    const itemPath = item.item_path?.trim() ?? '';
-    if (itemPath.startsWith('/comics/')) {
-        return '/comics';
-    }
-
     if (item.content_type === 'comic') {
         return '/comics';
     }

@@ -19,7 +19,7 @@ export interface CalendarItemResponse {
     authors: string[];
     content_type: CalendarContentType;
     color: string;
-    item_path?: string;
+    item_id?: string;
     item_cover?: string;
 }
 

@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote, LuStar } from 'react-icons/lu';
 
+import { buildRoutePath, detailRouteIdForContentType } from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
+import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { RecapItemResponse } from '../api/recap-data';
 import {
     buildStarDisplay,
@@ -16,7 +18,19 @@ type RecapItemCardProps = {
 };
 
 export function RecapItemCard({ item }: RecapItemCardProps) {
-    const detailPath = item.item_path?.trim() || null;
+    const location = useLocation();
+    const detailPath = useMemo(() => {
+        const itemId = item.item_id?.trim() ?? '';
+        if (!itemId) {
+            return null;
+        }
+
+        if (item.content_type !== 'book' && item.content_type !== 'comic') {
+            return null;
+        }
+
+        return buildRoutePath(detailRouteIdForContentType(item.content_type), { id: itemId });
+    }, [item.content_type, item.item_id]);
     const coverUrl = item.item_cover?.trim() || null;
     const [coverFailed, setCoverFailed] = useState(false);
     const [prevCoverUrl, setPrevCoverUrl] = useState(coverUrl);
@@ -24,6 +38,9 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
     const hasRating = typeof item.rating === 'number' && Number.isFinite(item.rating);
     const stars = buildStarDisplay(item.rating);
     const searchBasePath = resolveRecapSearchBasePath(item);
+    const detailReturnState = createDetailReturnState(location.pathname, location.search);
+    const coverFrameClass =
+        'w-full aspect-[2/3] flex items-center justify-center rounded-md overflow-hidden recap-cover-max';
 
     if (prevCoverUrl !== coverUrl) {
         setPrevCoverUrl(coverUrl);
@@ -33,6 +50,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
     const titleNode = detailPath ? (
         <Link
             to={detailPath}
+            state={detailReturnState}
             className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
         >
             {item.title}
@@ -52,32 +70,44 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                     <div className="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-stretch flex items-center justify-center">
                         {coverUrl && !coverFailed ? (
                             detailPath ? (
-                                <Link to={detailPath} className="block recap-cover-tilt rounded-md">
+                                <Link
+                                    to={detailPath}
+                                    state={detailReturnState}
+                                    className="block w-full recap-cover-tilt rounded-md"
+                                >
+                                    <div className={coverFrameClass}>
+                                        <img
+                                            className="block max-w-full max-h-full rounded-md"
+                                            src={coverUrl}
+                                            alt={`Cover of ${item.title}`}
+                                            loading="lazy"
+                                            onError={() => setCoverFailed(true)}
+                                        />
+                                    </div>
+                                </Link>
+                            ) : (
+                                <div className={coverFrameClass}>
                                     <img
-                                        className="w-full h-auto object-contain rounded-md recap-cover-max"
+                                        className="block max-w-full max-h-full rounded-md"
                                         src={coverUrl}
                                         alt={`Cover of ${item.title}`}
                                         loading="lazy"
                                         onError={() => setCoverFailed(true)}
                                     />
-                                </Link>
-                            ) : (
-                                <img
-                                    className="w-full h-auto object-contain rounded-md recap-cover-max"
-                                    src={coverUrl}
-                                    alt={`Cover of ${item.title}`}
-                                    loading="lazy"
-                                    onError={() => setCoverFailed(true)}
-                                />
+                                </div>
                             )
                         ) : detailPath ? (
-                            <Link to={detailPath} className="block w-full h-auto recap-cover-tilt rounded-md">
-                                <div className="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max">
+                            <Link
+                                to={detailPath}
+                                state={detailReturnState}
+                                className="block w-full recap-cover-tilt rounded-md"
+                            >
+                                <div className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}>
                                     <LuBookOpen className="w-12 h-12" aria-hidden />
                                 </div>
                             </Link>
                         ) : (
-                            <div className="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max">
+                            <div className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}>
                                 <LuBookOpen className="w-12 h-12" aria-hidden />
                             </div>
                         )}

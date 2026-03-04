@@ -2,16 +2,11 @@ import { Link } from 'react-router-dom';
 import { LuGithub } from 'react-icons/lu';
 
 import { translation } from '../../shared/i18n';
-import {
-    createLibraryReturnToListState,
-    type LibraryCollection,
-} from '../../shared/lib/navigation/library-scroll-restoration';
 import { BRAND_ICON, isActivePath, type NavItem } from './shell-nav';
 
 type ShellSidebarProps = {
     navItems: NavItem[];
     currentPath: string;
-    currentDetailCollection: LibraryCollection | null;
     siteTitle: string;
     generatedAt?: string;
     version?: string;
@@ -20,7 +15,6 @@ type ShellSidebarProps = {
 export function ShellSidebar({
     navItems,
     currentPath,
-    currentDetailCollection,
     siteTitle,
     generatedAt,
     version,
@@ -47,19 +41,14 @@ export function ShellSidebar({
 
             <nav className="flex-1 px-4 py-6 space-y-3">
                 {navItems.map((item) => {
-                    const active = isActivePath(currentPath, item.href);
+                    const active = isActivePath(currentPath, item.routeId);
                     const ItemIcon = item.icon;
-                    const returnToListState =
-                        currentDetailCollection && item.href === `/${currentDetailCollection}`
-                            ? createLibraryReturnToListState(currentDetailCollection)
-                            : undefined;
 
                     return (
                         <Link
                             key={item.href}
                             id={item.id}
                             to={item.href}
-                            state={returnToListState}
                             className={`sidebar-item-modern group ${active ? 'sidebar-item-modern-active' : ''}`}
                         >
                             <div
