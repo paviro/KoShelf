@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { AppRoutes } from './app/routes/AppRoutes';
@@ -6,6 +7,11 @@ import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { RecapIndexResponse, SiteResponse } from './shared/contracts';
+import {
+    clearLibraryListScrollSnapshot,
+    isLibraryPathForCollection,
+    libraryDetailCollectionFromPath,
+} from './shared/lib/navigation/library-scroll-restoration';
 
 function resolveDefaultRoute(site: SiteResponse | undefined): '/books' | '/comics' | '/statistics' {
     if (site?.capabilities.has_books) {
@@ -21,6 +27,7 @@ function resolveDefaultRoute(site: SiteResponse | undefined): '/books' | '/comic
 
 export function App() {
     const location = useLocation();
+    const previousPathRef = useRef<string | null>(null);
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -36,6 +43,24 @@ export function App() {
     const site = siteQuery.data;
     const navItems = buildNavItems(site, recapQuery.data);
     const defaultRoute = resolveDefaultRoute(site);
+
+    useEffect(() => {
+        const previousPath = previousPathRef.current;
+        previousPathRef.current = location.pathname;
+
+        if (!previousPath) {
+            return;
+        }
+
+        const previousDetailCollection = libraryDetailCollectionFromPath(previousPath);
+        if (!previousDetailCollection) {
+            return;
+        }
+
+        if (!isLibraryPathForCollection(location.pathname, previousDetailCollection)) {
+            clearLibraryListScrollSnapshot();
+        }
+    }, [location.pathname]);
 
     return (
         <AppShell

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHighlighter, FaPause, FaStar } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
@@ -6,6 +6,7 @@ import { LuBookOpen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
+import { saveLibraryListScrollSnapshot } from '../../../shared/lib/navigation/library-scroll-restoration';
 import type { LibraryListItem } from '../api/library-data';
 import type { LibraryCollection, LibrarySectionKey } from '../model/library-model';
 
@@ -48,6 +49,21 @@ export function LibraryCard({ item, collection, sectionKey }: LibraryCardProps) 
         return item.title;
     }, [item.title, primaryAuthor]);
 
+    const handleOpenDetails = (event: MouseEvent<HTMLAnchorElement>): void => {
+        if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.shiftKey
+        ) {
+            return;
+        }
+
+        saveLibraryListScrollSnapshot(collection);
+    };
+
     return (
         <article
             className="book-card group shadow-lg dark:shadow-none"
@@ -57,7 +73,12 @@ export function LibraryCard({ item, collection, sectionKey }: LibraryCardProps) 
             data-library-item-authors={item.authors.join(', ')}
             data-library-item-series={item.series ?? ''}
         >
-            <Link to={detailPath} className="block" aria-label={detailsAriaLabel}>
+            <Link
+                to={detailPath}
+                className="block"
+                aria-label={detailsAriaLabel}
+                onClick={handleOpenDetails}
+            >
                 <div className="aspect-book bg-gray-200 dark:bg-dark-700 relative overflow-hidden">
                     {!hasError && (
                         <img

@@ -5,6 +5,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
+import { createLibraryReturnToListState } from '../../../shared/lib/navigation/library-scroll-restoration';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
@@ -100,6 +101,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                         </p>
                         <Link
                             to={backHref}
+                            state={createLibraryReturnToListState(collection)}
                             className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                         >
                             {collectionTitle(collection)}

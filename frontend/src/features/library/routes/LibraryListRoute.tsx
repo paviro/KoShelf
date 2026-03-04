@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { StorageManager } from '../../../shared/storage-manager';
 import { useBookCardTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
+import {
+    consumeLibraryListScrollSnapshot,
+    isLibraryReturnToListState,
+} from '../../../shared/lib/navigation/library-scroll-restoration';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
@@ -58,9 +62,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     const location = useLocation();
     const navigate = useNavigate();
+    const navigationType = useNavigationType();
 
     const desktopSearchInputRef = useRef<HTMLInputElement>(null);
     const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+    const restoredLocationRef = useRef<string | null>(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -253,6 +259,45 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     );
 
     const pageTitle = translation.get(libraryTitleTranslationKey(collection));
+
+    const shouldAttemptScrollRestore = useMemo(() => {
+        const query = new URLSearchParams(location.search);
+        if (query.has('search')) {
+            return false;
+        }
+
+        if (isLibraryReturnToListState(location.state, collection)) {
+            return true;
+        }
+
+        return navigationType === 'POP';
+    }, [collection, location.search, location.state, navigationType]);
+
+    useLayoutEffect(() => {
+        if (!shouldAttemptScrollRestore || listQuery.isLoading || listQuery.isError) {
+            return;
+        }
+
+        const restoreKey = `${collection}:${location.key}`;
+        if (restoredLocationRef.current === restoreKey) {
+            return;
+        }
+
+        restoredLocationRef.current = restoreKey;
+        const savedScrollY = consumeLibraryListScrollSnapshot(collection, location.pathname);
+        if (savedScrollY === null) {
+            return;
+        }
+
+        window.scrollTo({ top: savedScrollY, behavior: 'auto' });
+    }, [
+        collection,
+        listQuery.isError,
+        listQuery.isLoading,
+        location.key,
+        location.pathname,
+        shouldAttemptScrollRestore,
+    ]);
 
     useEffect(() => {
         if (siteQuery.data?.title) {
