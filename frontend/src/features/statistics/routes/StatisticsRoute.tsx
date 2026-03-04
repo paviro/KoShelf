@@ -183,7 +183,10 @@ export function StatisticsRoute() {
                     <ScopeFilter
                         showTypeFilter={showTypeFilter}
                         scope={scope}
-                        onScopeChange={setScope}
+                        onScopeChange={(nextScope) => {
+                            setScope(nextScope);
+                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                        }}
                     />
                 }
             />

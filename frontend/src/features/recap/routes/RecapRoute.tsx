@@ -122,9 +122,11 @@ export function RecapRoute() {
                         selectedYear={yearForQuery}
                         onSelectYear={(nextYear) => {
                             setSelectedYear(nextYear);
+                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
                         }}
                         onScopeChange={(nextScope) => {
                             setScope(nextScope);
+                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
                         }}
                         sortNewestFirst={sortNewestFirst}
                         onToggleSort={() => {

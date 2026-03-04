@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { listRouteIdForCollection } from '../../../app/routes/route-registry';
@@ -116,6 +116,14 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
     const effectiveFilterValue: LibraryFilterValue =
         filterValue === 'unread' && !hasUnreadItems ? 'all' : filterValue;
+    const handleSearchTermChange = useCallback((nextSearchTerm: string) => {
+        setSearchTerm(nextSearchTerm);
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+    const handleFilterChange = useCallback((nextFilter: LibraryFilterValue) => {
+        setFilterValue(nextFilter);
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
 
     useEffect(() => {
         patchRouteState(routeId, 'session', { filterValue: effectiveFilterValue });
@@ -193,7 +201,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                 }
 
                 if (searchTerm) {
-                    setSearchTerm('');
+                    handleSearchTermChange('');
                 }
 
                 if (mobileSearchOpen) {
@@ -210,26 +218,26 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             switch (event.key) {
                 case '1':
                     event.preventDefault();
-                    setFilterValue('all');
+                    handleFilterChange('all');
                     break;
                 case '2':
                     event.preventDefault();
-                    setFilterValue('reading');
+                    handleFilterChange('reading');
                     break;
                 case '3':
                     event.preventDefault();
-                    setFilterValue('completed');
+                    handleFilterChange('completed');
                     break;
                 case '4':
                     event.preventDefault();
-                    setFilterValue('abandoned');
+                    handleFilterChange('abandoned');
                     break;
                 case '5':
                     if (!hasUnreadItems) {
                         break;
                     }
                     event.preventDefault();
-                    setFilterValue('unread');
+                    handleFilterChange('unread');
                     break;
                 default:
                     break;
@@ -240,7 +248,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [hasUnreadItems, mobileSearchOpen, searchTerm]);
+    }, [handleFilterChange, handleSearchTermChange, hasUnreadItems, mobileSearchOpen, searchTerm]);
 
     const normalizedSearch = useMemo(() => normalizeSearchTerm(searchTerm), [searchTerm]);
 
@@ -290,15 +298,15 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             <LibraryHeader
                 title={pageTitle}
                 searchTerm={searchTerm}
-                onSearchTermChange={setSearchTerm}
+                onSearchTermChange={handleSearchTermChange}
                 filterValue={effectiveFilterValue}
                 filterOptions={filterOptions}
-                onFilterChange={setFilterValue}
+                onFilterChange={handleFilterChange}
                 mobileSearchOpen={mobileSearchOpen}
                 onOpenMobileSearch={() => setMobileSearchOpen(true)}
                 onCloseMobileSearch={() => {
                     setMobileSearchOpen(false);
-                    setSearchTerm('');
+                    handleSearchTermChange('');
                 }}
                 desktopSearchInputRef={desktopSearchInputRef}
                 mobileSearchInputRef={mobileSearchInputRef}
