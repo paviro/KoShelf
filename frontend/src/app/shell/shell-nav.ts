@@ -9,6 +9,7 @@ import {
 
 import type { RecapIndexResponse, SiteResponse } from '../../shared/contracts';
 import { translation } from '../../shared/i18n';
+import { StorageManager } from '../../shared/storage-manager';
 
 export type NavItem = {
     id?: string;
@@ -26,6 +27,28 @@ const ICONS = {
 } as const;
 
 export const BRAND_ICON = ICONS.books;
+
+function readStoredRecapScope(): 'all' | 'books' | 'comics' {
+    const raw = StorageManager.get<string>(StorageManager.KEYS.RECAP_FILTER, 'all');
+    if (raw === 'books' || raw === 'comics') {
+        return raw;
+    }
+
+    return 'all';
+}
+
+function buildRecapHref(latestYear: number | null | undefined): string {
+    if (!latestYear) {
+        return '/recap';
+    }
+
+    const scope = readStoredRecapScope();
+    if (scope === 'all') {
+        return `/recap/${latestYear}`;
+    }
+
+    return `/recap/${latestYear}/${scope}`;
+}
 
 export function buildNavItems(
     site: SiteResponse | undefined,
@@ -69,11 +92,10 @@ export function buildNavItems(
 
     if (capabilities.has_recap) {
         const latestYear = recapIndex?.latest_year ?? recapIndex?.available_years?.[0];
-        const recapHref = latestYear ? `/recap/${latestYear}` : '/recap';
         items.push({
             id: 'nav-recap',
             label: translation.get('recap'),
-            href: recapHref,
+            href: buildRecapHref(latestYear),
             icon: ICONS.recap,
         });
     }

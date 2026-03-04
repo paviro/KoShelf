@@ -1,0 +1,239 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { IoIosStar, IoIosStarOutline } from 'react-icons/io';
+import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote } from 'react-icons/lu';
+
+import { translation } from '../../../shared/i18n';
+import type { RecapItemResponse } from '../api/recap-data';
+import {
+    buildStarDisplay,
+    formatRecapDateRange,
+    formatRecapDuration,
+    resolveRecapSearchBasePath,
+} from '../lib/recap-formatters';
+
+type RecapItemCardProps = {
+    item: RecapItemResponse;
+};
+
+export function RecapItemCard({ item }: RecapItemCardProps) {
+    const detailPath = item.item_path?.trim() || null;
+    const coverUrl = item.item_cover?.trim() || null;
+    const [coverFailed, setCoverFailed] = useState(false);
+    const hasReviewNote = Boolean(item.review_note?.trim());
+    const hasRating = typeof item.rating === 'number' && Number.isFinite(item.rating);
+    const stars = buildStarDisplay(item.rating);
+    const searchBasePath = resolveRecapSearchBasePath(item);
+
+    useEffect(() => {
+        setCoverFailed(false);
+    }, [coverUrl]);
+
+    const titleNode = detailPath ? (
+        <Link
+            to={detailPath}
+            className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+        >
+            {item.title}
+        </Link>
+    ) : (
+        <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{item.title}</div>
+    );
+
+    return (
+        <div
+            className="relative pl-10 recap-event recap-item"
+            data-content-type={item.content_type ?? 'unknown'}
+        >
+            <span className="recap-dot bg-primary-500"></span>
+            <div className="bg-white dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                <div className="flex flex-col md:flex-row md:items-stretch">
+                    <div className="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-stretch flex items-center justify-center">
+                        {coverUrl && !coverFailed ? (
+                            detailPath ? (
+                                <Link to={detailPath} className="block recap-cover-tilt rounded-md">
+                                    <img
+                                        className="w-full h-auto object-contain rounded-md recap-cover-max"
+                                        src={coverUrl}
+                                        alt={`Cover of ${item.title}`}
+                                        loading="lazy"
+                                        onError={() => setCoverFailed(true)}
+                                    />
+                                </Link>
+                            ) : (
+                                <img
+                                    className="w-full h-auto object-contain rounded-md recap-cover-max"
+                                    src={coverUrl}
+                                    alt={`Cover of ${item.title}`}
+                                    loading="lazy"
+                                    onError={() => setCoverFailed(true)}
+                                />
+                            )
+                        ) : detailPath ? (
+                            <Link to={detailPath} className="block w-full h-auto recap-cover-tilt rounded-md">
+                                <div className="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max">
+                                    <LuBookOpen className="w-12 h-12" aria-hidden />
+                                </div>
+                            </Link>
+                        ) : (
+                            <div className="w-full h-auto aspect-[2/3] flex items-center justify-center text-gray-400 dark:text-dark-400 rounded-md recap-cover-max">
+                                <LuBookOpen className="w-12 h-12" aria-hidden />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="md:flex-1 p-4 md:p-6 md:flex md:flex-col md:justify-center">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                                {titleNode}
+                                {item.series && (
+                                    <div className="text-sm text-gray-500 dark:text-dark-300 mt-1">
+                                        {item.series}
+                                    </div>
+                                )}
+                                {item.authors.length > 0 && (
+                                    <div className="text-sm text-gray-600 dark:text-dark-300">
+                                        {translation.get('by')}{' '}
+                                        {item.authors.map((author, index) => {
+                                            const separator = index < item.authors.length - 1 ? ', ' : '';
+                                            if (!detailPath) {
+                                                return (
+                                                    <span key={`${author}:${index}`}>
+                                                        {author}
+                                                        {separator}
+                                                    </span>
+                                                );
+                                            }
+
+                                            return (
+                                                <span key={`${author}:${index}`}>
+                                                    <Link
+                                                        to={`${searchBasePath}?search=${encodeURIComponent(author)}`}
+                                                        className="text-primary-600 dark:text-primary-400 hover:underline"
+                                                    >
+                                                        {author}
+                                                    </Link>
+                                                    {separator}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {hasRating && (
+                                    <div className="flex items-center gap-0.5 mt-2 md:hidden">
+                                        {stars.map((filled, index) => (
+                                            filled ? (
+                                                <IoIosStar
+                                                    key={`mobile-star-${index}`}
+                                                    className="w-4 h-4 text-yellow-400"
+                                                    aria-hidden
+                                                />
+                                            ) : (
+                                                <IoIosStarOutline
+                                                    key={`mobile-star-${index}`}
+                                                    className="w-4 h-4 text-gray-300 dark:text-dark-600"
+                                                    aria-hidden
+                                                />
+                                            )
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {hasRating && (
+                                <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
+                                    {stars.map((filled, index) => (
+                                        filled ? (
+                                            <IoIosStar
+                                                key={`desktop-star-${index}`}
+                                                className="w-5 h-5 text-yellow-400"
+                                                aria-hidden
+                                            />
+                                        ) : (
+                                            <IoIosStarOutline
+                                                key={`desktop-star-${index}`}
+                                                className="w-5 h-5 text-gray-300 dark:text-dark-600"
+                                                aria-hidden
+                                            />
+                                        )
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 xl:grid-cols-4 gap-2">
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                    <LuCalendarDays className="w-4 h-4 text-blue-600 dark:text-white" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                        {translation.get('period')}
+                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                        {formatRecapDateRange(item.start_date, item.end_date)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                    <LuClock3 className="w-4 h-4 text-purple-600 dark:text-white" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                        {translation.get('reading-time')}
+                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                        {formatRecapDuration(item.reading_time)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                                <div className="w-8 h-8 rounded-lg bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                    <LuFileText className="w-4 h-4 text-green-600 dark:text-white" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                        {translation.get('pages-label', item.pages_read)}
+                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                        {item.pages_read}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                                <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                    <LuBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                        {translation.get('sessions')}
+                                    </div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                        {item.session_count}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {hasReviewNote && (
+                            <div className="mt-4">
+                                <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg p-3 md:p-4">
+                                    <div className="flex items-start">
+                                        <LuQuote className="w-5 h-5 text-primary-400 mt-0.5 mr-2.5 flex-shrink-0" />
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                            {item.review_note}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
