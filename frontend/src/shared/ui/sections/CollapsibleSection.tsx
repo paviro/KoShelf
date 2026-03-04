@@ -36,6 +36,7 @@ type CollapsibleSectionProps = {
     visible: boolean;
     onToggle: () => void;
     controls?: ReactNode;
+    controlsClassName?: string;
     contentClassName?: string;
     children: ReactNode;
 };
@@ -49,6 +50,7 @@ export function CollapsibleSection({
     visible,
     onToggle,
     controls,
+    controlsClassName = 'space-x-3',
     contentClassName,
     children,
 }: CollapsibleSectionProps) {
@@ -66,7 +68,7 @@ export function CollapsibleSection({
                     </h2>
                     {titleBadge}
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className={`flex items-center ${controlsClassName}`}>
                     {controls}
                     <ToggleButton visible={visible} onClick={onToggle} />
                 </div>

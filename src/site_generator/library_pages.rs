@@ -158,15 +158,17 @@ impl SiteGenerator {
                 _ => None,
             };
 
+            let search_base_path = match content_type {
+                ContentType::Comic if ui.nav.has_books => "/comics/".to_string(),
+                _ => "/".to_string(),
+            };
+
             let template = ItemDetailTemplate {
                 site_title: self.site_title.clone(),
                 book: item.clone(),
                 book_stats: item_stats.clone(),
                 session_stats: session_stats.clone(),
-                search_base_path: match content_type {
-                    ContentType::Comic if ui.nav.has_books => "/comics/".to_string(),
-                    _ => "/".to_string(),
-                },
+                search_base_path: search_base_path.clone(),
                 version: self.get_version(),
                 last_updated: self.get_last_updated(),
                 navbar_items: self.create_navbar_items_with_recap(
@@ -203,6 +205,7 @@ impl SiteGenerator {
             let contract_detail = mappers::map_library_detail_response(
                 contract_meta,
                 item,
+                search_base_path,
                 item_stats.clone(),
                 session_stats,
             );

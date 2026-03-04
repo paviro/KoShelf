@@ -21,9 +21,7 @@ pub struct Annotation {
     pub chapter: Option<String>,
     pub datetime: Option<String>,
     pub pageno: Option<u32>,
-    #[serde(skip_serializing)]
     pub pos0: Option<String>,
-    #[serde(skip_serializing)]
     pub pos1: Option<String>,
     pub text: Option<String>, // Optional: highlights have text, bookmarks don't
     pub note: Option<String>,

@@ -73,6 +73,9 @@ pub struct LibraryDetailItem {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub review_note: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<u32>,
+    pub search_base_path: String,
     pub subjects: Vec<String>,
     pub identifiers: Vec<LibraryIdentifier>,
 }

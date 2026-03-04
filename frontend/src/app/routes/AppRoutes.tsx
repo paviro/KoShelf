@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { RoutePlaceholder } from './RoutePlaceholder';
 import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
 import { CalendarRoute } from '../../features/calendar/routes/CalendarRoute';
+import { LibraryDetailRoute } from '../../features/library/routes/LibraryDetailRoute';
 import { LibraryListRoute } from '../../features/library/routes/LibraryListRoute';
 import { translation } from '../../shared/i18n';
 
@@ -12,10 +13,6 @@ type PlaceholderRoute = {
 };
 
 const PLACEHOLDER_ROUTES: PlaceholderRoute[] = [
-    { path: '/books/:id', titleKey: 'books' },
-    { path: '/books/:id/:slug', titleKey: 'books' },
-    { path: '/comics/:id', titleKey: 'comics' },
-    { path: '/comics/:id/:slug', titleKey: 'comics' },
     { path: '/recap', titleKey: 'recap' },
     { path: '/recap/:year', titleKey: 'recap' },
     { path: '/recap/:year/:scope', titleKey: 'recap' },
@@ -51,7 +48,11 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
             <Route path="/statistics/:scope" element={<StatisticsRoute />} />
             <Route path="/calendar" element={<CalendarRoute />} />
             <Route path="/books" element={<LibraryListRoute collection="books" />} />
+            <Route path="/books/:id" element={<LibraryDetailRoute collection="books" />} />
+            <Route path="/books/:id/:slug" element={<LibraryDetailRoute collection="books" />} />
             <Route path="/comics" element={<LibraryListRoute collection="comics" />} />
+            <Route path="/comics/:id" element={<LibraryDetailRoute collection="comics" />} />
+            <Route path="/comics/:id/:slug" element={<LibraryDetailRoute collection="comics" />} />
 
             {PLACEHOLDER_ROUTES.map((route) => (
                 <Route

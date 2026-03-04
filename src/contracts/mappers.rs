@@ -118,6 +118,7 @@ fn map_library_identifier(identifier: crate::models::Identifier) -> LibraryIdent
 pub fn map_library_detail_response(
     meta: ApiMeta,
     item: &LibraryItem,
+    search_base_path: impl Into<String>,
     item_stats: Option<crate::models::StatBook>,
     session_stats: Option<crate::models::BookSessionStats>,
 ) -> LibraryDetailResponse {
@@ -147,6 +148,8 @@ pub fn map_library_detail_response(
             publisher: item.publisher().cloned(),
             description: item.book_info.description.clone(),
             review_note: item.review_note().cloned(),
+            pages: item.doc_pages(),
+            search_base_path: search_base_path.into(),
             subjects: item.subjects().clone(),
             identifiers: item
                 .identifiers()
