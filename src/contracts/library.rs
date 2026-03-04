@@ -81,6 +81,20 @@ pub struct LibraryDetailItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryAnnotation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chapter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub datetime: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pageno: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryDetailStatistics {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_stats: Option<crate::models::StatBook>,
@@ -94,7 +108,7 @@ pub struct LibraryDetailStatistics {
 pub struct LibraryDetailResponse {
     pub meta: ApiMeta,
     pub item: LibraryDetailItem,
-    pub annotations: Vec<crate::models::Annotation>,
-    pub bookmarks: Vec<crate::models::Annotation>,
+    pub highlights: Vec<LibraryAnnotation>,
+    pub bookmarks: Vec<LibraryAnnotation>,
     pub statistics: LibraryDetailStatistics,
 }

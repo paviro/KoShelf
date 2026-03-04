@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { api } from '../../../shared/api';
@@ -10,7 +10,6 @@ import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { useLibraryDetailSectionState } from '../hooks/useLibraryDetailSectionState';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
-import { splitLibraryAnnotations } from '../model/library-detail-model';
 import type { LibraryCollection } from '../model/library-model';
 import { LibraryAdditionalInfoSection } from '../sections/LibraryAdditionalInfoSection';
 import { LibraryBookmarksSection } from '../sections/LibraryBookmarksSection';
@@ -43,12 +42,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const sessionStats = detail?.statistics.session_stats ?? null;
     const completions = detail?.statistics.completions ?? itemStats?.completions ?? null;
 
-    const splitAnnotations = useMemo(
-        () => splitLibraryAnnotations(detail?.annotations ?? [], detail?.bookmarks ?? []),
-        [detail?.annotations, detail?.bookmarks],
-    );
-    const highlightAnnotations = splitAnnotations.highlights;
-    const bookmarkAnnotations = splitAnnotations.bookmarks;
+    const highlightAnnotations = detail?.highlights ?? [];
+    const bookmarkAnnotations = detail?.bookmarks ?? [];
 
     const noteCount =
         typeof itemStats?.notes === 'number' && Number.isFinite(itemStats.notes)

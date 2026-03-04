@@ -64,8 +64,6 @@ export interface LibraryAnnotation {
     chapter?: string | null;
     datetime?: string | null;
     pageno?: number | null;
-    pos0?: string | null;
-    pos1?: string | null;
     text?: string | null;
     note?: string | null;
 }
@@ -110,7 +108,7 @@ export interface LibraryDetailStatistics {
 export interface LibraryDetailResponse {
     meta: ApiMeta;
     item: LibraryDetailItem;
-    annotations: LibraryAnnotation[];
+    highlights: LibraryAnnotation[];
     bookmarks: LibraryAnnotation[];
     statistics: LibraryDetailStatistics;
 }

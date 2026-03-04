@@ -8,8 +8,9 @@ use super::calendar::{
 use super::common::ApiMeta;
 use super::common::Scoped;
 use super::library::{
-    LibraryContentType, LibraryDetailItem, LibraryDetailResponse, LibraryDetailStatistics,
-    LibraryIdentifier, LibraryListItem, LibraryListResponse, LibraryStatus,
+    LibraryAnnotation, LibraryContentType, LibraryDetailItem, LibraryDetailResponse,
+    LibraryDetailStatistics, LibraryIdentifier, LibraryListItem, LibraryListResponse,
+    LibraryStatus,
 };
 use super::locales::LocalesResponse;
 use super::recap::{
@@ -115,6 +116,16 @@ fn map_library_identifier(identifier: crate::models::Identifier) -> LibraryIdent
     }
 }
 
+fn map_library_annotation(annotation: &crate::models::Annotation) -> LibraryAnnotation {
+    LibraryAnnotation {
+        chapter: annotation.chapter.clone(),
+        datetime: annotation.datetime.clone(),
+        pageno: annotation.pageno,
+        text: annotation.text.clone(),
+        note: annotation.note.clone(),
+    }
+}
+
 pub fn map_library_detail_response(
     meta: ApiMeta,
     item: &LibraryItem,
@@ -122,11 +133,17 @@ pub fn map_library_detail_response(
     item_stats: Option<crate::models::StatBook>,
     session_stats: Option<crate::models::BookSessionStats>,
 ) -> LibraryDetailResponse {
-    let annotations = item.annotations().to_vec();
-    let bookmarks = annotations
+    let highlights = item
+        .annotations()
+        .iter()
+        .filter(|annotation| annotation.is_highlight())
+        .map(map_library_annotation)
+        .collect::<Vec<_>>();
+    let bookmarks = item
+        .annotations()
         .iter()
         .filter(|annotation| annotation.is_bookmark())
-        .cloned()
+        .map(map_library_annotation)
         .collect::<Vec<_>>();
     let completions = item_stats
         .as_ref()
@@ -157,7 +174,7 @@ pub fn map_library_detail_response(
                 .map(map_library_identifier)
                 .collect(),
         },
-        annotations,
+        highlights,
         bookmarks,
         statistics: LibraryDetailStatistics {
             item_stats,
