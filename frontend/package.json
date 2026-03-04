@@ -1,7 +1,13 @@
 {
-    "name": "koshelf-react-frontend",
+    "name": "koshelf-frontend",
+    "description": "React + Vite frontend for KoShelf.",
+    "repository": "https://github.com/paviro/KOShelf",
+    "license": "EUPL-1.2 license",
+    "authors": [
+        "Paul-Vincent Roll"
+    ],
     "private": true,
-    "version": "0.1.0",
+    "version": "1.0.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
