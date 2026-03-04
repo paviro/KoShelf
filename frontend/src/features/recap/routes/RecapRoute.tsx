@@ -60,7 +60,23 @@ export function RecapRoute() {
     const shareModalOpen = shareModalOpenKey === shareResetKey;
 
     const recapYearQuery = useRecapYearQuery(scope, yearForQuery);
-    const recapYear = recapYearQuery.data ?? null;
+    const [displayedRecapYear, setDisplayedRecapYear] = useState(recapYearQuery.data ?? null);
+
+    const [prevRecapYearData, setPrevRecapYearData] = useState(recapYearQuery.data);
+    if (recapYearQuery.data !== prevRecapYearData) {
+        setPrevRecapYearData(recapYearQuery.data);
+        if (recapYearQuery.data) {
+            setDisplayedRecapYear(recapYearQuery.data);
+        }
+    }
+
+    const [prevRecapScope, setPrevRecapScope] = useState(scope);
+    if (prevRecapScope !== scope) {
+        setPrevRecapScope(scope);
+        setDisplayedRecapYear(null);
+    }
+
+    const recapYear = displayedRecapYear ?? recapYearQuery.data ?? null;
     const shareAssets = recapYear?.share_assets ?? null;
 
     const orderedMonths = useMemo(
@@ -158,13 +174,15 @@ export function RecapRoute() {
         !recapIndexQuery.isError &&
         yearForQuery === null &&
         availableYears.length === 0;
+    const recapYearLoading =
+        recapYearQuery.isFetching && recapYear === null;
     const showYearEmptyState =
-        !recapYearQuery.isLoading &&
+        !recapYearLoading &&
         !recapYearQuery.isError &&
         recapYear !== null &&
         recapYear.months.length === 0;
     const showTimeline =
-        !recapYearQuery.isLoading &&
+        !recapYearLoading &&
         !recapYearQuery.isError &&
         recapYear !== null &&
         recapYear.months.length > 0;
@@ -218,7 +236,7 @@ export function RecapRoute() {
                     <>
                         {showPageLevelEmptyState && <RecapEmptyState hasYearContext={false} />}
 
-                        {yearForQuery !== null && recapYearQuery.isLoading && (
+                        {yearForQuery !== null && recapYearLoading && (
                             <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
                                 <LoadingSpinner size="lg" srLabel="Loading recap year" />
                             </section>
