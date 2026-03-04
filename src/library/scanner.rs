@@ -434,11 +434,8 @@ pub async fn scan_library(
             let (metadata_path, book_md5) = scanner.locate_metadata_path_and_md5(path, format);
             let koreader_metadata = scanner.parse_koreader_metadata(metadata_path).await;
             scanner.collect_md5_for_item(&mut library_md5s, path, &koreader_metadata, &book_md5);
-            let item_id = scanner.canonical_item_id(
-                path,
-                koreader_metadata.as_ref(),
-                book_md5.as_deref(),
-            )?;
+            let item_id =
+                scanner.canonical_item_id(path, koreader_metadata.as_ref(), book_md5.as_deref())?;
 
             let book = LibraryItem {
                 id: item_id,

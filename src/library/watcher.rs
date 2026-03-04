@@ -126,13 +126,12 @@ impl FileWatcher {
                                 .map(str::to_owned)
                                 .unwrap_or_else(|| config_clone.time_config.now_formatted());
 
-                            if !config_clone.is_internal_server {
-                                if let Err(error) =
-                                    snapshot.write_to_data_dir(&config_clone.output_dir.join("data"))
-                                {
-                                    warn!("Failed to write static contract data: {}", error);
-                                    continue;
-                                }
+                            if !config_clone.is_internal_server
+                                && let Err(error) = snapshot
+                                    .write_to_data_dir(&config_clone.output_dir.join("data"))
+                            {
+                                warn!("Failed to write static contract data: {}", error);
+                                continue;
                             }
 
                             if let Some(ref snapshot_store) = snapshot_store_clone {

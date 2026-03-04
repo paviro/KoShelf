@@ -142,8 +142,11 @@ pub async fn run(cli: Cli) -> Result<()> {
             let update_notifier = SnapshotUpdateNotifier::new(initial_generated_at);
 
             // Start file watcher with snapshot updates.
-            let file_watcher =
-                FileWatcher::new(config, Some(snapshot_store.clone()), Some(update_notifier.clone()));
+            let file_watcher = FileWatcher::new(
+                config,
+                Some(snapshot_store.clone()),
+                Some(update_notifier.clone()),
+            );
 
             // Start web server (runtime media cache is served from `plan.output_dir`).
             let web_server =

@@ -25,7 +25,10 @@ impl SnapshotBuilder {
         stats_data: &mut Option<StatisticsData>,
         snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
-        info!("Computing {} detail data...", Self::content_slug(content_type));
+        info!(
+            "Computing {} detail data...",
+            Self::content_slug(content_type)
+        );
 
         for item in items {
             // Try to find matching statistics by MD5

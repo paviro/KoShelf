@@ -19,7 +19,8 @@ impl SnapshotBuilder {
         info!("Computing statistics data...");
 
         // Calculate reading stats for ALL content
-        let reading_stats_all = StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
+        let reading_stats_all =
+            StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
         let completion_counts_all = completion_counts_by_year(stats_data);
 
         // Build per-type stats for contract exports. We always compute these so `/data` can

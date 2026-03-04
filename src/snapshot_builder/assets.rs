@@ -226,55 +226,51 @@ impl SnapshotBuilder {
                     let tx = progress_tx.clone();
                     // Spawn a task for each cover generation
                     let task = tokio::task::spawn_blocking(move || -> Result<()> {
-                            let img = image::load_from_memory(&cover_data)
-                                .context("Failed to load cover image")?;
+                        let img = image::load_from_memory(&cover_data)
+                            .context("Failed to load cover image")?;
 
-                            // Resize to height of 600px while maintaining aspect ratio (skip if already small).
-                            let resized = {
-                                let (original_width, original_height) = (img.width(), img.height());
-                                let target_height = 600;
-                                if original_height > target_height {
-                                    let target_width =
-                                        (original_width * target_height) / original_height;
-                                    img.resize(
-                                        target_width,
-                                        target_height,
-                                        image::imageops::FilterType::CatmullRom,
-                                    )
-                                } else {
-                                    img
-                                }
-                            };
+                        // Resize to height of 600px while maintaining aspect ratio (skip if already small).
+                        let resized = {
+                            let (original_width, original_height) = (img.width(), img.height());
+                            let target_height = 600;
+                            if original_height > target_height {
+                                let target_width =
+                                    (original_width * target_height) / original_height;
+                                img.resize(
+                                    target_width,
+                                    target_height,
+                                    image::imageops::FilterType::CatmullRom,
+                                )
+                            } else {
+                                img
+                            }
+                        };
 
-                            // Convert to RGB8 format for WebP encoding
-                            let rgb_img = resized.to_rgb8();
+                        // Convert to RGB8 format for WebP encoding
+                        let rgb_img = resized.to_rgb8();
 
-                            // Use webp crate with a faster config than defaults (method=4 by default).
-                            let encoder = webp::Encoder::from_rgb(
-                                &rgb_img,
-                                rgb_img.width(),
-                                rgb_img.height(),
-                            );
-                            let mut config = webp::WebPConfig::new()
-                                .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
-                            config.lossless = 0;
-                            config.quality = 50.0;
-                            config.method = 1; // faster encoding; good enough for 600px covers
-                            config.thread_level = 1; // allow libwebp internal threading
+                        // Use webp crate with a faster config than defaults (method=4 by default).
+                        let encoder =
+                            webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
+                        let mut config = webp::WebPConfig::new()
+                            .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
+                        config.lossless = 0;
+                        config.quality = 50.0;
+                        config.method = 1; // faster encoding; good enough for 600px covers
+                        config.thread_level = 1; // allow libwebp internal threading
 
-                            let webp_data = encoder
-                                .encode_advanced(&config)
-                                .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
+                        let webp_data = encoder
+                            .encode_advanced(&config)
+                            .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
-                            fs::write(&cover_path, &*webp_data).with_context(|| {
-                                format!("Failed to save cover: {:?}", cover_path)
-                            })?;
+                        fs::write(&cover_path, &*webp_data)
+                            .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
 
-                            // Signal progress
-                            let _ = tx.send(());
+                        // Signal progress
+                        let _ = tx.send(());
 
-                            Ok(())
-                        });
+                        Ok(())
+                    });
 
                     tasks.push(task);
                 }
