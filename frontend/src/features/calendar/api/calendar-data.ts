@@ -1,4 +1,4 @@
-import { api } from '../../../shared/api';
+import { api, isApiHttpError } from '../../../shared/api';
 
 export type CalendarContentType = 'book' | 'comic';
 
@@ -66,7 +66,7 @@ export function createEmptyCalendarMonthResponse(): CalendarMonthResponse {
 }
 
 function isNotFoundError(error: unknown): boolean {
-    return error instanceof Error && /\(404\)$/.test(error.message);
+    return isApiHttpError(error) && error.status === 404;
 }
 
 export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {

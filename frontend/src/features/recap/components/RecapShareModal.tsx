@@ -9,6 +9,7 @@ import {
 } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 
+import { ApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import type { RecapShareAssets } from '../api/recap-data';
@@ -148,9 +149,7 @@ export function RecapShareModal({
             try {
                 const response = await fetch(option.webpUrl);
                 if (!response.ok) {
-                    throw new Error(
-                        `Failed to fetch share asset (${response.status})`,
-                    );
+                    throw new ApiHttpError(option.webpUrl, response.status);
                 }
 
                 const blob = await response.blob();
