@@ -1,6 +1,6 @@
 use super::ServerState;
 use super::api;
-use crate::runtime::SharedSnapshotStore;
+use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
 use anyhow::Result;
 use axum::{
     Router,
@@ -23,6 +23,7 @@ pub struct WebServer {
     media_cache_dir: PathBuf,
     port: u16,
     snapshot_store: SharedSnapshotStore,
+    update_notifier: SnapshotUpdateNotifier,
 }
 
 impl WebServer {
@@ -30,17 +31,20 @@ impl WebServer {
         media_cache_dir: PathBuf,
         port: u16,
         snapshot_store: SharedSnapshotStore,
+        update_notifier: SnapshotUpdateNotifier,
     ) -> Self {
         Self {
             media_cache_dir,
             port,
             snapshot_store,
+            update_notifier,
         }
     }
 
     pub async fn run(self) -> Result<()> {
         let state = ServerState {
             snapshot_store: self.snapshot_store.clone(),
+            update_notifier: self.update_notifier.clone(),
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
         let recap_cache_dir = self.media_cache_dir.join("recap");
@@ -63,6 +67,7 @@ impl WebServer {
             .route("/api/calendar/months/{month_key}", get(api::calendar_month))
             .route("/api/recap", get(api::recap_index))
             .route("/api/recap/years/{year}", get(api::recap_year))
+            .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))
             .route("/index.html", get(react_shell_index_handler))

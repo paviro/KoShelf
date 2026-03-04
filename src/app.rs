@@ -1,7 +1,7 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
 use crate::library::{FileWatcher, MetadataLocation};
-use crate::runtime::SnapshotStore;
+use crate::runtime::{SnapshotStore, SnapshotUpdateNotifier};
 use crate::server::WebServer;
 use crate::snapshot_builder::SnapshotBuilder;
 use crate::time_config::TimeConfig;
@@ -87,7 +87,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Determine output directory + run mode
     let plan = plan_output(&cli)?;
 
-    // Determine if we're running with internal web server (enables long-polling)
+    // Determine if we're running with internal web server (enables runtime update events)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
     // Create site config - bundles all snapshot/export options.
@@ -121,7 +121,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher = FileWatcher::new(config, None);
+            let file_watcher = FileWatcher::new(config, None, None);
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -133,14 +133,21 @@ pub async fn run(cli: Cli) -> Result<()> {
                 "Running in serve mode with runtime snapshot refresh and media cache at: {:?}",
                 plan.output_dir
             );
+            let initial_generated_at = initial_snapshot
+                .generated_at()
+                .map(str::to_owned)
+                .unwrap_or_else(|| config.time_config.now_formatted());
             let snapshot_store = Arc::new(SnapshotStore::new());
             snapshot_store.replace(initial_snapshot);
+            let update_notifier = SnapshotUpdateNotifier::new(initial_generated_at);
 
             // Start file watcher with snapshot updates.
-            let file_watcher = FileWatcher::new(config, Some(snapshot_store.clone()));
+            let file_watcher =
+                FileWatcher::new(config, Some(snapshot_store.clone()), Some(update_notifier.clone()));
 
             // Start web server (runtime media cache is served from `plan.output_dir`).
-            let web_server = WebServer::new(plan.output_dir, cli.port, snapshot_store);
+            let web_server =
+                WebServer::new(plan.output_dir, cli.port, snapshot_store, update_notifier);
 
             // Run both file watcher and web server concurrently
             tokio::select! {

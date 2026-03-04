@@ -1,7 +1,7 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
-use crate::runtime::SharedSnapshotStore;
+use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
 use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
@@ -13,6 +13,7 @@ use tokio::time::sleep;
 pub struct FileWatcher {
     config: SiteConfig,
     snapshot_store: Option<SharedSnapshotStore>,
+    update_notifier: Option<SnapshotUpdateNotifier>,
 }
 
 impl std::ops::Deref for FileWatcher {
@@ -23,10 +24,15 @@ impl std::ops::Deref for FileWatcher {
 }
 
 impl FileWatcher {
-    pub fn new(config: SiteConfig, snapshot_store: Option<SharedSnapshotStore>) -> Self {
+    pub fn new(
+        config: SiteConfig,
+        snapshot_store: Option<SharedSnapshotStore>,
+        update_notifier: Option<SnapshotUpdateNotifier>,
+    ) -> Self {
         Self {
             config,
             snapshot_store,
+            update_notifier,
         }
     }
 
@@ -91,6 +97,7 @@ impl FileWatcher {
         // Clone the config for the rebuild task
         let config_clone = self.config.clone();
         let snapshot_store_clone = self.snapshot_store.clone();
+        let update_notifier_clone = self.update_notifier.clone();
 
         // Spawn delayed rebuild task.
         // NOTE: Snapshot building uses non-Send types (e.g. mlua::Lua, Rc-based translations),
@@ -114,6 +121,11 @@ impl FileWatcher {
 
                     match snapshot_builder.refresh_snapshot().await {
                         Ok(snapshot) => {
+                            let generated_at = snapshot
+                                .generated_at()
+                                .map(str::to_owned)
+                                .unwrap_or_else(|| config_clone.time_config.now_formatted());
+
                             if !config_clone.is_internal_server {
                                 if let Err(error) =
                                     snapshot.write_to_data_dir(&config_clone.output_dir.join("data"))
@@ -125,6 +137,14 @@ impl FileWatcher {
 
                             if let Some(ref snapshot_store) = snapshot_store_clone {
                                 snapshot_store.replace(snapshot);
+                            }
+
+                            if let Some(ref update_notifier) = update_notifier_clone {
+                                let update = update_notifier.publish(generated_at);
+                                info!(
+                                    "Published snapshot update event revision {}",
+                                    update.revision
+                                );
                             }
 
                             info!("Delayed snapshot refresh completed successfully");

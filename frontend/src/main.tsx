@@ -6,6 +6,7 @@ import { HashRouter } from 'react-router-dom';
 import './styles/app.css';
 import { App } from './App';
 import { translation } from './shared/i18n';
+import { RuntimeUpdatesBridge } from './shared/runtime-updates';
 
 const SERVER_MODE_STORAGE_KEY = 'koshelf_server_mode';
 
@@ -35,6 +36,7 @@ async function bootstrap(): Promise<void> {
     ReactDOM.createRoot(document.getElementById('root')!).render(
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
+                <RuntimeUpdatesBridge />
                 <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                     <App />
                 </HashRouter>

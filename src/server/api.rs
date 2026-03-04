@@ -2,15 +2,19 @@ use axum::{
     Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{
+        IntoResponse, Response,
+        sse::{Event, KeepAlive, Sse},
+    },
 };
+use futures::stream;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc, time::Duration};
 
 use super::ServerState;
 use crate::contracts::common::{MonthKey, Scope, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
-use crate::runtime::ContractSnapshot;
+use crate::runtime::{ContractSnapshot, SnapshotUpdate};
 
 #[derive(Debug, Deserialize)]
 pub struct ScopeQuery {
@@ -53,6 +57,46 @@ fn validate_year_key(value: &str) -> Result<YearKey, Response> {
 
 fn runtime_snapshot(state: &ServerState) -> Result<Arc<ContractSnapshot>, Response> {
     state.snapshot_store.get().ok_or_else(internal_error)
+}
+
+fn snapshot_update_event(update: &SnapshotUpdate) -> Event {
+    let payload = match serde_json::to_string(update) {
+        Ok(payload) => payload,
+        Err(_) => "{}".to_string(),
+    };
+
+    Event::default()
+        .event("snapshot_updated")
+        .data(payload)
+}
+
+pub async fn events_stream(
+    State(state): State<ServerState>,
+) -> Sse<impl futures::Stream<Item = Result<Event, Infallible>>> {
+    let receiver = state.update_notifier.subscribe();
+    let events = stream::unfold(
+        (receiver, true),
+        |(mut receiver, include_current)| async move {
+            if include_current {
+                let current = receiver.borrow().clone();
+                return Some((Ok(snapshot_update_event(&current)), (receiver, false)));
+            }
+
+            match receiver.changed().await {
+                Ok(()) => {
+                    let update = receiver.borrow().clone();
+                    Some((Ok(snapshot_update_event(&update)), (receiver, false)))
+                }
+                Err(_) => None,
+            }
+        },
+    );
+
+    Sse::new(events).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keepalive"),
+    )
 }
 
 pub async fn site(State(state): State<ServerState>) -> Response {

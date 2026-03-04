@@ -81,6 +81,12 @@ impl ContractSnapshot {
             && self.recap_years.is_empty()
     }
 
+    pub fn generated_at(&self) -> Option<&str> {
+        self.site
+            .as_ref()
+            .map(|site| site.meta.generated_at.as_str())
+    }
+
     pub fn write_to_data_dir(&self, data_dir: &Path) -> Result<()> {
         fs::create_dir_all(data_dir)?;
 
