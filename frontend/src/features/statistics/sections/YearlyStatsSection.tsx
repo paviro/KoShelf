@@ -136,7 +136,7 @@ export function YearlyStatsSection({
 
                     <div
                         id="yearlyStatsChart"
-                        className={`transition-opacity duration-300 ${isFetching ? 'opacity-50' : ''}`}
+                        className=""
                     >
                         <div
                             id="yearlyStatsScrollContainer"

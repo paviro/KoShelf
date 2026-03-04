@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { LuClock3, LuFileText } from 'react-icons/lu';
 
 import type { StatisticsIndexWeek, StatisticsWeekResponse } from '../api/statistics-data';
@@ -29,43 +28,6 @@ export function WeeklyStatsSection({
     weeklyStats,
     loading,
 }: WeeklyStatsSectionProps) {
-    const [loadingVisible, setLoadingVisible] = useState(false);
-    const [loadingActive, setLoadingActive] = useState(false);
-    const [transitionState, setTransitionState] = useState<'transition-in' | 'transition-out'>(
-        'transition-in',
-    );
-
-    const [prevLoading, setPrevLoading] = useState(loading);
-    if (loading !== prevLoading) {
-        setPrevLoading(loading);
-        if (loading) {
-            setTransitionState('transition-out');
-            setLoadingVisible(true);
-        } else {
-            setLoadingActive(false);
-        }
-    }
-
-    useEffect(() => {
-        if (loading) {
-            const showTimer = window.setTimeout(() => {
-                setLoadingActive(true);
-            }, 10);
-            return () => window.clearTimeout(showTimer);
-        }
-
-        const hideTimer = window.setTimeout(() => {
-            setLoadingVisible(false);
-        }, 250);
-        const transitionTimer = window.setTimeout(() => {
-            setTransitionState('transition-in');
-        }, 50);
-        return () => {
-            window.clearTimeout(hideTimer);
-            window.clearTimeout(transitionTimer);
-        };
-    }, [loading]);
-
     return (
         <CollapsibleSection
             sectionKey="weekly-stats"
@@ -84,7 +46,7 @@ export function WeeklyStatsSection({
             <div id="weekly-statsContainer" className="relative mb-8">
                 <div
                     id="statsLoadingIndicator"
-                    className={`absolute inset-0 bg-dark-800/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl ${loadingVisible ? '' : 'hidden'} ${loadingActive ? 'active' : ''}`}
+                    className={`absolute inset-0 bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl ${loading ? '' : 'hidden'}`}
                 >
                     <LoadingSpinner
                         size="md"
@@ -94,7 +56,7 @@ export function WeeklyStatsSection({
                 </div>
 
                 <div
-                    className={`week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 ${transitionState}`}
+                    className="week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
                 >
                     <MetricCard
                         icon={LuClock3}
