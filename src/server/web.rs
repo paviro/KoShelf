@@ -53,20 +53,25 @@ impl WebServer {
             // API endpoints
             .route("/api/site", get(api::site))
             .route("/api/locales", get(api::locales))
-            .route("/api/books", get(api::books))
-            .route("/api/books/{id}", get(api::book_detail))
-            .route("/api/comics", get(api::comics))
-            .route("/api/comics/{id}", get(api::comic_detail))
-            .route("/api/statistics", get(api::statistics_index))
+            .route("/api/items", get(api::items))
+            .route("/api/items/{id}", get(api::item_detail))
+            .route("/api/activity/weeks", get(api::activity_weeks))
+            .route("/api/activity/weeks/{week_key}", get(api::activity_week))
             .route(
-                "/api/statistics/weeks/{week_key}",
-                get(api::statistics_week),
+                "/api/activity/years/{year}/daily",
+                get(api::activity_year_daily),
             )
-            .route("/api/statistics/years/{year}", get(api::statistics_year))
-            .route("/api/calendar/months", get(api::calendar_months))
-            .route("/api/calendar/months/{month_key}", get(api::calendar_month))
-            .route("/api/recap", get(api::recap_index))
-            .route("/api/recap/years/{year}", get(api::recap_year))
+            .route(
+                "/api/activity/years/{year}/summary",
+                get(api::activity_year_summary),
+            )
+            .route("/api/activity/months", get(api::activity_months))
+            .route("/api/activity/months/{month_key}", get(api::activity_month))
+            .route("/api/completions/years", get(api::completion_years))
+            .route(
+                "/api/completions/years/{year}",
+                get(api::completion_year),
+            )
             .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))

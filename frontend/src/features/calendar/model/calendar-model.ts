@@ -111,7 +111,7 @@ export function resolveMonthlyStats(
 ): CalendarMonthlyStats {
     if (!monthData) {
         return {
-            books_read: 0,
+            items_read: 0,
             pages_read: 0,
             time_read: 0,
             days_read_pct: 0,

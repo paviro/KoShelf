@@ -9,7 +9,7 @@ export interface RecapIndexResponse {
 }
 
 export interface RecapSummaryResponse {
-    total_books: number;
+    total_items: number;
     total_time_seconds: number;
     total_time_days: number;
     total_time_hours: number;
@@ -43,7 +43,7 @@ export interface RecapItemResponse {
 export interface RecapMonthResponse {
     month_key: string;
     month_label: string;
-    books_finished: number;
+    items_finished: number;
     read_time: number;
     items: RecapItemResponse[];
 }
@@ -65,12 +65,12 @@ export interface RecapYearResponse {
 export async function loadRecapIndex(
     scope: RecapScope,
 ): Promise<RecapIndexResponse> {
-    return api.recap.get<RecapIndexResponse>(scope);
+    return api.completions.years.get<RecapIndexResponse>(scope);
 }
 
 export async function loadRecapYear(
     scope: RecapScope,
     year: number,
 ): Promise<RecapYearResponse> {
-    return api.recap.years.get<RecapYearResponse>(year, scope);
+    return api.completions.years.byKey<RecapYearResponse>(year, scope);
 }

@@ -40,6 +40,9 @@
     - [From EPUB Files](#from-epub-files)
     - [From KoReader Metadata](#from-koreader-metadata)
     - [From KoReader Statistics Database](#from-koreader-statistics-database-statisticssqlite3)
+- [API Shape](#api-shape)
+    - [Content Type Filter](#content-type-filter)
+    - [Model Resources](#model-resources)
 - [Generated Site Structure](#generated-site-structure)
 - [Credits](#credits)
 - [Disclaimer](#disclaimer)
@@ -50,9 +53,9 @@
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page with elegant formatting
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
-- 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
-- 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished books, hours read), and rich per‑book details
-- 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
+- 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with items read on each day and monthly statistics
+- 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished items, hours read), and rich per-item details
+- 📈 **Per-Item Statistics**: Detailed statistics for each item including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
 - 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
@@ -199,7 +202,7 @@ The binary will be available at `target/release/koshelf`.
 KoShelf can operate in several modes:
 
 1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
-2. **Web Server Mode**: Serves the embedded React app at `/` with runtime API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified)
+2. **Web Server Mode**: Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified)
 3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
 
 ### Command Line Options
@@ -430,6 +433,34 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Session duration tracking
 - Book completions (used by Yearly Recap)
 
+## API Shape
+
+KoShelf uses a model-centric API. Endpoints map to core resources (`items`, `activity`, `completions`).
+
+### Content Type Filter
+
+- Optional query parameter: `content_type`
+- Supported values: `all` (default), `books`, `comics`
+- Applied uniformly across activity/completion resources and supported by `GET /api/items`
+
+### Model Resources
+
+- `GET /api/site`
+- `GET /api/locales`
+- `GET /api/items`
+- `GET /api/items/{id}`
+- `GET /api/activity/weeks`
+- `GET /api/activity/weeks/{week_key}`
+- `GET /api/activity/years/{year}/daily`
+- `GET /api/activity/years/{year}/summary`
+- `GET /api/activity/months`
+- `GET /api/activity/months/{month_key}`
+- `GET /api/completions/years`
+- `GET /api/completions/years/{year}`
+- `GET /api/events/stream`
+
+In static output mode, these resources are mirrored under `data/**`, and the frontend API client composes or reshapes them for view-specific needs.
+
 ## Generated Site Structure
 
 ```
@@ -457,32 +488,83 @@ site/
 └── data/                   # Contract payloads used by static mode (not available when using server mode)
     ├── site.json
     ├── locales.json
-    ├── books.json
-    ├── comics.json
-    ├── books/
-    │   ├── <book-id>.json
-    │   └── ...
-    ├── comics/
-    │   ├── <comic-id>.json
-    │   └── ...
-    ├── calendar/
-    │   ├── months.json
-    │   └── months/
-    │       ├── 2024-01.json
-    │       └── ...
-    ├── statistics/
+    ├── items/
     │   ├── index.json
-    │   ├── weeks/
-    │   │   ├── 2024-01-01.json
-    │   │   └── ...
-    │   └── years/
-    │       ├── 2024.json
+    │   └── by_id/
+    │       ├── <item-id>.json
     │       └── ...
-    └── recap/
-        ├── index.json
+    ├── activity/
+    │   ├── weeks/
+    │   │   ├── all/
+    │   │   │   ├── index.json
+    │   │   │   └── by_key/
+    │   │   │       ├── 2024-01-01.json
+    │   │   │       └── ...
+    │   │   ├── books/
+    │   │   │   ├── index.json
+    │   │   │   └── by_key/
+    │   │   │       ├── 2024-01-01.json
+    │   │   │       └── ...
+    │   │   └── comics/
+    │   │       ├── index.json
+    │   │       └── by_key/
+    │   │           ├── 2024-01-01.json
+    │   │           └── ...
+    │   ├── years/
+    │   │   ├── all/
+    │   │   │   ├── daily/
+    │   │   │   │   ├── 2024.json
+    │   │   │   │   └── ...
+    │   │   │   └── summary/
+    │   │   │       ├── 2024.json
+    │   │   │       └── ...
+    │   │   ├── books/
+    │   │   │   ├── daily/
+    │   │   │   │   ├── 2024.json
+    │   │   │   │   └── ...
+    │   │   │   └── summary/
+    │   │   │       ├── 2024.json
+    │   │   │       └── ...
+    │   │   └── comics/
+    │   │       ├── daily/
+    │   │       │   ├── 2024.json
+    │   │       │   └── ...
+    │   │       └── summary/
+    │   │           ├── 2024.json
+    │   │           └── ...
+    │   └── months/
+    │       ├── all/
+    │       │   ├── index.json
+    │       │   └── by_key/
+    │       │       ├── 2024-01.json
+    │       │       └── ...
+    │       ├── books/
+    │       │   ├── index.json
+    │       │   └── by_key/
+    │       │       ├── 2024-01.json
+    │       │       └── ...
+    │       └── comics/
+    │           ├── index.json
+    │           └── by_key/
+    │               ├── 2024-01.json
+    │               └── ...
+    └── completions/
         └── years/
-            ├── 2024.json
-            └── ...
+            ├── all/
+            │   ├── index.json
+            │   └── by_key/
+            │       ├── 2024.json
+            │       └── ...
+            ├── books/
+            │   ├── index.json
+            │   └── by_key/
+            │       ├── 2024.json
+            │       └── ...
+            └── comics/
+                ├── index.json
+                └── by_key/
+                    ├── 2024.json
+                    └── ...
 ```
 
 ## Credits

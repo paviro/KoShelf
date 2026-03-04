@@ -23,8 +23,8 @@ export function CalendarMonthlyStatsSection({
 }: CalendarMonthlyStatsSectionProps) {
     const completedLabel =
         scope === 'comics'
-            ? translation.get('comic-label', { count: stats.books_read })
-            : translation.get('book-label', { count: stats.books_read });
+            ? translation.get('comic-label', { count: stats.items_read })
+            : translation.get('book-label', { count: stats.items_read });
 
     return (
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
@@ -32,7 +32,7 @@ export function CalendarMonthlyStatsSection({
                 icon={LuBookOpen}
                 iconContainerClassName="bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600"
                 iconClassName="text-blue-600 dark:text-white"
-                value={stats.books_read}
+                value={stats.items_read}
                 label={completedLabel}
             />
             <MetricCard

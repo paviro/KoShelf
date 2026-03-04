@@ -166,32 +166,16 @@ impl SnapshotBuilder {
             SiteCapabilities {
                 has_books,
                 has_comics,
-                has_statistics,
-                has_recap: has_statistics,
+                has_activity: has_statistics,
+                has_completions: has_statistics,
             },
         );
         snapshot.site = Some(site_response);
 
         // Always emit list contracts so API/static endpoints are present even when empty.
-        let books: Vec<LibraryItem> = items
-            .iter()
-            .filter(|item| item.is_book())
-            .cloned()
-            .collect();
-        let books_response = mappers::map_library_list_response(
-            mappers::build_meta(version.clone(), generated_at.clone()),
-            &books,
-        );
-        snapshot.books = Some(books_response);
-
-        let comics: Vec<LibraryItem> = items
-            .iter()
-            .filter(|item| item.is_comic())
-            .cloned()
-            .collect();
-        let comics_response =
-            mappers::map_library_list_response(mappers::build_meta(version, generated_at), &comics);
-        snapshot.comics = Some(comics_response);
+        let items_response =
+            mappers::map_library_list_response(mappers::build_meta(version, generated_at), items);
+        snapshot.items = Some(items_response);
 
         Ok(())
     }

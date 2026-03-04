@@ -2,7 +2,7 @@
 
 use super::SnapshotBuilder;
 use super::utils::{completion_year_and_month, format_day_month, format_duration};
-use crate::contracts::{mappers, recap::RecapShareAssets};
+use crate::contracts::{common::ContentTypeFilter, mappers, recap::RecapShareAssets};
 use crate::models::{
     ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
     StatisticsData, YearlySummary,
@@ -609,18 +609,38 @@ impl SnapshotBuilder {
             group_completions_by_year_month(stats_data, &md5_to_book, &self.translations);
         let years_books = mappers::years_for_content_type(&year_month_items, ContentType::Book);
         let years_comics = mappers::years_for_content_type(&year_month_items, ContentType::Comic);
+        let years_books_set: HashSet<i32> = years_books.iter().copied().collect();
+        let years_comics_set: HashSet<i32> = years_comics.iter().copied().collect();
 
         let recap_meta = mappers::build_meta(self.get_version(), self.get_last_updated());
-        let recap_index = mappers::map_recap_index_response(
-            recap_meta.clone(),
-            years.clone(),
-            years_books,
-            years_comics,
+        snapshot.completion_years.clear();
+        snapshot.completion_years.insert(
+            ContentTypeFilter::All.as_str().to_string(),
+            mappers::map_completion_years_response(
+                recap_meta.clone(),
+                ContentTypeFilter::All,
+                years.clone(),
+            ),
         );
-        snapshot.recap_index = Some(recap_index);
+        snapshot.completion_years.insert(
+            ContentTypeFilter::Books.as_str().to_string(),
+            mappers::map_completion_years_response(
+                recap_meta.clone(),
+                ContentTypeFilter::Books,
+                years_books,
+            ),
+        );
+        snapshot.completion_years.insert(
+            ContentTypeFilter::Comics.as_str().to_string(),
+            mappers::map_completion_years_response(
+                recap_meta.clone(),
+                ContentTypeFilter::Comics,
+                years_comics,
+            ),
+        );
 
         if years.is_empty() {
-            snapshot.recap_years.clear();
+            snapshot.completion_years_by_key.clear();
             let current_years: HashSet<i32> = HashSet::new();
             self.cleanup_stale_recap_outputs(&current_years)?;
 
@@ -632,8 +652,11 @@ impl SnapshotBuilder {
         let month_hours_books = month_hours_for(&reading_stats_books.daily_activity);
         let month_hours_comics = month_hours_for(&reading_stats_comics.daily_activity);
 
-        // Build each year contract scope (all/books/comics).
-        let mut recap_years_payload = HashMap::new();
+        // Build each year contract payload for all/books/comics filters.
+        let mut completion_years_all = HashMap::new();
+        let mut completion_years_books = HashMap::new();
+        let mut completion_years_comics = HashMap::new();
+
         for year in years.iter() {
             let months_map = year_month_items.get(year).cloned().unwrap_or_default();
             let monthly = build_monthly_recaps(
@@ -678,20 +701,58 @@ impl SnapshotBuilder {
             self.render_share_images_for_year(*year, &summary).await?;
 
             let share_assets = recap_share_assets_for_year(*year);
-            let year_response = mappers::map_recap_year_response(
-                recap_meta.clone(),
-                *year,
-                mappers::map_recap_year_scope(&monthly.all, &summary, Some(share_assets.clone())),
-                mappers::map_recap_year_scope(
-                    &monthly.books,
-                    &summary_books,
+            completion_years_all.insert(
+                year.to_string(),
+                mappers::map_completion_year_response(
+                    recap_meta.clone(),
+                    ContentTypeFilter::All,
+                    *year,
+                    &monthly.all,
+                    &summary,
                     Some(share_assets.clone()),
                 ),
-                mappers::map_recap_year_scope(&monthly.comics, &summary_comics, Some(share_assets)),
             );
-            recap_years_payload.insert(year.to_string(), year_response);
+            if years_books_set.contains(year) {
+                completion_years_books.insert(
+                    year.to_string(),
+                    mappers::map_completion_year_response(
+                        recap_meta.clone(),
+                        ContentTypeFilter::Books,
+                        *year,
+                        &monthly.books,
+                        &summary_books,
+                        Some(share_assets.clone()),
+                    ),
+                );
+            }
+            if years_comics_set.contains(year) {
+                completion_years_comics.insert(
+                    year.to_string(),
+                    mappers::map_completion_year_response(
+                        recap_meta.clone(),
+                        ContentTypeFilter::Comics,
+                        *year,
+                        &monthly.comics,
+                        &summary_comics,
+                        Some(share_assets),
+                    ),
+                );
+            }
         }
-        snapshot.recap_years = recap_years_payload;
+
+        snapshot.completion_years_by_key.clear();
+        snapshot.completion_years_by_key.insert(
+            ContentTypeFilter::All.as_str().to_string(),
+            completion_years_all,
+        );
+        snapshot.completion_years_by_key.insert(
+            ContentTypeFilter::Books.as_str().to_string(),
+            completion_years_books,
+        );
+        snapshot.completion_years_by_key.insert(
+            ContentTypeFilter::Comics.as_str().to_string(),
+            completion_years_comics,
+        );
 
         let current_years: HashSet<i32> = years.iter().copied().collect();
         self.cleanup_stale_recap_outputs(&current_years)?;

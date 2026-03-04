@@ -63,18 +63,7 @@ impl SnapshotBuilder {
                 item_stats.clone(),
                 session_stats,
             );
-            match content_type {
-                ContentType::Book => {
-                    snapshot
-                        .book_details
-                        .insert(item.id.clone(), contract_detail);
-                }
-                ContentType::Comic => {
-                    snapshot
-                        .comic_details
-                        .insert(item.id.clone(), contract_detail);
-                }
-            }
+            snapshot.item_details.insert(item.id.clone(), contract_detail);
         }
 
         Ok(())

@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-use super::common::{ApiMeta, Scoped};
+use super::common::{ApiMeta, ContentTypeFilter};
 use super::library::LibraryContentType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CalendarMonthsResponse {
+pub struct ActivityMonthsResponse {
     pub meta: ApiMeta,
+    pub content_type: ContentTypeFilter,
     pub months: Vec<String>,
 }
 
@@ -34,16 +35,17 @@ pub struct CalendarItemResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarMonthlyStats {
-    pub books_read: usize,
+    pub items_read: usize,
     pub pages_read: i64,
     pub time_read: i64,
     pub days_read_pct: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CalendarMonthResponse {
+pub struct ActivityMonthResponse {
     pub meta: ApiMeta,
+    pub content_type: ContentTypeFilter,
     pub events: Vec<CalendarEventResponse>,
     pub items: BTreeMap<String, CalendarItemResponse>,
-    pub stats: Scoped<CalendarMonthlyStats>,
+    pub stats: CalendarMonthlyStats,
 }

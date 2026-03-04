@@ -12,13 +12,14 @@ use serde::Deserialize;
 use std::{convert::Infallible, sync::Arc, time::Duration};
 
 use super::ServerState;
-use crate::contracts::common::{MonthKey, Scope, WeekKey, YearKey};
+use crate::contracts::common::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
+use crate::contracts::library::{LibraryContentType, LibraryListResponse};
 use crate::runtime::{ContractSnapshot, SnapshotUpdate};
 
 #[derive(Debug, Deserialize)]
-pub struct ScopeQuery {
-    scope: Option<String>,
+pub struct ContentTypeQuery {
+    content_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -59,8 +60,8 @@ fn not_found() -> Response {
     api_error(StatusCode::NOT_FOUND, ApiErrorCode::NotFound)
 }
 
-fn parse_scope(query: ScopeQuery) -> ApiResult<Scope> {
-    Scope::parse(query.scope.as_deref()).map_err(ApiResponseError::bad_request)
+fn parse_content_type(query: ContentTypeQuery) -> ApiResult<ContentTypeFilter> {
+    ContentTypeFilter::parse(query.content_type.as_deref()).map_err(ApiResponseError::bad_request)
 }
 
 fn validate_week_key(value: &str) -> ApiResult<WeekKey> {
@@ -144,60 +145,42 @@ pub async fn locales(State(state): State<ServerState>) -> Response {
     }
 }
 
-pub async fn books(State(state): State<ServerState>) -> Response {
-    let snapshot = match runtime_snapshot(&state) {
-        Ok(snapshot) => snapshot,
-        Err(error) => return error.into_response(),
-    };
-
-    match snapshot.books.as_ref() {
-        Some(books) => (StatusCode::OK, Json(books.clone())).into_response(),
-        None => not_found(),
+fn item_matches_content_type(
+    content_type: ContentTypeFilter,
+    item_content_type: LibraryContentType,
+) -> bool {
+    match content_type {
+        ContentTypeFilter::All => true,
+        ContentTypeFilter::Books => item_content_type == LibraryContentType::Book,
+        ContentTypeFilter::Comics => item_content_type == LibraryContentType::Comic,
     }
 }
 
-pub async fn book_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
-    let snapshot = match runtime_snapshot(&state) {
-        Ok(snapshot) => snapshot,
-        Err(error) => return error.into_response(),
-    };
+fn filter_library_items(
+    response: &LibraryListResponse,
+    content_type: ContentTypeFilter,
+) -> LibraryListResponse {
+    if content_type == ContentTypeFilter::All {
+        return response.clone();
+    }
 
-    match snapshot.book_details.get(&id) {
-        Some(book) => (StatusCode::OK, Json(book.clone())).into_response(),
-        None => not_found(),
+    LibraryListResponse {
+        meta: response.meta.clone(),
+        items: response
+            .items
+            .iter()
+            .filter(|item| item_matches_content_type(content_type, item.content_type))
+            .cloned()
+            .collect(),
     }
 }
 
-pub async fn comics(State(state): State<ServerState>) -> Response {
-    let snapshot = match runtime_snapshot(&state) {
-        Ok(snapshot) => snapshot,
-        Err(error) => return error.into_response(),
-    };
-
-    match snapshot.comics.as_ref() {
-        Some(comics) => (StatusCode::OK, Json(comics.clone())).into_response(),
-        None => not_found(),
-    }
-}
-
-pub async fn comic_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
-    let snapshot = match runtime_snapshot(&state) {
-        Ok(snapshot) => snapshot,
-        Err(error) => return error.into_response(),
-    };
-
-    match snapshot.comic_details.get(&id) {
-        Some(comic) => (StatusCode::OK, Json(comic.clone())).into_response(),
-        None => not_found(),
-    }
-}
-
-pub async fn statistics_index(
+pub async fn items(
     State(state): State<ServerState>,
-    Query(query): Query<ScopeQuery>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
-    let scope = match parse_scope(query) {
-        Ok(scope) => scope,
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
         Err(error) => return error.into_response(),
     };
 
@@ -206,19 +189,53 @@ pub async fn statistics_index(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.statistics_index.as_ref() {
-        Some(index) => (StatusCode::OK, Json(index.scoped(scope))).into_response(),
+    match snapshot.items.as_ref() {
+        Some(items) => {
+            (StatusCode::OK, Json(filter_library_items(items, content_type))).into_response()
+        }
         None => not_found(),
     }
 }
 
-pub async fn statistics_week(
+pub async fn item_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(error) => return error.into_response(),
+    };
+
+    match snapshot.item_details.get(&id) {
+        Some(item) => (StatusCode::OK, Json(item.clone())).into_response(),
+        None => not_found(),
+    }
+}
+
+pub async fn activity_weeks(
+    State(state): State<ServerState>,
+    Query(query): Query<ContentTypeQuery>,
+) -> Response {
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
+        Err(error) => return error.into_response(),
+    };
+
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(error) => return error.into_response(),
+    };
+
+    match snapshot.activity_weeks.get(content_type.as_str()) {
+        Some(weeks) => (StatusCode::OK, Json(weeks.clone())).into_response(),
+        None => not_found(),
+    }
+}
+
+pub async fn activity_week(
     State(state): State<ServerState>,
     Path(week_key): Path<String>,
-    Query(query): Query<ScopeQuery>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
-    let scope = match parse_scope(query) {
-        Ok(scope) => scope,
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
         Err(error) => return error.into_response(),
     };
     let week_key = match validate_week_key(&week_key) {
@@ -231,19 +248,23 @@ pub async fn statistics_week(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.statistics_weeks.get(week_key.as_str()) {
-        Some(week) => (StatusCode::OK, Json(week.scoped(scope))).into_response(),
+    match snapshot
+        .activity_weeks_by_key
+        .get(content_type.as_str())
+        .and_then(|weeks| weeks.get(week_key.as_str()))
+    {
+        Some(week) => (StatusCode::OK, Json(week.clone())).into_response(),
         None => not_found(),
     }
 }
 
-pub async fn statistics_year(
+pub async fn activity_year_daily(
     State(state): State<ServerState>,
     Path(year): Path<String>,
-    Query(query): Query<ScopeQuery>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
-    let scope = match parse_scope(query) {
-        Ok(scope) => scope,
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
         Err(error) => return error.into_response(),
     };
     let year = match validate_year_key(&year) {
@@ -256,28 +277,74 @@ pub async fn statistics_year(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.statistics_years.get(year.as_str()) {
-        Some(year_stats) => (StatusCode::OK, Json(year_stats.scoped(scope))).into_response(),
+    match snapshot
+        .activity_year_daily
+        .get(content_type.as_str())
+        .and_then(|years| years.get(year.as_str()))
+    {
+        Some(payload) => (StatusCode::OK, Json(payload.clone())).into_response(),
         None => not_found(),
     }
 }
 
-pub async fn calendar_months(State(state): State<ServerState>) -> Response {
+pub async fn activity_year_summary(
+    State(state): State<ServerState>,
+    Path(year): Path<String>,
+    Query(query): Query<ContentTypeQuery>,
+) -> Response {
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
+        Err(error) => return error.into_response(),
+    };
+    let year = match validate_year_key(&year) {
+        Ok(year) => year,
+        Err(error) => return error.into_response(),
+    };
+
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.calendar_months.as_ref() {
+    match snapshot
+        .activity_year_summary
+        .get(content_type.as_str())
+        .and_then(|years| years.get(year.as_str()))
+    {
+        Some(payload) => (StatusCode::OK, Json(payload.clone())).into_response(),
+        None => not_found(),
+    }
+}
+
+pub async fn activity_months(
+    State(state): State<ServerState>,
+    Query(query): Query<ContentTypeQuery>,
+) -> Response {
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
+        Err(error) => return error.into_response(),
+    };
+
+    let snapshot = match runtime_snapshot(&state) {
+        Ok(snapshot) => snapshot,
+        Err(error) => return error.into_response(),
+    };
+
+    match snapshot.activity_months.get(content_type.as_str()) {
         Some(months) => (StatusCode::OK, Json(months.clone())).into_response(),
         None => not_found(),
     }
 }
 
-pub async fn calendar_month(
+pub async fn activity_month(
     State(state): State<ServerState>,
     Path(month_key): Path<String>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
+        Err(error) => return error.into_response(),
+    };
     let month_key = match validate_month_key(&month_key) {
         Ok(month_key) => month_key,
         Err(error) => return error.into_response(),
@@ -288,18 +355,22 @@ pub async fn calendar_month(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.calendar_by_month.get(month_key.as_str()) {
+    match snapshot
+        .activity_months_by_key
+        .get(content_type.as_str())
+        .and_then(|months| months.get(month_key.as_str()))
+    {
         Some(month) => (StatusCode::OK, Json(month.clone())).into_response(),
         None => not_found(),
     }
 }
 
-pub async fn recap_index(
+pub async fn completion_years(
     State(state): State<ServerState>,
-    Query(query): Query<ScopeQuery>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
-    let scope = match parse_scope(query) {
-        Ok(scope) => scope,
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
         Err(error) => return error.into_response(),
     };
 
@@ -308,19 +379,19 @@ pub async fn recap_index(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.recap_index.as_ref() {
-        Some(index) => (StatusCode::OK, Json(index.scoped(scope))).into_response(),
+    match snapshot.completion_years.get(content_type.as_str()) {
+        Some(years) => (StatusCode::OK, Json(years.clone())).into_response(),
         None => not_found(),
     }
 }
 
-pub async fn recap_year(
+pub async fn completion_year(
     State(state): State<ServerState>,
     Path(year): Path<String>,
-    Query(query): Query<ScopeQuery>,
+    Query(query): Query<ContentTypeQuery>,
 ) -> Response {
-    let scope = match parse_scope(query) {
-        Ok(scope) => scope,
+    let content_type = match parse_content_type(query) {
+        Ok(content_type) => content_type,
         Err(error) => return error.into_response(),
     };
     let year = match validate_year_key(&year) {
@@ -333,8 +404,12 @@ pub async fn recap_year(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.recap_years.get(year.as_str()) {
-        Some(year_recap) => (StatusCode::OK, Json(year_recap.scoped(scope))).into_response(),
+    match snapshot
+        .completion_years_by_key
+        .get(content_type.as_str())
+        .and_then(|years| years.get(year.as_str()))
+    {
+        Some(year_recap) => (StatusCode::OK, Json(year_recap.clone())).into_response(),
         None => not_found(),
     }
 }
@@ -354,14 +429,15 @@ mod tests {
 
     #[tokio::test]
     async fn bad_request_error_maps_to_bad_request_status_and_code() {
-        let response = ApiResponseError::bad_request(ApiErrorCode::InvalidScope).into_response();
+        let response =
+            ApiResponseError::bad_request(ApiErrorCode::InvalidContentType).into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         let payload = decode_error_response(response).await;
-        assert_eq!(payload.error.code, ApiErrorCode::InvalidScope);
+        assert_eq!(payload.error.code, ApiErrorCode::InvalidContentType);
         assert_eq!(
             payload.error.message,
-            ApiErrorCode::InvalidScope.default_message()
+            ApiErrorCode::InvalidContentType.default_message()
         );
     }
 

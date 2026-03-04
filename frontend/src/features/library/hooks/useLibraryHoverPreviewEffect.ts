@@ -430,11 +430,7 @@ class HoverPreviewManager {
 
         try {
             const payload =
-                collection === 'books'
-                    ? await api.books.get<LibraryDetailPreviewResponse>(itemId)
-                    : await api.comics.get<LibraryDetailPreviewResponse>(
-                          itemId,
-                      );
+                await api.items.get<LibraryDetailPreviewResponse>(itemId);
 
             if (!payload?.item) {
                 return fallback;

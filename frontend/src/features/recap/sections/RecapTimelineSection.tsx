@@ -49,11 +49,11 @@ export function RecapTimelineSection({
                                         aria-hidden
                                     />
                                     <span className="month-books-finished font-semibold">
-                                        {month.books_finished}
+                                        {month.items_finished}
                                     </span>
                                     {completionLabel(
                                         scope,
-                                        month.books_finished,
+                                        month.items_finished,
                                     )}
                                 </div>
 

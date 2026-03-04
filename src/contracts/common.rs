@@ -13,14 +13,14 @@ pub struct ApiMeta {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
-pub enum Scope {
+pub enum ContentTypeFilter {
     #[default]
     All,
     Books,
     Comics,
 }
 
-impl Scope {
+impl ContentTypeFilter {
     pub fn parse(value: Option<&str>) -> Result<Self, ApiErrorCode> {
         match value {
             None => Ok(Self::All),
@@ -37,7 +37,7 @@ impl Scope {
     }
 }
 
-impl FromStr for Scope {
+impl FromStr for ContentTypeFilter {
     type Err = ApiErrorCode;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -45,31 +45,14 @@ impl FromStr for Scope {
             "all" => Ok(Self::All),
             "books" => Ok(Self::Books),
             "comics" => Ok(Self::Comics),
-            _ => Err(ApiErrorCode::InvalidScope),
+            _ => Err(ApiErrorCode::InvalidContentType),
         }
     }
 }
 
-impl fmt::Display for Scope {
+impl fmt::Display for ContentTypeFilter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Scoped<T> {
-    pub all: T,
-    pub books: T,
-    pub comics: T,
-}
-
-impl<T> Scoped<T> {
-    pub fn select(&self, scope: Scope) -> &T {
-        match scope {
-            Scope::All => &self.all,
-            Scope::Books => &self.books,
-            Scope::Comics => &self.comics,
-        }
     }
 }
 
@@ -189,20 +172,23 @@ impl FromStr for YearKey {
 
 #[cfg(test)]
 mod tests {
-    use super::{MonthKey, Scope, WeekKey, YearKey};
+    use super::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
 
     #[test]
-    fn scope_serializes_as_lowercase_values() {
+    fn content_type_filter_serializes_as_lowercase_values() {
         assert_eq!(
-            serde_json::to_string(&Scope::All).expect("scope should serialize"),
+            serde_json::to_string(&ContentTypeFilter::All)
+                .expect("content type filter should serialize"),
             "\"all\""
         );
         assert_eq!(
-            serde_json::to_string(&Scope::Books).expect("scope should serialize"),
+            serde_json::to_string(&ContentTypeFilter::Books)
+                .expect("content type filter should serialize"),
             "\"books\""
         );
         assert_eq!(
-            serde_json::to_string(&Scope::Comics).expect("scope should serialize"),
+            serde_json::to_string(&ContentTypeFilter::Comics)
+                .expect("content type filter should serialize"),
             "\"comics\""
         );
     }

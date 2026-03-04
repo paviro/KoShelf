@@ -146,12 +146,12 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
-                                    {formatNumber(summary.total_books)}
+                                    {formatNumber(summary.total_items)}
                                 </span>
                                 <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                                     {completionLabel(
                                         scope,
-                                        summary.total_books,
+                                        summary.total_items,
                                     )}
                                 </span>
                             </div>

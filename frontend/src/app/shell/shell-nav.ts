@@ -57,7 +57,7 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
         });
     }
 
-    if (capabilities.has_statistics) {
+    if (capabilities.has_activity) {
         items.push({
             id: 'nav-statistics',
             routeId: 'statistics',
@@ -74,7 +74,7 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
         });
     }
 
-    if (capabilities.has_recap) {
+    if (capabilities.has_completions) {
         items.push({
             id: 'nav-recap',
             routeId: 'recap',

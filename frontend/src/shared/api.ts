@@ -22,6 +22,11 @@ type ContractRoute = {
     dataPath: string;
 };
 
+type ContentTypeRoute = {
+    apiPath: string;
+    dataPathFor: (scope: ScopeValue) => string;
+};
+
 const SERVER_MODE_STORAGE_KEY = 'koshelf_server_mode';
 
 declare global {
@@ -80,38 +85,9 @@ function normalizeScope(scope: ScopeValue | undefined): ScopeValue {
     return 'all';
 }
 
-function withScope(path: string, scope: ScopeValue): string {
+function withContentType(path: string, scope: ScopeValue): string {
     const separator = path.includes('?') ? '&' : '?';
-    return `${path}${separator}scope=${scope}`;
-}
-
-function projectScopedPayload(payload: unknown, scope: ScopeValue): unknown {
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-        return payload;
-    }
-
-    const root = payload as Record<string, unknown>;
-    const scopesValue = root.scopes;
-
-    if (
-        !scopesValue ||
-        typeof scopesValue !== 'object' ||
-        Array.isArray(scopesValue)
-    ) {
-        return payload;
-    }
-
-    const scopes = scopesValue as Record<string, unknown>;
-    const selected = scopes[scope];
-
-    const projected: Record<string, unknown> = { ...root };
-    delete projected.scopes;
-
-    if (selected && typeof selected === 'object' && !Array.isArray(selected)) {
-        Object.assign(projected, selected as Record<string, unknown>);
-    }
-
-    return projected;
+    return `${path}${separator}content_type=${scope}`;
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -131,23 +107,72 @@ function route(apiPath: string, dataPath: string): ContractRoute {
     return { apiPath, dataPath };
 }
 
+function routeByContentType(
+    apiPath: string,
+    dataPathFor: (scope: ScopeValue) => string,
+): ContentTypeRoute {
+    return { apiPath, dataPathFor };
+}
+
 async function request<T>(target: ContractRoute): Promise<T> {
     const url = isServeMode() ? target.apiPath : target.dataPath;
     return (await fetchJson(url)) as T;
 }
 
-async function requestScoped<T>(
-    target: ContractRoute,
+async function requestByContentType<T>(
+    target: ContentTypeRoute,
     scope: ScopeValue | undefined,
 ): Promise<T> {
     const selectedScope = normalizeScope(scope);
 
     if (isServeMode()) {
-        return (await fetchJson(withScope(target.apiPath, selectedScope))) as T;
+        return (await fetchJson(
+            withContentType(target.apiPath, selectedScope),
+        )) as T;
     }
 
-    const payload = await fetchJson(target.dataPath);
-    return projectScopedPayload(payload, selectedScope) as T;
+    return (await fetchJson(target.dataPathFor(selectedScope))) as T;
+}
+
+type LibraryListPayload = {
+    items: Array<{
+        content_type?: string;
+    }>;
+};
+
+function filterItemsPayload(payload: unknown, scope: ScopeValue): unknown {
+    if (scope === 'all') {
+        return payload;
+    }
+
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        return payload;
+    }
+
+    const typed = payload as LibraryListPayload;
+    if (!Array.isArray(typed.items)) {
+        return payload;
+    }
+
+    const expected = scope === 'books' ? 'book' : 'comic';
+
+    return {
+        ...(payload as Record<string, unknown>),
+        items: typed.items.filter((item) => item.content_type === expected),
+    };
+}
+
+async function requestItemsList<T>(scope: ScopeValue | undefined): Promise<T> {
+    const selectedScope = normalizeScope(scope);
+
+    if (isServeMode()) {
+        return (await fetchJson(
+            withContentType('/api/items', selectedScope),
+        )) as T;
+    }
+
+    const payload = await fetchJson('/data/items/index.json');
+    return filterItemsPayload(payload, selectedScope) as T;
 }
 
 export const api = {
@@ -163,44 +188,35 @@ export const api = {
         },
     },
 
-    books: {
-        async list<T>(): Promise<T> {
-            return request<T>(route('/api/books', '/data/books.json'));
+    items: {
+        async list<T>(scope?: ScopeValue): Promise<T> {
+            return requestItemsList<T>(scope);
         },
 
         async get<T>(id: string): Promise<T> {
             return request<T>(
-                route(`/api/books/${id}`, `/data/books/${id}.json`),
+                route(`/api/items/${id}`, `/data/items/by_id/${id}.json`),
             );
         },
     },
 
-    comics: {
-        async list<T>(): Promise<T> {
-            return request<T>(route('/api/comics', '/data/comics.json'));
-        },
-
-        async get<T>(id: string): Promise<T> {
-            return request<T>(
-                route(`/api/comics/${id}`, `/data/comics/${id}.json`),
-            );
-        },
-    },
-
-    statistics: {
-        async get<T>(scope?: ScopeValue): Promise<T> {
-            return requestScoped<T>(
-                route('/api/statistics', '/data/statistics/index.json'),
-                scope,
-            );
-        },
-
+    activity: {
         weeks: {
-            async get<T>(weekKey: string, scope?: ScopeValue): Promise<T> {
-                return requestScoped<T>(
-                    route(
-                        `/api/statistics/weeks/${weekKey}`,
-                        `/data/statistics/weeks/${weekKey}.json`,
+            async get<T>(scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType('/api/activity/weeks', (selectedScope) =>
+                        `/data/activity/weeks/${selectedScope}/index.json`,
+                    ),
+                    scope,
+                );
+            },
+
+            async byKey<T>(weekKey: string, scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType(
+                        `/api/activity/weeks/${weekKey}`,
+                        (selectedScope) =>
+                            `/data/activity/weeks/${selectedScope}/by_key/${weekKey}.json`,
                     ),
                     scope,
                 );
@@ -208,51 +224,72 @@ export const api = {
         },
 
         years: {
-            async get<T>(year: number, scope?: ScopeValue): Promise<T> {
-                return requestScoped<T>(
-                    route(
-                        `/api/statistics/years/${year}`,
-                        `/data/statistics/years/${year}.json`,
-                    ),
-                    scope,
-                );
+            daily: {
+                async get<T>(year: number, scope?: ScopeValue): Promise<T> {
+                    return requestByContentType<T>(
+                        routeByContentType(
+                            `/api/activity/years/${year}/daily`,
+                            (selectedScope) =>
+                                `/data/activity/years/${selectedScope}/daily/${year}.json`,
+                        ),
+                        scope,
+                    );
+                },
+            },
+            summary: {
+                async get<T>(year: number, scope?: ScopeValue): Promise<T> {
+                    return requestByContentType<T>(
+                        routeByContentType(
+                            `/api/activity/years/${year}/summary`,
+                            (selectedScope) =>
+                                `/data/activity/years/${selectedScope}/summary/${year}.json`,
+                        ),
+                        scope,
+                    );
+                },
             },
         },
-    },
 
-    calendar: {
         months: {
-            async list<T>(): Promise<T> {
-                return request<T>(
-                    route('/api/calendar/months', '/data/calendar/months.json'),
+            async list<T>(scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType('/api/activity/months', (selectedScope) =>
+                        `/data/activity/months/${selectedScope}/index.json`,
+                    ),
+                    scope,
                 );
             },
 
-            async get<T>(monthKey: string): Promise<T> {
-                return request<T>(
-                    route(
-                        `/api/calendar/months/${monthKey}`,
-                        `/data/calendar/months/${monthKey}.json`,
+            async get<T>(monthKey: string, scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType(
+                        `/api/activity/months/${monthKey}`,
+                        (selectedScope) =>
+                            `/data/activity/months/${selectedScope}/by_key/${monthKey}.json`,
                     ),
+                    scope,
                 );
             },
         },
     },
 
-    recap: {
-        async get<T>(scope?: ScopeValue): Promise<T> {
-            return requestScoped<T>(
-                route('/api/recap', '/data/recap/index.json'),
-                scope,
-            );
-        },
-
+    completions: {
         years: {
-            async get<T>(year: number, scope?: ScopeValue): Promise<T> {
-                return requestScoped<T>(
-                    route(
-                        `/api/recap/years/${year}`,
-                        `/data/recap/years/${year}.json`,
+            async get<T>(scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType('/api/completions/years', (selectedScope) =>
+                        `/data/completions/years/${selectedScope}/index.json`,
+                    ),
+                    scope,
+                );
+            },
+
+            async byKey<T>(year: number, scope?: ScopeValue): Promise<T> {
+                return requestByContentType<T>(
+                    routeByContentType(
+                        `/api/completions/years/${year}`,
+                        (selectedScope) =>
+                            `/data/completions/years/${selectedScope}/by_key/${year}.json`,
                     ),
                     scope,
                 );

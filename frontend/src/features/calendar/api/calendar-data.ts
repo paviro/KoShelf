@@ -24,7 +24,7 @@ export interface CalendarItemResponse {
 }
 
 export interface CalendarMonthlyStats {
-    books_read: number;
+    items_read: number;
     pages_read: number;
     time_read: number;
     days_read_pct: number;
@@ -42,9 +42,15 @@ export interface CalendarMonthResponse {
     stats: CalendarScopedMonthlyStats;
 }
 
+type ActivityMonthPayload = {
+    events: CalendarEventResponse[];
+    items: Record<string, CalendarItemResponse>;
+    stats: CalendarMonthlyStats;
+};
+
 export function createEmptyMonthlyStats(): CalendarMonthlyStats {
     return {
-        books_read: 0,
+        items_read: 0,
         pages_read: 0,
         time_read: 0,
         days_read_pct: 0,
@@ -70,14 +76,28 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
-    return api.calendar.months.list<CalendarMonthsResponse>();
+    return api.activity.months.list<CalendarMonthsResponse>('all');
 }
 
 export async function loadCalendarMonth(
     monthKey: string,
 ): Promise<CalendarMonthResponse> {
     try {
-        return await api.calendar.months.get<CalendarMonthResponse>(monthKey);
+        const [allPayload, booksPayload, comicsPayload] = await Promise.all([
+            api.activity.months.get<ActivityMonthPayload>(monthKey, 'all'),
+            api.activity.months.get<ActivityMonthPayload>(monthKey, 'books'),
+            api.activity.months.get<ActivityMonthPayload>(monthKey, 'comics'),
+        ]);
+
+        return {
+            events: allPayload.events,
+            items: allPayload.items,
+            stats: {
+                all: allPayload.stats,
+                books: booksPayload.stats,
+                comics: comicsPayload.stats,
+            },
+        };
     } catch (error) {
         if (isNotFoundError(error)) {
             return createEmptyCalendarMonthResponse();
