@@ -16,7 +16,7 @@
 
 ![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
 
-###### A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+###### A Rust CLI tool that generates a beautiful website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
 </div>
 
@@ -170,7 +170,7 @@ If you prefer to build from source or need a custom build:
 #### Prerequisites
 
 - Rust 1.70+ (for building)
-- Node.js and npm (for Tailwind CSS compilation)
+- Node.js and npm (React frontend build pipeline)
 
 #### Building the tool
 
@@ -184,7 +184,7 @@ cargo build --release
 
 The binary will be available at `target/release/koshelf`.
 
-**Note:** Tailwind CSS will be compiled during build and added to the binary.
+**Note:** The React frontend is built during `cargo build` and embedded into the binary.
 
 ## Usage
 
@@ -199,15 +199,15 @@ The binary will be available at `target/release/koshelf`.
 KoShelf can operate in several modes:
 
 1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
-2. **Web Server Mode**: Builds a static site in a temporary folder and serves it, automatically rebuilds on book changes (default when `--output` is not specified)
+2. **Web Server Mode**: Serves the embedded React app at `/` with runtime API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified)
 3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
 
 ### Command Line Options
 
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
-- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--books-path`, mutually exclusive with `--hashdocsettings-path`)
-- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--books-path`, mutually exclusive with `--docsettings-path`)
-- `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--books-path` is provided)
+- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
+- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
+- `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided)
 - `-o, --output`: Output directory for the generated site
 - `-p, --port`: Port for web server mode (default: 3000)
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
@@ -219,7 +219,7 @@ KoShelf can operate in several modes:
 - `--min-pages-per-day`: Minimum pages read per book per day to be counted in statistics (optional)
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
-- `--include-all-stats`: By default, statistics are filtered to only include books present in your `--books-path` directory. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
+- `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
 - `-l, --language`: Language for UI translations. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
@@ -334,7 +334,7 @@ KOReaderSettings/
 Although there are many ways to use this tool here is how I use it:
 
 1. **Syncthing Sync**: I use [Syncthing](https://syncthing.net/) to sync both my books folder and KoReader settings folder from my e-reader to my server
-2. **Books and Statistics**: I point to the synced books folder with `--books-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
+2. **Books and Statistics**: I point to the synced books folder with `--library-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
 3. **Web Server Mode**: I then run KoShelf in web server mode (without `--output`) - it will automatically rebuild when files change
 4. **Nginx Reverse Proxy**: I use an nginx reverse proxy for HTTPS and to restrict access
 
@@ -434,69 +434,27 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 
 ```
 site/
-├── index.html              # Main library page (books list if any books exist; otherwise comics list)
-├── manifest.json           # PWA Manifest
-├── service-worker.js       # PWA Service Worker
-├── cache-manifest.json     # PWA Smart Cache Manifest
-├── version.txt             # Version timestamp for lightweight polling
-├── recap/                  # Yearly Recap pages
-│   ├── index.html          # Empty state / Recap landing
-│   ├── 2024/
-│   │   ├── index.html      # Yearly recap page
-│   │   ├── books/
-│   │   │   └── index.html  # Yearly recap page (books only; only generated when both books+comics exist)
-│   │   └── comics/
-│   │       └── index.html  # Yearly recap page (comics only; only generated when both books+comics exist)
-│   └── ...
-├── statistics/
-│   ├── index.html          # Reading statistics dashboard
-│   ├── books/
-│   │   └── index.html      # Reading statistics dashboard (books only; only generated when both books+comics exist)
-│   └── comics/
-│       └── index.html      # Reading statistics dashboard (comics only; only generated when both books+comics exist)
-├── calendar/
-│   └── index.html          # Reading calendar view
-├── books/                  # Individual book pages
-│   ├── book-id1/
-│   │   ├── index.html      # Book detail page with annotations
-│   │   ├── details.md      # Markdown export (human-readable)
-│   └── ...
-├── comics/                 # Comics list + individual comic pages
-│   ├── index.html          # Comics list page (only when books also exist; otherwise list is at /index.html)
-│   ├── comic-id1/
-│   │   ├── index.html      # Comic detail page with annotations
-│   │   ├── details.md      # Markdown export (human-readable)
-│   └── ...
-└── assets/
-    ├── covers/             # Optimized cover images
-    │   ├── book-id1.webp
-    │   └── ...
-    ├── recap/              # Social media share images (generated per year)
-    │   ├── 2024_share_story.webp
-    │   ├── 2024_share_story.svg
-    │   ├── 2024_share_square.webp
-    │   ├── 2024_share_square.svg
-    │   ├── 2024_share_banner.webp
-    │   └── 2024_share_banner.svg
-    ├── css/
-    │   ├── style.css       # Compiled Tailwind CSS
-    │   └── event-calendar.min.css # Event calendar library styles
-    ├── js/
-    │   ├── library_list.js # Search and filtering functionality
-    │   ├── item_detail.js  # Item detail page functionality
-    │   ├── lazy-loading.js # Image lazy loading
-    │   ├── section-toggle.js # Section collapsing/expanding
-    │   ├── statistics.js   # Statistics page functionality
-    │   ├── heatmap.js      # Activity heatmap visualization
-    │   ├── calendar.js     # Calendar initialization
-    │   ├── event-calendar.min.js # Event calendar library
-    │   ├── recap.js        # Recap page interactions
-    │   ├── storage-manager.js # Centralized local storage management
-    │   └── pwa.js          # PWA installation and update logic
-    ├── icons/              # PWA icons
-    │   ├── icon-192.png
-    │   └── icon-512.png
-└── data/                   # Contract payloads (used by static mode and /api passthrough)
+├── index.html              # React app shell (routes handled via HashRouter)
+├── manifest.json           # PWA manifest
+├── assets/
+│   ├── covers/             # Optimized cover images
+│   │   ├── <item-id>.webp
+│   │   └── ...
+│   ├── recap/              # Social media share images (generated per year)
+│   │   ├── 2024_share_story.webp
+│   │   ├── 2024_share_story.svg
+│   │   ├── 2024_share_square.webp
+│   │   ├── 2024_share_square.svg
+│   │   ├── 2024_share_banner.webp
+│   │   └── 2024_share_banner.svg
+│   ├── css/
+│   │   └── <hashed>.css    # Vite frontend bundles
+│   ├── js/
+│   │   └── <hashed>.js     # Vite frontend bundles
+│   └── icons/              # PWA icons
+│       ├── icon-192.png
+│       └── icon-512.png
+└── data/                   # Contract payloads used by static mode (not available when using server mode)
     ├── site.json
     ├── locales.json
     ├── books.json
@@ -533,8 +491,7 @@ Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeS
 
 The calendar feature is powered by [EventCalendar](https://github.com/vkurko/calendar) - a lightweight, full-featured JavaScript event calendar library.
 
-Styled with [Tailwind CSS](https://tailwindcss.com/) for modern, responsive design.
 
 ## Disclaimer
 
-This is a weekend project and was built for personal use - it relies heavily on AI-generated code. While I've tested everything and use it daily, I take no responsibility for any issues you might encounter. Use at your own risk.
+This was built for personal use and relies heavily on AI-generated code. While I've tested everything and use it daily, I take no responsibility for any issues you might encounter. Use at your own risk.
