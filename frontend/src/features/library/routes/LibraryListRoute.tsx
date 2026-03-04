@@ -290,7 +290,12 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             return;
         }
 
+        const html = document.documentElement;
+        html.style.overflow = 'hidden';
         window.scrollTo({ top: savedScrollY, behavior: 'auto' });
+        requestAnimationFrame(() => {
+            html.style.overflow = '';
+        });
     }, [
         collection,
         listQuery.isError,

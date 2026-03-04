@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
 import { CalendarRoute } from '../../features/calendar/routes/CalendarRoute';
 import { LibraryDetailRoute } from '../../features/library/routes/LibraryDetailRoute';
 import { LibraryListRoute } from '../../features/library/routes/LibraryListRoute';
 import { RecapRoute } from '../../features/recap/routes/RecapRoute';
+import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
+import { ScrollToTop } from '../../shared/lib/navigation/ScrollToTop';
 
 type AppRoutesProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
@@ -27,6 +28,8 @@ function RootRedirect({
 
 export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
     return (
+        <>
+        <ScrollToTop />
         <Routes>
             <Route
                 path="/"
@@ -45,5 +48,6 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
 
             <Route path="*" element={<Navigate to={defaultRoute} replace />} />
         </Routes>
+        </>
     );
 }
