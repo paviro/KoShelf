@@ -21,26 +21,6 @@ function libraryListPath(collection: LibraryCollection): string {
     return `/${collection}`;
 }
 
-export function libraryDetailCollectionFromPath(pathname: string): LibraryCollection | null {
-    if (pathname.startsWith('/books/')) {
-        return 'books';
-    }
-
-    if (pathname.startsWith('/comics/')) {
-        return 'comics';
-    }
-
-    return null;
-}
-
-export function isLibraryPathForCollection(
-    pathname: string,
-    collection: LibraryCollection,
-): boolean {
-    const collectionPath = libraryListPath(collection);
-    return pathname === collectionPath || pathname.startsWith(`${collectionPath}/`);
-}
-
 function clearSnapshot(): void {
     try {
         window.sessionStorage.removeItem(LIBRARY_SCROLL_SNAPSHOT_STORAGE_KEY);

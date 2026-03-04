@@ -2,21 +2,24 @@ import { Link } from 'react-router-dom';
 
 import {
     createLibraryReturnToListState,
-    libraryDetailCollectionFromPath,
+    type LibraryCollection,
 } from '../../shared/lib/navigation/library-scroll-restoration';
 import { isActivePath, type NavItem } from './shell-nav';
 
 type ShellMobileNavProps = {
     navItems: NavItem[];
     currentPath: string;
+    currentDetailCollection: LibraryCollection | null;
 };
 
-export function ShellMobileNav({ navItems, currentPath }: ShellMobileNavProps) {
+export function ShellMobileNav({
+    navItems,
+    currentPath,
+    currentDetailCollection,
+}: ShellMobileNavProps) {
     if (navItems.length <= 1) {
         return null;
     }
-
-    const currentDetailCollection = libraryDetailCollectionFromPath(currentPath);
 
     return (
         <nav className="lg:hidden fixed bottom-4 left-8 right-8 z-50">

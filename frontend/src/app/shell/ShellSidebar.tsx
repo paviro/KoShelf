@@ -4,13 +4,14 @@ import { LuGithub } from 'react-icons/lu';
 import { translation } from '../../shared/i18n';
 import {
     createLibraryReturnToListState,
-    libraryDetailCollectionFromPath,
+    type LibraryCollection,
 } from '../../shared/lib/navigation/library-scroll-restoration';
 import { BRAND_ICON, isActivePath, type NavItem } from './shell-nav';
 
 type ShellSidebarProps = {
     navItems: NavItem[];
     currentPath: string;
+    currentDetailCollection: LibraryCollection | null;
     siteTitle: string;
     generatedAt?: string;
     version?: string;
@@ -19,12 +20,12 @@ type ShellSidebarProps = {
 export function ShellSidebar({
     navItems,
     currentPath,
+    currentDetailCollection,
     siteTitle,
     generatedAt,
     version,
 }: ShellSidebarProps) {
     const BrandIcon = BRAND_ICON;
-    const currentDetailCollection = libraryDetailCollectionFromPath(currentPath);
 
     return (
         <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-sm border-r border-gray-200/50 dark:border-dark-700/50 flex-col z-30">
