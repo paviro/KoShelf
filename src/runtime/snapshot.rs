@@ -37,32 +37,31 @@ pub struct ContractSnapshot {
 
 impl ContractSnapshot {
     pub fn load_from_data_dir(data_dir: &Path) -> Result<Self> {
-        let mut snapshot = Self::default();
-
-        snapshot.site = Self::read_optional_json(&data_dir.join("site.json"))?;
-        snapshot.locales = Self::read_optional_json(&data_dir.join("locales.json"))?;
-        snapshot.books = Self::read_optional_json(&data_dir.join("books.json"))?;
-        snapshot.comics = Self::read_optional_json(&data_dir.join("comics.json"))?;
-        snapshot.book_details = Self::read_json_map_from_dir(&data_dir.join("books"))?;
-        snapshot.comic_details = Self::read_json_map_from_dir(&data_dir.join("comics"))?;
-
-        snapshot.statistics_index =
-            Self::read_optional_json(&data_dir.join("statistics").join("index.json"))?;
-        snapshot.statistics_weeks =
-            Self::read_json_map_from_dir(&data_dir.join("statistics").join("weeks"))?;
-        snapshot.statistics_years =
-            Self::read_json_map_from_dir(&data_dir.join("statistics").join("years"))?;
-
-        snapshot.calendar_months =
-            Self::read_optional_json(&data_dir.join("calendar").join("months.json"))?;
-        snapshot.calendar_by_month =
-            Self::read_json_map_from_dir(&data_dir.join("calendar").join("months"))?;
-
-        snapshot.recap_index =
-            Self::read_optional_json(&data_dir.join("recap").join("index.json"))?;
-        snapshot.recap_years = Self::read_json_map_from_dir(&data_dir.join("recap").join("years"))?;
-
-        Ok(snapshot)
+        Ok(Self {
+            site: Self::read_optional_json(&data_dir.join("site.json"))?,
+            locales: Self::read_optional_json(&data_dir.join("locales.json"))?,
+            books: Self::read_optional_json(&data_dir.join("books.json"))?,
+            comics: Self::read_optional_json(&data_dir.join("comics.json"))?,
+            book_details: Self::read_json_map_from_dir(&data_dir.join("books"))?,
+            comic_details: Self::read_json_map_from_dir(&data_dir.join("comics"))?,
+            statistics_index: Self::read_optional_json(
+                &data_dir.join("statistics").join("index.json"),
+            )?,
+            statistics_weeks: Self::read_json_map_from_dir(
+                &data_dir.join("statistics").join("weeks"),
+            )?,
+            statistics_years: Self::read_json_map_from_dir(
+                &data_dir.join("statistics").join("years"),
+            )?,
+            calendar_months: Self::read_optional_json(
+                &data_dir.join("calendar").join("months.json"),
+            )?,
+            calendar_by_month: Self::read_json_map_from_dir(
+                &data_dir.join("calendar").join("months"),
+            )?,
+            recap_index: Self::read_optional_json(&data_dir.join("recap").join("index.json"))?,
+            recap_years: Self::read_json_map_from_dir(&data_dir.join("recap").join("years"))?,
+        })
     }
 
     pub fn is_empty(&self) -> bool {
@@ -107,7 +106,10 @@ impl ContractSnapshot {
         Self::write_json_map(&statistics_dir.join("years"), &self.statistics_years)?;
 
         let calendar_dir = data_dir.join("calendar");
-        Self::write_optional_json(&calendar_dir.join("months.json"), self.calendar_months.as_ref())?;
+        Self::write_optional_json(
+            &calendar_dir.join("months.json"),
+            self.calendar_months.as_ref(),
+        )?;
         Self::write_json_map(&calendar_dir.join("months"), &self.calendar_by_month)?;
 
         let recap_dir = data_dir.join("recap");

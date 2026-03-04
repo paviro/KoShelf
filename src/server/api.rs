@@ -21,42 +21,65 @@ pub struct ScopeQuery {
     scope: Option<String>,
 }
 
-fn api_error(status: StatusCode, code: ApiErrorCode) -> Response {
-    (status, Json(ApiErrorResponse::from_code(code))).into_response()
+#[derive(Debug, Clone, Copy)]
+struct ApiResponseError {
+    status: StatusCode,
+    code: ApiErrorCode,
 }
 
-fn internal_error() -> Response {
-    api_error(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        ApiErrorCode::InternalServerError,
-    )
+impl ApiResponseError {
+    const fn bad_request(code: ApiErrorCode) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            code,
+        }
+    }
+
+    const fn internal_server_error() -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            code: ApiErrorCode::InternalServerError,
+        }
+    }
+}
+
+impl IntoResponse for ApiResponseError {
+    fn into_response(self) -> Response {
+        api_error(self.status, self.code)
+    }
+}
+
+type ApiResult<T> = Result<T, ApiResponseError>;
+
+fn api_error(status: StatusCode, code: ApiErrorCode) -> Response {
+    (status, Json(ApiErrorResponse::from_code(code))).into_response()
 }
 
 fn not_found() -> Response {
     api_error(StatusCode::NOT_FOUND, ApiErrorCode::NotFound)
 }
 
-fn parse_scope(query: ScopeQuery) -> Result<Scope, Response> {
-    Scope::parse(query.scope.as_deref())
-        .map_err(|_| api_error(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidScope))
+fn parse_scope(query: ScopeQuery) -> ApiResult<Scope> {
+    Scope::parse(query.scope.as_deref()).map_err(ApiResponseError::bad_request)
 }
 
-fn validate_week_key(value: &str) -> Result<WeekKey, Response> {
-    WeekKey::parse(value)
-        .map_err(|_| api_error(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidWeekKey))
+fn validate_week_key(value: &str) -> ApiResult<WeekKey> {
+    WeekKey::parse(value).map_err(ApiResponseError::bad_request)
 }
 
-fn validate_month_key(value: &str) -> Result<MonthKey, Response> {
-    MonthKey::parse(value)
-        .map_err(|_| api_error(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidMonthKey))
+fn validate_month_key(value: &str) -> ApiResult<MonthKey> {
+    MonthKey::parse(value).map_err(ApiResponseError::bad_request)
 }
 
-fn validate_year_key(value: &str) -> Result<YearKey, Response> {
-    YearKey::parse(value).map_err(|_| api_error(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidYear))
+fn validate_year_key(value: &str) -> ApiResult<YearKey> {
+    YearKey::parse(value).map_err(ApiResponseError::bad_request)
 }
 
-fn runtime_snapshot(state: &ServerState) -> Result<Arc<ContractSnapshot>, Response> {
-    state.snapshot_store.get().ok_or_else(internal_error)
+fn runtime_snapshot(state: &ServerState) -> ApiResult<Arc<ContractSnapshot>> {
+    state
+        .snapshot_store
+        .get()
+        .ok_or_else(ApiResponseError::internal_server_error)
 }
 
 fn snapshot_update_event(update: &SnapshotUpdate) -> Event {
@@ -65,9 +88,7 @@ fn snapshot_update_event(update: &SnapshotUpdate) -> Event {
         Err(_) => "{}".to_string(),
     };
 
-    Event::default()
-        .event("snapshot_updated")
-        .data(payload)
+    Event::default().event("snapshot_updated").data(payload)
 }
 
 pub async fn events_stream(
@@ -102,7 +123,7 @@ pub async fn events_stream(
 pub async fn site(State(state): State<ServerState>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.site.as_ref() {
@@ -114,7 +135,7 @@ pub async fn site(State(state): State<ServerState>) -> Response {
 pub async fn locales(State(state): State<ServerState>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.locales.as_ref() {
@@ -126,7 +147,7 @@ pub async fn locales(State(state): State<ServerState>) -> Response {
 pub async fn books(State(state): State<ServerState>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.books.as_ref() {
@@ -138,7 +159,7 @@ pub async fn books(State(state): State<ServerState>) -> Response {
 pub async fn book_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.book_details.get(&id) {
@@ -150,7 +171,7 @@ pub async fn book_detail(State(state): State<ServerState>, Path(id): Path<String
 pub async fn comics(State(state): State<ServerState>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.comics.as_ref() {
@@ -162,7 +183,7 @@ pub async fn comics(State(state): State<ServerState>) -> Response {
 pub async fn comic_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.comic_details.get(&id) {
@@ -177,12 +198,12 @@ pub async fn statistics_index(
 ) -> Response {
     let scope = match parse_scope(query) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.statistics_index.as_ref() {
@@ -198,16 +219,16 @@ pub async fn statistics_week(
 ) -> Response {
     let scope = match parse_scope(query) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
     let week_key = match validate_week_key(&week_key) {
         Ok(week_key) => week_key,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.statistics_weeks.get(week_key.as_str()) {
@@ -223,16 +244,16 @@ pub async fn statistics_year(
 ) -> Response {
     let scope = match parse_scope(query) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
     let year = match validate_year_key(&year) {
         Ok(year) => year,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.statistics_years.get(year.as_str()) {
@@ -244,7 +265,7 @@ pub async fn statistics_year(
 pub async fn calendar_months(State(state): State<ServerState>) -> Response {
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.calendar_months.as_ref() {
@@ -259,12 +280,12 @@ pub async fn calendar_month(
 ) -> Response {
     let month_key = match validate_month_key(&month_key) {
         Ok(month_key) => month_key,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.calendar_by_month.get(month_key.as_str()) {
@@ -279,12 +300,12 @@ pub async fn recap_index(
 ) -> Response {
     let scope = match parse_scope(query) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.recap_index.as_ref() {
@@ -300,20 +321,60 @@ pub async fn recap_year(
 ) -> Response {
     let scope = match parse_scope(query) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
     let year = match validate_year_key(&year) {
         Ok(year) => year,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     let snapshot = match runtime_snapshot(&state) {
         Ok(snapshot) => snapshot,
-        Err(response) => return response,
+        Err(error) => return error.into_response(),
     };
 
     match snapshot.recap_years.get(year.as_str()) {
         Some(year_recap) => (StatusCode::OK, Json(year_recap.scoped(scope))).into_response(),
         None => not_found(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+
+    async fn decode_error_response(response: Response) -> ApiErrorResponse {
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("error response body should be readable");
+        serde_json::from_slice::<ApiErrorResponse>(&bytes)
+            .expect("error response body should contain valid JSON")
+    }
+
+    #[tokio::test]
+    async fn bad_request_error_maps_to_bad_request_status_and_code() {
+        let response = ApiResponseError::bad_request(ApiErrorCode::InvalidScope).into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let payload = decode_error_response(response).await;
+        assert_eq!(payload.error.code, ApiErrorCode::InvalidScope);
+        assert_eq!(
+            payload.error.message,
+            ApiErrorCode::InvalidScope.default_message()
+        );
+    }
+
+    #[tokio::test]
+    async fn internal_error_maps_to_internal_server_error_status_and_code() {
+        let response = ApiResponseError::internal_server_error().into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        let payload = decode_error_response(response).await;
+        assert_eq!(payload.error.code, ApiErrorCode::InternalServerError);
+        assert_eq!(
+            payload.error.message,
+            ApiErrorCode::InternalServerError.default_message()
+        );
     }
 }
