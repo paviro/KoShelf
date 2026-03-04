@@ -203,7 +203,7 @@ mod tests {
                     rating: Some(5),
                     review_note: Some("note".to_string()),
                     series: None,
-                    item_path: Some("/books/id/".to_string()),
+                    item_path: Some("/books/id".to_string()),
                     item_cover: Some("/assets/covers/id.webp".to_string()),
                     content_type: Some(LibraryContentType::Book),
                 }],

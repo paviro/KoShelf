@@ -47,8 +47,8 @@ impl CalendarGenerator {
                         md5.to_lowercase(),
                         (
                             match b.content_type() {
-                                ContentType::Book => format!("/books/{}/", b.id),
-                                ContentType::Comic => format!("/comics/{}/", b.id),
+                                ContentType::Book => format!("/books/{}", b.id),
+                                ContentType::Comic => format!("/comics/{}", b.id),
                             },
                             format!("/assets/covers/{}.webp", b.id),
                             b.content_type(),
@@ -102,7 +102,7 @@ impl CalendarGenerator {
             let mut sessions_by_day: HashMap<NaiveDate, Vec<&PageStat>> = HashMap::new();
             for session in &sorted_sessions {
                 if let Ok(date) = NaiveDate::parse_from_str(
-                    &Self::timestamp_to_date_string(session.start_time, time_config),
+                    &time_config.format_date(session.start_time),
                     "%Y-%m-%d",
                 ) {
                     sessions_by_day.entry(date).or_default().push(session);
@@ -325,11 +325,6 @@ impl CalendarGenerator {
         );
 
         calendar_events.push(event);
-    }
-
-    /// Convert Unix timestamp to ISO date string (yyyy-mm-dd)
-    fn timestamp_to_date_string(timestamp: i64, time_config: &TimeConfig) -> String {
-        time_config.format_date(timestamp)
     }
 
     /// Build per-month reading statistics from raw `StatisticsData`.

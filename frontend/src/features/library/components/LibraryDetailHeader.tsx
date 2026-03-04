@@ -26,7 +26,6 @@ export function LibraryDetailHeader({
 
     useClickOutside(dropdownRef, () => setShareOpen(false), shareOpen);
 
-    const markdownHref = `/${collection}/${itemId}/details.md`;
     const jsonHref = `/data/${collection}/${itemId}.json`;
 
     return (
@@ -116,14 +115,6 @@ export function LibraryDetailHeader({
                         className={`dropdown-menu-right absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden ${shareOpen ? '' : 'hidden'}`}
                         role="menu"
                     >
-                        <a
-                            href={markdownHref}
-                            download
-                            className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200"
-                            onClick={() => setShareOpen(false)}
-                        >
-                            Markdown
-                        </a>
                         <a
                             href={jsonHref}
                             download

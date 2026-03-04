@@ -36,14 +36,6 @@ impl SnapshotStore {
             .expect("snapshot store lock poisoned while reading");
         guard.clone()
     }
-
-    pub fn is_ready(&self) -> bool {
-        self.get().is_some()
-    }
 }
 
 pub type SharedSnapshotStore = Arc<SnapshotStore>;
-
-pub fn create_snapshot_store() -> SharedSnapshotStore {
-    Arc::new(SnapshotStore::new())
-}

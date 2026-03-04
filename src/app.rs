@@ -1,12 +1,13 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
 use crate::library::{FileWatcher, MetadataLocation};
-use crate::runtime::create_snapshot_store;
-use crate::server::{WebServer, create_version_notifier};
-use crate::site_generator::SiteGenerator;
+use crate::runtime::SnapshotStore;
+use crate::server::WebServer;
+use crate::snapshot_builder::SnapshotBuilder;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;
+use std::sync::Arc;
 use tempfile::TempDir;
 
 enum RunMode {
@@ -35,7 +36,7 @@ fn plan_output(cli: &Cli) -> Result<OutputPlan> {
             mode: RunMode::WatchStatic,
         }),
         (None, _) => {
-            // For server mode, generate into a temp directory that is cleaned up on exit.
+            // For server mode, use a temp media-cache directory cleaned up on exit.
             let tmp = tempfile::tempdir().context("Failed to create temporary output directory")?;
             Ok(OutputPlan {
                 output_dir: tmp.path().to_path_buf(),
@@ -89,7 +90,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Determine if we're running with internal web server (enables long-polling)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
-    // Create site config - bundles all generation options
+    // Create site config - bundles all snapshot/export options.
     let config = SiteConfig {
         output_dir: plan.output_dir.clone(),
         site_title: cli.title.clone(),
@@ -106,18 +107,21 @@ pub async fn run(cli: Cli) -> Result<()> {
         language: cli.language.clone(),
     };
 
-    // Create site generator - it will handle book scanning and stats loading internally
-    let site_generator = SiteGenerator::new(config.clone());
+    // Create snapshot builder - it handles library scanning and stats loading internally.
+    let snapshot_builder = SnapshotBuilder::new(config.clone());
 
-    // Generate initial site
-    let initial_snapshot = site_generator.generate().await?;
+    // Build initial in-memory snapshot.
+    let initial_snapshot = snapshot_builder.refresh_snapshot().await?;
+    if !is_internal_server {
+        initial_snapshot.write_to_data_dir(&plan.output_dir.join("data"))?;
+    }
 
     match plan.mode {
         RunMode::StaticExport => Ok(()),
 
         RunMode::WatchStatic => {
-            info!("Starting file watcher mode for static output");
-            let file_watcher = FileWatcher::new(config, None, None);
+            info!("Watching library changes to refresh static shell/assets and /data export.");
+            let file_watcher = FileWatcher::new(config, None);
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -125,25 +129,18 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
 
         RunMode::Serve => {
-            // Create shared version notifier for long-polling
-            let version_notifier = create_version_notifier();
-            let snapshot_store = create_snapshot_store();
+            info!(
+                "Running in serve mode with runtime snapshot refresh and media cache at: {:?}",
+                plan.output_dir
+            );
+            let snapshot_store = Arc::new(SnapshotStore::new());
             snapshot_store.replace(initial_snapshot);
 
-            // Start file watcher with version notifier
-            let file_watcher = FileWatcher::new(
-                config,
-                Some(version_notifier.clone()),
-                Some(snapshot_store.clone()),
-            );
+            // Start file watcher with snapshot updates.
+            let file_watcher = FileWatcher::new(config, Some(snapshot_store.clone()));
 
-            // Start web server with version notifier
-            let web_server = WebServer::new(
-                plan.output_dir,
-                cli.port,
-                version_notifier,
-                snapshot_store,
-            );
+            // Start web server (runtime media cache is served from `plan.output_dir`).
+            let web_server = WebServer::new(plan.output_dir, cli.port, snapshot_store);
 
             // Run both file watcher and web server concurrently
             tokio::select! {

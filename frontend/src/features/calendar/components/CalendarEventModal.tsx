@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LuBookOpen, LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
+import { useNavigate } from 'react-router-dom';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -16,6 +17,7 @@ type CalendarEventModalProps = {
 
 export function CalendarEventModal({ open, event, item, onClose }: CalendarEventModalProps) {
     const [coverFailed, setCoverFailed] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         setCoverFailed(false);
@@ -132,7 +134,9 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
                             className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                             onClick={() => {
                                 onClose();
-                                window.location.hash = item?.item_path ?? '';
+                                if (item?.item_path) {
+                                    navigate(item.item_path);
+                                }
                             }}
                         >
                             <span className="flex items-center">

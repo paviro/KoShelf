@@ -2,8 +2,7 @@ use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
 use crate::runtime::SharedSnapshotStore;
-use crate::server::version::SharedVersionNotifier;
-use crate::site_generator::SiteGenerator;
+use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -13,7 +12,6 @@ use tokio::time::sleep;
 
 pub struct FileWatcher {
     config: SiteConfig,
-    version_notifier: Option<SharedVersionNotifier>,
     snapshot_store: Option<SharedSnapshotStore>,
 }
 
@@ -25,14 +23,9 @@ impl std::ops::Deref for FileWatcher {
 }
 
 impl FileWatcher {
-    pub fn new(
-        config: SiteConfig,
-        version_notifier: Option<SharedVersionNotifier>,
-        snapshot_store: Option<SharedSnapshotStore>,
-    ) -> Self {
+    pub fn new(config: SiteConfig, snapshot_store: Option<SharedSnapshotStore>) -> Self {
         Self {
             config,
-            version_notifier,
             snapshot_store,
         }
     }
@@ -95,13 +88,12 @@ impl FileWatcher {
             }
         }
 
-        // Clone the config and version notifier for the rebuild task
+        // Clone the config for the rebuild task
         let config_clone = self.config.clone();
-        let version_notifier_clone = self.version_notifier.clone();
         let snapshot_store_clone = self.snapshot_store.clone();
 
-        // Spawn delayed rebuild task
-        // NOTE: Site generation uses non-Send types (e.g. mlua::Lua, Rc-based translations),
+        // Spawn delayed rebuild task.
+        // NOTE: Snapshot building uses non-Send types (e.g. mlua::Lua, Rc-based translations),
         // so this rebuild loop must not be spawned onto the multithreaded executor.
         let rebuild_task = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
@@ -115,26 +107,29 @@ impl FileWatcher {
                     // Drain any additional events that came in during the delay
                     while rebuild_rx.try_recv().is_ok() {}
 
-                    info!("Starting delayed site rebuild after quiet period");
+                    info!("Starting delayed snapshot refresh after quiet period");
 
-                    // Create new site generator and regenerate everything
-                    let site_generator = SiteGenerator::new(config_clone.clone());
+                    // Create a fresh snapshot builder and recompute all payloads.
+                    let snapshot_builder = SnapshotBuilder::new(config_clone.clone());
 
-                    match site_generator.generate().await {
+                    match snapshot_builder.refresh_snapshot().await {
                         Ok(snapshot) => {
+                            if !config_clone.is_internal_server {
+                                if let Err(error) =
+                                    snapshot.write_to_data_dir(&config_clone.output_dir.join("data"))
+                                {
+                                    warn!("Failed to write static contract data: {}", error);
+                                    continue;
+                                }
+                            }
+
                             if let Some(ref snapshot_store) = snapshot_store_clone {
                                 snapshot_store.replace(snapshot);
                             }
 
-                            info!("Delayed site rebuild completed successfully");
-
-                            // Notify long-polling clients that a new version is available
-                            if let Some(ref notifier) = version_notifier_clone {
-                                let version = chrono::Local::now().to_rfc3339();
-                                notifier.notify(version);
-                            }
+                            info!("Delayed snapshot refresh completed successfully");
                         }
-                        Err(e) => warn!("Failed to rebuild site: {}", e),
+                        Err(e) => warn!("Failed to refresh snapshot: {}", e),
                     }
                 }
             })

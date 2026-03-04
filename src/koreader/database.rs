@@ -1,6 +1,4 @@
-use super::statistics::StatisticsCalculator;
 use crate::models::{PageStat, StatBook, StatisticsData};
-use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::{debug, info, warn};
 use rusqlite::{Connection, OpenFlags};
@@ -127,13 +125,5 @@ impl StatisticsParser {
         }
 
         Ok(page_stats)
-    }
-
-    /// Calculate reading statistics based on the parsed data
-    pub fn calculate_stats(
-        stats_data: &mut StatisticsData,
-        time_config: &TimeConfig,
-    ) -> crate::models::ReadingStats {
-        StatisticsCalculator::calculate_stats(stats_data, time_config)
     }
 }

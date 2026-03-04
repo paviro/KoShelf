@@ -8,8 +8,6 @@ pub struct SiteCapabilities {
     pub has_comics: bool,
     pub has_statistics: bool,
     pub has_recap: bool,
-    pub supports_api: bool,
-    pub supports_static_data: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

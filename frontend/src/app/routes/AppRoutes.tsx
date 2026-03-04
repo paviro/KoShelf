@@ -37,10 +37,8 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
             <Route path="/calendar" element={<CalendarRoute />} />
             <Route path="/books" element={<LibraryListRoute collection="books" />} />
             <Route path="/books/:id" element={<LibraryDetailRoute collection="books" />} />
-            <Route path="/books/:id/:slug" element={<LibraryDetailRoute collection="books" />} />
             <Route path="/comics" element={<LibraryListRoute collection="comics" />} />
             <Route path="/comics/:id" element={<LibraryDetailRoute collection="comics" />} />
-            <Route path="/comics/:id/:slug" element={<LibraryDetailRoute collection="comics" />} />
             <Route path="/recap" element={<RecapRoute />} />
             <Route path="/recap/:year" element={<RecapRoute />} />
             <Route path="/recap/:year/:scope" element={<RecapRoute />} />

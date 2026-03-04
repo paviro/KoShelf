@@ -8,8 +8,6 @@ export interface SiteCapabilities {
     has_comics: boolean;
     has_statistics: boolean;
     has_recap: boolean;
-    supports_api: boolean;
-    supports_static_data: boolean;
 }
 
 export interface SiteResponse {

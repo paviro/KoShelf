@@ -1,11 +1,10 @@
 use super::ServerState;
 use super::api;
-use super::version::SharedVersionNotifier;
 use crate::runtime::SharedSnapshotStore;
 use anyhow::Result;
 use axum::{
     Router,
-    extract::{Path, State},
+    extract::Path,
     http::{StatusCode, header::CONTENT_TYPE},
     response::{IntoResponse, Response},
     routing::get,
@@ -13,49 +12,38 @@ use axum::{
 use include_dir::{Dir, include_dir};
 use log::info;
 use std::path::PathBuf;
-use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
-use tower_http::services::{ServeDir, ServeFile};
-use tower_http::set_status::SetStatus;
+use tower_http::services::ServeDir;
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 
 pub struct WebServer {
-    site_dir: PathBuf,
+    media_cache_dir: PathBuf,
     port: u16,
-    version_notifier: SharedVersionNotifier,
     snapshot_store: SharedSnapshotStore,
 }
 
 impl WebServer {
     pub fn new(
-        site_dir: PathBuf,
+        media_cache_dir: PathBuf,
         port: u16,
-        version_notifier: SharedVersionNotifier,
         snapshot_store: SharedSnapshotStore,
     ) -> Self {
         Self {
-            site_dir,
+            media_cache_dir,
             port,
-            version_notifier,
             snapshot_store,
         }
     }
 
     pub async fn run(self) -> Result<()> {
         let state = ServerState {
-            site_dir: self.site_dir.clone(),
-            version_notifier: self.version_notifier.clone(),
             snapshot_store: self.snapshot_store.clone(),
         };
-
-        // Serve the generated static 404 page.
-        let not_found_service = SetStatus::new(
-            ServeFile::new(self.site_dir.join("404.html")),
-            StatusCode::NOT_FOUND,
-        );
+        let covers_cache_dir = self.media_cache_dir.join("covers");
+        let recap_cache_dir = self.media_cache_dir.join("recap");
 
         let mut app = Router::new()
             // API endpoints
@@ -75,22 +63,23 @@ impl WebServer {
             .route("/api/calendar/months/{month_key}", get(api::calendar_month))
             .route("/api/recap", get(api::recap_index))
             .route("/api/recap/years/{year}", get(api::recap_year))
-            // Long-poll endpoint for version changes
-            .route("/api/events/version", get(version_poll_handler))
-            // Embedded React shell mounted under /app.
-            .route("/app", get(react_shell_index_handler))
-            .route("/app/", get(react_shell_index_handler))
-            .route("/app/index.html", get(react_shell_index_handler))
-            .route("/react-assets/{*path}", get(react_shell_asset_handler))
-            .with_state(state);
+            // Embedded React shell mounted at /.
+            .route("/", get(react_shell_index_handler))
+            .route("/index.html", get(react_shell_index_handler))
+            .route("/manifest.json", get(react_shell_manifest_handler))
+            .route("/assets/icons/{*path}", get(react_shell_icon_handler))
+            .route("/assets/js/{*path}", get(react_shell_js_handler))
+            .route("/assets/css/{*path}", get(react_shell_css_handler))
+            .with_state(state)
+            // Runtime-generated media cache directories are mounted under public /assets URLs.
+            .nest_service("/assets/covers", ServeDir::new(covers_cache_dir))
+            .nest_service("/assets/recap", ServeDir::new(recap_cache_dir));
 
-        app = app
-            .fallback_service(ServeDir::new(&self.site_dir).not_found_service(not_found_service))
-            .layer(
-                ServiceBuilder::new()
-                    .layer(CompressionLayer::new())
-                    .layer(CorsLayer::permissive()),
-            );
+        app = app.layer(
+            ServiceBuilder::new()
+                .layer(CompressionLayer::new())
+                .layer(CorsLayer::permissive()),
+        );
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 
@@ -98,7 +87,6 @@ impl WebServer {
             "Web server running on http://localhost:{}, binding to: 0.0.0.0",
             self.port
         );
-        info!("Embedded React shell mounted at /app");
 
         axum::serve(listener, app).await?;
 
@@ -106,37 +94,26 @@ impl WebServer {
     }
 }
 
-/// Long-poll handler that waits for version changes.
-/// Returns the new version when available, or times out after 60 seconds.
-async fn version_poll_handler(State(state): State<ServerState>) -> impl IntoResponse {
-    let mut receiver = state.version_notifier.subscribe();
-
-    // Wait up to 60 seconds for a version change
-    match tokio::time::timeout(Duration::from_secs(60), receiver.recv()).await {
-        Ok(Ok(version)) => {
-            // New version available
-            (StatusCode::OK, version)
-        }
-        Ok(Err(_)) => {
-            // Channel closed (shouldn't happen in normal operation)
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Channel closed".to_string(),
-            )
-        }
-        Err(_) => {
-            // Timeout - client should reconnect
-            (StatusCode::NO_CONTENT, String::new())
-        }
-    }
-}
-
 async fn react_shell_index_handler() -> Response {
     serve_embedded_frontend_file("index.html")
 }
 
-async fn react_shell_asset_handler(Path(path): Path<String>) -> Response {
-    let full_path = format!("react-assets/{}", path);
+async fn react_shell_manifest_handler() -> Response {
+    serve_embedded_frontend_file("manifest.json")
+}
+
+async fn react_shell_icon_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/icons/{}", path);
+    serve_embedded_frontend_file(&full_path)
+}
+
+async fn react_shell_js_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/js/{}", path);
+    serve_embedded_frontend_file(&full_path)
+}
+
+async fn react_shell_css_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/css/{}", path);
     serve_embedded_frontend_file(&full_path)
 }
 

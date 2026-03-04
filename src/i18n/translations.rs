@@ -115,10 +115,6 @@ impl Translations {
         serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_string())
     }
 
-    pub fn raw_json(&self) -> String {
-        self.to_json_string()
-    }
-
     /// Get a translation by key.
     pub fn get(&self, key: &str) -> String {
         self.format(key, None)

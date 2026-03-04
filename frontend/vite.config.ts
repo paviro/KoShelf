@@ -21,9 +21,20 @@ export default defineConfig(({ mode }) => {
         },
         build: {
             outDir: 'dist',
-            assetsDir: 'react-assets',
             sourcemap: false,
             emptyOutDir: true,
+            rollupOptions: {
+                output: {
+                    entryFileNames: 'assets/js/[name]-[hash].js',
+                    chunkFileNames: 'assets/js/[name]-[hash].js',
+                    assetFileNames: (assetInfo) => {
+                        if (assetInfo.name?.endsWith('.css')) {
+                            return 'assets/css/[name]-[hash][extname]';
+                        }
+                        return 'assets/[name]-[hash][extname]';
+                    },
+                },
+            },
         },
     };
 });
