@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import type { DependencyList } from 'react';
 
 export interface TiltOptions {
     selector: string;
@@ -226,16 +225,16 @@ function initTilt(options: TiltOptions): Cleanup {
     };
 }
 
-export function useTiltEffect(options: TiltOptions, dependencies: DependencyList): void {
+export function useTiltEffect(options: TiltOptions, refreshKey: string): void {
     useEffect(() => {
         const teardownTilt = initTilt(options);
         return () => {
             teardownTilt();
         };
-    }, [options, ...dependencies]);
+    }, [options, refreshKey]);
 }
 
-export function useBookCardTiltEffect(dependencies: DependencyList): void {
+export function useBookCardTiltEffect(refreshKey: string): void {
     useEffect(() => {
         const teardownTilt = initTilt({
             selector: '.book-card',
@@ -244,10 +243,10 @@ export function useBookCardTiltEffect(dependencies: DependencyList): void {
         return () => {
             teardownTilt();
         };
-    }, dependencies);
+    }, [refreshKey]);
 }
 
-export function useRecapCoverTiltEffect(dependencies: DependencyList): void {
+export function useRecapCoverTiltEffect(refreshKey: string): void {
     useEffect(() => {
         const teardownTilt = initTilt({
             selector: '.recap-cover-tilt',
@@ -261,5 +260,5 @@ export function useRecapCoverTiltEffect(dependencies: DependencyList): void {
         return () => {
             teardownTilt();
         };
-    }, dependencies);
+    }, [refreshKey]);
 }

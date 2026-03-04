@@ -64,7 +64,7 @@ export function CalendarRoute() {
     const nextMonthKey = shiftMonthKey(displayedMonthKey, 1);
 
     const monthsQuery = useCalendarMonthsQuery();
-    const availableMonths = monthsQuery.data?.months ?? [];
+    const availableMonths = useMemo(() => monthsQuery.data?.months ?? [], [monthsQuery.data?.months]);
     const availableMonthSet = useMemo(() => new Set(availableMonths), [availableMonths]);
     const canStartMonthQueries = monthsQuery.isSuccess || monthsQuery.isError;
 

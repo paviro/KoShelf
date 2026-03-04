@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IoIosStar, IoIosStarOutline } from 'react-icons/io';
 import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote } from 'react-icons/lu';
@@ -20,14 +20,16 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
     const detailPath = item.item_path?.trim() || null;
     const coverUrl = item.item_cover?.trim() || null;
     const [coverFailed, setCoverFailed] = useState(false);
+    const [prevCoverUrl, setPrevCoverUrl] = useState(coverUrl);
     const hasReviewNote = Boolean(item.review_note?.trim());
     const hasRating = typeof item.rating === 'number' && Number.isFinite(item.rating);
     const stars = buildStarDisplay(item.rating);
     const searchBasePath = resolveRecapSearchBasePath(item);
 
-    useEffect(() => {
+    if (prevCoverUrl !== coverUrl) {
+        setPrevCoverUrl(coverUrl);
         setCoverFailed(false);
-    }, [coverUrl]);
+    }
 
     const titleNode = detailPath ? (
         <Link

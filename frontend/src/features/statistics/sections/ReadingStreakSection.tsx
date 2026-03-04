@@ -12,6 +12,7 @@ type ReadingStreakSectionProps = {
     selectedYear: number | null;
     onSelectYear: (year: number) => void;
     yearData: StatisticsYearResponse | undefined;
+    animationSeed: string;
     currentStreak: StatisticsIndexResponse['streaks']['current'];
     longestStreak: StatisticsIndexResponse['streaks']['longest'];
 };
@@ -23,6 +24,7 @@ export function ReadingStreakSection({
     selectedYear,
     onSelectYear,
     yearData,
+    animationSeed,
     currentStreak,
     longestStreak,
 }: ReadingStreakSectionProps) {
@@ -46,7 +48,11 @@ export function ReadingStreakSection({
             }
         >
             <div className="mb-8">
-                <HeatmapSection selectedYear={selectedYear} yearData={yearData} />
+                <HeatmapSection
+                    selectedYear={selectedYear}
+                    yearData={yearData}
+                    animationSeed={animationSeed}
+                />
 
                 <div className="w-full mt-3 sm:mt-3 md:mt-4">
                     <div className="flex flex-row w-full rounded-lg shadow-lg overflow-hidden gap-0">

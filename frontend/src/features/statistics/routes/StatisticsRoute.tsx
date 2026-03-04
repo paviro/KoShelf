@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
@@ -41,8 +41,8 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
 
 export function StatisticsRoute() {
     const params = useParams();
+    const location = useLocation();
     const scope = normalizeScope(params.scope);
-    const hasInitializedScopeRef = useRef(false);
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -52,8 +52,8 @@ export function StatisticsRoute() {
     const statsIndexQuery = useStatisticsIndexQuery(scope);
     const { state: sectionState, toggle: toggleSection } = usePersistentSectionState(scope);
 
-    const availableYears = statsIndexQuery.data?.available_years ?? [];
-    const availableWeeks = statsIndexQuery.data?.available_weeks ?? [];
+    const availableYears = useMemo(() => statsIndexQuery.data?.available_years ?? [], [statsIndexQuery.data?.available_years]);
+    const availableWeeks = useMemo(() => statsIndexQuery.data?.available_weeks ?? [], [statsIndexQuery.data?.available_weeks]);
 
     const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
     const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<number | null>(null);
@@ -68,30 +68,15 @@ export function StatisticsRoute() {
     const effectiveSelectedHeatmapYear = selectedHeatmapYear ?? availableYears[0] ?? null;
     const effectiveSelectedYearlyYear = selectedYearlyYear ?? availableYears[0] ?? null;
 
-    useEffect(() => {
-        if (!selectedWeekKey && availableWeeks.length > 0) {
-            setSelectedWeekKey(availableWeeks[0].week_key);
-        }
-        if (!selectedHeatmapYear && availableYears.length > 0) {
-            setSelectedHeatmapYear(availableYears[0]);
-        }
-        if (!selectedYearlyYear && availableYears.length > 0) {
-            setSelectedYearlyYear(availableYears[0]);
-        }
-    }, [availableWeeks, availableYears, selectedHeatmapYear, selectedWeekKey, selectedYearlyYear]);
-
-    useEffect(() => {
-        if (!hasInitializedScopeRef.current) {
-            hasInitializedScopeRef.current = true;
-            return;
-        }
-
+    const [prevScope, setPrevScope] = useState(scope);
+    if (prevScope !== scope) {
+        setPrevScope(scope);
         setSelectedWeekKey(null);
         setSelectedHeatmapYear(null);
         setSelectedYearlyYear(null);
         setDisplayedWeeklyStats(EMPTY_WEEKLY_STATS);
         setDisplayedYearlyData(null);
-    }, [scope]);
+    }
 
     useEffect(() => {
         document.body.dataset.sectionToggleScope = 'statistics';
@@ -152,17 +137,21 @@ export function StatisticsRoute() {
         Boolean(statsIndex) && availableYears.length === 0 && availableWeeks.length === 0;
     const yearlyLoading = yearlyQuery.isFetching && effectiveDisplayedYearlyData === null;
 
-    useEffect(() => {
+    const [prevWeekData, setPrevWeekData] = useState(weekQuery.data);
+    if (weekQuery.data !== prevWeekData) {
+        setPrevWeekData(weekQuery.data);
         if (weekQuery.data) {
             setDisplayedWeeklyStats(weekQuery.data);
         }
-    }, [weekQuery.data]);
+    }
 
-    useEffect(() => {
+    const [prevYearlyData, setPrevYearlyData] = useState(yearlyQuery.data);
+    if (yearlyQuery.data !== prevYearlyData) {
+        setPrevYearlyData(yearlyQuery.data);
         if (yearlyQuery.data) {
             setDisplayedYearlyData(yearlyQuery.data);
         }
-    }, [yearlyQuery.data]);
+    }
 
     const weeklyStats = displayedWeeklyStats;
 
@@ -211,6 +200,7 @@ export function StatisticsRoute() {
                                     selectedYear={effectiveSelectedHeatmapYear}
                                     onSelectYear={setSelectedHeatmapYear}
                                     yearData={heatmapYearQuery.data}
+                                    animationSeed={location.key}
                                     currentStreak={validatedCurrentStreak}
                                     longestStreak={statsIndex.streaks.longest}
                                 />

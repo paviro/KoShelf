@@ -22,15 +22,19 @@ export function useLazyImageSource({
     threshold = 0.01,
 }: UseLazyImageSourceOptions): UseLazyImageSourceResult {
     const imageRef = useRef<HTMLImageElement>(null);
-    const [shouldLoad, setShouldLoad] = useState(false);
+    const [isIntersecting, setIsIntersecting] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
-    useEffect(() => {
-        setShouldLoad(false);
+    const [prevSrc, setPrevSrc] = useState(src);
+    if (prevSrc !== src) {
+        setPrevSrc(src);
+        setIsIntersecting(false);
         setIsLoaded(false);
         setHasError(false);
-    }, [src]);
+    }
+
+    const shouldLoad = !('IntersectionObserver' in window) || isIntersecting;
 
     useEffect(() => {
         if (shouldLoad) {
@@ -42,20 +46,12 @@ export function useLazyImageSource({
             return;
         }
 
-        if (!('IntersectionObserver' in window)) {
-            setShouldLoad(true);
-            return;
-        }
-
         const observer = new IntersectionObserver(
             (entries) => {
-                const isIntersecting = entries.some((entry) => entry.isIntersecting);
-                if (!isIntersecting) {
-                    return;
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    setIsIntersecting(true);
+                    observer.disconnect();
                 }
-
-                setShouldLoad(true);
-                observer.disconnect();
             },
             {
                 rootMargin,

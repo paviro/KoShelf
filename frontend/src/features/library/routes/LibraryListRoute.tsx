@@ -97,36 +97,37 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         return LIBRARY_FILTER_VALUES.filter((filter) => filter !== 'unread');
     }, [hasUnreadItems]);
 
-    useEffect(() => {
+    const [prevCollection, setPrevCollection] = useState(collection);
+    if (prevCollection !== collection) {
+        setPrevCollection(collection);
         const persisted = StorageManager.get<string>(libraryFilterStorageKey(collection), 'all');
         setFilterValue(normalizeLibraryFilterValue(persisted, true));
         setSearchTerm('');
         setMobileSearchOpen(false);
-    }, [collection]);
+    }
 
-    useEffect(() => {
-        if (filterValue === 'unread' && !hasUnreadItems) {
-            setFilterValue('all');
-        }
-    }, [filterValue, hasUnreadItems]);
+    if (filterValue === 'unread' && !hasUnreadItems) {
+        setFilterValue('all');
+    }
 
     useEffect(() => {
         StorageManager.set(libraryFilterStorageKey(collection), filterValue);
     }, [collection, filterValue]);
 
-    useEffect(() => {
-        const query = new URLSearchParams(location.search);
-        const querySearch = query.get('search');
-
-        if (querySearch === null) {
-            return;
-        }
-
-        setSearchTerm(querySearch);
-        if (querySearch.trim().length > 0 && window.innerWidth < 640) {
+    const searchQuery = new URLSearchParams(location.search);
+    const querySearchParam = searchQuery.get('search');
+    if (querySearchParam !== null) {
+        setSearchTerm(querySearchParam);
+        if (querySearchParam.trim().length > 0 && window.innerWidth < 640) {
             setMobileSearchOpen(true);
         }
+    }
 
+    useEffect(() => {
+        const query = new URLSearchParams(location.search);
+        if (!query.has('search')) {
+            return;
+        }
         query.delete('search');
         navigate(
             {
@@ -250,8 +251,8 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         [sectionRows],
     );
 
-    useBookCardTiltEffect([collection, visibleCardKey]);
-    useLibraryHoverPreviewEffect([collection, visibleCardKey]);
+    useBookCardTiltEffect(`${collection}:${visibleCardKey}`);
+    useLibraryHoverPreviewEffect(`${collection}:${visibleCardKey}`);
 
     const visibleItemCount = useMemo(
         () => sectionRows.reduce((sum, section) => sum + section.items.length, 0),

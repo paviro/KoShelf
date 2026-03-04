@@ -58,6 +58,7 @@ export function CalendarGrid({
     const containerRef = useRef<HTMLElement | null>(null);
     const calendarRef = useRef<Calendar | null>(null);
     const scrollTimeoutRef = useRef<number | null>(null);
+    const optionRefs = useRef<{ locale: string; displayedMonth: Date; mappedEvents: Calendar.EventInput[] }>({ locale, displayedMonth, mappedEvents: [] });
 
     const scrollCurrentDayIntoView = useCallback(() => {
         const calendarContainer = containerRef.current;
@@ -110,8 +111,12 @@ export function CalendarGrid({
                     },
                 };
             }),
-        [events, items, locale],
+        [events, items],
     );
+
+    useEffect(() => {
+        optionRefs.current = { locale, displayedMonth, mappedEvents };
+    }, [locale, displayedMonth, mappedEvents]);
 
     const handleDatesSet = useCallback(
         (info: Calendar.DatesSetInfo) => {
@@ -152,17 +157,18 @@ export function CalendarGrid({
             return;
         }
 
+        const opts = optionRefs.current;
         const instance = createCalendar(containerRef.current, [DayGrid], {
             view: 'dayGridMonth',
             height: 'auto',
-            locale,
-            date: displayedMonth,
+            locale: opts.locale,
+            date: opts.displayedMonth,
             firstDay: 1,
             displayEventEnd: false,
             editable: false,
             eventStartEditable: false,
             eventDurationEditable: false,
-            events: mappedEvents,
+            events: opts.mappedEvents,
             eventClick: handleEventClick,
             datesSet: handleDatesSet,
         });

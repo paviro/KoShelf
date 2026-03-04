@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import {
     scrollToHorizontalOverflowRatio,
@@ -21,6 +21,7 @@ const HEATMAP_ALL_COLOR_CLASSES = HEATMAP_COLOR_CLASSES.flat();
 type HeatmapSectionProps = {
     selectedYear: number | null;
     yearData: StatisticsYearResponse | undefined;
+    animationSeed: string;
 };
 
 function prefersReducedMotion(): boolean {
@@ -31,29 +32,11 @@ function heatmapCellAnimationDelay(): number {
     return Math.floor(Math.random() * 340);
 }
 
-export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) {
+export function HeatmapSection({ selectedYear, yearData, animationSeed }: HeatmapSectionProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const heatmapContainerRef = useRef<HTMLDivElement>(null);
     const dayLabelsRef = useRef<HTMLDivElement>(null);
     const heatmapGridRef = useRef<HTMLDivElement>(null);
-    const renderedYearRef = useRef<number | null>(null);
-    const animationTimeoutIdsRef = useRef<number[]>([]);
-    const [shouldAnimateCells, setShouldAnimateCells] = useState(false);
-    const [animationToken, setAnimationToken] = useState(0);
-
-    const shouldRenderBaseBeforeAnimation = useMemo(() => {
-        const renderedYear = yearData?.year ?? null;
-        if (!renderedYear) {
-            return false;
-        }
-
-        if (prefersReducedMotion()) {
-            return false;
-        }
-
-        return renderedYearRef.current === null || renderedYearRef.current !== renderedYear;
-    }, [yearData?.year]);
-
     const activityMap = useMemo(() => {
         const map = new Map<string, { pages: number; read: number }>();
         let maxActivity = 0;
@@ -135,51 +118,6 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
         };
     }, [selectedYear, yearData]);
 
-    useLayoutEffect(() => {
-        const renderedYear = yearData?.year ?? null;
-        if (!renderedYear) {
-            return;
-        }
-
-        animationTimeoutIdsRef.current.forEach((timeoutId) => {
-            window.clearTimeout(timeoutId);
-        });
-        animationTimeoutIdsRef.current = [];
-
-        const isInitialRender = renderedYearRef.current === null;
-        const yearChanged =
-            renderedYearRef.current !== null && renderedYearRef.current !== renderedYear;
-
-        const shouldAnimate = (isInitialRender || yearChanged) && !prefersReducedMotion();
-
-        renderedYearRef.current = renderedYear;
-
-        if (!shouldAnimate) {
-            setShouldAnimateCells(false);
-            return;
-        }
-
-        setAnimationToken((current) => current + 1);
-        setShouldAnimateCells(true);
-
-        const timeoutId = window.setTimeout(() => {
-            setShouldAnimateCells(false);
-        }, 720);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [yearData?.year]);
-
-    useEffect(() => {
-        return () => {
-            animationTimeoutIdsRef.current.forEach((timeoutId) => {
-                window.clearTimeout(timeoutId);
-            });
-            animationTimeoutIdsRef.current = [];
-        };
-    }, []);
-
     const cellsByKey = useMemo(() => {
         const cellMap = new Map<string, { classes: string; tooltip: string; level: number }>();
         if (!selectedYear) {
@@ -205,6 +143,54 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
 
         return cellMap;
     }, [activityMap, selectedYear]);
+
+    useLayoutEffect(() => {
+        const grid = heatmapGridRef.current;
+        if (!grid || prefersReducedMotion()) {
+            return;
+        }
+
+        const timeoutIds: number[] = [];
+        const cells = grid.querySelectorAll<HTMLElement>('.activity-cell');
+
+        cells.forEach((element) => {
+            const weekStr = element.dataset.week;
+            const dayStr = element.dataset.day;
+            if (!weekStr || !dayStr) return;
+
+            const cellData = cellsByKey.get(`${weekStr}-${dayStr}`);
+            if (!cellData || cellData.level === 0) return;
+
+            element.getAnimations().forEach((a) => a.cancel());
+            HEATMAP_ALL_COLOR_CLASSES.forEach((c) => element.classList.remove(c));
+            HEATMAP_COLOR_CLASSES[0].forEach((c) => element.classList.add(c));
+
+            const level = cellData.level;
+            const timeoutId = window.setTimeout(() => {
+                if (!element.isConnected) return;
+
+                HEATMAP_ALL_COLOR_CLASSES.forEach((c) => element.classList.remove(c));
+                HEATMAP_COLOR_CLASSES[level].forEach((c) => element.classList.add(c));
+
+                element.getAnimations().forEach((a) => a.cancel());
+                element.animate(
+                    [
+                        { transform: 'scale(0.62)', filter: 'saturate(0.88) brightness(0.99)' },
+                        { transform: 'scale(1.2)', filter: 'saturate(1.22) brightness(1.04)', offset: 0.52 },
+                        { transform: 'scale(0.97)', filter: 'saturate(1.03) brightness(1.01)', offset: 0.78 },
+                        { transform: 'scale(1)', filter: 'saturate(1) brightness(1)' },
+                    ],
+                    { duration: 280, easing: 'cubic-bezier(0.2, 0.9, 0.24, 1.1)', fill: 'both' },
+                );
+            }, heatmapCellAnimationDelay());
+
+            timeoutIds.push(timeoutId);
+        });
+
+        return () => {
+            timeoutIds.forEach((id) => window.clearTimeout(id));
+        };
+    }, [cellsByKey, animationSeed]);
 
     return (
         <div className="bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
@@ -256,11 +242,7 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
                                     {Array.from({ length: 7 }, (_, day) => {
                                         const cell = cellsByKey.get(`${week}-${day}`);
                                         const colorClasses =
-                                            cell &&
-                                            cell.level > 0 &&
-                                            (shouldAnimateCells || shouldRenderBaseBeforeAnimation)
-                                                ? HEATMAP_COLOR_CLASSES[0].join(' ')
-                                                : (cell?.classes ?? 'bg-gray-100 dark:bg-dark-800');
+                                            cell?.classes ?? 'bg-gray-100 dark:bg-dark-800';
                                         return (
                                             <div
                                                 key={`${week}-${day}`}
@@ -273,132 +255,6 @@ export function HeatmapSection({ selectedYear, yearData }: HeatmapSectionProps) 
                                                             element,
                                                             cell.tooltip,
                                                         );
-
-                                                        if (shouldAnimateCells && cell.level > 0) {
-                                                            const tokenKey = String(animationToken);
-                                                            if (
-                                                                element.dataset.animationToken !==
-                                                                tokenKey
-                                                            ) {
-                                                                element.dataset.animationToken =
-                                                                    tokenKey;
-
-                                                                const previousTimeoutId =
-                                                                    Number.parseInt(
-                                                                        element.dataset
-                                                                            .animationTimeoutId ||
-                                                                            '',
-                                                                        10,
-                                                                    );
-                                                                if (
-                                                                    Number.isFinite(
-                                                                        previousTimeoutId,
-                                                                    )
-                                                                ) {
-                                                                    window.clearTimeout(
-                                                                        previousTimeoutId,
-                                                                    );
-                                                                }
-
-                                                                element
-                                                                    .getAnimations()
-                                                                    .forEach((animation) =>
-                                                                        animation.cancel(),
-                                                                    );
-
-                                                                HEATMAP_ALL_COLOR_CLASSES.forEach(
-                                                                    (className) => {
-                                                                        element.classList.remove(
-                                                                            className,
-                                                                        );
-                                                                    },
-                                                                );
-                                                                HEATMAP_COLOR_CLASSES[0].forEach(
-                                                                    (className) => {
-                                                                        element.classList.add(
-                                                                            className,
-                                                                        );
-                                                                    },
-                                                                );
-
-                                                                const timeoutId = window.setTimeout(
-                                                                    () => {
-                                                                        if (!element.isConnected) {
-                                                                            return;
-                                                                        }
-
-                                                                        if (
-                                                                            element.dataset
-                                                                                .animationToken !==
-                                                                            tokenKey
-                                                                        ) {
-                                                                            return;
-                                                                        }
-
-                                                                        HEATMAP_ALL_COLOR_CLASSES.forEach(
-                                                                            (className) => {
-                                                                                element.classList.remove(
-                                                                                    className,
-                                                                                );
-                                                                            },
-                                                                        );
-
-                                                                        HEATMAP_COLOR_CLASSES[
-                                                                            cell.level
-                                                                        ].forEach((className) => {
-                                                                            element.classList.add(
-                                                                                className,
-                                                                            );
-                                                                        });
-
-                                                                        element
-                                                                            .getAnimations()
-                                                                            .forEach((animation) =>
-                                                                                animation.cancel(),
-                                                                            );
-
-                                                                        element.animate(
-                                                                            [
-                                                                                {
-                                                                                    transform:
-                                                                                        'scale(0.62)',
-                                                                                    filter: 'saturate(0.88) brightness(0.99)',
-                                                                                },
-                                                                                {
-                                                                                    transform:
-                                                                                        'scale(1.2)',
-                                                                                    filter: 'saturate(1.22) brightness(1.04)',
-                                                                                    offset: 0.52,
-                                                                                },
-                                                                                {
-                                                                                    transform:
-                                                                                        'scale(0.97)',
-                                                                                    filter: 'saturate(1.03) brightness(1.01)',
-                                                                                    offset: 0.78,
-                                                                                },
-                                                                                {
-                                                                                    transform:
-                                                                                        'scale(1)',
-                                                                                    filter: 'saturate(1) brightness(1)',
-                                                                                },
-                                                                            ],
-                                                                            {
-                                                                                duration: 280,
-                                                                                easing: 'cubic-bezier(0.2, 0.9, 0.24, 1.1)',
-                                                                                fill: 'both',
-                                                                            },
-                                                                        );
-                                                                    },
-                                                                    heatmapCellAnimationDelay(),
-                                                                );
-
-                                                                animationTimeoutIdsRef.current.push(
-                                                                    timeoutId,
-                                                                );
-                                                                element.dataset.animationTimeoutId =
-                                                                    String(timeoutId);
-                                                            }
-                                                        }
                                                     }
                                                 }}
                                             ></div>

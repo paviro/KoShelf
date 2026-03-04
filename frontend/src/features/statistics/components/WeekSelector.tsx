@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { LuCalendarDays, LuChevronDown, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
 import type { StatisticsIndexWeek } from '../api/statistics-data';
@@ -29,15 +29,17 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
         return weeks.find((week) => week.week_key === selectedWeekKey) ?? weeks[0];
     }, [selectedWeekKey, weeks]);
 
+    const [prevSelectedWeek, setPrevSelectedWeek] = useState(selectedWeek);
     const [selectedYear, setSelectedYear] = useState<string | null>(
         selectedWeek ? selectedWeek.start_date.substring(0, 4) : (yearOrder[0] ?? null),
     );
 
-    useEffect(() => {
+    if (selectedWeek !== prevSelectedWeek) {
+        setPrevSelectedWeek(selectedWeek);
         if (selectedWeek) {
             setSelectedYear(selectedWeek.start_date.substring(0, 4));
         }
-    }, [selectedWeek]);
+    }
 
     useClickOutside(wrapperRef, () => setOpen(false), open);
 

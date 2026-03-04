@@ -26,31 +26,29 @@ export function ModalShell({
     const [isVisible, setIsVisible] = useState(false);
     const backdropRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-        let timeoutId: number | null = null;
-
+    const [prevOpen, setPrevOpen] = useState(false);
+    if (open !== prevOpen) {
+        setPrevOpen(open);
         if (open) {
             setIsMounted(true);
         } else if (isMounted) {
             setIsVisible(false);
-            timeoutId = window.setTimeout(() => {
+        }
+    }
+
+    useEffect(() => {
+        if (!open && isMounted) {
+            const timeoutId = window.setTimeout(() => {
                 setIsMounted(false);
             }, MODAL_TRANSITION_DURATION_MS);
+            return () => window.clearTimeout(timeoutId);
         }
-
-        return () => {
-            if (timeoutId !== null) {
-                window.clearTimeout(timeoutId);
-            }
-        };
-    }, [isMounted, open]);
+    }, [open, isMounted]);
 
     useEffect(() => {
         if (!open || !isMounted) {
             return;
         }
-
-        setIsVisible(false);
 
         if (backdropRef.current) {
             void backdropRef.current.offsetHeight;

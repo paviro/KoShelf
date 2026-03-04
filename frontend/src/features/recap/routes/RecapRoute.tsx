@@ -44,7 +44,7 @@ export function RecapRoute() {
 
     const requestedYear = parseRecapYearParam(params.year);
     const [sortNewestFirst, setSortNewestFirst] = useState(() => readRecapSortNewest());
-    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [shareModalOpenKey, setShareModalOpenKey] = useState<string | null>(null);
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -52,9 +52,12 @@ export function RecapRoute() {
     });
 
     const recapIndexQuery = useRecapIndexQuery(scope);
-    const availableYears = recapIndexQuery.data?.available_years ?? [];
+    const availableYears = useMemo(() => recapIndexQuery.data?.available_years ?? [], [recapIndexQuery.data?.available_years]);
     const latestYear = resolveLatestYear(availableYears, recapIndexQuery.data?.latest_year);
     const yearForQuery = requestedYear ?? latestYear;
+
+    const shareResetKey = `${scope}:${yearForQuery}`;
+    const shareModalOpen = shareModalOpenKey === shareResetKey;
 
     const recapYearQuery = useRecapYearQuery(scope, yearForQuery);
     const recapYear = recapYearQuery.data ?? null;
@@ -72,15 +75,11 @@ export function RecapRoute() {
         [orderedMonths],
     );
 
-    useRecapCoverTiltEffect([scope, yearForQuery ?? 'none', sortNewestFirst, visibleItemsKey]);
+    useRecapCoverTiltEffect(`${scope}:${yearForQuery ?? 'none'}:${sortNewestFirst}:${visibleItemsKey}`);
 
     useEffect(() => {
         persistRecapScope(scope);
     }, [scope]);
-
-    useEffect(() => {
-        setShareModalOpen(false);
-    }, [scope, yearForQuery]);
 
     useEffect(() => {
         if (!siteQuery.data?.title) {
@@ -195,7 +194,7 @@ export function RecapRoute() {
                             });
                         }}
                         shareEnabled={Boolean(shareAssets)}
-                        onShareClick={() => setShareModalOpen(true)}
+                        onShareClick={() => setShareModalOpenKey(shareResetKey)}
                     />
                 }
             />
@@ -251,7 +250,7 @@ export function RecapRoute() {
 
             <RecapShareModal
                 open={shareModalOpen}
-                onClose={() => setShareModalOpen(false)}
+                onClose={() => setShareModalOpenKey(null)}
                 year={recapYear?.year ?? yearForQuery ?? new Date().getFullYear()}
                 shareAssets={shareAssets}
             />

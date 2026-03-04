@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import type { DependencyList } from 'react';
 
 import { api } from '../../../shared/api';
 import type { LibraryDetailPreviewResponse } from '../api/library-data';
@@ -44,15 +43,6 @@ function supportsHoverPreview(): boolean {
     }
 
     return true;
-}
-
-function emptyPreviewData(): PreviewCardData {
-    return {
-        title: '',
-        author: '',
-        series: '',
-        description: '',
-    };
 }
 
 class HoverPreviewManager {
@@ -716,11 +706,11 @@ class HoverPreviewManager {
     }
 }
 
-export function useLibraryHoverPreviewEffect(dependencies: DependencyList): void {
+export function useLibraryHoverPreviewEffect(refreshKey: string): void {
     const detailsCacheRef = useRef<Map<string, PreviewCardData>>(new Map());
 
     useEffect(() => {
         const manager = new HoverPreviewManager(detailsCacheRef.current);
         return manager.init('.book-card');
-    }, dependencies);
+    }, [refreshKey]);
 }

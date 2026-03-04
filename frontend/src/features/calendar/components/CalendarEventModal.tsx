@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { LuBookOpen, LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,11 +17,14 @@ type CalendarEventModalProps = {
 
 export function CalendarEventModal({ open, event, item, onClose }: CalendarEventModalProps) {
     const [coverFailed, setCoverFailed] = useState(false);
+    const coverKey = `${event?.item_id}\0${item?.item_cover}`;
+    const [prevCoverKey, setPrevCoverKey] = useState(coverKey);
     const navigate = useNavigate();
 
-    useEffect(() => {
+    if (prevCoverKey !== coverKey) {
+        setPrevCoverKey(coverKey);
         setCoverFailed(false);
-    }, [event?.item_id, item?.item_cover]);
+    }
 
     if (!event) {
         return null;

@@ -35,37 +35,34 @@ export function WeeklyStatsSection({
         'transition-in',
     );
 
-    useEffect(() => {
-        let showTimer: number | null = null;
-        let hideTimer: number | null = null;
-        let transitionTimer: number | null = null;
-
+    const [prevLoading, setPrevLoading] = useState(loading);
+    if (loading !== prevLoading) {
+        setPrevLoading(loading);
         if (loading) {
             setTransitionState('transition-out');
             setLoadingVisible(true);
-            showTimer = window.setTimeout(() => {
-                setLoadingActive(true);
-            }, 10);
         } else {
             setLoadingActive(false);
-            hideTimer = window.setTimeout(() => {
-                setLoadingVisible(false);
-            }, 250);
-            transitionTimer = window.setTimeout(() => {
-                setTransitionState('transition-in');
-            }, 50);
+        }
+    }
+
+    useEffect(() => {
+        if (loading) {
+            const showTimer = window.setTimeout(() => {
+                setLoadingActive(true);
+            }, 10);
+            return () => window.clearTimeout(showTimer);
         }
 
+        const hideTimer = window.setTimeout(() => {
+            setLoadingVisible(false);
+        }, 250);
+        const transitionTimer = window.setTimeout(() => {
+            setTransitionState('transition-in');
+        }, 50);
         return () => {
-            if (showTimer !== null) {
-                window.clearTimeout(showTimer);
-            }
-            if (hideTimer !== null) {
-                window.clearTimeout(hideTimer);
-            }
-            if (transitionTimer !== null) {
-                window.clearTimeout(transitionTimer);
-            }
+            window.clearTimeout(hideTimer);
+            window.clearTimeout(transitionTimer);
         };
     }, [loading]);
 
