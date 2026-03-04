@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
 use std::collections::{HashMap, HashSet};
@@ -8,7 +8,15 @@ use std::time::Instant;
 use crate::koreader::{LuaParser, calculate_partial_md5};
 use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
-use crate::utils::generate_book_id;
+
+fn normalize_md5(candidate: &str) -> Option<String> {
+    let normalized = candidate.trim().to_lowercase();
+    if normalized.len() == 32 && normalized.chars().all(|c| c.is_ascii_hexdigit()) {
+        Some(normalized)
+    } else {
+        None
+    }
+}
 
 /// Configuration for where to find KOReader metadata
 #[derive(Clone, Debug, Default)]
@@ -293,48 +301,87 @@ impl LibraryScanner {
         // 1. Prefer MD5 from metadata (stable even if file is updated)
         // 2. Use calculated MD5 from hashdocsettings lookup if available
         // 3. Fall back to calculating MD5 for books without metadata
-        if let Some(metadata) = koreader_metadata {
-            if let Some(md5) = metadata.partial_md5_checksum.as_ref() {
-                library_md5s.insert(md5.clone());
-            } else if let Some(md5) = book_md5 {
-                library_md5s.insert(md5.clone());
-            } else if let Ok(md5) = calculate_partial_md5(path) {
-                library_md5s.insert(md5);
+        if let Some(metadata_md5) = koreader_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.partial_md5_checksum.as_deref())
+        {
+            if let Some(normalized) = normalize_md5(metadata_md5) {
+                library_md5s.insert(normalized);
+                return;
             }
-        } else if let Some(md5) = book_md5 {
-            library_md5s.insert(md5.clone());
-        } else if let Ok(md5) = calculate_partial_md5(path) {
-            library_md5s.insert(md5);
+
+            warn!(
+                "Ignoring invalid KOReader partial_md5_checksum '{}' for {:?}; expected 32 hex chars",
+                metadata_md5, path
+            );
+        }
+
+        if let Some(calculated_md5) = book_md5 {
+            if let Some(normalized) = normalize_md5(calculated_md5) {
+                library_md5s.insert(normalized);
+                return;
+            }
+
+            warn!(
+                "Ignoring invalid precomputed partial MD5 '{}' for {:?}; expected 32 hex chars",
+                calculated_md5, path
+            );
+        }
+
+        if let Ok(derived_md5) = calculate_partial_md5(path) {
+            if let Some(normalized) = normalize_md5(&derived_md5) {
+                library_md5s.insert(normalized);
+            } else {
+                warn!(
+                    "Ignoring invalid derived partial MD5 '{}' for {:?}; expected 32 hex chars",
+                    derived_md5, path
+                );
+            }
         }
     }
 
     fn canonical_item_id(
         &self,
         path: &std::path::Path,
-        title: &str,
         koreader_metadata: Option<&KoReaderMetadata>,
         book_md5: Option<&str>,
-    ) -> String {
-        if let Some(md5) =
+    ) -> Result<String> {
+        if let Some(metadata_md5) =
             koreader_metadata.and_then(|metadata| metadata.partial_md5_checksum.as_deref())
         {
-            return md5.to_lowercase();
-        }
-
-        if let Some(md5) = book_md5 {
-            return md5.to_lowercase();
-        }
-
-        match calculate_partial_md5(path) {
-            Ok(md5) => md5.to_lowercase(),
-            Err(error) => {
-                warn!(
-                    "Failed to derive canonical md5 ID for {:?}: {}. Falling back to title ID.",
-                    path, error
-                );
-                generate_book_id(title)
+            if let Some(normalized) = normalize_md5(metadata_md5) {
+                return Ok(normalized);
             }
+
+            warn!(
+                "Invalid KOReader partial_md5_checksum '{}' for {:?}; falling back to file-derived MD5",
+                metadata_md5, path
+            );
         }
+
+        if let Some(calculated_md5) = book_md5 {
+            if let Some(normalized) = normalize_md5(calculated_md5) {
+                return Ok(normalized);
+            }
+
+            warn!(
+                "Invalid precomputed partial MD5 '{}' for {:?}; recalculating from file",
+                calculated_md5, path
+            );
+        }
+
+        let derived_md5 = calculate_partial_md5(path)
+            .with_context(|| format!("Failed to derive canonical md5 ID for {:?}", path))?;
+
+        if let Some(normalized) = normalize_md5(&derived_md5) {
+            return Ok(normalized);
+        }
+
+        bail!(
+            "Derived canonical md5 ID '{}' for {:?} is invalid; expected 32 hex characters",
+            derived_md5,
+            path
+        );
     }
 }
 
@@ -389,10 +436,9 @@ pub async fn scan_library(
             scanner.collect_md5_for_item(&mut library_md5s, path, &koreader_metadata, &book_md5);
             let item_id = scanner.canonical_item_id(
                 path,
-                &book_info.title,
                 koreader_metadata.as_ref(),
                 book_md5.as_deref(),
-            );
+            )?;
 
             let book = LibraryItem {
                 id: item_id,
