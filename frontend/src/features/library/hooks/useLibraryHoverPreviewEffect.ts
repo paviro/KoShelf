@@ -106,7 +106,10 @@ class HoverPreviewManager {
 
             const handleMouseLeave = (event: MouseEvent): void => {
                 const relatedTarget = event.relatedTarget;
-                if (relatedTarget instanceof Node && card.contains(relatedTarget)) {
+                if (
+                    relatedTarget instanceof Node &&
+                    card.contains(relatedTarget)
+                ) {
                     return;
                 }
 
@@ -124,7 +127,10 @@ class HoverPreviewManager {
 
             const handleFocusOut = (event: FocusEvent): void => {
                 const relatedTarget = event.relatedTarget;
-                if (relatedTarget instanceof Node && card.contains(relatedTarget)) {
+                if (
+                    relatedTarget instanceof Node &&
+                    card.contains(relatedTarget)
+                ) {
                     return;
                 }
 
@@ -153,7 +159,10 @@ class HoverPreviewManager {
             });
         });
 
-        window.addEventListener('scroll', this.handleScroll, { passive: true, capture: true });
+        window.addEventListener('scroll', this.handleScroll, {
+            passive: true,
+            capture: true,
+        });
         window.addEventListener('resize', this.handleResize, { passive: true });
         document.addEventListener('keydown', this.handleEscapeKey);
 
@@ -281,7 +290,11 @@ class HoverPreviewManager {
         this.targetCard = card;
 
         const data = await this.loadPreviewData(card);
-        if (this.targetCard !== card || !this.previewElement || this.isUserScrolling) {
+        if (
+            this.targetCard !== card ||
+            !this.previewElement ||
+            this.isUserScrolling
+        ) {
             return;
         }
 
@@ -325,15 +338,22 @@ class HoverPreviewManager {
             return;
         }
 
-        const titleEl = this.previewElement.querySelector<HTMLElement>('[data-preview-title]');
-        const authorEl = this.previewElement.querySelector<HTMLElement>('[data-preview-author]');
-        const seriesEl = this.previewElement.querySelector<HTMLElement>('[data-preview-series]');
+        const titleEl = this.previewElement.querySelector<HTMLElement>(
+            '[data-preview-title]',
+        );
+        const authorEl = this.previewElement.querySelector<HTMLElement>(
+            '[data-preview-author]',
+        );
+        const seriesEl = this.previewElement.querySelector<HTMLElement>(
+            '[data-preview-series]',
+        );
         const descriptionEl = this.previewElement.querySelector<HTMLElement>(
             '[data-preview-description]',
         );
-        const descriptionWrapperEl = this.previewElement.querySelector<HTMLElement>(
-            '[data-preview-description-wrapper]',
-        );
+        const descriptionWrapperEl =
+            this.previewElement.querySelector<HTMLElement>(
+                '[data-preview-description-wrapper]',
+            );
 
         if (titleEl) {
             titleEl.textContent = data.title;
@@ -366,9 +386,10 @@ class HoverPreviewManager {
         const descriptionEl = this.previewElement.querySelector<HTMLElement>(
             '[data-preview-description]',
         );
-        const descriptionWrapperEl = this.previewElement.querySelector<HTMLElement>(
-            '[data-preview-description-wrapper]',
-        );
+        const descriptionWrapperEl =
+            this.previewElement.querySelector<HTMLElement>(
+                '[data-preview-description-wrapper]',
+            );
 
         if (!descriptionEl || !descriptionWrapperEl) {
             return;
@@ -388,11 +409,15 @@ class HoverPreviewManager {
         };
     }
 
-    private async loadPreviewData(card: LibraryCardElement): Promise<PreviewCardData> {
+    private async loadPreviewData(
+        card: LibraryCardElement,
+    ): Promise<PreviewCardData> {
         const fallback = this.fallbackDataFromCard(card);
 
         const itemId = card.dataset.libraryItemId;
-        const collection = card.dataset.libraryCollection as LibraryCollection | undefined;
+        const collection = card.dataset.libraryCollection as
+            | LibraryCollection
+            | undefined;
 
         if (!itemId || (collection !== 'books' && collection !== 'comics')) {
             return fallback;
@@ -407,7 +432,9 @@ class HoverPreviewManager {
             const payload =
                 collection === 'books'
                     ? await api.books.get<LibraryDetailPreviewResponse>(itemId)
-                    : await api.comics.get<LibraryDetailPreviewResponse>(itemId);
+                    : await api.comics.get<LibraryDetailPreviewResponse>(
+                          itemId,
+                      );
 
             if (!payload?.item) {
                 return fallback;
@@ -433,7 +460,10 @@ class HoverPreviewManager {
         return this.clean(authors.filter(Boolean).join(', '));
     }
 
-    private positionPreview(card: LibraryCardElement, preview: HTMLElement): void {
+    private positionPreview(
+        card: LibraryCardElement,
+        preview: HTMLElement,
+    ): void {
         const cardRect = card.getBoundingClientRect();
 
         preview.style.maxWidth = 'min(360px, calc(100vw - 20px))';
@@ -460,27 +490,37 @@ class HoverPreviewManager {
         const neededHeight = previewRect.height + PREVIEW_OFFSET_PX;
         const neededWidth = previewRect.width + PREVIEW_OFFSET_PX;
 
-        const placementScores: Array<{ placement: Placement; score: number }> = [
-            {
-                placement: 'right',
-                score: space.right >= neededWidth ? 10000 + space.right : space.right - neededWidth,
-            },
-            {
-                placement: 'left',
-                score: space.left >= neededWidth ? 10000 + space.left : space.left - neededWidth,
-            },
-            {
-                placement: 'top',
-                score: space.top >= neededHeight ? 10000 + space.top : space.top - neededHeight,
-            },
-            {
-                placement: 'bottom',
-                score:
-                    space.bottom >= neededHeight
-                        ? 10000 + space.bottom
-                        : space.bottom - neededHeight,
-            },
-        ];
+        const placementScores: Array<{ placement: Placement; score: number }> =
+            [
+                {
+                    placement: 'right',
+                    score:
+                        space.right >= neededWidth
+                            ? 10000 + space.right
+                            : space.right - neededWidth,
+                },
+                {
+                    placement: 'left',
+                    score:
+                        space.left >= neededWidth
+                            ? 10000 + space.left
+                            : space.left - neededWidth,
+                },
+                {
+                    placement: 'top',
+                    score:
+                        space.top >= neededHeight
+                            ? 10000 + space.top
+                            : space.top - neededHeight,
+                },
+                {
+                    placement: 'bottom',
+                    score:
+                        space.bottom >= neededHeight
+                            ? 10000 + space.bottom
+                            : space.bottom - neededHeight,
+                },
+            ];
 
         placementScores.sort((left, right) => right.score - left.score);
         const placement = placementScores[0]?.placement ?? 'right';
@@ -520,7 +560,9 @@ class HoverPreviewManager {
         preview.style.top = `${top}px`;
         preview.style.left = `${left}px`;
 
-        const arrow = preview.querySelector<HTMLElement>('[data-preview-arrow]');
+        const arrow = preview.querySelector<HTMLElement>(
+            '[data-preview-arrow]',
+        );
         if (arrow) {
             const arrowClamp = 14;
             const arrowX = Math.min(

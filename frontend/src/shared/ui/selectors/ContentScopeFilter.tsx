@@ -29,7 +29,11 @@ function scopeLabel(scope: ScopeValue): string {
     return translation.get('filter.all');
 }
 
-export function ContentScopeFilter({ visible, value, onChange }: ContentScopeFilterProps) {
+export function ContentScopeFilter({
+    visible,
+    value,
+    onChange,
+}: ContentScopeFilterProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
 
@@ -53,7 +57,9 @@ export function ContentScopeFilter({ visible, value, onChange }: ContentScopeFil
                     className={`sm:hidden w-5 h-5 ${value === 'all' ? 'text-gray-600 dark:text-gray-300' : 'text-primary-500'}`}
                     aria-hidden="true"
                 />
-                <span className="hidden sm:inline font-medium">{scopeLabel(value)}</span>
+                <span className="hidden sm:inline font-medium">
+                    {scopeLabel(value)}
+                </span>
                 <LuChevronDown
                     className="hidden sm:block w-4 h-4 text-primary-400"
                     aria-hidden="true"

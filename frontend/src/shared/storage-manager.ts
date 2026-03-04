@@ -31,7 +31,10 @@ export class StorageManager {
         writeToStorage(localStorage, this.PREFIX + key, value);
     }
 
-    static getSessionByKey<T>(key: string, defaultValue: T | null = null): T | null {
+    static getSessionByKey<T>(
+        key: string,
+        defaultValue: T | null = null,
+    ): T | null {
         return readFromStorage(sessionStorage, this.PREFIX + key, defaultValue);
     }
 

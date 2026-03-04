@@ -87,7 +87,10 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
     return items;
 }
 
-export function isActivePath(currentPath: string, routeId: MainRouteId): boolean {
+export function isActivePath(
+    currentPath: string,
+    routeId: MainRouteId,
+): boolean {
     const currentRoute = matchRoute(currentPath);
     if (!currentRoute.routeId) {
         return false;

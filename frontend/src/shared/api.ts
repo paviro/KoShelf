@@ -39,7 +39,9 @@ export function getServerMode(): ServerMode {
 
     let stored: ServerMode | null = null;
     try {
-        stored = parseStoredServerMode(localStorage.getItem(SERVER_MODE_STORAGE_KEY));
+        stored = parseStoredServerMode(
+            localStorage.getItem(SERVER_MODE_STORAGE_KEY),
+        );
     } catch {
         stored = null;
     }
@@ -75,7 +77,11 @@ function projectScopedPayload(payload: unknown, scope: ScopeValue): unknown {
     const root = payload as Record<string, unknown>;
     const scopesValue = root.scopes;
 
-    if (!scopesValue || typeof scopesValue !== 'object' || Array.isArray(scopesValue)) {
+    if (
+        !scopesValue ||
+        typeof scopesValue !== 'object' ||
+        Array.isArray(scopesValue)
+    ) {
         return payload;
     }
 
@@ -114,7 +120,10 @@ async function request<T>(target: ContractRoute): Promise<T> {
     return (await fetchJson(url)) as T;
 }
 
-async function requestScoped<T>(target: ContractRoute, scope: ScopeValue | undefined): Promise<T> {
+async function requestScoped<T>(
+    target: ContractRoute,
+    scope: ScopeValue | undefined,
+): Promise<T> {
     const selectedScope = normalizeScope(scope);
 
     if (isServeMode()) {
@@ -144,7 +153,9 @@ export const api = {
         },
 
         async get<T>(id: string): Promise<T> {
-            return request<T>(route(`/api/books/${id}`, `/data/books/${id}.json`));
+            return request<T>(
+                route(`/api/books/${id}`, `/data/books/${id}.json`),
+            );
         },
     },
 
@@ -154,13 +165,18 @@ export const api = {
         },
 
         async get<T>(id: string): Promise<T> {
-            return request<T>(route(`/api/comics/${id}`, `/data/comics/${id}.json`));
+            return request<T>(
+                route(`/api/comics/${id}`, `/data/comics/${id}.json`),
+            );
         },
     },
 
     statistics: {
         async get<T>(scope?: ScopeValue): Promise<T> {
-            return requestScoped<T>(route('/api/statistics', '/data/statistics/index.json'), scope);
+            return requestScoped<T>(
+                route('/api/statistics', '/data/statistics/index.json'),
+                scope,
+            );
         },
 
         weeks: {
@@ -178,7 +194,10 @@ export const api = {
         years: {
             async get<T>(year: number, scope?: ScopeValue): Promise<T> {
                 return requestScoped<T>(
-                    route(`/api/statistics/years/${year}`, `/data/statistics/years/${year}.json`),
+                    route(
+                        `/api/statistics/years/${year}`,
+                        `/data/statistics/years/${year}.json`,
+                    ),
                     scope,
                 );
             },
@@ -188,7 +207,9 @@ export const api = {
     calendar: {
         months: {
             async list<T>(): Promise<T> {
-                return request<T>(route('/api/calendar/months', '/data/calendar/months.json'));
+                return request<T>(
+                    route('/api/calendar/months', '/data/calendar/months.json'),
+                );
             },
 
             async get<T>(monthKey: string): Promise<T> {
@@ -204,13 +225,19 @@ export const api = {
 
     recap: {
         async get<T>(scope?: ScopeValue): Promise<T> {
-            return requestScoped<T>(route('/api/recap', '/data/recap/index.json'), scope);
+            return requestScoped<T>(
+                route('/api/recap', '/data/recap/index.json'),
+                scope,
+            );
         },
 
         years: {
             async get<T>(year: number, scope?: ScopeValue): Promise<T> {
                 return requestScoped<T>(
-                    route(`/api/recap/years/${year}`, `/data/recap/years/${year}.json`),
+                    route(
+                        `/api/recap/years/${year}`,
+                        `/data/recap/years/${year}.json`,
+                    ),
                     scope,
                 );
             },

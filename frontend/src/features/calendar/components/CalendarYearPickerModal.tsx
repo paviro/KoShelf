@@ -35,7 +35,9 @@ export function CalendarYearPickerModal({
                         type="button"
                         className="p-2 rounded-lg border border-gray-200/70 dark:border-dark-700/60 bg-gray-100/60 dark:bg-dark-800/40 hover:bg-gray-200/60 dark:hover:bg-dark-700/60 transition-colors"
                         onClick={onPreviousRange}
-                        aria-label={translation.get('previous-month.aria-label')}
+                        aria-label={translation.get(
+                            'previous-month.aria-label',
+                        )}
                     >
                         <LuChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                     </button>
@@ -52,7 +54,10 @@ export function CalendarYearPickerModal({
                     </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: 9 }, (_, index) => rangeStartYear + index).map((year) => {
+                    {Array.from(
+                        { length: 9 },
+                        (_, index) => rangeStartYear + index,
+                    ).map((year) => {
                         const active = year === selectedYear;
                         return (
                             <button

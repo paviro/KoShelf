@@ -1,10 +1,16 @@
 import { LuClock3, LuFileText } from 'react-icons/lu';
 
-import type { StatisticsIndexWeek, StatisticsWeekResponse } from '../api/statistics-data';
+import type {
+    StatisticsIndexWeek,
+    StatisticsWeekResponse,
+} from '../api/statistics-data';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
-import { formatSessionDuration, type SectionName } from '../model/statistics-model';
+import {
+    formatSessionDuration,
+    type SectionName,
+} from '../model/statistics-model';
 import { WeekSelector } from '../components/WeekSelector';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
@@ -55,15 +61,15 @@ export function WeeklyStatsSection({
                     />
                 </div>
 
-                <div
-                    className="week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
-                >
+                <div className="week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                     <MetricCard
                         icon={LuClock3}
                         iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                         iconClassName="text-primary-600 dark:text-white"
                         valueId="weekReadTime"
-                        value={DataFormatter.formatReadTime(weeklyStats.read_time)}
+                        value={DataFormatter.formatReadTime(
+                            weeklyStats.read_time,
+                        )}
                         label={translation.get('total-read-time')}
                     />
 
@@ -72,7 +78,9 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                         iconClassName="text-indigo-600 dark:text-white"
                         valueId="weekPagesRead"
-                        value={DataFormatter.formatCount(weeklyStats.pages_read)}
+                        value={DataFormatter.formatCount(
+                            weeklyStats.pages_read,
+                        )}
                         label={translation.get('total-pages-read')}
                     />
 
@@ -81,7 +89,9 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
                         iconClassName="text-amber-600 dark:text-white"
                         valueId="weekAvgPagesPerDay"
-                        value={DataFormatter.formatAvgPages(weeklyStats.avg_pages_per_day)}
+                        value={DataFormatter.formatAvgPages(
+                            weeklyStats.avg_pages_per_day,
+                        )}
                         label={translation.get('average-pages-day')}
                     />
 
@@ -90,7 +100,9 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                         iconClassName="text-green-600 dark:text-white"
                         valueId="weekAvgReadTimePerDay"
-                        value={DataFormatter.formatMinutes(weeklyStats.avg_read_time_per_day / 60)}
+                        value={DataFormatter.formatMinutes(
+                            weeklyStats.avg_read_time_per_day / 60,
+                        )}
                         label={translation.get('average-time-day')}
                     />
 
@@ -99,7 +111,9 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                         iconClassName="text-pink-600 dark:text-white"
                         valueId="weekLongestSession"
-                        value={formatSessionDuration(weeklyStats.longest_session_duration)}
+                        value={formatSessionDuration(
+                            weeklyStats.longest_session_duration,
+                        )}
                         label={translation.get('session.longest')}
                     />
 
@@ -108,7 +122,9 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                         iconClassName="text-purple-600 dark:text-white"
                         valueId="weekAverageSession"
-                        value={formatSessionDuration(weeklyStats.average_session_duration)}
+                        value={formatSessionDuration(
+                            weeklyStats.average_session_duration,
+                        )}
                         label={translation.get('session.average')}
                     />
                 </div>

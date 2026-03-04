@@ -3,7 +3,10 @@ import { useState } from 'react';
 import type { RouteId } from '../../../app/routes/route-registry';
 import { patchRouteState, readRouteState } from './route-state-storage';
 
-export type SectionVisibilityState<SectionKey extends string> = Record<SectionKey, boolean>;
+export type SectionVisibilityState<SectionKey extends string> = Record<
+    SectionKey,
+    boolean
+>;
 
 type SectionVisibilityOptions<SectionKey extends string> = {
     routeId: RouteId;

@@ -66,7 +66,9 @@ function initTilt(options: TiltOptions): Cleanup {
     }
 
     const opts = { ...DEFAULT_OPTIONS, ...options };
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(opts.selector));
+    const elements = Array.from(
+        document.querySelectorAll<HTMLElement>(opts.selector),
+    );
     const cleanupHandlers: Cleanup[] = [];
 
     elements.forEach((element) => {
@@ -80,16 +82,22 @@ function initTilt(options: TiltOptions): Cleanup {
         const overlayElements: HTMLElement[] = [];
 
         if (opts.enableOverlays) {
-            overlayContainer = element.querySelector<HTMLElement>(opts.overlayContainer);
+            overlayContainer = element.querySelector<HTMLElement>(
+                opts.overlayContainer,
+            );
             if (overlayContainer) {
                 overlayContainer.style.transformStyle = 'preserve-3d';
                 overlayContainer.style.backfaceVisibility = 'hidden';
             }
 
-            const badges = Array.from(element.querySelectorAll<HTMLElement>(opts.badgeSelector));
+            const badges = Array.from(
+                element.querySelectorAll<HTMLElement>(opts.badgeSelector),
+            );
             overlayElements.push(...badges);
 
-            const progressBar = element.querySelector<HTMLElement>(opts.progressBarSelector);
+            const progressBar = element.querySelector<HTMLElement>(
+                opts.progressBarSelector,
+            );
             if (progressBar) {
                 overlayElements.push(progressBar);
             }

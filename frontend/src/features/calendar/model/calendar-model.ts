@@ -1,5 +1,8 @@
 import type { ScopeValue } from '../../../shared/api';
-import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
+import {
+    patchRouteState,
+    readRouteState,
+} from '../../../shared/lib/state/route-state-storage';
 import type {
     CalendarEventResponse,
     CalendarItemResponse,
@@ -25,7 +28,12 @@ export function parseMonthKey(targetMonthKey: string): Date {
     const year = Number(yearRaw);
     const month = Number(monthRaw);
 
-    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    if (
+        !Number.isFinite(year) ||
+        !Number.isFinite(month) ||
+        month < 1 ||
+        month > 12
+    ) {
         return normalizeToMonthStart(new Date());
     }
 
@@ -46,10 +54,15 @@ export function shiftMonthKey(targetMonthKey: string, offset: number): string {
 
 export function isCurrentMonth(date: Date): boolean {
     const now = new Date();
-    return now.getFullYear() === date.getFullYear() && now.getMonth() === date.getMonth();
+    return (
+        now.getFullYear() === date.getFullYear() &&
+        now.getMonth() === date.getMonth()
+    );
 }
 
-export function aggregateCalendarData(months: CalendarMonthResponse[]): AggregatedCalendarData {
+export function aggregateCalendarData(
+    months: CalendarMonthResponse[],
+): AggregatedCalendarData {
     const events: CalendarEventResponse[] = [];
     const items: Record<string, CalendarItemResponse> = {};
     const seen = new Set<string>();

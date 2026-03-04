@@ -57,7 +57,9 @@ export const translation = {
         const message = bundle.getMessage(messageId);
         if (!message) return key;
 
-        const pattern = attributeId ? message.attributes?.[attributeId] : message.value;
+        const pattern = attributeId
+            ? message.attributes?.[attributeId]
+            : message.value;
         if (!pattern) return key;
 
         return bundle.formatPattern(pattern, fluentArgs);

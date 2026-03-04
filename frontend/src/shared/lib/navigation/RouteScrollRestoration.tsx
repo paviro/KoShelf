@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { isMainRouteId, matchRoute, type MainRouteId } from '../../../app/routes/route-registry';
+import {
+    isMainRouteId,
+    matchRoute,
+    type MainRouteId,
+} from '../../../app/routes/route-registry';
 import { patchRouteState, readRouteState } from '../state/route-state-storage';
 
 const RESTORE_RETRY_INTERVAL_MS = 50;
 const MAX_RESTORE_DURATION_MS = 1000;
-const MAX_RESTORE_ATTEMPTS = Math.ceil(MAX_RESTORE_DURATION_MS / RESTORE_RETRY_INTERVAL_MS);
+const MAX_RESTORE_ATTEMPTS = Math.ceil(
+    MAX_RESTORE_DURATION_MS / RESTORE_RETRY_INTERVAL_MS,
+);
 const PERSIST_DEBOUNCE_MS = 150;
 
 function resolveMainRouteId(pathname: string): MainRouteId | null {
@@ -61,12 +67,20 @@ function restoreScrollPosition(targetY: number): () => void {
         window.scrollTo({ top: targetY, behavior: 'auto' });
         attempts += 1;
 
-        const maxScrollableY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const maxScrollableY = Math.max(
+            0,
+            document.documentElement.scrollHeight - window.innerHeight,
+        );
         const reachedTarget = Math.abs(window.scrollY - targetY) <= 1;
-        const reachedPageBottom = Math.abs(window.scrollY - maxScrollableY) <= 1;
+        const reachedPageBottom =
+            Math.abs(window.scrollY - maxScrollableY) <= 1;
         const pageCanReachTarget = maxScrollableY >= targetY - 1;
         const canStopAtBottom = targetY <= 0 || pageCanReachTarget;
-        if (reachedTarget || (reachedPageBottom && canStopAtBottom) || attempts >= maxAttempts) {
+        if (
+            reachedTarget ||
+            (reachedPageBottom && canStopAtBottom) ||
+            attempts >= maxAttempts
+        ) {
             html.style.overflow = '';
             return;
         }
@@ -99,12 +113,15 @@ export function RouteScrollRestoration(): null {
     const pendingPersistRouteIdRef = useRef<MainRouteId | null>(null);
     const pendingPersistScrollYRef = useRef<number>(0);
 
-    const captureScrollSnapshot = useCallback((routeId: MainRouteId | null, scrollY: number) => {
-        if (!routeId) {
-            return;
-        }
-        persistScrollSnapshot(routeId, scrollY);
-    }, []);
+    const captureScrollSnapshot = useCallback(
+        (routeId: MainRouteId | null, scrollY: number) => {
+            if (!routeId) {
+                return;
+            }
+            persistScrollSnapshot(routeId, scrollY);
+        },
+        [],
+    );
 
     const flushPersist = useCallback(() => {
         if (persistTimeoutIdRef.current !== null) {
@@ -113,37 +130,49 @@ export function RouteScrollRestoration(): null {
         }
 
         if (pendingPersistRouteIdRef.current !== null) {
-            persistScrollSnapshot(pendingPersistRouteIdRef.current, pendingPersistScrollYRef.current);
+            persistScrollSnapshot(
+                pendingPersistRouteIdRef.current,
+                pendingPersistScrollYRef.current,
+            );
             pendingPersistRouteIdRef.current = null;
         }
     }, []);
 
-    const schedulePersist = useCallback((routeId: MainRouteId | null, scrollY: number) => {
-        if (!routeId) {
-            return;
-        }
-
-        pendingPersistRouteIdRef.current = routeId;
-        pendingPersistScrollYRef.current = scrollY;
-        if (persistTimeoutIdRef.current !== null) {
-            window.clearTimeout(persistTimeoutIdRef.current);
-        }
-
-        persistTimeoutIdRef.current = window.setTimeout(() => {
-            persistTimeoutIdRef.current = null;
-            if (pendingPersistRouteIdRef.current === null) {
+    const schedulePersist = useCallback(
+        (routeId: MainRouteId | null, scrollY: number) => {
+            if (!routeId) {
                 return;
             }
 
-            persistScrollSnapshot(pendingPersistRouteIdRef.current, pendingPersistScrollYRef.current);
-            pendingPersistRouteIdRef.current = null;
-        }, PERSIST_DEBOUNCE_MS);
-    }, []);
+            pendingPersistRouteIdRef.current = routeId;
+            pendingPersistScrollYRef.current = scrollY;
+            if (persistTimeoutIdRef.current !== null) {
+                window.clearTimeout(persistTimeoutIdRef.current);
+            }
+
+            persistTimeoutIdRef.current = window.setTimeout(() => {
+                persistTimeoutIdRef.current = null;
+                if (pendingPersistRouteIdRef.current === null) {
+                    return;
+                }
+
+                persistScrollSnapshot(
+                    pendingPersistRouteIdRef.current,
+                    pendingPersistScrollYRef.current,
+                );
+                pendingPersistRouteIdRef.current = null;
+            }, PERSIST_DEBOUNCE_MS);
+        },
+        [],
+    );
 
     useLayoutEffect(() => {
         const previousRouteId = activeRouteIdRef.current;
         if (hasHydratedInitialRouteRef.current) {
-            captureScrollSnapshot(previousRouteId, activeRouteScrollYRef.current);
+            captureScrollSnapshot(
+                previousRouteId,
+                activeRouteScrollYRef.current,
+            );
         }
         activeRouteIdRef.current = currentRouteId;
 
@@ -173,7 +202,9 @@ export function RouteScrollRestoration(): null {
 
         return () => {
             window.removeEventListener('scroll', handleScroll);
-            const finalScrollY = resolvePersistScrollY(activeRouteScrollYRef.current);
+            const finalScrollY = resolvePersistScrollY(
+                activeRouteScrollYRef.current,
+            );
             activeRouteScrollYRef.current = finalScrollY;
             captureScrollSnapshot(activeRouteIdRef.current, finalScrollY);
             flushPersist();
@@ -182,7 +213,9 @@ export function RouteScrollRestoration(): null {
 
     useEffect(() => {
         const flush = () => {
-            const finalScrollY = resolvePersistScrollY(activeRouteScrollYRef.current);
+            const finalScrollY = resolvePersistScrollY(
+                activeRouteScrollYRef.current,
+            );
             activeRouteScrollYRef.current = finalScrollY;
             captureScrollSnapshot(activeRouteIdRef.current, finalScrollY);
             flushPersist();
@@ -199,7 +232,10 @@ export function RouteScrollRestoration(): null {
 
         return () => {
             window.removeEventListener('pagehide', flush);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener(
+                'visibilitychange',
+                handleVisibilityChange,
+            );
             flush();
         };
     }, [captureScrollSnapshot, flushPersist]);

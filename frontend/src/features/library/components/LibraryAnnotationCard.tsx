@@ -32,7 +32,10 @@ const VARIANT_STYLES: Record<
     },
 };
 
-export function LibraryAnnotationCard({ annotation, variant }: LibraryAnnotationCardProps) {
+export function LibraryAnnotationCard({
+    annotation,
+    variant,
+}: LibraryAnnotationCardProps) {
     const styles = VARIANT_STYLES[variant];
     const formattedDate = formatAnnotationDatetime(annotation.datetime);
     const hasText = annotation.text !== null && annotation.text !== undefined;
@@ -44,8 +47,13 @@ export function LibraryAnnotationCard({ annotation, variant }: LibraryAnnotation
             <header className="flex items-center justify-between text-sm text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center gap-3">
                     {variant === 'bookmark' && (
-                        <span className={`inline-flex items-center ${styles.leadingBadgeClass}`}>
-                            <BsBookmarkFill className="w-4 h-4 mr-1" aria-hidden="true" />
+                        <span
+                            className={`inline-flex items-center ${styles.leadingBadgeClass}`}
+                        >
+                            <BsBookmarkFill
+                                className="w-4 h-4 mr-1"
+                                aria-hidden="true"
+                            />
                             {translation.get('page-bookmark')}
                         </span>
                     )}
@@ -62,7 +70,10 @@ export function LibraryAnnotationCard({ annotation, variant }: LibraryAnnotation
 
                     {typeof annotation.pageno === 'number' && (
                         <span className="hidden sm:inline-flex items-center">
-                            <LuHash className="w-4 h-4 mr-1 text-primary-400" aria-hidden="true" />
+                            <LuHash
+                                className="w-4 h-4 mr-1 text-primary-400"
+                                aria-hidden="true"
+                            />
                             {translation.get('page-number', annotation.pageno)}
                         </span>
                     )}
@@ -71,7 +82,10 @@ export function LibraryAnnotationCard({ annotation, variant }: LibraryAnnotation
                 <div className="flex items-center gap-3">
                     {typeof annotation.pageno === 'number' && (
                         <span className="sm:hidden inline-flex items-center">
-                            <LuHash className="w-4 h-4 mr-1 text-primary-400" aria-hidden="true" />
+                            <LuHash
+                                className="w-4 h-4 mr-1 text-primary-400"
+                                aria-hidden="true"
+                            />
                             {translation.get('page-number', annotation.pageno)}
                         </span>
                     )}

@@ -7,10 +7,7 @@ type ShellMobileNavProps = {
     currentPath: string;
 };
 
-export function ShellMobileNav({
-    navItems,
-    currentPath,
-}: ShellMobileNavProps) {
+export function ShellMobileNav({ navItems, currentPath }: ShellMobileNavProps) {
     if (navItems.length <= 1) {
         return null;
     }
@@ -30,7 +27,10 @@ export function ShellMobileNav({
                                 to={item.href}
                                 className={`nav-item flex flex-col items-center py-1.5 px-2 rounded-xl min-w-fit ${active ? 'nav-item-active' : ''}`}
                             >
-                                <ItemIcon className="w-4 h-4 mb-0.5" aria-hidden="true" />
+                                <ItemIcon
+                                    className="w-4 h-4 mb-0.5"
+                                    aria-hidden="true"
+                                />
                                 <span className="text-xs">{item.label}</span>
                             </Link>
                         );

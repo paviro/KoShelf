@@ -20,7 +20,13 @@ type RecapHeaderControlsProps = {
 
 function SortOrderIcon({ newestFirst }: { newestFirst: boolean }) {
     return (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden
+        >
             {newestFirst ? (
                 <path
                     strokeLinecap="round"
@@ -92,7 +98,11 @@ export function RecapHeaderControls({
                 <SortOrderIcon newestFirst={sortNewestFirst} />
             </button>
 
-            <ContentScopeFilter visible={showTypeFilter} value={scope} onChange={onScopeChange} />
+            <ContentScopeFilter
+                visible={showTypeFilter}
+                value={scope}
+                onChange={onScopeChange}
+            />
         </div>
     );
 }

@@ -36,7 +36,10 @@ function parseSnapshotUpdatePayload(raw: string): SnapshotUpdatePayload | null {
     }
 
     const payload = parsed as Record<string, unknown>;
-    if (typeof payload.revision !== 'number' || !Number.isFinite(payload.revision)) {
+    if (
+        typeof payload.revision !== 'number' ||
+        !Number.isFinite(payload.revision)
+    ) {
         return null;
     }
     if (typeof payload.generated_at !== 'string') {
@@ -81,7 +84,11 @@ export function RuntimeUpdatesBridge() {
     const lastGeneratedAtRef = useRef<string | null>(null);
 
     useEffect(() => {
-        if (!isServeMode() || typeof window === 'undefined' || typeof EventSource === 'undefined') {
+        if (
+            !isServeMode() ||
+            typeof window === 'undefined' ||
+            typeof EventSource === 'undefined'
+        ) {
             return;
         }
 
@@ -105,7 +112,10 @@ export function RuntimeUpdatesBridge() {
         source.addEventListener('snapshot_updated', handleSnapshotUpdated);
 
         return () => {
-            source.removeEventListener('snapshot_updated', handleSnapshotUpdated);
+            source.removeEventListener(
+                'snapshot_updated',
+                handleSnapshotUpdated,
+            );
             source.close();
         };
     }, [queryClient]);
@@ -143,7 +153,10 @@ export function RuntimeUpdatesBridge() {
                 const previousGeneratedAt = lastGeneratedAtRef.current;
                 lastGeneratedAtRef.current = generatedAt;
 
-                if (previousGeneratedAt && previousGeneratedAt !== generatedAt) {
+                if (
+                    previousGeneratedAt &&
+                    previousGeneratedAt !== generatedAt
+                ) {
                     invalidateRuntimeQueries(queryClient);
                 }
             } catch {

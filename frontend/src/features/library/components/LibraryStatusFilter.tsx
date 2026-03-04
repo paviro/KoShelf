@@ -39,7 +39,11 @@ function filterAriaLabel(filter: LibraryFilterValue): string {
     return translation.get(FILTER_ARIA_KEYS[filter]);
 }
 
-export function LibraryStatusFilter({ value, options, onChange }: LibraryStatusFilterProps) {
+export function LibraryStatusFilter({
+    value,
+    options,
+    onChange,
+}: LibraryStatusFilterProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
 
@@ -60,7 +64,9 @@ export function LibraryStatusFilter({ value, options, onChange }: LibraryStatusF
                     className={`sm:hidden w-5 h-5 ${value === 'all' ? 'text-gray-600 dark:text-gray-300' : 'text-primary-500'}`}
                     aria-hidden="true"
                 />
-                <span className="hidden sm:inline font-medium">{filterLabel(value)}</span>
+                <span className="hidden sm:inline font-medium">
+                    {filterLabel(value)}
+                </span>
                 <LuChevronDown
                     className="hidden sm:block w-4 h-4 text-primary-400"
                     aria-hidden="true"

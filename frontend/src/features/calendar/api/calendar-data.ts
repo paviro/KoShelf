@@ -73,7 +73,9 @@ export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
     return api.calendar.months.list<CalendarMonthsResponse>();
 }
 
-export async function loadCalendarMonth(monthKey: string): Promise<CalendarMonthResponse> {
+export async function loadCalendarMonth(
+    monthKey: string,
+): Promise<CalendarMonthResponse> {
     try {
         return await api.calendar.months.get<CalendarMonthResponse>(monthKey);
     } catch (error) {

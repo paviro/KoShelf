@@ -7,7 +7,11 @@ type ScopeFilterProps = {
     onScopeChange: (scope: StatisticsScope) => void;
 };
 
-export function ScopeFilter({ showTypeFilter, scope, onScopeChange }: ScopeFilterProps) {
+export function ScopeFilter({
+    showTypeFilter,
+    scope,
+    onScopeChange,
+}: ScopeFilterProps) {
     return (
         <ContentScopeFilter
             visible={showTypeFilter}

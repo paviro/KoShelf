@@ -2,7 +2,10 @@ import { LuBookOpen, LuClock3 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
-import { formatRecapDuration, formatRecapMonthLabel } from '../lib/recap-formatters';
+import {
+    formatRecapDuration,
+    formatRecapMonthLabel,
+} from '../lib/recap-formatters';
 import { RecapItemCard } from '../components/RecapItemCard';
 
 type RecapTimelineSectionProps = {
@@ -20,11 +23,18 @@ function completionLabel(scope: RecapScope, count: number): string {
     return translation.get('status.completed');
 }
 
-export function RecapTimelineSection({ months, scope }: RecapTimelineSectionProps) {
+export function RecapTimelineSection({
+    months,
+    scope,
+}: RecapTimelineSectionProps) {
     return (
         <>
             {months.map((month) => (
-                <div key={month.month_key} className="month-group space-y-6" data-month={month.month_key}>
+                <div
+                    key={month.month_key}
+                    className="month-group space-y-6"
+                    data-month={month.month_key}
+                >
                     <div className="relative pl-10 recap-event">
                         <span className="recap-dot bg-gray-400 dark:bg-dark-400"></span>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -34,11 +44,17 @@ export function RecapTimelineSection({ months, scope }: RecapTimelineSectionProp
 
                             <div className="flex items-center gap-2">
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-400/5 dark:from-blue-500/20 dark:to-blue-400/10 border border-blue-200/50 dark:border-blue-700/30 text-blue-700 dark:text-blue-300 text-sm">
-                                    <LuBookOpen className="w-4 h-4" aria-hidden />
+                                    <LuBookOpen
+                                        className="w-4 h-4"
+                                        aria-hidden
+                                    />
                                     <span className="month-books-finished font-semibold">
                                         {month.books_finished}
                                     </span>
-                                    {completionLabel(scope, month.books_finished)}
+                                    {completionLabel(
+                                        scope,
+                                        month.books_finished,
+                                    )}
                                 </div>
 
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-400/5 dark:from-purple-500/20 dark:to-purple-400/10 border border-purple-200/50 dark:border-purple-700/30 text-purple-700 dark:text-purple-300 text-sm">

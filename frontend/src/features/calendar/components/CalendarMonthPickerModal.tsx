@@ -41,7 +41,9 @@ export function CalendarMonthPickerModal({
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                     {Array.from({ length: 12 }, (_, monthIndex) => {
-                        const monthName = monthFormatter.format(new Date(year, monthIndex, 1));
+                        const monthName = monthFormatter.format(
+                            new Date(year, monthIndex, 1),
+                        );
                         const active = monthIndex === selectedMonthIndex;
 
                         return (

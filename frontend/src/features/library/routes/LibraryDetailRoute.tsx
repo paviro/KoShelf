@@ -52,7 +52,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const item = detail?.item;
     const itemStats = detail?.statistics.item_stats ?? null;
     const sessionStats = detail?.statistics.session_stats ?? null;
-    const completions = detail?.statistics.completions ?? itemStats?.completions ?? null;
+    const completions =
+        detail?.statistics.completions ?? itemStats?.completions ?? null;
 
     const highlightAnnotations = detail?.highlights ?? [];
     const bookmarkAnnotations = detail?.bookmarks ?? [];
@@ -62,16 +63,25 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             ? Math.max(0, Math.floor(itemStats.notes))
             : 0;
     const reviewNote = item?.review_note ?? '';
-    const hasReviewNote = item?.review_note !== null && item?.review_note !== undefined;
-    const hasPublisher = item?.publisher !== null && item?.publisher !== undefined;
+    const hasReviewNote =
+        item?.review_note !== null && item?.review_note !== undefined;
+    const hasPublisher =
+        item?.publisher !== null && item?.publisher !== undefined;
 
-    const detailRouteId = useMemo(() => detailRouteIdForCollection(collection), [collection]);
-    const sectionDefaults = useMemo(() => defaultLibraryDetailSectionState(), []);
-    const { state: sectionState, toggle } = useSectionVisibilityState<LibraryDetailSectionKey>({
-        routeId: detailRouteId,
-        sectionKeys: LIBRARY_DETAIL_SECTION_KEYS,
-        defaults: sectionDefaults,
-    });
+    const detailRouteId = useMemo(
+        () => detailRouteIdForCollection(collection),
+        [collection],
+    );
+    const sectionDefaults = useMemo(
+        () => defaultLibraryDetailSectionState(),
+        [],
+    );
+    const { state: sectionState, toggle } =
+        useSectionVisibilityState<LibraryDetailSectionKey>({
+            routeId: detailRouteId,
+            sectionKeys: LIBRARY_DETAIL_SECTION_KEYS,
+            defaults: sectionDefaults,
+        });
 
     useEffect(() => {
         if (!siteQuery.data?.title) {
@@ -87,13 +97,19 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     }, [collection, item?.title, siteQuery.data?.title]);
 
     if (!id) {
-        return <Navigate to={buildRoutePath(listRouteIdForCollection(collection))} replace />;
+        return (
+            <Navigate
+                to={buildRoutePath(listRouteIdForCollection(collection))}
+                replace
+            />
+        );
     }
 
     const headerTitle = item?.title ?? collectionTitle(collection);
     const primaryAuthor = item?.authors[0];
     const returnTo = resolveDetailReturnPath(location.state);
-    const backHref = returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
+    const backHref =
+        returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
 
     return (
         <>
@@ -108,7 +124,10 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             <PageContent className="space-y-6 md:space-y-8">
                 {detailQuery.isLoading && (
                     <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                        <LoadingSpinner size="lg" srLabel="Loading item details" />
+                        <LoadingSpinner
+                            size="lg"
+                            srLabel="Loading item details"
+                        />
                     </section>
                 )}
 
@@ -157,21 +176,23 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                             />
                         )}
 
-                        {item.content_type === 'book' && highlightAnnotations.length > 0 && (
-                            <LibraryHighlightsSection
-                                annotations={highlightAnnotations}
-                                visible={sectionState.highlights}
-                                onToggle={() => toggle('highlights')}
-                            />
-                        )}
+                        {item.content_type === 'book' &&
+                            highlightAnnotations.length > 0 && (
+                                <LibraryHighlightsSection
+                                    annotations={highlightAnnotations}
+                                    visible={sectionState.highlights}
+                                    onToggle={() => toggle('highlights')}
+                                />
+                            )}
 
-                        {item.content_type === 'book' && bookmarkAnnotations.length > 0 && (
-                            <LibraryBookmarksSection
-                                annotations={bookmarkAnnotations}
-                                visible={sectionState.bookmarks}
-                                onToggle={() => toggle('bookmarks')}
-                            />
-                        )}
+                        {item.content_type === 'book' &&
+                            bookmarkAnnotations.length > 0 && (
+                                <LibraryBookmarksSection
+                                    annotations={bookmarkAnnotations}
+                                    visible={sectionState.bookmarks}
+                                    onToggle={() => toggle('bookmarks')}
+                                />
+                            )}
 
                         {(hasPublisher || item.identifiers.length > 0) && (
                             <LibraryAdditionalInfoSection

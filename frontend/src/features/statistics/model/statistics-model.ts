@@ -6,7 +6,10 @@ import type {
 import { DateFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
-import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
+import {
+    patchRouteState,
+    readRouteState,
+} from '../../../shared/lib/state/route-state-storage';
 import { monthKeyAt } from '../lib/months';
 
 export const SECTION_NAMES = [
@@ -73,7 +76,9 @@ export function readStoredStatisticsViewState(): StatisticsViewState {
     return {
         scope: normalizeScope(persisted.scope),
         selectedWeekKey: normalizeSelectedWeekKey(persisted.selectedWeekKey),
-        selectedHeatmapYear: normalizeSelectedYear(persisted.selectedHeatmapYear),
+        selectedHeatmapYear: normalizeSelectedYear(
+            persisted.selectedHeatmapYear,
+        ),
         selectedYearlyYear: normalizeSelectedYear(persisted.selectedYearlyYear),
     };
 }
@@ -141,7 +146,13 @@ function tryFormatSingleDayRange(dateStr: string): string | null {
     const month = Number.parseInt(dateStr.slice(5, 7), 10) - 1;
     const year = Number.parseInt(dateStr.slice(0, 4), 10);
 
-    if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year) || month < 0 || month > 11) {
+    if (
+        Number.isNaN(day) ||
+        Number.isNaN(month) ||
+        Number.isNaN(year) ||
+        month < 0 ||
+        month > 11
+    ) {
         return null;
     }
 
@@ -156,7 +167,10 @@ function formatSingleStreakDate(dateStr: string): string {
     return tryFormatSingleDayRange(dateStr) ?? dateStr;
 }
 
-export function formatStreakDateRange(startDate: string | null, endDate: string | null): string {
+export function formatStreakDateRange(
+    startDate: string | null,
+    endDate: string | null,
+): string {
     if (!startDate && !endDate) {
         return '';
     }
@@ -193,7 +207,9 @@ export function isCurrentStreakActive(endDate: string | null): boolean {
     return endDate === todayIso;
 }
 
-export function aggregateMonthlyStats(dailyActivity: DailyActivityEntry[]): MonthlyReadStats[] {
+export function aggregateMonthlyStats(
+    dailyActivity: DailyActivityEntry[],
+): MonthlyReadStats[] {
     const monthlyStats = Array.from({ length: 12 }, () => ({
         read_time: 0,
         pages_read: 0,

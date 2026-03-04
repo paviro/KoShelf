@@ -14,7 +14,10 @@ if (window.__KOSHELF_SERVER_MODE !== 'external') {
     window.__KOSHELF_SERVER_MODE = 'internal';
 
     try {
-        localStorage.setItem(SERVER_MODE_STORAGE_KEY, JSON.stringify('internal'));
+        localStorage.setItem(
+            SERVER_MODE_STORAGE_KEY,
+            JSON.stringify('internal'),
+        );
     } catch {
         // Ignore storage write failures.
     }
@@ -37,7 +40,12 @@ async function bootstrap(): Promise<void> {
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
                 <RuntimeUpdatesBridge />
-                <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <HashRouter
+                    future={{
+                        v7_startTransition: true,
+                        v7_relativeSplatPath: true,
+                    }}
+                >
                     <App />
                 </HashRouter>
             </QueryClientProvider>

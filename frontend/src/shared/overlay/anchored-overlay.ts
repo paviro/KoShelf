@@ -15,7 +15,12 @@ type OverlayPositionResult = {
     arrowY: number;
 };
 
-const DEFAULT_PLACEMENT_ORDER: OverlayPlacement[] = ['top', 'bottom', 'right', 'left'];
+const DEFAULT_PLACEMENT_ORDER: OverlayPlacement[] = [
+    'top',
+    'bottom',
+    'right',
+    'left',
+];
 const DEFAULT_PLACEMENT_CLASS_PREFIX = 'tooltip-';
 const DEFAULT_PLACEMENT_CLASSES = [
     'tooltip-top',
@@ -29,10 +34,17 @@ function placementClassesForPrefix(prefix: string): string[] {
         return DEFAULT_PLACEMENT_CLASSES;
     }
 
-    return [`${prefix}top`, `${prefix}bottom`, `${prefix}left`, `${prefix}right`];
+    return [
+        `${prefix}top`,
+        `${prefix}bottom`,
+        `${prefix}left`,
+        `${prefix}right`,
+    ];
 }
 
-function normalizePlacementOrder(order: OverlayPlacement[] | undefined): OverlayPlacement[] {
+function normalizePlacementOrder(
+    order: OverlayPlacement[] | undefined,
+): OverlayPlacement[] {
     if (!order || order.length === 0) {
         return DEFAULT_PLACEMENT_ORDER;
     }
@@ -84,7 +96,9 @@ export function computeOverlayPosition(
             return {
                 placement,
                 score:
-                    spaceTop >= requiredVertical ? 10000 + spaceTop : spaceTop - requiredVertical,
+                    spaceTop >= requiredVertical
+                        ? 10000 + spaceTop
+                        : spaceTop - requiredVertical,
             };
         }
 
@@ -137,8 +151,14 @@ export function computeOverlayPosition(
         left = anchorRect.left - overlayRect.width - gap - arrowSize;
     }
 
-    const maxLeft = Math.max(padding, viewportWidth - overlayRect.width - padding);
-    const maxTop = Math.max(padding, viewportHeight - overlayRect.height - padding);
+    const maxLeft = Math.max(
+        padding,
+        viewportWidth - overlayRect.width - padding,
+    );
+    const maxTop = Math.max(
+        padding,
+        viewportHeight - overlayRect.height - padding,
+    );
 
     left = Math.min(Math.max(left, padding), maxLeft);
     top = Math.min(Math.max(top, padding), maxTop);
@@ -255,7 +275,9 @@ export class AnchoredOverlay {
 
         const placementClassPrefix =
             this.options.placementClassPrefix ?? DEFAULT_PLACEMENT_CLASS_PREFIX;
-        this.root.classList.remove(...placementClassesForPrefix(placementClassPrefix));
+        this.root.classList.remove(
+            ...placementClassesForPrefix(placementClassPrefix),
+        );
         this.options.onVisibilityChange?.(false, previousAnchor);
     }
 
@@ -297,8 +319,11 @@ export class AnchoredOverlay {
             {
                 padding: this.runtimeOptions.padding ?? this.options.padding,
                 gap: this.runtimeOptions.gap ?? this.options.gap,
-                arrowSize: this.runtimeOptions.arrowSize ?? this.options.arrowSize,
-                placementOrder: this.runtimeOptions.placementOrder ?? this.options.placementOrder,
+                arrowSize:
+                    this.runtimeOptions.arrowSize ?? this.options.arrowSize,
+                placementOrder:
+                    this.runtimeOptions.placementOrder ??
+                    this.options.placementOrder,
             },
         );
 
@@ -309,7 +334,9 @@ export class AnchoredOverlay {
 
         const placementClassPrefix =
             this.options.placementClassPrefix ?? DEFAULT_PLACEMENT_CLASS_PREFIX;
-        this.root.classList.remove(...placementClassesForPrefix(placementClassPrefix));
+        this.root.classList.remove(
+            ...placementClassesForPrefix(placementClassPrefix),
+        );
         this.root.classList.add(`${placementClassPrefix}${position.placement}`);
     }
 
@@ -342,6 +369,8 @@ export class AnchoredOverlay {
             passive: true,
             capture: true,
         });
-        window.addEventListener('resize', this.handleScrollOrResize, { passive: true });
+        window.addEventListener('resize', this.handleScrollOrResize, {
+            passive: true,
+        });
     }
 }

@@ -7,7 +7,10 @@ import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { useBookCardTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
-import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
+import {
+    patchRouteState,
+    readRouteState,
+} from '../../../shared/lib/state/route-state-storage';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
@@ -59,7 +62,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     const location = useLocation();
     const navigate = useNavigate();
-    const routeId = useMemo(() => listRouteIdForCollection(collection), [collection]);
+    const routeId = useMemo(
+        () => listRouteIdForCollection(collection),
+        [collection],
+    );
 
     const desktopSearchInputRef = useRef<HTMLInputElement>(null);
     const mobileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +73,9 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     const [searchTerm, setSearchTerm] = useState(() => {
         const persistedState = readRouteState(routeId, 'session');
         const persisted = persistedState.searchTerm;
-        const searchFromQuery = new URLSearchParams(location.search).get('search');
+        const searchFromQuery = new URLSearchParams(location.search).get(
+            'search',
+        );
         if (typeof searchFromQuery === 'string') {
             return searchFromQuery;
         }
@@ -76,15 +84,23 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     const [mobileSearchOpen, setMobileSearchOpen] = useState(() => {
         const persistedState = readRouteState(routeId, 'session');
         const persisted = persistedState.searchTerm;
-        const searchFromQuery = new URLSearchParams(location.search).get('search');
-        const initialSearchTerm = typeof searchFromQuery === 'string'
-            ? searchFromQuery
-            : (typeof persisted === 'string' ? persisted : '');
+        const searchFromQuery = new URLSearchParams(location.search).get(
+            'search',
+        );
+        const initialSearchTerm =
+            typeof searchFromQuery === 'string'
+                ? searchFromQuery
+                : typeof persisted === 'string'
+                  ? persisted
+                  : '';
         return initialSearchTerm.trim().length > 0 && window.innerWidth < 640;
     });
     const [filterValue, setFilterValue] = useState<LibraryFilterValue>(() => {
         const persisted = readRouteState(routeId, 'session').filterValue;
-        return normalizeLibraryFilterValue(typeof persisted === 'string' ? persisted : null, true);
+        return normalizeLibraryFilterValue(
+            typeof persisted === 'string' ? persisted : null,
+            true,
+        );
     });
 
     const siteQuery = useQuery({
@@ -100,11 +116,12 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
     const hasUnreadItems = sectionBuckets.unread.length > 0;
     const sectionDefaults = useMemo(() => defaultLibrarySectionState(), []);
-    const { state: sectionState, toggle: toggleSection } = useSectionVisibilityState<LibrarySectionKey>({
-        routeId,
-        sectionKeys: LIBRARY_SECTION_KEYS,
-        defaults: sectionDefaults,
-    });
+    const { state: sectionState, toggle: toggleSection } =
+        useSectionVisibilityState<LibrarySectionKey>({
+            routeId,
+            sectionKeys: LIBRARY_SECTION_KEYS,
+            defaults: sectionDefaults,
+        });
 
     const filterOptions = useMemo<LibraryFilterValue[]>(() => {
         if (hasUnreadItems) {
@@ -126,7 +143,9 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     }, []);
 
     useEffect(() => {
-        patchRouteState(routeId, 'session', { filterValue: effectiveFilterValue });
+        patchRouteState(routeId, 'session', {
+            filterValue: effectiveFilterValue,
+        });
     }, [effectiveFilterValue, routeId]);
 
     useEffect(() => {
@@ -182,7 +201,13 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         const handleKeyDown = (event: KeyboardEvent): void => {
             const typing = isTypingTarget(event.target);
 
-            if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !typing) {
+            if (
+                event.key === '/' &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey &&
+                !typing
+            ) {
                 event.preventDefault();
 
                 if (window.innerWidth < 640) {
@@ -248,9 +273,18 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [handleFilterChange, handleSearchTermChange, hasUnreadItems, mobileSearchOpen, searchTerm]);
+    }, [
+        handleFilterChange,
+        handleSearchTermChange,
+        hasUnreadItems,
+        mobileSearchOpen,
+        searchTerm,
+    ]);
 
-    const normalizedSearch = useMemo(() => normalizeSearchTerm(searchTerm), [searchTerm]);
+    const normalizedSearch = useMemo(
+        () => normalizeSearchTerm(searchTerm),
+        [searchTerm],
+    );
 
     const sectionRows = useMemo(
         () =>
@@ -261,7 +295,9 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                     return { sectionKey, items: [] };
                 }
 
-                const items = baseItems.filter((item) => itemMatchesSearch(item, normalizedSearch));
+                const items = baseItems.filter((item) =>
+                    itemMatchesSearch(item, normalizedSearch),
+                );
                 return { sectionKey, items };
             }),
         [effectiveFilterValue, normalizedSearch, sectionBuckets],
@@ -271,7 +307,9 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         () =>
             sectionRows
                 .flatMap((section) =>
-                    section.items.map((item) => `${section.sectionKey}:${item.id}`),
+                    section.items.map(
+                        (item) => `${section.sectionKey}:${item.id}`,
+                    ),
                 )
                 .join('|'),
         [sectionRows],
@@ -281,7 +319,8 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     useLibraryHoverPreviewEffect(`${collection}:${visibleCardKey}`);
 
     const visibleItemCount = useMemo(
-        () => sectionRows.reduce((sum, section) => sum + section.items.length, 0),
+        () =>
+            sectionRows.reduce((sum, section) => sum + section.items.length, 0),
         [sectionRows],
     );
 
@@ -346,12 +385,16 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                                         key={section.sectionKey}
                                         sectionKey={section.sectionKey}
                                         title={translation.get(
-                                            SECTION_TITLE_KEYS[section.sectionKey],
+                                            SECTION_TITLE_KEYS[
+                                                section.sectionKey
+                                            ],
                                         )}
                                         items={section.items}
                                         collection={collection}
                                         visible={visible}
-                                        onToggle={() => toggleSection(section.sectionKey)}
+                                        onToggle={() =>
+                                            toggleSection(section.sectionKey)
+                                        }
                                     />
                                 );
                             })

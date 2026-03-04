@@ -18,11 +18,15 @@ function normalizeStateRecord(value: unknown): RouteStateRecord {
     return value as RouteStateRecord;
 }
 
-function readRawRouteState(routeId: RouteId, storage: RouteStateStorage): RouteStateRecord {
+function readRawRouteState(
+    routeId: RouteId,
+    storage: RouteStateStorage,
+): RouteStateRecord {
     const key = routeStateStorageKey(routeId);
-    const value = storage === 'local'
-        ? StorageManager.getByKey<RouteStateRecord>(key)
-        : StorageManager.getSessionByKey<RouteStateRecord>(key);
+    const value =
+        storage === 'local'
+            ? StorageManager.getByKey<RouteStateRecord>(key)
+            : StorageManager.getSessionByKey<RouteStateRecord>(key);
     return normalizeStateRecord(value);
 }
 
@@ -40,7 +44,10 @@ function writeRawRouteState(
     StorageManager.setSessionByKey(key, value);
 }
 
-export function readRouteState(routeId: RouteId, storage: RouteStateStorage): RouteStateRecord {
+export function readRouteState(
+    routeId: RouteId,
+    storage: RouteStateStorage,
+): RouteStateRecord {
     return readRawRouteState(routeId, storage);
 }
 

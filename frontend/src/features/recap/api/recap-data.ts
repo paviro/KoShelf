@@ -62,10 +62,15 @@ export interface RecapYearResponse {
     share_assets?: RecapShareAssets | null;
 }
 
-export async function loadRecapIndex(scope: RecapScope): Promise<RecapIndexResponse> {
+export async function loadRecapIndex(
+    scope: RecapScope,
+): Promise<RecapIndexResponse> {
     return api.recap.get<RecapIndexResponse>(scope);
 }
 
-export async function loadRecapYear(scope: RecapScope, year: number): Promise<RecapYearResponse> {
+export async function loadRecapYear(
+    scope: RecapScope,
+    year: number,
+): Promise<RecapYearResponse> {
     return api.recap.years.get<RecapYearResponse>(year, scope);
 }

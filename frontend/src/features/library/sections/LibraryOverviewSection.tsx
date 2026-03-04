@@ -14,7 +14,11 @@ import {
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
-import type { LibraryCompletions, LibraryDetailItem, LibraryItemStats } from '../api/library-data';
+import type {
+    LibraryCompletions,
+    LibraryDetailItem,
+    LibraryItemStats,
+} from '../api/library-data';
 import {
     formatLanguageDisplayName,
     sanitizeRichTextHtml,
@@ -71,7 +75,8 @@ export function LibraryOverviewSection({
 
     const progressPercentage = toProgressPercentage(item.progress_percentage);
     const languageDisplay = formatLanguageDisplayName(item.language);
-    const showProgressStatus = item.status === 'reading' || item.status === 'abandoned';
+    const showProgressStatus =
+        item.status === 'reading' || item.status === 'abandoned';
     const showCompletedStatus = item.status === 'complete';
     const isBook = item.content_type === 'book';
     const hasSeries = Boolean(item.series?.trim());
@@ -137,7 +142,9 @@ export function LibraryOverviewSection({
                                             {progressPercentage}%
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-dark-400">
-                                            {translation.get('reading-progress')}
+                                            {translation.get(
+                                                'reading-progress',
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -155,12 +162,16 @@ export function LibraryOverviewSection({
                                     </div>
                                     <div className="text-center @[180px]:text-left">
                                         <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {translation.get('status.completed')}
+                                            {translation.get(
+                                                'status.completed',
+                                            )}
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-dark-400">
                                             {completions?.last_completion_date
                                                 ? `${translation.get('last')}: ${completions.last_completion_date}`
-                                                : translation.get('reading-progress')}
+                                                : translation.get(
+                                                      'reading-progress',
+                                                  )}
                                         </div>
                                     </div>
                                 </div>
@@ -184,7 +195,10 @@ export function LibraryOverviewSection({
                                         {cardValueOrUnknown(pagesCount)}
                                     </div>
                                     <div className="text-sm text-gray-500 dark:text-dark-400">
-                                        {translation.get('pages-label', pagesCount ?? 0)}
+                                        {translation.get(
+                                            'pages-label',
+                                            pagesCount ?? 0,
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -204,7 +218,10 @@ export function LibraryOverviewSection({
                                             {formatNumber(highlightCount)}
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-dark-400">
-                                            {translation.get('highlights-label', highlightCount)}
+                                            {translation.get(
+                                                'highlights-label',
+                                                highlightCount,
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -225,7 +242,10 @@ export function LibraryOverviewSection({
                                             {formatNumber(noteCount)}
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-dark-400">
-                                            {translation.get('notes-label', noteCount)}
+                                            {translation.get(
+                                                'notes-label',
+                                                noteCount,
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -265,7 +285,9 @@ export function LibraryOverviewSection({
                             </h3>
                             <div
                                 className="text-gray-700 dark:text-dark-300 leading-relaxed prose max-w-none book-description"
-                                dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                                dangerouslySetInnerHTML={{
+                                    __html: sanitizedDescription,
+                                }}
                             />
                         </div>
                     )}
@@ -287,7 +309,10 @@ export function LibraryOverviewSection({
                                 className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-650 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors"
                             >
                                 {item.series}
-                                <LuArrowUpRight className="w-4 h-4 ml-2" aria-hidden="true" />
+                                <LuArrowUpRight
+                                    className="w-4 h-4 ml-2"
+                                    aria-hidden="true"
+                                />
                             </Link>
                         </div>
                     )}

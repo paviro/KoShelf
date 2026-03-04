@@ -10,7 +10,12 @@ export type RouteId =
     | 'comics-detail'
     | 'recap';
 
-export type MainRouteId = 'statistics' | 'calendar' | 'books-list' | 'comics-list' | 'recap';
+export type MainRouteId =
+    | 'statistics'
+    | 'calendar'
+    | 'books-list'
+    | 'comics-list'
+    | 'recap';
 export type DetailRouteId = 'books-detail' | 'comics-detail';
 export type LibraryCollectionRoute = 'books' | 'comics';
 export type LibraryContentTypeRoute = 'book' | 'comic';
@@ -32,11 +37,18 @@ export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
     { id: 'recap', path: '/recap', mainRouteId: 'recap' },
 ] as const;
 
-const ROUTE_DEFINITION_BY_ID: Record<RouteId, RouteDefinition> = Object.fromEntries(
-    ROUTE_DEFINITIONS.map((definition) => [definition.id, definition]),
-) as Record<RouteId, RouteDefinition>;
+const ROUTE_DEFINITION_BY_ID: Record<RouteId, RouteDefinition> =
+    Object.fromEntries(
+        ROUTE_DEFINITIONS.map((definition) => [definition.id, definition]),
+    ) as Record<RouteId, RouteDefinition>;
 
-export const MAIN_ROUTE_IDS = ['books-list', 'comics-list', 'statistics', 'calendar', 'recap'] as const;
+export const MAIN_ROUTE_IDS = [
+    'books-list',
+    'comics-list',
+    'statistics',
+    'calendar',
+    'recap',
+] as const;
 
 export type RouteMatch = {
     routeId: RouteId | null;
@@ -63,7 +75,9 @@ export function buildRoutePath(
     if (route.path.includes(':id')) {
         const id = params?.id;
         if (!id) {
-            throw new Error(`Missing required route param "id" for route ${routeId}`);
+            throw new Error(
+                `Missing required route param "id" for route ${routeId}`,
+            );
         }
         return generatePath(route.path, { id });
     }
@@ -117,7 +131,9 @@ export function isMainRouteId(routeId: RouteId | null): routeId is MainRouteId {
     return routeId !== null && MAIN_ROUTE_IDS.includes(routeId as MainRouteId);
 }
 
-export function resolveMainRouteId(routeId: RouteId | null): MainRouteId | null {
+export function resolveMainRouteId(
+    routeId: RouteId | null,
+): MainRouteId | null {
     if (!routeId) {
         return null;
     }
@@ -125,14 +141,20 @@ export function resolveMainRouteId(routeId: RouteId | null): MainRouteId | null 
     return ROUTE_DEFINITION_BY_ID[routeId].mainRouteId;
 }
 
-export function detailRouteIdForCollection(collection: LibraryCollectionRoute): DetailRouteId {
+export function detailRouteIdForCollection(
+    collection: LibraryCollectionRoute,
+): DetailRouteId {
     return collection === 'comics' ? 'comics-detail' : 'books-detail';
 }
 
-export function detailRouteIdForContentType(contentType: LibraryContentTypeRoute): DetailRouteId {
+export function detailRouteIdForContentType(
+    contentType: LibraryContentTypeRoute,
+): DetailRouteId {
     return contentType === 'comic' ? 'comics-detail' : 'books-detail';
 }
 
-export function listRouteIdForCollection(collection: LibraryCollectionRoute): MainRouteId {
+export function listRouteIdForCollection(
+    collection: LibraryCollectionRoute,
+): MainRouteId {
     return collection === 'comics' ? 'comics-list' : 'books-list';
 }

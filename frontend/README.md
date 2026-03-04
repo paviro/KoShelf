@@ -7,11 +7,11 @@ React + Vite frontend for KoShelf. This is the UI runtime used by the Rust app i
 - Router: `HashRouter` (routes resolve under `/#/...`)
 - Server state: TanStack Query
 - Mode-aware data loading in `src/shared/api.ts`:
-  - `internal` mode: fetch from `/api/**`
-  - `external` mode: fetch from `/data/**`
+    - `internal` mode: fetch from `/api/**`
+    - `external` mode: fetch from `/data/**`
 - Runtime updates:
-  - `internal` mode listens to `/api/events/stream` and invalidates query caches on snapshot updates
-  - `external` mode polls `/data/site.json` and invalidates when `generated_at` changes
+    - `internal` mode listens to `/api/events/stream` and invalidates query caches on snapshot updates
+    - `external` mode polls `/data/site.json` and invalidates when `generated_at` changes
 
 ## Route Coverage
 

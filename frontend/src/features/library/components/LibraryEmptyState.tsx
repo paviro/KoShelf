@@ -9,7 +9,10 @@ export function LibraryEmptyState() {
                 <div className="relative mb-8">
                     <div className="absolute inset-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-full blur-2xl" />
                     <div className="relative w-24 h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-2xl">
-                        <LuSearch className="w-12 h-12 text-white" aria-hidden="true" />
+                        <LuSearch
+                            className="w-12 h-12 text-white"
+                            aria-hidden="true"
+                        />
                     </div>
                 </div>
 

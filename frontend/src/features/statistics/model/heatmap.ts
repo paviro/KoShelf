@@ -6,7 +6,11 @@ export const HEATMAP_COLOR_CLASSES = [
     ['bg-green-600', 'dark:bg-green-300'],
 ] as const;
 
-export function calculateCellDate(year: number, weekIndex: number, dayIndex: number): Date {
+export function calculateCellDate(
+    year: number,
+    weekIndex: number,
+    dayIndex: number,
+): Date {
     const janFirst = new Date(year, 0, 1);
     const janDayOfWeek = janFirst.getDay();
     const shiftToMonday = janDayOfWeek === 0 ? -6 : 1 - janDayOfWeek;
@@ -24,7 +28,10 @@ export function formatISODate(date: Date): string {
     ).padStart(2, '0')}`;
 }
 
-export function normalizeHeatmapLevel(activity: number, maxActivity: number): number {
+export function normalizeHeatmapLevel(
+    activity: number,
+    maxActivity: number,
+): number {
     const maxLevel = HEATMAP_COLOR_CLASSES.length - 1;
     if (!Number.isFinite(activity) || activity <= 0) {
         return 0;

@@ -1,10 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { api } from '../../../shared/api';
-import type { LibraryDetailResponse, LibraryListResponse } from '../api/library-data';
+import type {
+    LibraryDetailResponse,
+    LibraryListResponse,
+} from '../api/library-data';
 import type { LibraryCollection } from '../model/library-model';
 
-async function fetchLibraryList(collection: LibraryCollection): Promise<LibraryListResponse> {
+async function fetchLibraryList(
+    collection: LibraryCollection,
+): Promise<LibraryListResponse> {
     if (collection === 'comics') {
         return api.comics.list<LibraryListResponse>();
     }
@@ -30,7 +35,10 @@ export function useLibraryListQuery(collection: LibraryCollection) {
     });
 }
 
-export function useLibraryDetailQuery(collection: LibraryCollection, id: string | undefined) {
+export function useLibraryDetailQuery(
+    collection: LibraryCollection,
+    id: string | undefined,
+) {
     return useQuery({
         queryKey: ['library-detail', collection, id],
         queryFn: () => fetchLibraryDetail(collection, id ?? ''),

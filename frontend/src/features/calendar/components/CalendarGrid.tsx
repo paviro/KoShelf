@@ -3,7 +3,10 @@ import type { Calendar } from '@event-calendar/core';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { translation } from '../../../shared/i18n';
-import type { CalendarEventResponse, CalendarItemResponse } from '../api/calendar-data';
+import type {
+    CalendarEventResponse,
+    CalendarItemResponse,
+} from '../api/calendar-data';
 
 type CalendarGridProps = {
     locale: string;
@@ -31,7 +34,10 @@ const EVENT_COLOR_PALETTE = [
     '#6366F1',
 ];
 
-function fallbackColorForEvent(event: CalendarEventResponse, title: string): string {
+function fallbackColorForEvent(
+    event: CalendarEventResponse,
+    title: string,
+): string {
     let hash = 0;
     const token = `${title}${event.item_id}`;
 
@@ -58,17 +64,23 @@ export function CalendarGrid({
     const containerRef = useRef<HTMLElement | null>(null);
     const calendarRef = useRef<Calendar | null>(null);
     const scrollTimeoutRef = useRef<number | null>(null);
-    const optionRefs = useRef<{ locale: string; displayedMonth: Date; mappedEvents: Calendar.EventInput[] }>({ locale, displayedMonth, mappedEvents: [] });
+    const optionRefs = useRef<{
+        locale: string;
+        displayedMonth: Date;
+        mappedEvents: Calendar.EventInput[];
+    }>({ locale, displayedMonth, mappedEvents: [] });
 
     const scrollCurrentDayIntoView = useCallback(() => {
         const calendarContainer = containerRef.current;
-        const todayCell = calendarContainer?.querySelector<HTMLElement>('.ec-day.ec-today');
+        const todayCell =
+            calendarContainer?.querySelector<HTMLElement>('.ec-day.ec-today');
 
         if (!calendarContainer || !todayCell) {
             return;
         }
 
-        const maxScrollLeft = calendarContainer.scrollWidth - calendarContainer.clientWidth;
+        const maxScrollLeft =
+            calendarContainer.scrollWidth - calendarContainer.clientWidth;
         if (maxScrollLeft <= 0) {
             return;
         }
@@ -82,7 +94,10 @@ export function CalendarGrid({
             calendarContainer.scrollLeft;
         const desiredScrollLeft =
             todayCenterRelativeToContainer - calendarContainer.clientWidth / 2;
-        const clampedScrollLeft = Math.max(0, Math.min(desiredScrollLeft, maxScrollLeft));
+        const clampedScrollLeft = Math.max(
+            0,
+            Math.min(desiredScrollLeft, maxScrollLeft),
+        );
 
         if (Math.abs(clampedScrollLeft - calendarContainer.scrollLeft) > 1) {
             calendarContainer.scrollTo({
@@ -104,7 +119,8 @@ export function CalendarGrid({
                     start: event.start,
                     end: event.end || event.start,
                     allDay: true,
-                    backgroundColor: item?.color ?? fallbackColorForEvent(event, title),
+                    backgroundColor:
+                        item?.color ?? fallbackColorForEvent(event, title),
                     textColor: '#ffffff',
                     extendedProps: {
                         rawEvent: event,

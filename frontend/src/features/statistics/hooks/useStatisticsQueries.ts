@@ -14,7 +14,10 @@ export function useStatisticsIndexQuery(scope: StatisticsScope) {
     });
 }
 
-export function useStatisticsWeekQuery(scope: StatisticsScope, weekKey: string | null) {
+export function useStatisticsWeekQuery(
+    scope: StatisticsScope,
+    weekKey: string | null,
+) {
     return useQuery({
         queryKey: ['statistics-week', scope, weekKey],
         queryFn: () => loadStatisticsWeek(scope, weekKey ?? ''),
@@ -23,7 +26,10 @@ export function useStatisticsWeekQuery(scope: StatisticsScope, weekKey: string |
     });
 }
 
-export function useStatisticsYearQuery(scope: StatisticsScope, year: number | null) {
+export function useStatisticsYearQuery(
+    scope: StatisticsScope,
+    year: number | null,
+) {
     return useQuery({
         queryKey: ['statistics-year', scope, year],
         queryFn: () => loadStatisticsYear(scope, year ?? 0),

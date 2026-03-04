@@ -1,4 +1,9 @@
-import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText } from 'react-icons/lu';
+import {
+    LuBookOpen,
+    LuCalendarDays,
+    LuClock3,
+    LuFileText,
+} from 'react-icons/lu';
 
 import type { ScopeValue } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
@@ -12,7 +17,10 @@ type CalendarMonthlyStatsSectionProps = {
     scope: ScopeValue;
 };
 
-export function CalendarMonthlyStatsSection({ stats, scope }: CalendarMonthlyStatsSectionProps) {
+export function CalendarMonthlyStatsSection({
+    stats,
+    scope,
+}: CalendarMonthlyStatsSectionProps) {
     const completedLabel =
         scope === 'comics'
             ? translation.get('comic-label', { count: stats.books_read })

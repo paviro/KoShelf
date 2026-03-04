@@ -34,17 +34,46 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
             <Routes>
                 <Route
                     path={routePathPattern('root')}
-                    element={<RootRedirect defaultRoute={defaultRoute} siteLoaded={siteLoaded} />}
+                    element={
+                        <RootRedirect
+                            defaultRoute={defaultRoute}
+                            siteLoaded={siteLoaded}
+                        />
+                    }
                 />
-                <Route path={routePathPattern('statistics')} element={<StatisticsRoute />} />
-                <Route path={routePathPattern('calendar')} element={<CalendarRoute />} />
-                <Route path={routePathPattern('books-list')} element={<LibraryListRoute collection="books" />} />
-                <Route path={routePathPattern('books-detail')} element={<LibraryDetailRoute collection="books" />} />
-                <Route path={routePathPattern('comics-list')} element={<LibraryListRoute collection="comics" />} />
-                <Route path={routePathPattern('comics-detail')} element={<LibraryDetailRoute collection="comics" />} />
-                <Route path={routePathPattern('recap')} element={<RecapRoute />} />
+                <Route
+                    path={routePathPattern('statistics')}
+                    element={<StatisticsRoute />}
+                />
+                <Route
+                    path={routePathPattern('calendar')}
+                    element={<CalendarRoute />}
+                />
+                <Route
+                    path={routePathPattern('books-list')}
+                    element={<LibraryListRoute collection="books" />}
+                />
+                <Route
+                    path={routePathPattern('books-detail')}
+                    element={<LibraryDetailRoute collection="books" />}
+                />
+                <Route
+                    path={routePathPattern('comics-list')}
+                    element={<LibraryListRoute collection="comics" />}
+                />
+                <Route
+                    path={routePathPattern('comics-detail')}
+                    element={<LibraryDetailRoute collection="comics" />}
+                />
+                <Route
+                    path={routePathPattern('recap')}
+                    element={<RecapRoute />}
+                />
 
-                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+                <Route
+                    path="*"
+                    element={<Navigate to={defaultRoute} replace />}
+                />
             </Routes>
         </>
     );

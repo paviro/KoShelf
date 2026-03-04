@@ -30,10 +30,7 @@ export function AppShell({
                 generatedAt={generatedAt}
                 version={version}
             />
-            <ShellMobileNav
-                navItems={navItems}
-                currentPath={currentPath}
-            />
+            <ShellMobileNav navItems={navItems} currentPath={currentPath} />
 
             <div className="min-h-full lg:ml-64">{children}</div>
         </div>

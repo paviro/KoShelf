@@ -7,7 +7,9 @@ import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { SiteResponse } from './shared/contracts';
 
-function resolveDefaultRoute(site: SiteResponse | undefined): '/books' | '/comics' | '/statistics' {
+function resolveDefaultRoute(
+    site: SiteResponse | undefined,
+): '/books' | '/comics' | '/statistics' {
     if (site?.capabilities.has_books) {
         return '/books';
     }

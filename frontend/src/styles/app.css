@@ -111,7 +111,8 @@
     /* Arrow pointing down (tooltip on top) */
     .tooltip-top::before {
         top: 100%;
-        border-color: var(--tooltip-outline-color) transparent transparent transparent;
+        border-color: var(--tooltip-outline-color) transparent transparent
+            transparent;
         left: var(--arrow-x);
         margin-left: -7px;
     }
@@ -126,7 +127,8 @@
     /* Arrow pointing up (tooltip on bottom) */
     .tooltip-bottom::before {
         bottom: 100%;
-        border-color: transparent transparent var(--tooltip-outline-color) transparent;
+        border-color: transparent transparent var(--tooltip-outline-color)
+            transparent;
         left: var(--arrow-x);
         margin-left: -7px;
     }
@@ -141,7 +143,8 @@
     /* Arrow pointing right (tooltip on left) */
     .tooltip-left::before {
         left: 100%;
-        border-color: transparent transparent transparent var(--tooltip-outline-color);
+        border-color: transparent transparent transparent
+            var(--tooltip-outline-color);
         top: var(--arrow-y);
         margin-top: -7px;
     }
@@ -156,7 +159,8 @@
     /* Arrow pointing left (tooltip on right) */
     .tooltip-right::before {
         right: 100%;
-        border-color: transparent var(--tooltip-outline-color) transparent transparent;
+        border-color: transparent var(--tooltip-outline-color) transparent
+            transparent;
         top: var(--arrow-y);
         margin-top: -7px;
     }

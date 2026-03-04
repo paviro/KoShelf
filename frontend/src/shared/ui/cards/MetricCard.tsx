@@ -29,7 +29,10 @@ export function MetricCard({
                     <div
                         className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
                     >
-                        <Icon className={`w-5 h-5 ${iconClassName}`} aria-hidden="true" />
+                        <Icon
+                            className={`w-5 h-5 ${iconClassName}`}
+                            aria-hidden="true"
+                        />
                     </div>
                     <div>
                         <div
@@ -38,7 +41,9 @@ export function MetricCard({
                         >
                             {value}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-dark-400">{label}</div>
+                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                            {label}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -51,7 +56,10 @@ export function MetricCard({
                 <div
                     className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
                 >
-                    <Icon className={`w-5 h-5 ${iconClassName}`} aria-hidden="true" />
+                    <Icon
+                        className={`w-5 h-5 ${iconClassName}`}
+                        aria-hidden="true"
+                    />
                 </div>
                 <div className="text-center @[140px]:text-left">
                     <div
@@ -60,7 +68,9 @@ export function MetricCard({
                     >
                         {value}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-dark-400">{label}</div>
+                    <div className="text-sm text-gray-500 dark:text-dark-400">
+                        {label}
+                    </div>
                 </div>
             </div>
         </div>

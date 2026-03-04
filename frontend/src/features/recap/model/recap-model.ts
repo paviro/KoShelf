@@ -1,4 +1,7 @@
-import { patchRouteState, readRouteState } from '../../../shared/lib/state/route-state-storage';
+import {
+    patchRouteState,
+    readRouteState,
+} from '../../../shared/lib/state/route-state-storage';
 import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
 
 export type RecapViewState = {
@@ -63,7 +66,9 @@ export function readStoredRecapYear(): number | null {
 
 export function readRecapSortNewest(): boolean {
     const persisted = readRouteState('recap', 'local');
-    return typeof persisted.sortNewestFirst === 'boolean' ? persisted.sortNewestFirst : true;
+    return typeof persisted.sortNewestFirst === 'boolean'
+        ? persisted.sortNewestFirst
+        : true;
 }
 
 export function persistRecapSortNewest(value: boolean): void {

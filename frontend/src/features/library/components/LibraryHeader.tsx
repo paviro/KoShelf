@@ -44,7 +44,9 @@ export function LibraryHeader({
                     </h1>
                 </div>
 
-                <div className={`lg:hidden flex-1 mr-3 ${mobileSearchOpen ? '' : 'hidden'}`}>
+                <div
+                    className={`lg:hidden flex-1 mr-3 ${mobileSearchOpen ? '' : 'hidden'}`}
+                >
                     <input
                         ref={mobileSearchInputRef}
                         type="text"
@@ -52,7 +54,9 @@ export function LibraryHeader({
                         placeholder={translation.get('search-placeholder')}
                         aria-label={translation.get('search.aria-label')}
                         className="w-full bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm"
-                        onChange={(event) => onSearchTermChange(event.target.value)}
+                        onChange={(event) =>
+                            onSearchTermChange(event.target.value)
+                        }
                     />
                 </div>
 
@@ -69,7 +73,9 @@ export function LibraryHeader({
                             placeholder={translation.get('search-placeholder')}
                             aria-label={translation.get('search.aria-label')}
                             className="bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200 shadow-sm w-40 sm:w-48 md:w-64 text-sm md:text-base backdrop-blur-sm"
-                            onChange={(event) => onSearchTermChange(event.target.value)}
+                            onChange={(event) =>
+                                onSearchTermChange(event.target.value)
+                            }
                         />
                     </div>
 
@@ -93,7 +99,9 @@ export function LibraryHeader({
                             type="button"
                             className="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm"
                             title={translation.get('close-search.aria-label')}
-                            aria-label={translation.get('close-search.aria-label')}
+                            aria-label={translation.get(
+                                'close-search.aria-label',
+                            )}
                             onClick={onCloseMobileSearch}
                         >
                             <LuX
@@ -103,7 +111,9 @@ export function LibraryHeader({
                         </button>
                     )}
 
-                    <div className={`${mobileSearchOpen ? 'hidden sm:flex' : 'flex'} items-center`}>
+                    <div
+                        className={`${mobileSearchOpen ? 'hidden sm:flex' : 'flex'} items-center`}
+                    >
                         <LibraryStatusFilter
                             value={filterValue}
                             options={filterOptions}

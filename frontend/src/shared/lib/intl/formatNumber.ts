@@ -2,7 +2,10 @@ import { translation } from '../../i18n';
 
 const FALLBACK_LOCALE = 'en-US';
 
-export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
+export function formatNumber(
+    value: number,
+    options?: Intl.NumberFormatOptions,
+): string {
     const locale = translation.getLanguage() || FALLBACK_LOCALE;
 
     try {

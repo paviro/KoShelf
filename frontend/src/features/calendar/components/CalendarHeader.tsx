@@ -76,19 +76,29 @@ export function CalendarHeader({
                             type="button"
                             className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm"
                             title={translation.get('previous-month.aria-label')}
-                            aria-label={translation.get('previous-month.aria-label')}
+                            aria-label={translation.get(
+                                'previous-month.aria-label',
+                            )}
                             onClick={onPreviousMonth}
                         >
-                            <LuChevronLeft className="w-4 h-4" aria-hidden="true" />
+                            <LuChevronLeft
+                                className="w-4 h-4"
+                                aria-hidden="true"
+                            />
                         </button>
                         <button
                             type="button"
                             className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm"
                             title={translation.get('next-month.aria-label')}
-                            aria-label={translation.get('next-month.aria-label')}
+                            aria-label={translation.get(
+                                'next-month.aria-label',
+                            )}
                             onClick={onNextMonth}
                         >
-                            <LuChevronRight className="w-4 h-4" aria-hidden="true" />
+                            <LuChevronRight
+                                className="w-4 h-4"
+                                aria-hidden="true"
+                            />
                         </button>
                     </div>
 

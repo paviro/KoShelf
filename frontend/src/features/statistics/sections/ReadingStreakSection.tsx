@@ -1,6 +1,12 @@
-import type { StatisticsIndexResponse, StatisticsYearResponse } from '../api/statistics-data';
+import type {
+    StatisticsIndexResponse,
+    StatisticsYearResponse,
+} from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
-import { formatStreakDateRange, type SectionName } from '../model/statistics-model';
+import {
+    formatStreakDateRange,
+    type SectionName,
+} from '../model/statistics-model';
 import { HeatmapSection } from './HeatmapSection';
 import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
@@ -63,7 +69,10 @@ export function ReadingStreakSection({
                                         {currentStreak.days}
                                     </span>
                                     <span className="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-primary-500 dark:text-primary-200 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">
-                                        {translation.get('days_label', currentStreak.days)}
+                                        {translation.get(
+                                            'days_label',
+                                            currentStreak.days,
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex items-center lg:ml-6">
@@ -89,7 +98,10 @@ export function ReadingStreakSection({
                                         {longestStreak.days}
                                     </span>
                                     <span className="text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-600 dark:text-gray-400 ml-1.5 md:ml-2 tracking-wider xl:tracking-widest uppercase">
-                                        {translation.get('days_label', longestStreak.days)}
+                                        {translation.get(
+                                            'days_label',
+                                            longestStreak.days,
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex items-center w-full lg:flex-1 lg:justify-end lg:ml-6">

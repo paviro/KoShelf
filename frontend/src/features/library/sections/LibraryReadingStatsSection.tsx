@@ -1,4 +1,10 @@
-import { LuBookOpen, LuCalendarDays, LuClock3, LuInfo, LuZap } from 'react-icons/lu';
+import {
+    LuBookOpen,
+    LuCalendarDays,
+    LuClock3,
+    LuInfo,
+    LuZap,
+} from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -47,7 +53,9 @@ export function LibraryReadingStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
-                    value={formatDurationFromSeconds(itemStats?.total_read_time)}
+                    value={formatDurationFromSeconds(
+                        itemStats?.total_read_time,
+                    )}
                     label={translation.get('total-read-time')}
                 />
 
@@ -56,14 +64,19 @@ export function LibraryReadingStatsSection({
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     value={formatNumber(sessionStats.session_count)}
-                    label={translation.get('reading-sessions-label', sessionStats.session_count)}
+                    label={translation.get(
+                        'reading-sessions-label',
+                        sessionStats.session_count,
+                    )}
                 />
 
                 <MetricCard
                     icon={LuClock3}
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
-                    value={formatDurationFromSeconds(sessionStats.average_session_duration)}
+                    value={formatDurationFromSeconds(
+                        sessionStats.average_session_duration,
+                    )}
                     label={translation.get('session.average')}
                 />
 
@@ -71,7 +84,9 @@ export function LibraryReadingStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
-                    value={formatDurationFromSeconds(sessionStats.longest_session_duration)}
+                    value={formatDurationFromSeconds(
+                        sessionStats.longest_session_duration,
+                    )}
                     label={translation.get('session.longest')}
                 />
 
@@ -103,7 +118,10 @@ export function LibraryReadingStatsSection({
                         {completions.entries.map((entry, index) => {
                             const averageSessionDuration =
                                 entry.session_count > 0
-                                    ? Math.floor(entry.reading_time / entry.session_count)
+                                    ? Math.floor(
+                                          entry.reading_time /
+                                              entry.session_count,
+                                      )
                                     : null;
                             const averageSpeed = calculateAverageReadingSpeed(
                                 entry.pages_read,
@@ -141,7 +159,9 @@ export function LibraryReadingStatsSection({
                                                         className="w-3.5 h-3.5 mr-1"
                                                         aria-hidden="true"
                                                     />
-                                                    {formatDurationFromSeconds(entry.reading_time)}
+                                                    {formatDurationFromSeconds(
+                                                        entry.reading_time,
+                                                    )}
                                                 </span>
 
                                                 <span className="flex items-center whitespace-nowrap">
@@ -155,7 +175,8 @@ export function LibraryReadingStatsSection({
                                                     )}
                                                 </span>
 
-                                                {averageSessionDuration !== null && (
+                                                {averageSessionDuration !==
+                                                    null && (
                                                     <span className="flex items-center whitespace-nowrap">
                                                         <LuClock3
                                                             className="w-3.5 h-3.5 mr-1"
@@ -164,7 +185,9 @@ export function LibraryReadingStatsSection({
                                                         {formatDurationFromSeconds(
                                                             averageSessionDuration,
                                                         )}
-                                                        {translation.get('avg-session-suffix')}
+                                                        {translation.get(
+                                                            'avg-session-suffix',
+                                                        )}
                                                     </span>
                                                 )}
 
@@ -174,8 +197,12 @@ export function LibraryReadingStatsSection({
                                                             className="w-3.5 h-3.5 mr-1"
                                                             aria-hidden="true"
                                                         />
-                                                        {formatReadingSpeed(averageSpeed)}{' '}
-                                                        {translation.get('pph-abbreviation')}
+                                                        {formatReadingSpeed(
+                                                            averageSpeed,
+                                                        )}{' '}
+                                                        {translation.get(
+                                                            'pph-abbreviation',
+                                                        )}
                                                     </span>
                                                 )}
 
@@ -203,7 +230,10 @@ export function LibraryReadingStatsSection({
 
             <div className="mt-6 p-4 bg-primary-50 dark:bg-dark-850/30 rounded-lg border border-primary-200 dark:border-dark-700/50">
                 <div className="flex items-center text-sm text-gray-500 dark:text-dark-400">
-                    <LuInfo className="w-4 h-4 mr-2 text-primary-400" aria-hidden="true" />
+                    <LuInfo
+                        className="w-4 h-4 mr-2 text-primary-400"
+                        aria-hidden="true"
+                    />
                     {translation.get('statistics-from-koreader')}
                 </div>
             </div>

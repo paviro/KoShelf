@@ -42,7 +42,10 @@ export function YearSelector({
                 className={`${DROPDOWN_TRIGGER_BASE_CLASSNAME} w-10 sm:w-auto sm:px-4`}
             >
                 <div className="flex items-center space-x-0 sm:space-x-3">
-                    <LuCalendarDays className={`w-5 h-5 ${iconColorClass}`} aria-hidden="true" />
+                    <LuCalendarDays
+                        className={`w-5 h-5 ${iconColorClass}`}
+                        aria-hidden="true"
+                    />
                     <span
                         id={`selected${idPrefix}Text`}
                         className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm"

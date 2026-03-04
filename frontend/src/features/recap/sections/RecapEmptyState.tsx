@@ -13,7 +13,10 @@ export function RecapEmptyState({ hasYearContext }: RecapEmptyStateProps) {
                 <div className="relative mb-8">
                     <div className="absolute inset-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-2xl"></div>
                     <div className="relative w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                        <LuScrollText className="w-12 h-12 text-white" aria-hidden />
+                        <LuScrollText
+                            className="w-12 h-12 text-white"
+                            aria-hidden
+                        />
                     </div>
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
@@ -31,7 +34,9 @@ export function RecapEmptyState({ hasYearContext }: RecapEmptyStateProps) {
                     <summary className="flex items-center justify-between p-4 cursor-pointer select-none text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
                         <div className="flex items-center gap-3">
                             <LuInfo className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                            <span>{translation.get('recap-empty.info-question')}</span>
+                            <span>
+                                {translation.get('recap-empty.info-question')}
+                            </span>
                         </div>
                         <svg
                             className="w-4 h-4 text-gray-400 transform transition-transform duration-200 group-open:rotate-180 ml-4"

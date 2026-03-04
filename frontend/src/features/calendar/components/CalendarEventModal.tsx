@@ -1,13 +1,26 @@
 import { useState } from 'react';
-import { LuBookOpen, LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
+import {
+    LuBookOpen,
+    LuClock3,
+    LuEye,
+    LuFileText,
+    LuUser,
+    LuX,
+} from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { buildRoutePath, detailRouteIdForContentType } from '../../../app/routes/route-registry';
+import {
+    buildRoutePath,
+    detailRouteIdForContentType,
+} from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
-import type { CalendarEventResponse, CalendarItemResponse } from '../api/calendar-data';
+import type {
+    CalendarEventResponse,
+    CalendarItemResponse,
+} from '../api/calendar-data';
 import { formatDuration } from '../model/calendar-model';
 
 type CalendarEventModalProps = {
@@ -17,13 +30,21 @@ type CalendarEventModalProps = {
     onClose: () => void;
 };
 
-export function CalendarEventModal({ open, event, item, onClose }: CalendarEventModalProps) {
+export function CalendarEventModal({
+    open,
+    event,
+    item,
+    onClose,
+}: CalendarEventModalProps) {
     const [coverFailed, setCoverFailed] = useState(false);
     const coverKey = `${event?.item_id}\0${item?.item_cover}`;
     const [prevCoverKey, setPrevCoverKey] = useState(coverKey);
     const location = useLocation();
     const navigate = useNavigate();
-    const detailReturnState = createDetailReturnState(location.pathname, location.search);
+    const detailReturnState = createDetailReturnState(
+        location.pathname,
+        location.search,
+    );
 
     if (prevCoverKey !== coverKey) {
         setPrevCoverKey(coverKey);
@@ -40,9 +61,12 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
         : translation.get('unknown-author');
     const coverUrl = item?.item_cover?.trim() ? item.item_cover : null;
     const detailItemId = item?.item_id?.trim() ?? '';
-    const detailPath = item && detailItemId
-        ? buildRoutePath(detailRouteIdForContentType(item.content_type), { id: detailItemId })
-        : null;
+    const detailPath =
+        item && detailItemId
+            ? buildRoutePath(detailRouteIdForContentType(item.content_type), {
+                  id: detailItemId,
+              })
+            : null;
     const canViewDetails = Boolean(detailPath);
 
     return (
@@ -146,12 +170,17 @@ export function CalendarEventModal({ open, event, item, onClose }: CalendarEvent
                             onClick={() => {
                                 onClose();
                                 if (detailPath) {
-                                    navigate(detailPath, { state: detailReturnState });
+                                    navigate(detailPath, {
+                                        state: detailReturnState,
+                                    });
                                 }
                             }}
                         >
                             <span className="flex items-center">
-                                <LuEye className="w-4 h-4 mr-2" aria-hidden="true" />
+                                <LuEye
+                                    className="w-4 h-4 mr-2"
+                                    aria-hidden="true"
+                                />
                                 {translation.get('view-details')}
                             </span>
                         </button>

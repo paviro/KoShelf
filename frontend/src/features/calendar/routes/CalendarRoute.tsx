@@ -21,7 +21,10 @@ import {
     shiftMonth,
     shiftMonthKey,
 } from '../model/calendar-model';
-import { useCalendarMonthQuery, useCalendarMonthsQuery } from '../hooks/useCalendarQueries';
+import {
+    useCalendarMonthQuery,
+    useCalendarMonthsQuery,
+} from '../hooks/useCalendarQueries';
 import type { CalendarEventResponse } from '../api/calendar-data';
 import type { ScopeValue } from '../../../shared/api';
 import { api } from '../../../shared/api';
@@ -38,15 +41,22 @@ function safeFormatDateLabel(
     options: Intl.DateTimeFormatOptions,
 ): string {
     try {
-        return new Intl.DateTimeFormat(locale || FALLBACK_LOCALE, options).format(date);
+        return new Intl.DateTimeFormat(
+            locale || FALLBACK_LOCALE,
+            options,
+        ).format(date);
     } catch {
         return new Intl.DateTimeFormat(FALLBACK_LOCALE, options).format(date);
     }
 }
 
 export function CalendarRoute() {
-    const [initialCalendarView] = useState(() => loadInitialCalendarViewState());
-    const [scope, setScope] = useState<ScopeValue>(() => initialCalendarView.scope);
+    const [initialCalendarView] = useState(() =>
+        loadInitialCalendarViewState(),
+    );
+    const [scope, setScope] = useState<ScopeValue>(
+        () => initialCalendarView.scope,
+    );
     const [persistMonthSelection, setPersistMonthSelection] = useState<boolean>(
         () => initialCalendarView.monthKey !== null,
     );
@@ -57,8 +67,11 @@ export function CalendarRoute() {
     );
     const [monthPickerOpen, setMonthPickerOpen] = useState(false);
     const [yearPickerOpen, setYearPickerOpen] = useState(false);
-    const [yearPickerStartYear, setYearPickerStartYear] = useState(new Date().getFullYear() - 4);
-    const [selectedEvent, setSelectedEvent] = useState<CalendarEventResponse | null>(null);
+    const [yearPickerStartYear, setYearPickerStartYear] = useState(
+        new Date().getFullYear() - 4,
+    );
+    const [selectedEvent, setSelectedEvent] =
+        useState<CalendarEventResponse | null>(null);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
     const siteQuery = useQuery({
@@ -71,8 +84,14 @@ export function CalendarRoute() {
     const nextMonthKey = shiftMonthKey(displayedMonthKey, 1);
 
     const monthsQuery = useCalendarMonthsQuery();
-    const availableMonths = useMemo(() => monthsQuery.data?.months ?? [], [monthsQuery.data?.months]);
-    const availableMonthSet = useMemo(() => new Set(availableMonths), [availableMonths]);
+    const availableMonths = useMemo(
+        () => monthsQuery.data?.months ?? [],
+        [monthsQuery.data?.months],
+    );
+    const availableMonthSet = useMemo(
+        () => new Set(availableMonths),
+        [availableMonths],
+    );
     const canStartMonthQueries = monthsQuery.isSuccess || monthsQuery.isError;
 
     const shouldFetchMonth = useCallback(
@@ -98,9 +117,18 @@ export function CalendarRoute() {
     const currentMonthEnabled = shouldFetchMonth(displayedMonthKey);
     const nextMonthEnabled = shouldFetchMonth(nextMonthKey);
 
-    const previousMonthQuery = useCalendarMonthQuery(previousMonthKey, previousMonthEnabled);
-    const currentMonthQuery = useCalendarMonthQuery(displayedMonthKey, currentMonthEnabled);
-    const nextMonthQuery = useCalendarMonthQuery(nextMonthKey, nextMonthEnabled);
+    const previousMonthQuery = useCalendarMonthQuery(
+        previousMonthKey,
+        previousMonthEnabled,
+    );
+    const currentMonthQuery = useCalendarMonthQuery(
+        displayedMonthKey,
+        currentMonthEnabled,
+    );
+    const nextMonthQuery = useCalendarMonthQuery(
+        nextMonthKey,
+        nextMonthEnabled,
+    );
 
     useEffect(() => {
         persistCalendarViewState({
@@ -129,8 +157,13 @@ export function CalendarRoute() {
     const mergedCalendarData = useMemo(
         () =>
             aggregateCalendarData(
-                [previousMonthQuery.data, currentMonthQuery.data, nextMonthQuery.data].filter(
-                    (monthData): monthData is NonNullable<typeof monthData> => Boolean(monthData),
+                [
+                    previousMonthQuery.data,
+                    currentMonthQuery.data,
+                    nextMonthQuery.data,
+                ].filter(
+                    (monthData): monthData is NonNullable<typeof monthData> =>
+                        Boolean(monthData),
                 ),
             ),
         [currentMonthQuery.data, nextMonthQuery.data, previousMonthQuery.data],
@@ -150,7 +183,8 @@ export function CalendarRoute() {
     const monthlyStats = resolveMonthlyStats(currentMonthQuery.data, scope);
 
     const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books && siteQuery.data?.capabilities.has_comics,
+        siteQuery.data?.capabilities.has_books &&
+        siteQuery.data?.capabilities.has_comics,
     );
 
     const handleDisplayedMonthChange = useCallback((nextDate: Date) => {
@@ -201,7 +235,9 @@ export function CalendarRoute() {
 
     const initialLoading =
         !canStartMonthQueries ||
-        (currentMonthEnabled && currentMonthQuery.isLoading && !currentMonthQuery.data);
+        (currentMonthEnabled &&
+            currentMonthQuery.isLoading &&
+            !currentMonthQuery.data);
 
     return (
         <>
@@ -217,7 +253,9 @@ export function CalendarRoute() {
                     onToday={handleToday}
                     onOpenMonthPicker={() => setMonthPickerOpen(true)}
                     onOpenYearPicker={() => {
-                        setYearPickerStartYear(displayedMonth.getFullYear() - 4);
+                        setYearPickerStartYear(
+                            displayedMonth.getFullYear() - 4,
+                        );
                         setYearPickerOpen(true);
                     }}
                     todayDisabled={isCurrentMonth(displayedMonth)}
@@ -226,7 +264,10 @@ export function CalendarRoute() {
                 <main className="flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-4">
                     {initialLoading && (
                         <section className="flex-1 flex items-center justify-center">
-                            <LoadingSpinner size="lg" srLabel="Loading calendar" />
+                            <LoadingSpinner
+                                size="lg"
+                                srLabel="Loading calendar"
+                            />
                         </section>
                     )}
 
@@ -240,14 +281,19 @@ export function CalendarRoute() {
 
                     {!currentMonthQuery.isError && !initialLoading && (
                         <>
-                            <CalendarMonthlyStatsSection stats={monthlyStats} scope={scope} />
+                            <CalendarMonthlyStatsSection
+                                stats={monthlyStats}
+                                scope={scope}
+                            />
 
                             <CalendarGrid
                                 locale={locale}
                                 displayedMonth={displayedMonth}
                                 events={filteredEvents}
                                 items={mergedCalendarData.items}
-                                onDisplayedMonthChange={handleDisplayedMonthChange}
+                                onDisplayedMonthChange={
+                                    handleDisplayedMonthChange
+                                }
                                 onEventSelect={handleEventSelect}
                             />
                         </>
@@ -265,7 +311,15 @@ export function CalendarRoute() {
                     setPersistMonthSelection(true);
                     setDisplayedMonth(
                         (currentDate) =>
-                            new Date(currentDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0),
+                            new Date(
+                                currentDate.getFullYear(),
+                                monthIndex,
+                                1,
+                                12,
+                                0,
+                                0,
+                                0,
+                            ),
                     );
                 }}
             />
@@ -275,12 +329,25 @@ export function CalendarRoute() {
                 selectedYear={displayedMonth.getFullYear()}
                 rangeStartYear={yearPickerStartYear}
                 onClose={() => setYearPickerOpen(false)}
-                onPreviousRange={() => setYearPickerStartYear((current) => current - 9)}
-                onNextRange={() => setYearPickerStartYear((current) => current + 9)}
+                onPreviousRange={() =>
+                    setYearPickerStartYear((current) => current - 9)
+                }
+                onNextRange={() =>
+                    setYearPickerStartYear((current) => current + 9)
+                }
                 onSelectYear={(year) => {
                     setPersistMonthSelection(true);
                     setDisplayedMonth(
-                        (currentDate) => new Date(year, currentDate.getMonth(), 1, 12, 0, 0, 0),
+                        (currentDate) =>
+                            new Date(
+                                year,
+                                currentDate.getMonth(),
+                                1,
+                                12,
+                                0,
+                                0,
+                                0,
+                            ),
                     );
                 }}
             />

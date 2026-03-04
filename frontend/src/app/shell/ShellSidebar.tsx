@@ -26,7 +26,10 @@ export function ShellSidebar({
             <div className="py-4 px-6 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <BrandIcon className="w-6 h-6 text-white" aria-hidden="true" />
+                        <BrandIcon
+                            className="w-6 h-6 text-white"
+                            aria-hidden="true"
+                        />
                     </div>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -85,7 +88,10 @@ export function ShellSidebar({
                 <div className="bg-gray-100/50 dark:bg-dark-900/50 border border-gray-200/50 dark:border-dark-700/50 rounded-lg p-3">
                     <div className="flex items-center mb-2">
                         <div className="w-6 h-6 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center mr-2">
-                            <LuGithub className="w-3 h-3 text-white" aria-hidden="true" />
+                            <LuGithub
+                                className="w-3 h-3 text-white"
+                                aria-hidden="true"
+                            />
                         </div>
                         <a
                             href="https://github.com/paviro/KOShelf"

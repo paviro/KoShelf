@@ -1,5 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
-import { LuCalendarDays, LuChevronDown, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import {
+    LuCalendarDays,
+    LuChevronDown,
+    LuChevronLeft,
+    LuChevronRight,
+} from 'react-icons/lu';
 
 import type { StatisticsIndexWeek } from '../api/statistics-data';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
@@ -16,7 +21,11 @@ type WeekSelectorProps = {
     onSelect: (weekKey: string) => void;
 };
 
-export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorProps) {
+export function WeekSelector({
+    weeks,
+    selectedWeekKey,
+    onSelect,
+}: WeekSelectorProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<'years' | 'weeks'>('years');
@@ -26,12 +35,16 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
         if (!weeks.length) {
             return null;
         }
-        return weeks.find((week) => week.week_key === selectedWeekKey) ?? weeks[0];
+        return (
+            weeks.find((week) => week.week_key === selectedWeekKey) ?? weeks[0]
+        );
     }, [selectedWeekKey, weeks]);
 
     const [prevSelectedWeek, setPrevSelectedWeek] = useState(selectedWeek);
     const [selectedYear, setSelectedYear] = useState<string | null>(
-        selectedWeek ? selectedWeek.start_date.substring(0, 4) : (yearOrder[0] ?? null),
+        selectedWeek
+            ? selectedWeek.start_date.substring(0, 4)
+            : (yearOrder[0] ?? null),
     );
 
     if (selectedWeek !== prevSelectedWeek) {
@@ -44,9 +57,14 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
     useClickOutside(wrapperRef, () => setOpen(false), open);
 
     const selectedText = selectedWeek
-        ? DateFormatter.formatDateRange(selectedWeek.start_date, selectedWeek.end_date)
+        ? DateFormatter.formatDateRange(
+              selectedWeek.start_date,
+              selectedWeek.end_date,
+          )
         : 'No weeks available';
-    const selectedYearText = selectedWeek ? selectedWeek.start_date.substring(0, 4) : '';
+    const selectedYearText = selectedWeek
+        ? selectedWeek.start_date.substring(0, 4)
+        : '';
 
     const weeksForSelectedYear = weeks.filter(
         (week) => week.start_date.substring(0, 4) === (selectedYear ?? ''),
@@ -79,8 +97,12 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                     >
                         {selectedWeek ? (
                             <>
-                                <span className="font-bold">{selectedText}</span>{' '}
-                                <span className="text-primary-400">{selectedYearText}</span>
+                                <span className="font-bold">
+                                    {selectedText}
+                                </span>{' '}
+                                <span className="text-primary-400">
+                                    {selectedYearText}
+                                </span>
                             </>
                         ) : (
                             'No weeks available'
@@ -125,7 +147,9 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                                             className="w-4 h-4 text-primary-400 mr-2"
                                             aria-hidden="true"
                                         />
-                                        <span className="font-semibold">{year}</span>
+                                        <span className="font-semibold">
+                                            {year}
+                                        </span>
                                     </div>
                                     <LuChevronRight
                                         className="w-4 h-4 text-gray-400 dark:text-dark-400"
@@ -137,7 +161,10 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                     })}
                 </div>
 
-                <div id="weekYearWeeksView" className={view === 'weeks' ? '' : 'hidden'}>
+                <div
+                    id="weekYearWeeksView"
+                    className={view === 'weeks' ? '' : 'hidden'}
+                >
                     <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200/60 dark:border-dark-700/60 bg-gray-50/70 dark:bg-dark-900/40">
                         <button
                             id="weekYearBackButton"
@@ -146,7 +173,10 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                             aria-label="Back to years"
                             onClick={() => setView('years')}
                         >
-                            <LuChevronLeft className="w-4 h-4" aria-hidden="true" />
+                            <LuChevronLeft
+                                className="w-4 h-4"
+                                aria-hidden="true"
+                            />
                         </button>
                         <span
                             id="weekYearTitle"
@@ -157,9 +187,13 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                         <span className="w-8 h-8"></span>
                     </div>
 
-                    <div id="weekYearWeekList" className="max-h-56 overflow-y-auto">
+                    <div
+                        id="weekYearWeekList"
+                        className="max-h-56 overflow-y-auto"
+                    >
                         {weeksForSelectedYear.map((week) => {
-                            const active = week.week_key === selectedWeek?.week_key;
+                            const active =
+                                week.week_key === selectedWeek?.week_key;
                             return (
                                 <button
                                     key={week.week_key}
@@ -172,10 +206,15 @@ export function WeekSelector({ weeks, selectedWeekKey, onSelect }: WeekSelectorP
                                     data-week-key={week.week_key}
                                     data-start-date={week.start_date}
                                     data-end-date={week.end_date}
-                                    data-week-year={week.start_date.substring(0, 4)}
+                                    data-week-year={week.start_date.substring(
+                                        0,
+                                        4,
+                                    )}
                                     onClick={() => {
                                         onSelect(week.week_key);
-                                        setSelectedYear(week.start_date.substring(0, 4));
+                                        setSelectedYear(
+                                            week.start_date.substring(0, 4),
+                                        );
                                         setOpen(false);
                                     }}
                                 >

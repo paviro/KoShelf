@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type MouseEvent,
+    type ReactNode,
+} from 'react';
 import { LuX } from 'react-icons/lu';
 
 import { translation } from '../../i18n';

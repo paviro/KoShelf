@@ -1,8 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LuBookOpen, LuCalendarDays, LuClock3, LuFileText, LuQuote, LuStar } from 'react-icons/lu';
+import {
+    LuBookOpen,
+    LuCalendarDays,
+    LuClock3,
+    LuFileText,
+    LuQuote,
+    LuStar,
+} from 'react-icons/lu';
 
-import { buildRoutePath, detailRouteIdForContentType } from '../../../app/routes/route-registry';
+import {
+    buildRoutePath,
+    detailRouteIdForContentType,
+} from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { RecapItemResponse } from '../api/recap-data';
@@ -29,16 +39,22 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
             return null;
         }
 
-        return buildRoutePath(detailRouteIdForContentType(item.content_type), { id: itemId });
+        return buildRoutePath(detailRouteIdForContentType(item.content_type), {
+            id: itemId,
+        });
     }, [item.content_type, item.item_id]);
     const coverUrl = item.item_cover?.trim() || null;
     const [coverFailed, setCoverFailed] = useState(false);
     const [prevCoverUrl, setPrevCoverUrl] = useState(coverUrl);
     const hasReviewNote = Boolean(item.review_note?.trim());
-    const hasRating = typeof item.rating === 'number' && Number.isFinite(item.rating);
+    const hasRating =
+        typeof item.rating === 'number' && Number.isFinite(item.rating);
     const stars = buildStarDisplay(item.rating);
     const searchBasePath = resolveRecapSearchBasePath(item);
-    const detailReturnState = createDetailReturnState(location.pathname, location.search);
+    const detailReturnState = createDetailReturnState(
+        location.pathname,
+        location.search,
+    );
     const coverFrameClass =
         'w-full aspect-[2/3] flex items-center justify-center rounded-md overflow-hidden recap-cover-max';
 
@@ -56,7 +72,9 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
             {item.title}
         </Link>
     ) : (
-        <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{item.title}</div>
+        <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+            {item.title}
+        </div>
     );
 
     return (
@@ -102,12 +120,19 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 state={detailReturnState}
                                 className="block w-full recap-cover-tilt rounded-md"
                             >
-                                <div className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}>
-                                    <LuBookOpen className="w-12 h-12" aria-hidden />
+                                <div
+                                    className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}
+                                >
+                                    <LuBookOpen
+                                        className="w-12 h-12"
+                                        aria-hidden
+                                    />
                                 </div>
                             </Link>
                         ) : (
-                            <div className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}>
+                            <div
+                                className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}
+                            >
                                 <LuBookOpen className="w-12 h-12" aria-hidden />
                             </div>
                         )}
@@ -126,10 +151,15 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                     <div className="text-sm text-gray-600 dark:text-dark-300">
                                         {translation.get('by')}{' '}
                                         {item.authors.map((author, index) => {
-                                            const separator = index < item.authors.length - 1 ? ', ' : '';
+                                            const separator =
+                                                index < item.authors.length - 1
+                                                    ? ', '
+                                                    : '';
                                             if (!detailPath) {
                                                 return (
-                                                    <span key={`${author}:${index}`}>
+                                                    <span
+                                                        key={`${author}:${index}`}
+                                                    >
                                                         {author}
                                                         {separator}
                                                     </span>
@@ -137,7 +167,9 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                             }
 
                                             return (
-                                                <span key={`${author}:${index}`}>
+                                                <span
+                                                    key={`${author}:${index}`}
+                                                >
                                                     <Link
                                                         to={`${searchBasePath}?search=${encodeURIComponent(author)}`}
                                                         className="text-primary-600 dark:text-primary-400 hover:underline"
@@ -194,7 +226,10 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                         {translation.get('period')}
                                     </div>
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                                        {formatRecapDateRange(item.start_date, item.end_date)}
+                                        {formatRecapDateRange(
+                                            item.start_date,
+                                            item.end_date,
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -219,7 +254,10 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                        {translation.get('pages-label', item.pages_read)}
+                                        {translation.get(
+                                            'pages-label',
+                                            item.pages_read,
+                                        )}
                                     </div>
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                                         {item.pages_read}

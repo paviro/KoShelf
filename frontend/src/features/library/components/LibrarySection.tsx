@@ -1,6 +1,9 @@
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type { LibraryListItem } from '../api/library-data';
-import type { LibraryCollection, LibrarySectionKey } from '../model/library-model';
+import type {
+    LibraryCollection,
+    LibrarySectionKey,
+} from '../model/library-model';
 import { LibraryCard } from './LibraryCard';
 
 type LibrarySectionProps = {
@@ -12,7 +15,10 @@ type LibrarySectionProps = {
     onToggle: () => void;
 };
 
-const SECTION_STYLES: Record<LibrarySectionKey, { accentClass: string; badgeClass: string }> = {
+const SECTION_STYLES: Record<
+    LibrarySectionKey,
+    { accentClass: string; badgeClass: string }
+> = {
     reading: {
         accentClass: 'from-primary-400 to-primary-600',
         badgeClass: 'from-primary-500 to-primary-600',

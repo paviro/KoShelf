@@ -1,6 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import { loadRecapIndex, loadRecapYear, type RecapScope } from '../api/recap-data';
+import {
+    loadRecapIndex,
+    loadRecapYear,
+    type RecapScope,
+} from '../api/recap-data';
 
 export function useRecapIndexQuery(scope: RecapScope) {
     return useQuery({

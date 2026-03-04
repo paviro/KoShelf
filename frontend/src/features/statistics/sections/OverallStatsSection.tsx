@@ -17,7 +17,11 @@ type OverallStatsSectionProps = {
     overview: StatisticsIndexResponse['overview'];
 };
 
-export function OverallStatsSection({ visible, onToggle, overview }: OverallStatsSectionProps) {
+export function OverallStatsSection({
+    visible,
+    onToggle,
+    overview,
+}: OverallStatsSectionProps) {
     return (
         <CollapsibleSection
             sectionKey="overall-stats"
@@ -47,7 +51,9 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuFileText}
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
-                    value={DataFormatter.formatCount(overview.most_pages_in_day)}
+                    value={DataFormatter.formatCount(
+                        overview.most_pages_in_day,
+                    )}
                     label={translation.get('most-pages-in-day')}
                 />
 
@@ -55,7 +61,9 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuSun}
                     iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
                     iconClassName="text-amber-600 dark:text-white"
-                    value={DataFormatter.formatReadTime(overview.longest_read_time_in_day)}
+                    value={DataFormatter.formatReadTime(
+                        overview.longest_read_time_in_day,
+                    )}
                     label={translation.get('longest-daily-reading')}
                 />
 
@@ -63,7 +71,9 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuClock3}
                     iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
-                    value={formatSessionDuration(overview.longest_session_duration)}
+                    value={formatSessionDuration(
+                        overview.longest_session_duration,
+                    )}
                     label={translation.get('session.longest')}
                 />
 
@@ -71,7 +81,9 @@ export function OverallStatsSection({ visible, onToggle, overview }: OverallStat
                     icon={LuClock3}
                     iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                     iconClassName="text-purple-600 dark:text-white"
-                    value={formatSessionDuration(overview.average_session_duration)}
+                    value={formatSessionDuration(
+                        overview.average_session_duration,
+                    )}
                     label={translation.get('session.average')}
                 />
             </div>

@@ -10,7 +10,10 @@ import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 import { RecapHeaderControls } from '../components/RecapHeaderControls';
 import { RecapShareModal } from '../components/RecapShareModal';
-import { useRecapIndexQuery, useRecapYearQuery } from '../hooks/useRecapQueries';
+import {
+    useRecapIndexQuery,
+    useRecapYearQuery,
+} from '../hooks/useRecapQueries';
 import {
     orderRecapMonths,
     persistRecapViewState,
@@ -26,9 +29,15 @@ import { RecapTimelineSection } from '../sections/RecapTimelineSection';
 
 export function RecapRoute() {
     const [scope, setScope] = useState(() => readStoredRecapScope());
-    const [selectedYear, setSelectedYear] = useState<number | null>(() => readStoredRecapYear());
-    const [sortNewestFirst, setSortNewestFirst] = useState(() => readRecapSortNewest());
-    const [shareModalOpenKey, setShareModalOpenKey] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState<number | null>(() =>
+        readStoredRecapYear(),
+    );
+    const [sortNewestFirst, setSortNewestFirst] = useState(() =>
+        readRecapSortNewest(),
+    );
+    const [shareModalOpenKey, setShareModalOpenKey] = useState<string | null>(
+        null,
+    );
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -36,8 +45,14 @@ export function RecapRoute() {
     });
 
     const recapIndexQuery = useRecapIndexQuery(scope);
-    const availableYears = useMemo(() => recapIndexQuery.data?.available_years ?? [], [recapIndexQuery.data?.available_years]);
-    const latestYear = resolveLatestYear(availableYears, recapIndexQuery.data?.latest_year);
+    const availableYears = useMemo(
+        () => recapIndexQuery.data?.available_years ?? [],
+        [recapIndexQuery.data?.available_years],
+    );
+    const latestYear = resolveLatestYear(
+        availableYears,
+        recapIndexQuery.data?.latest_year,
+    );
     const yearForQuery = useMemo(() => {
         if (selectedYear !== null && availableYears.includes(selectedYear)) {
             return selectedYear;
@@ -60,12 +75,17 @@ export function RecapRoute() {
     const visibleItemsKey = useMemo(
         () =>
             orderedMonths
-                .map((month) => `${month.month_key}:${month.items.map((item) => item.end_date).join('|')}`)
+                .map(
+                    (month) =>
+                        `${month.month_key}:${month.items.map((item) => item.end_date).join('|')}`,
+                )
                 .join('||'),
         [orderedMonths],
     );
 
-    useRecapCoverTiltEffect(`${scope}:${yearForQuery ?? 'none'}:${sortNewestFirst}:${visibleItemsKey}`);
+    useRecapCoverTiltEffect(
+        `${scope}:${yearForQuery ?? 'none'}:${sortNewestFirst}:${visibleItemsKey}`,
+    );
 
     useEffect(() => {
         if (!recapIndexQuery.isSuccess) {
@@ -89,7 +109,8 @@ export function RecapRoute() {
     }, [recapYear?.year, siteQuery.data?.title, yearForQuery]);
 
     const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books && siteQuery.data?.capabilities.has_comics,
+        siteQuery.data?.capabilities.has_books &&
+        siteQuery.data?.capabilities.has_comics,
     );
 
     const showPageLevelEmptyState =
@@ -97,8 +118,7 @@ export function RecapRoute() {
         !recapIndexQuery.isError &&
         yearForQuery === null &&
         availableYears.length === 0;
-    const recapYearLoading =
-        recapYearQuery.isFetching && recapYear === null;
+    const recapYearLoading = recapYearQuery.isFetching && recapYear === null;
     const showYearEmptyState =
         !recapYearLoading &&
         !recapYearQuery.isError &&
@@ -122,11 +142,19 @@ export function RecapRoute() {
                         selectedYear={yearForQuery}
                         onSelectYear={(nextYear) => {
                             setSelectedYear(nextYear);
-                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                            window.scrollTo({
+                                top: 0,
+                                left: 0,
+                                behavior: 'auto',
+                            });
                         }}
                         onScopeChange={(nextScope) => {
                             setScope(nextScope);
-                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                            window.scrollTo({
+                                top: 0,
+                                left: 0,
+                                behavior: 'auto',
+                            });
                         }}
                         sortNewestFirst={sortNewestFirst}
                         onToggleSort={() => {
@@ -159,11 +187,16 @@ export function RecapRoute() {
 
                 {!recapIndexQuery.isLoading && !recapIndexQuery.isError && (
                     <>
-                        {showPageLevelEmptyState && <RecapEmptyState hasYearContext={false} />}
+                        {showPageLevelEmptyState && (
+                            <RecapEmptyState hasYearContext={false} />
+                        )}
 
                         {yearForQuery !== null && recapYearLoading && (
                             <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                                <LoadingSpinner size="lg" srLabel="Loading recap year" />
+                                <LoadingSpinner
+                                    size="lg"
+                                    srLabel="Loading recap year"
+                                />
                             </section>
                         )}
 
@@ -175,16 +208,24 @@ export function RecapRoute() {
                             </section>
                         )}
 
-                        {showYearEmptyState && <RecapEmptyState hasYearContext={true} />}
+                        {showYearEmptyState && (
+                            <RecapEmptyState hasYearContext={true} />
+                        )}
 
                         {showTimeline && recapYear && (
-                            <div className="recap-timeline space-y-6" id="recapTimeline">
+                            <div
+                                className="recap-timeline space-y-6"
+                                id="recapTimeline"
+                            >
                                 <RecapSummarySection
                                     year={recapYear.year}
                                     scope={scope}
                                     summary={recapYear.summary}
                                 />
-                                <RecapTimelineSection months={orderedMonths} scope={scope} />
+                                <RecapTimelineSection
+                                    months={orderedMonths}
+                                    scope={scope}
+                                />
                             </div>
                         )}
                     </>
@@ -194,7 +235,9 @@ export function RecapRoute() {
             <RecapShareModal
                 open={shareModalOpen}
                 onClose={() => setShareModalOpenKey(null)}
-                year={recapYear?.year ?? yearForQuery ?? new Date().getFullYear()}
+                year={
+                    recapYear?.year ?? yearForQuery ?? new Date().getFullYear()
+                }
                 shareAssets={shareAssets}
             />
         </>

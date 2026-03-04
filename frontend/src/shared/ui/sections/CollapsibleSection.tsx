@@ -16,11 +16,15 @@ function ToggleButton({ visible, onClick }: ToggleButtonProps) {
             className="flex items-center justify-center sm:space-x-2 w-10 sm:w-auto sm:px-3 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm"
         >
             <span className="hidden sm:inline text-sm text-gray-600 dark:text-dark-300">
-                {visible ? translation.get('toggle.hide') : translation.get('toggle.show')}
+                {visible
+                    ? translation.get('toggle.hide')
+                    : translation.get('toggle.show')}
             </span>
             <LuChevronDown
                 className="w-4 h-4 text-gray-600 dark:text-gray-300 transform transition-transform duration-200"
-                style={{ transform: visible ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+                style={{
+                    transform: visible ? 'rotate(0deg)' : 'rotate(-90deg)',
+                }}
                 aria-hidden="true"
             />
         </button>
@@ -59,10 +63,15 @@ export function CollapsibleSection({
         .join(' ');
 
     return (
-        <section data-name={sectionKey} data-default-visible={defaultVisible ? 'true' : 'false'}>
+        <section
+            data-name={sectionKey}
+            data-default-visible={defaultVisible ? 'true' : 'false'}
+        >
             <div className="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center space-x-3">
-                    <div className={`w-2 h-6 md:h-8 rounded-full ${accentClass}`}></div>
+                    <div
+                        className={`w-2 h-6 md:h-8 rounded-full ${accentClass}`}
+                    ></div>
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                         {title}
                     </h2>

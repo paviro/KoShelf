@@ -3,7 +3,8 @@ import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 
 const FALLBACK_LOCALE = 'en-US';
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
-const ISO_DATETIME_REGEX = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
+const ISO_DATETIME_REGEX =
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 function isFiniteNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value);
@@ -13,7 +14,10 @@ function currentLocale(): string {
     return translation.getLanguage() || FALLBACK_LOCALE;
 }
 
-function safeDateFormat(date: Date, options: Intl.DateTimeFormatOptions): string {
+function safeDateFormat(
+    date: Date,
+    options: Intl.DateTimeFormatOptions,
+): string {
     try {
         return new Intl.DateTimeFormat(currentLocale(), options).format(date);
     } catch {
@@ -31,7 +35,11 @@ function parseIsoDate(value: string): Date | null {
     const month = Number.parseInt(match[2], 10);
     const day = Number.parseInt(match[3], 10);
 
-    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    if (
+        !Number.isFinite(year) ||
+        !Number.isFinite(month) ||
+        !Number.isFinite(day)
+    ) {
         return null;
     }
 
@@ -65,7 +73,9 @@ function parseIsoDateTime(value: string): Date | null {
     return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 }
 
-export function toProgressPercentage(progress: number | null | undefined): number {
+export function toProgressPercentage(
+    progress: number | null | undefined,
+): number {
     if (!isFiniteNumber(progress)) {
         return 0;
     }
@@ -74,7 +84,9 @@ export function toProgressPercentage(progress: number | null | undefined): numbe
     return Math.min(100, Math.max(0, Math.round(percent)));
 }
 
-export function formatDurationFromSeconds(seconds: number | null | undefined): string {
+export function formatDurationFromSeconds(
+    seconds: number | null | undefined,
+): string {
     if (!isFiniteNumber(seconds)) {
         return '--';
     }
@@ -91,7 +103,10 @@ export function formatDurationFromSeconds(seconds: number | null | undefined): s
     return `${formatNumber(totalMinutes)}${translation.get('units.m')}`;
 }
 
-export function formatCompletionDateRange(startDate: string, endDate: string): string {
+export function formatCompletionDateRange(
+    startDate: string,
+    endDate: string,
+): string {
     const start = parseIsoDate(startDate);
     const end = parseIsoDate(endDate);
 
@@ -117,7 +132,9 @@ export function formatCompletionDateRange(startDate: string, endDate: string): s
     return `${formatOne(start)} – ${formatOne(end)}`;
 }
 
-export function formatAnnotationDatetime(value: string | null | undefined): string | null {
+export function formatAnnotationDatetime(
+    value: string | null | undefined,
+): string | null {
     if (!value) {
         return null;
     }
@@ -134,7 +151,9 @@ export function formatAnnotationDatetime(value: string | null | undefined): stri
     });
 }
 
-export function formatLanguageDisplayName(value: string | null | undefined): string {
+export function formatLanguageDisplayName(
+    value: string | null | undefined,
+): string {
     if (!value || !value.trim()) {
         return '--';
     }
@@ -147,8 +166,13 @@ export function formatLanguageDisplayName(value: string | null | undefined): str
     }
 
     try {
-        const displayNames = new Intl.DisplayNames([currentLocale()], { type: 'language' });
-        return displayNames.of(baseLanguage.toLowerCase()) ?? normalized.toUpperCase();
+        const displayNames = new Intl.DisplayNames([currentLocale()], {
+            type: 'language',
+        });
+        return (
+            displayNames.of(baseLanguage.toLowerCase()) ??
+            normalized.toUpperCase()
+        );
     } catch {
         return normalized.toUpperCase();
     }
@@ -180,7 +204,10 @@ export function calculateAverageReadingSpeed(
     return pagesRead / (readingTimeSeconds / 3600);
 }
 
-export function calculateCalendarLengthDays(startDate: string, endDate: string): number | null {
+export function calculateCalendarLengthDays(
+    startDate: string,
+    endDate: string,
+): number | null {
     const start = parseIsoDate(startDate);
     const end = parseIsoDate(endDate);
 
@@ -189,7 +216,9 @@ export function calculateCalendarLengthDays(startDate: string, endDate: string):
     }
 
     const millisecondsPerDay = 24 * 60 * 60 * 1000;
-    const delta = Math.round(Math.abs(end.getTime() - start.getTime()) / millisecondsPerDay);
+    const delta = Math.round(
+        Math.abs(end.getTime() - start.getTime()) / millisecondsPerDay,
+    );
     return delta + 1;
 }
 
@@ -203,9 +232,11 @@ export function sanitizeRichTextHtml(rawHtml: string): string {
     }
 
     const parsed = new DOMParser().parseFromString(rawHtml, 'text/html');
-    parsed.querySelectorAll('script, style, iframe, object, embed').forEach((node) => {
-        node.remove();
-    });
+    parsed
+        .querySelectorAll('script, style, iframe, object, embed')
+        .forEach((node) => {
+            node.remove();
+        });
 
     parsed.querySelectorAll('*').forEach((element) => {
         for (const attribute of Array.from(element.attributes)) {

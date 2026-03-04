@@ -32,7 +32,11 @@ function heatmapCellAnimationDelay(): number {
     return Math.floor(Math.random() * 340);
 }
 
-export function HeatmapSection({ selectedYear, yearData, animationSeed }: HeatmapSectionProps) {
+export function HeatmapSection({
+    selectedYear,
+    yearData,
+    animationSeed,
+}: HeatmapSectionProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const heatmapContainerRef = useRef<HTMLDivElement>(null);
     const dayLabelsRef = useRef<HTMLDivElement>(null);
@@ -45,7 +49,10 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
             if (entry.read_time > maxActivity) {
                 maxActivity = entry.read_time;
             }
-            map.set(entry.date, { pages: entry.pages_read, read: entry.read_time });
+            map.set(entry.date, {
+                pages: entry.pages_read,
+                read: entry.read_time,
+            });
         });
 
         const configuredMax = yearData?.config.max_scale_seconds;
@@ -69,17 +76,24 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
                 const today = new Date();
                 const janFirst = new Date(today.getFullYear(), 0, 1);
                 const janDayOfWeek = janFirst.getDay();
-                const shiftToMonday = janDayOfWeek === 0 ? -6 : 1 - janDayOfWeek;
+                const shiftToMonday =
+                    janDayOfWeek === 0 ? -6 : 1 - janDayOfWeek;
                 const firstMonday = new Date(janFirst);
                 firstMonday.setDate(janFirst.getDate() + shiftToMonday);
                 const daysDiff = Math.floor(
-                    (today.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24),
+                    (today.getTime() - firstMonday.getTime()) /
+                        (1000 * 60 * 60 * 24),
                 );
                 return Math.floor(daysDiff / 7);
             })();
 
             const targetPosition = currentWeek * weekWidth;
-            scrollToHorizontalPosition(scrollContainer, heatmapContainer, targetPosition, 0.7);
+            scrollToHorizontalPosition(
+                scrollContainer,
+                heatmapContainer,
+                targetPosition,
+                0.7,
+            );
             return;
         }
 
@@ -119,7 +133,10 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
     }, [selectedYear, yearData]);
 
     const cellsByKey = useMemo(() => {
-        const cellMap = new Map<string, { classes: string; tooltip: string; level: number }>();
+        const cellMap = new Map<
+            string,
+            { classes: string; tooltip: string; level: number }
+        >();
         if (!selectedYear) {
             return cellMap;
         }
@@ -128,8 +145,14 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
             for (let day = 0; day < 7; day += 1) {
                 const date = calculateCellDate(selectedYear, week, day);
                 const dateIso = formatISODate(date);
-                const activity = activityMap.map.get(dateIso) ?? { pages: 0, read: 0 };
-                const level = normalizeHeatmapLevel(activity.read, activityMap.maxActivity);
+                const activity = activityMap.map.get(dateIso) ?? {
+                    pages: 0,
+                    read: 0,
+                };
+                const level = normalizeHeatmapLevel(
+                    activity.read,
+                    activityMap.maxActivity,
+                );
                 const colorClasses = HEATMAP_COLOR_CLASSES[level].join(' ');
                 const tooltip = `${dateIso}: ${DataFormatter.formatReadTime(activity.read)}, ${DataFormatter.formatCount(activity.pages)} ${translation.get('pages-label', activity.pages)}`;
 
@@ -162,25 +185,49 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
             if (!cellData || cellData.level === 0) return;
 
             element.getAnimations().forEach((a) => a.cancel());
-            HEATMAP_ALL_COLOR_CLASSES.forEach((c) => element.classList.remove(c));
+            HEATMAP_ALL_COLOR_CLASSES.forEach((c) =>
+                element.classList.remove(c),
+            );
             HEATMAP_COLOR_CLASSES[0].forEach((c) => element.classList.add(c));
 
             const level = cellData.level;
             const timeoutId = window.setTimeout(() => {
                 if (!element.isConnected) return;
 
-                HEATMAP_ALL_COLOR_CLASSES.forEach((c) => element.classList.remove(c));
-                HEATMAP_COLOR_CLASSES[level].forEach((c) => element.classList.add(c));
+                HEATMAP_ALL_COLOR_CLASSES.forEach((c) =>
+                    element.classList.remove(c),
+                );
+                HEATMAP_COLOR_CLASSES[level].forEach((c) =>
+                    element.classList.add(c),
+                );
 
                 element.getAnimations().forEach((a) => a.cancel());
                 element.animate(
                     [
-                        { transform: 'scale(0.62)', filter: 'saturate(0.88) brightness(0.99)' },
-                        { transform: 'scale(1.2)', filter: 'saturate(1.22) brightness(1.04)', offset: 0.52 },
-                        { transform: 'scale(0.97)', filter: 'saturate(1.03) brightness(1.01)', offset: 0.78 },
-                        { transform: 'scale(1)', filter: 'saturate(1) brightness(1)' },
+                        {
+                            transform: 'scale(0.62)',
+                            filter: 'saturate(0.88) brightness(0.99)',
+                        },
+                        {
+                            transform: 'scale(1.2)',
+                            filter: 'saturate(1.22) brightness(1.04)',
+                            offset: 0.52,
+                        },
+                        {
+                            transform: 'scale(0.97)',
+                            filter: 'saturate(1.03) brightness(1.01)',
+                            offset: 0.78,
+                        },
+                        {
+                            transform: 'scale(1)',
+                            filter: 'saturate(1) brightness(1)',
+                        },
                     ],
-                    { duration: 280, easing: 'cubic-bezier(0.2, 0.9, 0.24, 1.1)', fill: 'both' },
+                    {
+                        duration: 280,
+                        easing: 'cubic-bezier(0.2, 0.9, 0.24, 1.1)',
+                        fill: 'both',
+                    },
                 );
             }, heatmapCellAnimationDelay());
 
@@ -221,8 +268,15 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
                         <div className="flex mb-3 mt-2 text-xs text-gray-500 dark:text-dark-400 font-medium">
                             <div className="flex w-full justify-between">
                                 {Array.from({ length: 12 }, (_, monthIndex) => (
-                                    <div key={monthIndex} className="w-8 text-center">
-                                        {translation.get(toShortMonthKey(monthKeyAt(monthIndex)))}
+                                    <div
+                                        key={monthIndex}
+                                        className="w-8 text-center"
+                                    >
+                                        {translation.get(
+                                            toShortMonthKey(
+                                                monthKeyAt(monthIndex),
+                                            ),
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -240,9 +294,12 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
                                     className="grid grid-rows-7 gap-1 sm:gap-1 md:gap-1 xl:gap-1.5"
                                 >
                                     {Array.from({ length: 7 }, (_, day) => {
-                                        const cell = cellsByKey.get(`${week}-${day}`);
+                                        const cell = cellsByKey.get(
+                                            `${week}-${day}`,
+                                        );
                                         const colorClasses =
-                                            cell?.classes ?? 'bg-gray-100 dark:bg-dark-800';
+                                            cell?.classes ??
+                                            'bg-gray-100 dark:bg-dark-800';
                                         return (
                                             <div
                                                 key={`${week}-${day}`}
@@ -268,13 +325,17 @@ export function HeatmapSection({ selectedYear, yearData, animationSeed }: Heatma
             </div>
 
             <div className="flex items-center justify-end mt-4 space-x-2 text-xs">
-                <span className="text-gray-500 dark:text-dark-400">{translation.get('less')}</span>
+                <span className="text-gray-500 dark:text-dark-400">
+                    {translation.get('less')}
+                </span>
                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-gray-100 dark:bg-dark-800"></div>
                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-100 dark:bg-green-900"></div>
                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-300 dark:bg-green-700"></div>
                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-500 dark:bg-green-500"></div>
                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-600 dark:bg-green-300"></div>
-                <span className="text-gray-500 dark:text-dark-400">{translation.get('more')}</span>
+                <span className="text-gray-500 dark:text-dark-400">
+                    {translation.get('more')}
+                </span>
             </div>
         </div>
     );

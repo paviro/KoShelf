@@ -55,41 +55,57 @@ export function StatisticsRoute() {
 
     const statsIndexQuery = useStatisticsIndexQuery(scope);
     const sectionDefaults = useMemo(() => defaultSectionState(), []);
-    const { state: sectionState, toggle: toggleSection } = useSectionVisibilityState<SectionName>({
-        routeId: 'statistics',
-        sectionKeys: SECTION_NAMES,
-        defaults: sectionDefaults,
-    });
+    const { state: sectionState, toggle: toggleSection } =
+        useSectionVisibilityState<SectionName>({
+            routeId: 'statistics',
+            sectionKeys: SECTION_NAMES,
+            defaults: sectionDefaults,
+        });
 
-    const availableYears = useMemo(() => statsIndexQuery.data?.available_years ?? [], [statsIndexQuery.data?.available_years]);
-    const availableWeeks = useMemo(() => statsIndexQuery.data?.available_weeks ?? [], [statsIndexQuery.data?.available_weeks]);
+    const availableYears = useMemo(
+        () => statsIndexQuery.data?.available_years ?? [],
+        [statsIndexQuery.data?.available_years],
+    );
+    const availableWeeks = useMemo(
+        () => statsIndexQuery.data?.available_weeks ?? [],
+        [statsIndexQuery.data?.available_weeks],
+    );
 
     const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(
         () => initialViewState.selectedWeekKey,
     );
-    const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<number | null>(
-        () => initialViewState.selectedHeatmapYear,
-    );
+    const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<
+        number | null
+    >(() => initialViewState.selectedHeatmapYear);
     const [selectedYearlyYear, setSelectedYearlyYear] = useState<number | null>(
         () => initialViewState.selectedYearlyYear,
     );
 
     const effectiveSelectedWeekKey = useMemo(() => {
-        if (selectedWeekKey && availableWeeks.some((week) => week.week_key === selectedWeekKey)) {
+        if (
+            selectedWeekKey &&
+            availableWeeks.some((week) => week.week_key === selectedWeekKey)
+        ) {
             return selectedWeekKey;
         }
 
         return availableWeeks[0]?.week_key ?? null;
     }, [availableWeeks, selectedWeekKey]);
     const effectiveSelectedHeatmapYear = useMemo(() => {
-        if (selectedHeatmapYear !== null && availableYears.includes(selectedHeatmapYear)) {
+        if (
+            selectedHeatmapYear !== null &&
+            availableYears.includes(selectedHeatmapYear)
+        ) {
             return selectedHeatmapYear;
         }
 
         return availableYears[0] ?? null;
     }, [availableYears, selectedHeatmapYear]);
     const effectiveSelectedYearlyYear = useMemo(() => {
-        if (selectedYearlyYear !== null && availableYears.includes(selectedYearlyYear)) {
+        if (
+            selectedYearlyYear !== null &&
+            availableYears.includes(selectedYearlyYear)
+        ) {
             return selectedYearlyYear;
         }
 
@@ -132,15 +148,24 @@ export function StatisticsRoute() {
     ]);
 
     const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeekKey);
-    const heatmapYearQuery = useStatisticsYearQuery(scope, effectiveSelectedHeatmapYear);
-    const yearlyQuery = useStatisticsYearQuery(scope, effectiveSelectedYearlyYear);
+    const heatmapYearQuery = useStatisticsYearQuery(
+        scope,
+        effectiveSelectedHeatmapYear,
+    );
+    const yearlyQuery = useStatisticsYearQuery(
+        scope,
+        effectiveSelectedYearlyYear,
+    );
     const effectiveDisplayedYearlyData = yearlyQuery.data ?? null;
 
     const statsIndex = statsIndexQuery.data;
     const weeklyLoading = weekQuery.isFetching;
 
     const yearlyMonthlyStats = useMemo(
-        () => aggregateMonthlyStats(effectiveDisplayedYearlyData?.daily_activity ?? []),
+        () =>
+            aggregateMonthlyStats(
+                effectiveDisplayedYearlyData?.daily_activity ?? [],
+            ),
         [effectiveDisplayedYearlyData],
     );
 
@@ -156,7 +181,11 @@ export function StatisticsRoute() {
     const validatedCurrentStreak = useMemo(() => {
         const streak = statsIndex?.streaks.current;
         if (!streak) {
-            return { days: 0, start_date: null as string | null, end_date: null as string | null };
+            return {
+                days: 0,
+                start_date: null as string | null,
+                end_date: null as string | null,
+            };
         }
 
         if (streak.end_date && !isCurrentStreakActive(streak.end_date)) {
@@ -167,10 +196,13 @@ export function StatisticsRoute() {
     }, [statsIndex]);
 
     const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books && siteQuery.data?.capabilities.has_comics,
+        siteQuery.data?.capabilities.has_books &&
+        siteQuery.data?.capabilities.has_comics,
     );
     const showPageEmptyState =
-        Boolean(statsIndex) && availableYears.length === 0 && availableWeeks.length === 0;
+        Boolean(statsIndex) &&
+        availableYears.length === 0 &&
+        availableWeeks.length === 0;
     const yearlyLoading = yearlyQuery.isFetching;
 
     const weeklyStats = weekQuery.data ?? EMPTY_WEEKLY_STATS;
@@ -185,7 +217,11 @@ export function StatisticsRoute() {
                         scope={scope}
                         onScopeChange={(nextScope) => {
                             setScope(nextScope);
-                            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                            window.scrollTo({
+                                top: 0,
+                                left: 0,
+                                behavior: 'auto',
+                            });
                         }}
                     />
                 }
@@ -194,7 +230,10 @@ export function StatisticsRoute() {
             <PageContent className="space-y-6 md:space-y-8">
                 {statsIndexQuery.isLoading && (
                     <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                        <LoadingSpinner size="lg" srLabel="Loading statistics" />
+                        <LoadingSpinner
+                            size="lg"
+                            srLabel="Loading statistics"
+                        />
                     </section>
                 )}
 
@@ -211,7 +250,9 @@ export function StatisticsRoute() {
                         {showPageEmptyState ? (
                             <section className="bg-white dark:bg-dark-850/50 rounded-lg p-8 border border-dashed border-gray-300/80 dark:border-dark-700 text-center">
                                 <p className="text-sm text-gray-500 dark:text-dark-300">
-                                    {translation.get('stats-empty.nothing-here')}
+                                    {translation.get(
+                                        'stats-empty.nothing-here',
+                                    )}
                                 </p>
                             </section>
                         ) : (

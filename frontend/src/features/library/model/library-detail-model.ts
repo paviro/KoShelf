@@ -7,9 +7,13 @@ export const LIBRARY_DETAIL_SECTION_KEYS = [
     'additional-info',
 ] as const;
 
-export type LibraryDetailSectionKey = (typeof LIBRARY_DETAIL_SECTION_KEYS)[number];
+export type LibraryDetailSectionKey =
+    (typeof LIBRARY_DETAIL_SECTION_KEYS)[number];
 
-export type LibraryDetailSectionVisibilityState = Record<LibraryDetailSectionKey, boolean>;
+export type LibraryDetailSectionVisibilityState = Record<
+    LibraryDetailSectionKey,
+    boolean
+>;
 
 const DEFAULT_DETAIL_SECTION_STATE: LibraryDetailSectionVisibilityState = {
     'book-overview': true,

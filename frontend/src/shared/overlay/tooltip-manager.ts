@@ -5,7 +5,13 @@ export class TooltipManager {
     private static highlightedElement: HTMLElement | null = null;
 
     private static applyHighlight(element: HTMLElement): void {
-        element.classList.add('ring-1', 'ring-inset', 'ring-gray-900', 'dark:ring-white', 'z-10');
+        element.classList.add(
+            'ring-1',
+            'ring-inset',
+            'ring-gray-900',
+            'dark:ring-white',
+            'z-10',
+        );
     }
 
     private static clearHighlight(element: HTMLElement): void {

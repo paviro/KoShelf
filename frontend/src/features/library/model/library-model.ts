@@ -2,13 +2,21 @@ import type { LibraryListItem } from '../api/library-data';
 
 export type LibraryCollection = 'books' | 'comics';
 
-export const LIBRARY_SECTION_KEYS = ['reading', 'abandoned', 'completed', 'unread'] as const;
+export const LIBRARY_SECTION_KEYS = [
+    'reading',
+    'abandoned',
+    'completed',
+    'unread',
+] as const;
 
 export type LibrarySectionKey = (typeof LIBRARY_SECTION_KEYS)[number];
 
 export type LibrarySectionVisibilityState = Record<LibrarySectionKey, boolean>;
 
-export type LibrarySectionBuckets = Record<LibrarySectionKey, LibraryListItem[]>;
+export type LibrarySectionBuckets = Record<
+    LibrarySectionKey,
+    LibraryListItem[]
+>;
 
 export const LIBRARY_FILTER_VALUES = [
     'all',
@@ -27,13 +35,17 @@ const DEFAULT_SECTION_STATE: LibrarySectionVisibilityState = {
     unread: true,
 };
 
-const LIBRARY_STATUS_FILTERS = new Set<LibraryFilterValue>(LIBRARY_FILTER_VALUES);
+const LIBRARY_STATUS_FILTERS = new Set<LibraryFilterValue>(
+    LIBRARY_FILTER_VALUES,
+);
 
 export function defaultLibrarySectionState(): LibrarySectionVisibilityState {
     return { ...DEFAULT_SECTION_STATE };
 }
 
-export function libraryTitleTranslationKey(collection: LibraryCollection): 'books' | 'comics' {
+export function libraryTitleTranslationKey(
+    collection: LibraryCollection,
+): 'books' | 'comics' {
     return collection;
 }
 
@@ -56,7 +68,9 @@ export function normalizeLibraryFilterValue(
     return value as LibraryFilterValue;
 }
 
-export function sectionFromLibraryItem(item: LibraryListItem): LibrarySectionKey {
+export function sectionFromLibraryItem(
+    item: LibraryListItem,
+): LibrarySectionKey {
     if (item.status === 'reading') {
         return 'reading';
     }
@@ -72,7 +86,9 @@ export function sectionFromLibraryItem(item: LibraryListItem): LibrarySectionKey
     return 'unread';
 }
 
-export function bucketLibraryItems(items: LibraryListItem[]): LibrarySectionBuckets {
+export function bucketLibraryItems(
+    items: LibraryListItem[],
+): LibrarySectionBuckets {
     const buckets: LibrarySectionBuckets = {
         reading: [],
         abandoned: [],
@@ -87,14 +103,18 @@ export function bucketLibraryItems(items: LibraryListItem[]): LibrarySectionBuck
     LIBRARY_SECTION_KEYS.forEach((sectionKey) => {
         buckets[sectionKey].sort(
             (left, right) =>
-                left.title.localeCompare(right.title) || left.id.localeCompare(right.id),
+                left.title.localeCompare(right.title) ||
+                left.id.localeCompare(right.id),
         );
     });
 
     return buckets;
 }
 
-export function itemMatchesSearch(item: LibraryListItem, normalizedSearchTerm: string): boolean {
+export function itemMatchesSearch(
+    item: LibraryListItem,
+    normalizedSearchTerm: string,
+): boolean {
     if (!normalizedSearchTerm) {
         return true;
     }
