@@ -54,6 +54,9 @@ Run from repo root:
 ```bash
 npm --prefix frontend install
 npm --prefix frontend run dev
+npm --prefix frontend run lint
+npm --prefix frontend run format
+npm --prefix frontend run format:check
 ```
 
 ## Recommended Dev Loop (Vite + Rust backend)
