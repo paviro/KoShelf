@@ -267,7 +267,7 @@ export function LibraryOverviewSection({
                                 {translation.get('description')}
                             </h3>
                             <div
-                                className="text-gray-700 dark:text-dark-300 leading-relaxed prose max-w-none book-description"
+                                className="leading-relaxed prose max-w-none book-description"
                                 dangerouslySetInnerHTML={{
                                     __html: sanitizedDescription,
                                 }}

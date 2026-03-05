@@ -330,6 +330,42 @@
         @apply my-4;
     }
 
+    .book-description {
+        --tw-prose-body: theme(colors.gray.700);
+        --tw-prose-headings: theme(colors.gray.900);
+        --tw-prose-links: theme(colors.primary.600);
+        --tw-prose-bold: theme(colors.gray.900);
+        --tw-prose-counters: theme(colors.gray.500);
+        --tw-prose-bullets: theme(colors.gray.300);
+        --tw-prose-hr: theme(colors.gray.200);
+        --tw-prose-quotes: theme(colors.gray.900);
+        --tw-prose-quote-borders: theme(colors.gray.200);
+        --tw-prose-captions: theme(colors.gray.500);
+        --tw-prose-code: theme(colors.gray.900);
+        --tw-prose-pre-code: theme(colors.gray.100);
+        --tw-prose-pre-bg: theme(colors.gray.800);
+        --tw-prose-th-borders: theme(colors.gray.300);
+        --tw-prose-td-borders: theme(colors.gray.200);
+    }
+
+    .dark .book-description {
+        --tw-prose-body: theme(colors.dark.300);
+        --tw-prose-headings: theme(colors.dark.100);
+        --tw-prose-links: theme(colors.primary.300);
+        --tw-prose-bold: theme(colors.dark.100);
+        --tw-prose-counters: theme(colors.dark.400);
+        --tw-prose-bullets: theme(colors.dark.500);
+        --tw-prose-hr: theme(colors.dark.700);
+        --tw-prose-quotes: theme(colors.dark.100);
+        --tw-prose-quote-borders: theme(colors.dark.700);
+        --tw-prose-captions: theme(colors.dark.400);
+        --tw-prose-code: theme(colors.dark.100);
+        --tw-prose-pre-code: theme(colors.dark.200);
+        --tw-prose-pre-bg: theme(colors.dark.800);
+        --tw-prose-th-borders: theme(colors.dark.600);
+        --tw-prose-td-borders: theme(colors.dark.700);
+    }
+
     /* Weekly Stats Transitions */
     .week-stats {
         transition:
