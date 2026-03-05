@@ -25,6 +25,8 @@
         "@event-calendar/core": "^5.4.1",
         "@fluent/bundle": "^0.19.1",
         "@tanstack/react-query": "^5.66.4",
+        "cldr-core": "^48.1.0",
+        "i18n-iso-countries": "^7.14.0",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "react-icons": "^5.6.0",

@@ -24,11 +24,16 @@ comics = Comics
 statistics = Statistics
 calendar = Calendar
 recap = Recap
+settings = Settings
 github = GitHub
 reading-companion = Reading Companion
 # Used in footer/sidebar for update time
 last-updated = Last updated
 view-details = View Details
+language-setting = Language
+region-setting = Region
+locale-setting-description = Choose language and region for translations plus date and number formatting.
+example = Example
 
 # -----------------------------------
 #        Book List & Library

@@ -7,6 +7,7 @@ let loadedLanguage = '';
 
 const FALLBACK_LANGUAGE = 'en-US';
 const LOCALE_STORAGE_KEY = 'koshelf_locale';
+export const I18N_LANGUAGE_CHANGE_EVENT = 'koshelf:language-changed';
 const localeModules = import.meta.glob('../../locales/*.ftl', {
     query: '?raw',
 }) as Record<string, () => Promise<{ default: string }>>;
@@ -43,18 +44,19 @@ function writeStoredLanguage(language: string): void {
 
 function hasSupportedLocale(language: string): boolean {
     const normalized = normalizeLanguage(language);
-    const parts = normalized.split('-');
-    const base = parts[0]?.toLowerCase();
+    const [base] = normalized.split('-');
     if (!base) return false;
 
-    const region = parts.slice(1).join('_').toUpperCase();
-    const regionalFile = region ? `${base}_${region}.ftl` : null;
     const baseFile = `${base}.ftl`;
+    return localeLoaders.has(baseFile);
+}
 
-    return (
-        localeLoaders.has(baseFile) ||
-        (regionalFile ? localeLoaders.has(regionalFile) : false)
-    );
+function emitLanguageChanged(): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    window.dispatchEvent(new Event(I18N_LANGUAGE_CHANGE_EVENT));
 }
 
 function resolveRequestedLanguage(serverLanguage?: string): string {
@@ -173,11 +175,29 @@ async function load(language: string): Promise<void> {
 
 export const translation = {
     async init(language?: string): Promise<void> {
+        const previousLanguage = loadedLanguage;
         const requestedLanguage = resolveRequestedLanguage(language);
         if (!loadPromise || requestedLanguage !== loadedLanguage) {
             loadPromise = load(requestedLanguage);
         }
         await loadPromise;
+        if (loadedLanguage !== previousLanguage) {
+            emitLanguageChanged();
+        }
+    },
+
+    async setLanguage(language: string): Promise<void> {
+        const normalized = normalizeLanguage(language);
+        if (!hasSupportedLocale(normalized)) {
+            return;
+        }
+        writeStoredLanguage(normalized);
+        const previousLanguage = loadedLanguage;
+        loadPromise = load(normalized);
+        await loadPromise;
+        if (loadedLanguage !== previousLanguage) {
+            emitLanguageChanged();
+        }
     },
 
     get(key: string, args?: number | Record<string, FluentVariable>): string {

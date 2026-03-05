@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { LuGithub } from 'react-icons/lu';
+import { LuGithub, LuSettings } from 'react-icons/lu';
 
 import { translation } from '../../shared/i18n';
 import { BRAND_ICON, isActivePath, type NavItem } from './shell-nav';
@@ -20,6 +20,10 @@ export function ShellSidebar({
     version,
 }: ShellSidebarProps) {
     const BrandIcon = BRAND_ICON;
+    const primaryNavItems = navItems.filter(
+        (item) => item.routeId !== 'settings',
+    );
+    const settingsActive = isActivePath(currentPath, 'settings');
 
     return (
         <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-sm border-r border-gray-200/50 dark:border-dark-700/50 flex-col z-30">
@@ -43,7 +47,7 @@ export function ShellSidebar({
             </div>
 
             <nav className="flex-1 px-4 py-6 space-y-3">
-                {navItems.map((item) => {
+                {primaryNavItems.map((item) => {
                     const active = isActivePath(currentPath, item.routeId);
                     const ItemIcon = item.icon;
 
@@ -84,7 +88,36 @@ export function ShellSidebar({
                 })}
             </nav>
 
-            <div className="mt-auto px-4 py-4 border-t border-gray-200/50 dark:border-dark-700/50">
+            <div className="mt-auto px-4 py-4 border-t border-gray-200/50 dark:border-dark-700/50 space-y-3">
+                <Link
+                    to="/settings"
+                    className={`block rounded-lg p-3 transition-all duration-200 border ${
+                        settingsActive
+                            ? 'bg-primary-50/50 dark:bg-primary-900/20 border-primary-200/50 dark:border-primary-700/50'
+                            : 'bg-gray-100/50 dark:bg-dark-900/50 border-gray-200/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-800/50'
+                    }`}
+                    aria-label={translation.get('settings')}
+                >
+                    <div className="flex items-center">
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center mr-2 ${
+                            settingsActive
+                                ? 'bg-gradient-to-br from-primary-400 to-primary-500'
+                                : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                        }`}>
+                            <LuSettings
+                                className="w-3 h-3 text-white"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <span className={`text-xs font-medium ${
+                            settingsActive
+                                ? 'text-primary-700 dark:text-primary-300'
+                                : 'text-gray-500 dark:text-dark-400'
+                        }`}>
+                            {translation.get('settings')}
+                        </span>
+                    </div>
+                </Link>
                 <div className="bg-gray-100/50 dark:bg-dark-900/50 border border-gray-200/50 dark:border-dark-700/50 rounded-lg p-3">
                     <div className="flex items-center mb-2">
                         <div className="w-6 h-6 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center mr-2">
@@ -105,7 +138,7 @@ export function ShellSidebar({
                             &middot; v{version ?? '--'}
                         </span>
                     </div>
-                    <div className="text-xs text-gray-400 dark:text-dark-500">
+                    <div className="text-[0.65rem] leading-tight text-gray-400 dark:text-dark-500">
                         {translation.get('last-updated')}: {generatedAt ?? '--'}
                     </div>
                 </div>

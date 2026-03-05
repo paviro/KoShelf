@@ -24,11 +24,16 @@ comics = Комиксы
 statistics = Статистика
 calendar = Календарь
 recap = Итоги
+settings = Настройки
 github = GitHub
 reading-companion = Помощник чтения
 # Used in footer/sidebar for update time
 last-updated = Последнее обновление
 view-details = Подробнее
+language-setting = Язык
+region-setting = Регион
+locale-setting-description = Выберите язык и регион для переводов, а также формата даты и чисел.
+example = Пример
 
 # -----------------------------------
 #        Book List & Library

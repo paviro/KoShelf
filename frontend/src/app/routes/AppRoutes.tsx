@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { CalendarRoute } from '../../features/calendar/routes/CalendarRoute';
@@ -7,6 +8,11 @@ import { RecapRoute } from '../../features/recap/routes/RecapRoute';
 import { StatisticsRoute } from '../../features/statistics/routes/StatisticsRoute';
 import { RouteScrollRestoration } from '../../shared/lib/navigation/RouteScrollRestoration';
 import { routePathPattern } from './route-registry';
+
+const SettingsRoute = lazy(async () => {
+    const module = await import('../../features/settings/routes/SettingsRoute');
+    return { default: module.SettingsRoute };
+});
 
 type AppRoutesProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
@@ -48,6 +54,14 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
                 <Route
                     path={routePathPattern('calendar')}
                     element={<CalendarRoute />}
+                />
+                <Route
+                    path={routePathPattern('settings')}
+                    element={
+                        <Suspense fallback={null}>
+                            <SettingsRoute />
+                        </Suspense>
+                    }
                 />
                 <Route
                     path={routePathPattern('books-list')}

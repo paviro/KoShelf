@@ -7,7 +7,7 @@ import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { SiteResponse } from './shared/contracts';
-import { translation } from './shared/i18n';
+import { I18N_LANGUAGE_CHANGE_EVENT, translation } from './shared/i18n';
 
 function resolveDefaultRoute(
     site: SiteResponse | undefined,
@@ -37,10 +37,21 @@ export function App() {
         const language = site?.language;
         if (!language) return;
 
-        void translation.init(language).then(() => {
-            setI18nVersion((value) => value + 1);
-        });
+        void translation.init(language);
     }, [site?.language]);
+    useEffect(() => {
+        const handleLanguageChange = () => {
+            setI18nVersion((value) => value + 1);
+        };
+
+        window.addEventListener(I18N_LANGUAGE_CHANGE_EVENT, handleLanguageChange);
+        return () => {
+            window.removeEventListener(
+                I18N_LANGUAGE_CHANGE_EVENT,
+                handleLanguageChange,
+            );
+        };
+    }, []);
 
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);

@@ -5,6 +5,7 @@ import {
     LuCalendarDays,
     LuChartNoAxesColumn,
     LuClock3,
+    LuSettings,
 } from 'react-icons/lu';
 
 import type { SiteResponse } from '../../shared/contracts';
@@ -29,6 +30,7 @@ const ICONS = {
     statistics: LuChartNoAxesColumn,
     calendar: LuCalendarDays,
     recap: LuClock3,
+    settings: LuSettings,
 } as const;
 
 export const BRAND_ICON = ICONS.books;
@@ -83,6 +85,14 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
             icon: ICONS.recap,
         });
     }
+
+    items.push({
+        id: 'nav-settings',
+        routeId: 'settings',
+        label: translation.get('settings'),
+        href: '/settings',
+        icon: ICONS.settings,
+    });
 
     return items;
 }

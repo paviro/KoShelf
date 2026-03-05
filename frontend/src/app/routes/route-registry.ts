@@ -4,6 +4,7 @@ export type RouteId =
     | 'root'
     | 'statistics'
     | 'calendar'
+    | 'settings'
     | 'books-list'
     | 'books-detail'
     | 'comics-list'
@@ -13,6 +14,7 @@ export type RouteId =
 export type MainRouteId =
     | 'statistics'
     | 'calendar'
+    | 'settings'
     | 'books-list'
     | 'comics-list'
     | 'recap';
@@ -30,6 +32,7 @@ export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
     { id: 'root', path: '/', mainRouteId: null },
     { id: 'statistics', path: '/statistics', mainRouteId: 'statistics' },
     { id: 'calendar', path: '/calendar', mainRouteId: 'calendar' },
+    { id: 'settings', path: '/settings', mainRouteId: 'settings' },
     { id: 'books-list', path: '/books', mainRouteId: 'books-list' },
     { id: 'books-detail', path: '/books/:id', mainRouteId: 'books-list' },
     { id: 'comics-list', path: '/comics', mainRouteId: 'comics-list' },
@@ -47,6 +50,7 @@ export const MAIN_ROUTE_IDS = [
     'comics-list',
     'statistics',
     'calendar',
+    'settings',
     'recap',
 ] as const;
 
