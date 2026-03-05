@@ -7,14 +7,30 @@ use axum::{
         sse::{Event, KeepAlive, Sse},
     },
 };
+use chrono::{Duration as ChronoDuration, NaiveDate};
 use futures::stream;
 use serde::Deserialize;
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, convert::Infallible, sync::Arc, time::Duration};
 
 use super::ServerState;
-use crate::contracts::common::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
+use crate::contracts::calendar::{
+    ActivityMonthResponse, ActivityMonthsResponse, CalendarMonthlyStats,
+};
+use crate::contracts::common::{ApiMeta, ContentTypeFilter, MonthKey, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
-use crate::contracts::library::{LibraryContentType, LibraryListResponse};
+use crate::contracts::library::{
+    LibraryContentType, LibraryDetailItem, LibraryDetailResponse, LibraryDetailStatistics,
+    LibraryListResponse, LibraryStatus,
+};
+use crate::contracts::recap::{
+    CompletionYearResponse, CompletionYearsResponse, RecapSummaryResponse,
+};
+use crate::contracts::site::{SiteCapabilities, SiteResponse};
+use crate::contracts::statistics::{
+    ActivityHeatmapConfig, ActivityOverview, ActivityStreaks, ActivityWeekResponse,
+    ActivityWeeksResponse, ActivityYearDailyResponse, ActivityYearSummaryResponse, YearlySummary,
+};
+use crate::models::{StreakInfo, WeeklyStats};
 use crate::runtime::{ContractSnapshot, SnapshotUpdate};
 
 #[derive(Debug, Deserialize)]
@@ -56,10 +72,6 @@ fn api_error(status: StatusCode, code: ApiErrorCode) -> Response {
     (status, Json(ApiErrorResponse::from_code(code))).into_response()
 }
 
-fn not_found() -> Response {
-    api_error(StatusCode::NOT_FOUND, ApiErrorCode::NotFound)
-}
-
 fn parse_content_type(query: ContentTypeQuery) -> ApiResult<ContentTypeFilter> {
     ContentTypeFilter::parse(query.content_type.as_deref()).map_err(ApiResponseError::bad_request)
 }
@@ -81,6 +93,282 @@ fn runtime_snapshot(state: &ServerState) -> ApiResult<Arc<ContractSnapshot>> {
         .snapshot_store
         .get()
         .ok_or_else(ApiResponseError::internal_server_error)
+}
+
+fn fallback_meta(snapshot: &ContractSnapshot) -> ApiMeta {
+    snapshot
+        .site
+        .as_ref()
+        .map(|site| site.meta.clone())
+        .or_else(|| snapshot.items.as_ref().map(|items| items.meta.clone()))
+        .or_else(|| {
+            snapshot
+                .activity_weeks
+                .values()
+                .next()
+                .map(|weeks| weeks.meta.clone())
+        })
+        .or_else(|| {
+            snapshot
+                .activity_months
+                .values()
+                .next()
+                .map(|months| months.meta.clone())
+        })
+        .or_else(|| {
+            snapshot
+                .completion_years
+                .values()
+                .next()
+                .map(|years| years.meta.clone())
+        })
+        .unwrap_or(ApiMeta {
+            version: "unknown".to_string(),
+            generated_at: "".to_string(),
+        })
+}
+
+fn parse_validated_year(year: &YearKey) -> ApiResult<i32> {
+    year.as_str()
+        .parse::<i32>()
+        .map_err(|_| ApiResponseError::internal_server_error())
+}
+
+fn resolve_week_bounds(week_key: &str) -> (String, String) {
+    let start = NaiveDate::parse_from_str(week_key, "%Y-%m-%d")
+        .ok()
+        .unwrap_or_else(|| {
+            NaiveDate::from_ymd_opt(1970, 1, 1).expect("constant date should be valid")
+        });
+    let end = start + ChronoDuration::days(6);
+    (
+        start.format("%Y-%m-%d").to_string(),
+        end.format("%Y-%m-%d").to_string(),
+    )
+}
+
+fn empty_site_response(meta: ApiMeta) -> SiteResponse {
+    SiteResponse {
+        meta,
+        title: String::new(),
+        language: "en_US".to_string(),
+        capabilities: SiteCapabilities {
+            has_books: false,
+            has_comics: false,
+            has_activity: false,
+            has_completions: false,
+        },
+    }
+}
+
+fn empty_library_list_response(meta: ApiMeta) -> LibraryListResponse {
+    LibraryListResponse { meta, items: vec![] }
+}
+
+fn empty_library_detail_response(meta: ApiMeta, id: String) -> LibraryDetailResponse {
+    LibraryDetailResponse {
+        meta,
+        item: LibraryDetailItem {
+            id,
+            title: String::new(),
+            authors: vec![],
+            series: None,
+            status: LibraryStatus::Unknown,
+            progress_percentage: None,
+            rating: None,
+            cover_url: String::new(),
+            content_type: LibraryContentType::Book,
+            language: None,
+            publisher: None,
+            description: None,
+            review_note: None,
+            pages: None,
+            search_base_path: String::new(),
+            subjects: vec![],
+            identifiers: vec![],
+        },
+        highlights: vec![],
+        bookmarks: vec![],
+        statistics: LibraryDetailStatistics {
+            item_stats: None,
+            session_stats: None,
+            completions: None,
+        },
+    }
+}
+
+fn empty_activity_overview() -> ActivityOverview {
+    ActivityOverview {
+        total_read_time: 0,
+        total_page_reads: 0,
+        longest_read_time_in_day: 0,
+        most_pages_in_day: 0,
+        average_session_duration: None,
+        longest_session_duration: None,
+        total_completions: 0,
+        items_completed: 0,
+        most_completions: 0,
+    }
+}
+
+fn empty_activity_streaks() -> ActivityStreaks {
+    ActivityStreaks {
+        longest: StreakInfo::new(0, None, None),
+        current: StreakInfo::new(0, None, None),
+    }
+}
+
+fn empty_activity_weeks_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+) -> ActivityWeeksResponse {
+    ActivityWeeksResponse {
+        meta,
+        content_type,
+        available_years: vec![],
+        available_weeks: vec![],
+        overview: empty_activity_overview(),
+        streaks: empty_activity_streaks(),
+        heatmap_config: ActivityHeatmapConfig {
+            max_scale_seconds: None,
+        },
+    }
+}
+
+fn empty_activity_week_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+    week_key: &str,
+) -> ActivityWeekResponse {
+    let (start_date, end_date) = resolve_week_bounds(week_key);
+
+    ActivityWeekResponse {
+        meta,
+        content_type,
+        week_key: week_key.to_string(),
+        stats: WeeklyStats {
+            start_date,
+            end_date,
+            read_time: 0,
+            pages_read: 0,
+            avg_pages_per_day: 0.0,
+            avg_read_time_per_day: 0.0,
+            longest_session_duration: None,
+            average_session_duration: None,
+        },
+        daily_activity: vec![],
+    }
+}
+
+fn empty_activity_months_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+) -> ActivityMonthsResponse {
+    ActivityMonthsResponse {
+        meta,
+        content_type,
+        months: vec![],
+    }
+}
+
+fn empty_calendar_monthly_stats() -> CalendarMonthlyStats {
+    CalendarMonthlyStats {
+        items_read: 0,
+        pages_read: 0,
+        time_read: 0,
+        days_read_pct: 0,
+    }
+}
+
+fn empty_activity_month_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+) -> ActivityMonthResponse {
+    ActivityMonthResponse {
+        meta,
+        content_type,
+        events: vec![],
+        items: BTreeMap::new(),
+        stats: empty_calendar_monthly_stats(),
+    }
+}
+
+fn empty_activity_year_daily_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+    year: i32,
+) -> ActivityYearDailyResponse {
+    ActivityYearDailyResponse {
+        meta,
+        content_type,
+        year,
+        daily_activity: vec![],
+        config: Some(ActivityHeatmapConfig {
+            max_scale_seconds: None,
+        }),
+    }
+}
+
+fn empty_activity_year_summary_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+    year: i32,
+) -> ActivityYearSummaryResponse {
+    ActivityYearSummaryResponse {
+        meta,
+        content_type,
+        year,
+        summary: YearlySummary { completed_count: 0 },
+        monthly_aggregates: vec![],
+        config: Some(ActivityHeatmapConfig {
+            max_scale_seconds: None,
+        }),
+    }
+}
+
+fn empty_recap_summary_response() -> RecapSummaryResponse {
+    RecapSummaryResponse {
+        total_items: 0,
+        total_time_seconds: 0,
+        total_time_days: 0,
+        total_time_hours: 0,
+        longest_session_hours: 0,
+        longest_session_minutes: 0,
+        average_session_hours: 0,
+        average_session_minutes: 0,
+        active_days: 0,
+        active_days_percentage: 0.0,
+        longest_streak: 0,
+        best_month_name: None,
+    }
+}
+
+fn empty_completion_years_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+) -> CompletionYearsResponse {
+    CompletionYearsResponse {
+        meta,
+        content_type,
+        available_years: vec![],
+        latest_year: None,
+    }
+}
+
+fn empty_completion_year_response(
+    meta: ApiMeta,
+    content_type: ContentTypeFilter,
+    year: i32,
+) -> CompletionYearResponse {
+    CompletionYearResponse {
+        meta,
+        content_type,
+        year,
+        summary: empty_recap_summary_response(),
+        months: vec![],
+        items: vec![],
+        share_assets: None,
+    }
 }
 
 fn snapshot_update_event(update: &SnapshotUpdate) -> Event {
@@ -127,10 +415,13 @@ pub async fn site(State(state): State<ServerState>) -> Response {
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.site.as_ref() {
-        Some(site) => (StatusCode::OK, Json(site.clone())).into_response(),
-        None => not_found(),
-    }
+    let payload = snapshot
+        .site
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| empty_site_response(fallback_meta(&snapshot)));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 fn item_matches_content_type(
@@ -177,14 +468,14 @@ pub async fn items(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.items.as_ref() {
-        Some(items) => (
-            StatusCode::OK,
-            Json(filter_library_items(items, content_type)),
-        )
-            .into_response(),
-        None => not_found(),
-    }
+    let base_payload = snapshot
+        .items
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| empty_library_list_response(fallback_meta(&snapshot)));
+    let payload = filter_library_items(&base_payload, content_type);
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn item_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
@@ -193,10 +484,13 @@ pub async fn item_detail(State(state): State<ServerState>, Path(id): Path<String
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.item_details.get(&id) {
-        Some(item) => (StatusCode::OK, Json(item.clone())).into_response(),
-        None => not_found(),
-    }
+    let payload = snapshot
+        .item_details
+        .get(&id)
+        .cloned()
+        .unwrap_or_else(|| empty_library_detail_response(fallback_meta(&snapshot), id.clone()));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_weeks(
@@ -213,10 +507,13 @@ pub async fn activity_weeks(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.activity_weeks.get(content_type.as_str()) {
-        Some(weeks) => (StatusCode::OK, Json(weeks.clone())).into_response(),
-        None => not_found(),
-    }
+    let payload = snapshot
+        .activity_weeks
+        .get(content_type.as_str())
+        .cloned()
+        .unwrap_or_else(|| empty_activity_weeks_response(fallback_meta(&snapshot), content_type));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_week(
@@ -238,14 +535,19 @@ pub async fn activity_week(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot
+    let meta = snapshot
+        .activity_weeks
+        .get(content_type.as_str())
+        .map(|weeks| weeks.meta.clone())
+        .unwrap_or_else(|| fallback_meta(&snapshot));
+    let payload = snapshot
         .activity_weeks_by_key
         .get(content_type.as_str())
         .and_then(|weeks| weeks.get(week_key.as_str()))
-    {
-        Some(week) => (StatusCode::OK, Json(week.clone())).into_response(),
-        None => not_found(),
-    }
+        .cloned()
+        .unwrap_or_else(|| empty_activity_week_response(meta, content_type, week_key.as_str()));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_year_daily(
@@ -267,14 +569,23 @@ pub async fn activity_year_daily(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot
+    let year_value = match parse_validated_year(&year) {
+        Ok(value) => value,
+        Err(error) => return error.into_response(),
+    };
+    let meta = snapshot
+        .activity_weeks
+        .get(content_type.as_str())
+        .map(|weeks| weeks.meta.clone())
+        .unwrap_or_else(|| fallback_meta(&snapshot));
+    let payload = snapshot
         .activity_year_daily
         .get(content_type.as_str())
         .and_then(|years| years.get(year.as_str()))
-    {
-        Some(payload) => (StatusCode::OK, Json(payload.clone())).into_response(),
-        None => not_found(),
-    }
+        .cloned()
+        .unwrap_or_else(|| empty_activity_year_daily_response(meta, content_type, year_value));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_year_summary(
@@ -296,14 +607,23 @@ pub async fn activity_year_summary(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot
+    let year_value = match parse_validated_year(&year) {
+        Ok(value) => value,
+        Err(error) => return error.into_response(),
+    };
+    let meta = snapshot
+        .activity_weeks
+        .get(content_type.as_str())
+        .map(|weeks| weeks.meta.clone())
+        .unwrap_or_else(|| fallback_meta(&snapshot));
+    let payload = snapshot
         .activity_year_summary
         .get(content_type.as_str())
         .and_then(|years| years.get(year.as_str()))
-    {
-        Some(payload) => (StatusCode::OK, Json(payload.clone())).into_response(),
-        None => not_found(),
-    }
+        .cloned()
+        .unwrap_or_else(|| empty_activity_year_summary_response(meta, content_type, year_value));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_months(
@@ -320,10 +640,13 @@ pub async fn activity_months(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.activity_months.get(content_type.as_str()) {
-        Some(months) => (StatusCode::OK, Json(months.clone())).into_response(),
-        None => not_found(),
-    }
+    let payload = snapshot
+        .activity_months
+        .get(content_type.as_str())
+        .cloned()
+        .unwrap_or_else(|| empty_activity_months_response(fallback_meta(&snapshot), content_type));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn activity_month(
@@ -345,14 +668,19 @@ pub async fn activity_month(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot
+    let meta = snapshot
+        .activity_months
+        .get(content_type.as_str())
+        .map(|months| months.meta.clone())
+        .unwrap_or_else(|| fallback_meta(&snapshot));
+    let payload = snapshot
         .activity_months_by_key
         .get(content_type.as_str())
         .and_then(|months| months.get(month_key.as_str()))
-    {
-        Some(month) => (StatusCode::OK, Json(month.clone())).into_response(),
-        None => not_found(),
-    }
+        .cloned()
+        .unwrap_or_else(|| empty_activity_month_response(meta, content_type));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn completion_years(
@@ -369,10 +697,15 @@ pub async fn completion_years(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot.completion_years.get(content_type.as_str()) {
-        Some(years) => (StatusCode::OK, Json(years.clone())).into_response(),
-        None => not_found(),
-    }
+    let payload = snapshot
+        .completion_years
+        .get(content_type.as_str())
+        .cloned()
+        .unwrap_or_else(|| {
+            empty_completion_years_response(fallback_meta(&snapshot), content_type)
+        });
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 pub async fn completion_year(
@@ -394,14 +727,23 @@ pub async fn completion_year(
         Err(error) => return error.into_response(),
     };
 
-    match snapshot
+    let year_value = match parse_validated_year(&year) {
+        Ok(value) => value,
+        Err(error) => return error.into_response(),
+    };
+    let meta = snapshot
+        .completion_years
+        .get(content_type.as_str())
+        .map(|years| years.meta.clone())
+        .unwrap_or_else(|| fallback_meta(&snapshot));
+    let payload = snapshot
         .completion_years_by_key
         .get(content_type.as_str())
         .and_then(|years| years.get(year.as_str()))
-    {
-        Some(year_recap) => (StatusCode::OK, Json(year_recap.clone())).into_response(),
-        None => not_found(),
-    }
+        .cloned()
+        .unwrap_or_else(|| empty_completion_year_response(meta, content_type, year_value));
+
+    (StatusCode::OK, Json(payload)).into_response()
 }
 
 #[cfg(test)]

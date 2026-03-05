@@ -1,4 +1,4 @@
-import { api, isApiHttpError } from '../../../shared/api';
+import { api } from '../../../shared/api';
 
 export type CalendarContentType = 'book' | 'comic';
 
@@ -48,33 +48,6 @@ type ActivityMonthPayload = {
     stats: CalendarMonthlyStats;
 };
 
-export function createEmptyMonthlyStats(): CalendarMonthlyStats {
-    return {
-        items_read: 0,
-        pages_read: 0,
-        time_read: 0,
-        days_read_pct: 0,
-    };
-}
-
-export function createEmptyCalendarMonthResponse(): CalendarMonthResponse {
-    const emptyStats = createEmptyMonthlyStats();
-
-    return {
-        events: [],
-        items: {},
-        stats: {
-            all: { ...emptyStats },
-            books: { ...emptyStats },
-            comics: { ...emptyStats },
-        },
-    };
-}
-
-function isNotFoundError(error: unknown): boolean {
-    return isApiHttpError(error) && error.status === 404;
-}
-
 export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
     return api.activity.months.list<CalendarMonthsResponse>('all');
 }
@@ -82,27 +55,19 @@ export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
 export async function loadCalendarMonth(
     monthKey: string,
 ): Promise<CalendarMonthResponse> {
-    try {
-        const [allPayload, booksPayload, comicsPayload] = await Promise.all([
-            api.activity.months.get<ActivityMonthPayload>(monthKey, 'all'),
-            api.activity.months.get<ActivityMonthPayload>(monthKey, 'books'),
-            api.activity.months.get<ActivityMonthPayload>(monthKey, 'comics'),
-        ]);
+    const [allPayload, booksPayload, comicsPayload] = await Promise.all([
+        api.activity.months.get<ActivityMonthPayload>(monthKey, 'all'),
+        api.activity.months.get<ActivityMonthPayload>(monthKey, 'books'),
+        api.activity.months.get<ActivityMonthPayload>(monthKey, 'comics'),
+    ]);
 
-        return {
-            events: allPayload.events,
-            items: allPayload.items,
-            stats: {
-                all: allPayload.stats,
-                books: booksPayload.stats,
-                comics: comicsPayload.stats,
-            },
-        };
-    } catch (error) {
-        if (isNotFoundError(error)) {
-            return createEmptyCalendarMonthResponse();
-        }
-
-        throw error;
-    }
+    return {
+        events: allPayload.events,
+        items: allPayload.items,
+        stats: {
+            all: allPayload.stats,
+            books: booksPayload.stats,
+            comics: comicsPayload.stats,
+        },
+    };
 }

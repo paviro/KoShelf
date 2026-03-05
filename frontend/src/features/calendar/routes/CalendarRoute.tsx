@@ -103,11 +103,12 @@ export function CalendarRoute() {
             }
 
             if (!monthsQuery.isSuccess) {
+                // If the month index fails, avoid blocking the calendar on it.
                 return true;
             }
 
             if (availableMonthSet.size === 0) {
-                return true;
+                return false;
             }
 
             return availableMonthSet.has(targetMonthKey);
@@ -134,10 +135,7 @@ export function CalendarRoute() {
         isFetching: currentMonthQuery.isFetching,
         isPlaceholderData: currentMonthQuery.isPlaceholderData,
     });
-    const nextMonthQuery = useCalendarMonthQuery(
-        nextMonthKey,
-        nextMonthEnabled,
-    );
+    const nextMonthQuery = useCalendarMonthQuery(nextMonthKey, nextMonthEnabled);
 
     useEffect(() => {
         persistCalendarViewState({
