@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import { useIsScrollRestoring } from '../navigation/scroll-restore-state';
 
 type UseLazyImageSourceOptions = {
     src: string;
@@ -25,6 +26,7 @@ export function useLazyImageSource({
     const [isIntersecting, setIsIntersecting] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const isScrollRestoring = useIsScrollRestoring();
 
     const [prevSrc, setPrevSrc] = useState(src);
     if (prevSrc !== src) {
@@ -34,10 +36,12 @@ export function useLazyImageSource({
         setHasError(false);
     }
 
-    const shouldLoad = !('IntersectionObserver' in window) || isIntersecting;
+    const canLoadByIntersection =
+        !('IntersectionObserver' in window) || isIntersecting;
+    const shouldLoad = !isScrollRestoring && canLoadByIntersection;
 
     useEffect(() => {
-        if (shouldLoad) {
+        if (shouldLoad || isScrollRestoring) {
             return;
         }
 
@@ -64,7 +68,7 @@ export function useLazyImageSource({
         return () => {
             observer.disconnect();
         };
-    }, [rootMargin, shouldLoad, threshold]);
+    }, [isScrollRestoring, rootMargin, shouldLoad, threshold]);
 
     return {
         imageRef,

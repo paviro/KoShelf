@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     LuBookOpen,
@@ -14,6 +14,7 @@ import {
     detailRouteIdForContentType,
 } from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
+import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { RecapItemResponse } from '../api/recap-data';
 import {
@@ -44,8 +45,14 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
         });
     }, [item.content_type, item.item_id]);
     const coverUrl = item.item_cover?.trim() || null;
-    const [coverFailed, setCoverFailed] = useState(false);
-    const [prevCoverUrl, setPrevCoverUrl] = useState(coverUrl);
+    const {
+        imageRef,
+        resolvedSrc: resolvedCoverSrc,
+        hasError: coverFailed,
+        onError: onCoverError,
+    } = useLazyImageSource({
+        src: coverUrl ?? '',
+    });
     const hasReviewNote = Boolean(item.review_note?.trim());
     const hasRating =
         typeof item.rating === 'number' && Number.isFinite(item.rating);
@@ -57,11 +64,6 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
     );
     const coverFrameClass =
         'w-full aspect-[2/3] flex items-center justify-center rounded-md overflow-hidden recap-cover-max';
-
-    if (prevCoverUrl !== coverUrl) {
-        setPrevCoverUrl(coverUrl);
-        setCoverFailed(false);
-    }
 
     const titleNode = detailPath ? (
         <Link
@@ -95,22 +97,24 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 >
                                     <div className={coverFrameClass}>
                                         <img
+                                            ref={imageRef}
                                             className="block max-w-full max-h-full rounded-md"
-                                            src={coverUrl}
+                                            src={resolvedCoverSrc}
                                             alt={`Cover of ${item.title}`}
                                             loading="lazy"
-                                            onError={() => setCoverFailed(true)}
+                                            onError={onCoverError}
                                         />
                                     </div>
                                 </Link>
                             ) : (
                                 <div className={coverFrameClass}>
                                     <img
+                                        ref={imageRef}
                                         className="block max-w-full max-h-full rounded-md"
-                                        src={coverUrl}
+                                        src={resolvedCoverSrc}
                                         alt={`Cover of ${item.title}`}
                                         loading="lazy"
-                                        onError={() => setCoverFailed(true)}
+                                        onError={onCoverError}
                                     />
                                 </div>
                             )

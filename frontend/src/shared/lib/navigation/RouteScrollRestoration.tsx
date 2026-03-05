@@ -6,9 +6,10 @@ import {
     type MainRouteId,
 } from '../../../app/routes/route-registry';
 import { patchRouteState, readRouteState } from '../state/route-state-storage';
+import { beginScrollRestore, endScrollRestore } from './scroll-restore-state';
 
 const RESTORE_RETRY_INTERVAL_MS = 50;
-const MAX_RESTORE_DURATION_MS = 1000;
+const MAX_RESTORE_DURATION_MS = 1500;
 const MAX_RESTORE_ATTEMPTS = Math.ceil(
     MAX_RESTORE_DURATION_MS / RESTORE_RETRY_INTERVAL_MS,
 );
@@ -53,11 +54,28 @@ function resolvePersistScrollY(lastKnownScrollY: number): number {
 function restoreScrollPosition(targetY: number): () => void {
     const html = document.documentElement;
     html.style.overflow = 'hidden';
+    const shouldTrackRestore = targetY > 0;
+    if (shouldTrackRestore) {
+        beginScrollRestore();
+    }
 
     let attempts = 0;
     const maxAttempts = targetY > 0 ? MAX_RESTORE_ATTEMPTS : 1;
     let timerId: number | null = null;
     let cancelled = false;
+    let hasFinished = false;
+
+    const finish = () => {
+        if (hasFinished) {
+            return;
+        }
+
+        hasFinished = true;
+        html.style.overflow = '';
+        if (shouldTrackRestore) {
+            endScrollRestore();
+        }
+    };
 
     const restore = () => {
         if (cancelled) {
@@ -81,7 +99,7 @@ function restoreScrollPosition(targetY: number): () => void {
             (reachedPageBottom && canStopAtBottom) ||
             attempts >= maxAttempts
         ) {
-            html.style.overflow = '';
+            finish();
             return;
         }
 
@@ -95,7 +113,7 @@ function restoreScrollPosition(targetY: number): () => void {
         if (timerId !== null) {
             window.clearTimeout(timerId);
         }
-        html.style.overflow = '';
+        finish();
     };
 }
 
