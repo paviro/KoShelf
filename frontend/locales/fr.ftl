@@ -221,11 +221,15 @@ stats-empty =
     .info-answer = KoReader enregistre automatiquement vos sessions de lecture, y compris le temps passé et les pages lues. Synchronisez votre base de données de statistiques avec KoShelf pour visualiser vos activités ici.
 error-state =
     .title = Une erreur est survenue
-    .description = Les données n'ont pas pu être chargées. Veuillez réessayer.
+    .description =
+        Les données n'ont pas pu être chargées.
+        Veuillez réessayer.
     .not-found-title = Introuvable
     .not-found-description = La page que vous recherchez n'existe pas ou a été supprimée.
     .connection-title = Connexion échouée
-    .connection-description = Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.
+    .connection-description =
+        Impossible de joindre le serveur.
+        Vérifiez votre connexion et réessayez.
     .retry = Réessayer
 
 # Navigation and sorting

@@ -93,7 +93,7 @@ export function PageErrorState({
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
                     {translation.get(config.titleKey)}
                 </h3>
-                <p className="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed">
+                <p className="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed whitespace-pre-line">
                     {translation.get(config.descriptionKey)}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3 mt-6">

@@ -22,7 +22,7 @@ export function RecapEmptyState({ hasYearContext }: RecapEmptyStateProps) {
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
                     {translation.get('recap-empty.nothing-here')}
                 </h3>
-                <p className="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed">
+                <p className="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed whitespace-pre-line">
                     {hasYearContext
                         ? translation.get('recap-empty.try-switching')
                         : translation.get('recap-empty.finish-reading')}

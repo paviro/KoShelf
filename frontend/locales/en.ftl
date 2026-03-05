@@ -220,11 +220,15 @@ stats-empty =
     .info-answer = KoReader automatically tracks your reading sessions, including time spent and pages read. Sync your statistics database to KoShelf to see your activity visualized here.
 error-state =
     .title = Something went wrong
-    .description = The data could not be loaded. Please try again.
+    .description =
+        The data could not be loaded.
+        Please try again.
     .not-found-title = Not found
     .not-found-description = The page you're looking for doesn't exist or may have been removed.
     .connection-title = Connection failed
-    .connection-description = Could not reach the server. Check your connection and try again.
+    .connection-description =
+        Could not reach the server.
+        Check your connection and try again.
     .retry = Try again
 
 # Navigation and sorting
