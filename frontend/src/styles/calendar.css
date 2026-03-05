@@ -243,11 +243,6 @@
 /* Event styling */
 .calendar-container .ec-event {
     @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
-    margin: 0 0.1rem;
-}
-
-.calendar-container .ec.ec-day-grid {
-    --ec-event-col-gap: 0.25rem;
 }
 
 /* Scrollbar styling */
