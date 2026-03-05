@@ -53,6 +53,20 @@ export function RecapSummarySection({
     const activeDaysRingOffset =
         activeDaysRingCircumference -
         (activeDaysRingCircumference * activeDaysPercentage) / 100;
+    const hasAverageSessionHours = summary.average_session_hours > 0;
+    const hasAverageSessionMinutes =
+        summary.average_session_hours === 0 ||
+        summary.average_session_minutes > 0;
+    const averageSessionHasTwoValues =
+        summary.average_session_hours > 0 &&
+        summary.average_session_minutes > 0;
+    const hasLongestSessionHours = summary.longest_session_hours > 0;
+    const hasLongestSessionMinutes =
+        summary.longest_session_hours === 0 ||
+        summary.longest_session_minutes > 0;
+    const longestSessionHasTwoValues =
+        summary.longest_session_hours > 0 &&
+        summary.longest_session_minutes > 0;
 
     return (
         <section className="relative pl-10 recap-event">
@@ -223,15 +237,10 @@ export function RecapSummarySection({
                                 <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                     {formatNumber(summary.longest_streak)}{' '}
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                        <span className="hidden md:inline">
-                                            {translation.get(
-                                                'days_label',
-                                                summary.longest_streak,
-                                            )}
-                                        </span>
-                                        <span className="md:hidden">
-                                            {translation.get('units.d')}
-                                        </span>
+                                        {translation.get(
+                                            'days_label',
+                                            summary.longest_streak,
+                                        )}
                                     </span>
                                 </span>
                                 <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -272,7 +281,7 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-baseline gap-1">
-                                    {summary.average_session_hours > 0 && (
+                                    {hasAverageSessionHours && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
@@ -280,21 +289,16 @@ export function RecapSummarySection({
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                                <span className="hidden md:inline">
-                                                    {translation.get(
-                                                        'hours_label',
-                                                        summary.average_session_hours,
-                                                    )}
-                                                </span>
-                                                <span className="md:hidden">
-                                                    {translation.get('units.h')}
-                                                </span>
+                                                {averageSessionHasTwoValues
+                                                    ? translation.get('units.h')
+                                                    : translation.get(
+                                                          'hours_label',
+                                                          summary.average_session_hours,
+                                                      )}
                                             </span>
                                         </>
                                     )}
-                                    {(summary.average_session_hours === 0 ||
-                                        summary.average_session_minutes >
-                                            0) && (
+                                    {hasAverageSessionMinutes && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
@@ -302,15 +306,12 @@ export function RecapSummarySection({
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                                <span className="hidden md:inline">
-                                                    {translation.get(
-                                                        'minutes_label',
-                                                        summary.average_session_minutes,
-                                                    )}
-                                                </span>
-                                                <span className="md:hidden">
-                                                    {translation.get('units.m')}
-                                                </span>
+                                                {averageSessionHasTwoValues
+                                                    ? translation.get('units.m')
+                                                    : translation.get(
+                                                          'minutes_label',
+                                                          summary.average_session_minutes,
+                                                      )}
                                             </span>
                                         </>
                                     )}
@@ -332,7 +333,7 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-baseline gap-1">
-                                    {summary.longest_session_hours > 0 && (
+                                    {hasLongestSessionHours && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
@@ -340,21 +341,16 @@ export function RecapSummarySection({
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                                <span className="hidden md:inline">
-                                                    {translation.get(
-                                                        'hours_label',
-                                                        summary.longest_session_hours,
-                                                    )}
-                                                </span>
-                                                <span className="md:hidden">
-                                                    {translation.get('units.h')}
-                                                </span>
+                                                {longestSessionHasTwoValues
+                                                    ? translation.get('units.h')
+                                                    : translation.get(
+                                                          'hours_label',
+                                                          summary.longest_session_hours,
+                                                      )}
                                             </span>
                                         </>
                                     )}
-                                    {(summary.longest_session_hours === 0 ||
-                                        summary.longest_session_minutes >
-                                            0) && (
+                                    {hasLongestSessionMinutes && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
@@ -362,15 +358,12 @@ export function RecapSummarySection({
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                                <span className="hidden md:inline">
-                                                    {translation.get(
-                                                        'minutes_label',
-                                                        summary.longest_session_minutes,
-                                                    )}
-                                                </span>
-                                                <span className="md:hidden">
-                                                    {translation.get('units.m')}
-                                                </span>
+                                                {longestSessionHasTwoValues
+                                                    ? translation.get('units.m')
+                                                    : translation.get(
+                                                          'minutes_label',
+                                                          summary.longest_session_minutes,
+                                                      )}
                                             </span>
                                         </>
                                     )}
