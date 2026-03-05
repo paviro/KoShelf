@@ -112,8 +112,7 @@ export async function loadStatisticsYear(
         summary: summaryPayload.summary,
         daily_activity: dailyPayload.daily_activity,
         monthly_aggregates: summaryPayload.monthly_aggregates,
-        config:
-            dailyPayload.config ??
+        config: dailyPayload.config ??
             summaryPayload.config ?? {
                 max_scale_seconds: null,
             },

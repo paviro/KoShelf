@@ -204,8 +204,10 @@ export const api = {
         weeks: {
             async get<T>(scope?: ScopeValue): Promise<T> {
                 return requestByContentType<T>(
-                    routeByContentType('/api/activity/weeks', (selectedScope) =>
-                        `/data/activity/weeks/${selectedScope}/index.json`,
+                    routeByContentType(
+                        '/api/activity/weeks',
+                        (selectedScope) =>
+                            `/data/activity/weeks/${selectedScope}/index.json`,
                     ),
                     scope,
                 );
@@ -253,8 +255,10 @@ export const api = {
         months: {
             async list<T>(scope?: ScopeValue): Promise<T> {
                 return requestByContentType<T>(
-                    routeByContentType('/api/activity/months', (selectedScope) =>
-                        `/data/activity/months/${selectedScope}/index.json`,
+                    routeByContentType(
+                        '/api/activity/months',
+                        (selectedScope) =>
+                            `/data/activity/months/${selectedScope}/index.json`,
                     ),
                     scope,
                 );
@@ -277,8 +281,10 @@ export const api = {
         years: {
             async get<T>(scope?: ScopeValue): Promise<T> {
                 return requestByContentType<T>(
-                    routeByContentType('/api/completions/years', (selectedScope) =>
-                        `/data/completions/years/${selectedScope}/index.json`,
+                    routeByContentType(
+                        '/api/completions/years',
+                        (selectedScope) =>
+                            `/data/completions/years/${selectedScope}/index.json`,
                     ),
                     scope,
                 );
