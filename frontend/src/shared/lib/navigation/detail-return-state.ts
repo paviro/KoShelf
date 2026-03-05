@@ -8,7 +8,6 @@ import {
 export type DetailReturnState = {
     detailReturnRouteId?: MainRouteId;
     detailReturnSearch?: string;
-    detailReturnPath?: string;
 };
 
 function normalizeInternalPath(path: unknown): string | null {
@@ -70,8 +69,6 @@ export function createDetailReturnState(
     return {
         detailReturnRouteId: matched.routeId,
         detailReturnSearch: normalizeSearch(normalizedUrl.search),
-        // Include path field for compatibility with existing state consumers.
-        detailReturnPath: normalized,
     };
 }
 
@@ -89,5 +86,5 @@ export function resolveDetailReturnPath(state: unknown): string | null {
         return normalizeInternalPath(path);
     }
 
-    return normalizeInternalPath(candidate.detailReturnPath);
+    return null;
 }
