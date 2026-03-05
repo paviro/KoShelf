@@ -298,7 +298,7 @@ impl LibraryScanner {
         book_md5: &Option<String>,
     ) {
         // Collect MD5 for statistics filtering:
-        // 1. Prefer MD5 from metadata (stable even if file is updated)
+        // 1. Prefer MD5 from metadata (stable even if file contents vary)
         // 2. Use calculated MD5 from hashdocsettings lookup if available
         // 3. Fall back to calculating MD5 for books without metadata
         if let Some(metadata_md5) = koreader_metadata

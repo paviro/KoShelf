@@ -70,7 +70,7 @@ export function createDetailReturnState(
     return {
         detailReturnRouteId: matched.routeId,
         detailReturnSearch: normalizeSearch(normalizedUrl.search),
-        // Keep legacy path field for compatibility during transition.
+        // Include path field for compatibility with existing state consumers.
         detailReturnPath: normalized,
     };
 }

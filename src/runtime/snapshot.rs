@@ -97,7 +97,7 @@ impl ContractSnapshot {
     pub fn write_to_data_dir(&self, data_dir: &Path) -> Result<()> {
         fs::create_dir_all(data_dir)?;
 
-        // Remove legacy contract outputs from pre-cutover layouts.
+        // Ensure data dir contains only current contract outputs.
         for legacy_file in ["books.json", "comics.json"] {
             if let Err(error) = fs::remove_file(data_dir.join(legacy_file))
                 && error.kind() != std::io::ErrorKind::NotFound

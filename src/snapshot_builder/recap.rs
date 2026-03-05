@@ -468,7 +468,7 @@ impl SnapshotBuilder {
             best_month: summary.best_month_name.clone(),
         };
 
-        // Check if we need to regenerate share images (skip if stats DB hasn't changed)
+        // Regenerate share images only when stats DB mtime differs.
         let stats_db_time = self
             .statistics_db_path
             .as_ref()
