@@ -78,6 +78,10 @@ export function isServeMode(): boolean {
     return getServerMode() === 'internal';
 }
 
+export function itemDetailDownloadHref(id: string): string {
+    return isServeMode() ? `/api/items/${id}` : `/data/items/by_id/${id}.json`;
+}
+
 function normalizeScope(scope: ScopeValue | undefined): ScopeValue {
     if (scope === 'books' || scope === 'comics') {
         return scope;

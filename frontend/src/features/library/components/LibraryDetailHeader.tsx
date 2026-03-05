@@ -3,6 +3,7 @@ import { LuArrowLeft } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
+import { itemDetailDownloadHref } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import type { LibraryCollection } from '../model/library-model';
@@ -27,7 +28,8 @@ export function LibraryDetailHeader({
 
     useClickOutside(dropdownRef, () => setShareOpen(false), shareOpen);
 
-    const jsonHref = `/data/${collection}/${itemId}.json`;
+    const jsonHref = itemDetailDownloadHref(itemId);
+    const jsonDownloadName = `${collection}-${itemId}.json`;
 
     const header = useMemo(
         () => ({
@@ -119,7 +121,7 @@ export function LibraryDetailHeader({
                         >
                             <a
                                 href={jsonHref}
-                                download
+                                download={jsonDownloadName}
                                 className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200"
                                 onClick={() => setShareOpen(false)}
                             >
@@ -130,7 +132,7 @@ export function LibraryDetailHeader({
                 </div>
             ),
         }),
-        [backHref, jsonHref, primaryAuthor, shareOpen, title],
+        [backHref, jsonDownloadName, jsonHref, primaryAuthor, shareOpen, title],
     );
 
     useRouteHeader(header);
