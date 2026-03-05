@@ -43,6 +43,7 @@ export function CalendarHeader({
                 >
                     {monthLabel}
                 </button>
+                {' '}
                 <button
                     type="button"
                     className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
@@ -55,12 +56,12 @@ export function CalendarHeader({
 
         return {
             mobileContent: (
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-[0.45rem]">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
                     {titleContent}
                 </h1>
             ),
             desktopContent: (
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white items-center gap-[0.45rem] flex">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                     {titleContent}
                 </h2>
             ),
