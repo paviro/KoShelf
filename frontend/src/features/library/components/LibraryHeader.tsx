@@ -1,6 +1,7 @@
-import type { RefObject } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { LuSearch, LuX } from 'react-icons/lu';
 
+import { useRouteHeader } from '../../../app/shell/route-header';
 import { translation } from '../../../shared/i18n';
 import type { LibraryFilterValue } from '../model/library-model';
 import { LibraryStatusFilter } from './LibraryStatusFilter';
@@ -32,38 +33,42 @@ export function LibraryHeader({
     desktopSearchInputRef,
     mobileSearchInputRef,
 }: LibraryHeaderProps) {
-    return (
-        <header className="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
-            <div className="flex items-center justify-between h-full">
-                <div
-                    className={`lg:hidden flex items-center ${mobileSearchOpen ? 'hidden' : ''}`}
-                    aria-hidden={mobileSearchOpen}
-                >
-                    <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                        {title}
-                    </h1>
-                </div>
+    const header = useMemo(
+        () => ({
+            mobileContent: (
+                <>
+                    <div
+                        className={`lg:hidden flex items-center min-w-0 ${mobileSearchOpen ? 'hidden' : ''}`}
+                        aria-hidden={mobileSearchOpen}
+                    >
+                        <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                            {title}
+                        </h1>
+                    </div>
 
-                <div
-                    className={`lg:hidden flex-1 mr-3 ${mobileSearchOpen ? '' : 'hidden'}`}
-                >
-                    <input
-                        ref={mobileSearchInputRef}
-                        type="text"
-                        value={searchTerm}
-                        placeholder={translation.get('search-placeholder')}
-                        aria-label={translation.get('search.aria-label')}
-                        className="w-full bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm"
-                        onChange={(event) =>
-                            onSearchTermChange(event.target.value)
-                        }
-                    />
-                </div>
-
-                <h2 className="hidden lg:block text-2xl font-bold text-gray-900 dark:text-white">
+                    <div
+                        className={`lg:hidden flex-1 mr-3 ${mobileSearchOpen ? '' : 'hidden'}`}
+                    >
+                        <input
+                            ref={mobileSearchInputRef}
+                            type="text"
+                            value={searchTerm}
+                            placeholder={translation.get('search-placeholder')}
+                            aria-label={translation.get('search.aria-label')}
+                            className="w-full bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm text-sm backdrop-blur-sm"
+                            onChange={(event) =>
+                                onSearchTermChange(event.target.value)
+                            }
+                        />
+                    </div>
+                </>
+            ),
+            desktopContent: (
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
                     {title}
                 </h2>
-
+            ),
+            controls: (
                 <div className="flex items-center space-x-3 md:space-x-4">
                     <div className="relative hidden sm:block">
                         <input
@@ -121,7 +126,23 @@ export function LibraryHeader({
                         />
                     </div>
                 </div>
-            </div>
-        </header>
+            ),
+        }),
+        [
+            desktopSearchInputRef,
+            filterOptions,
+            filterValue,
+            mobileSearchInputRef,
+            mobileSearchOpen,
+            onCloseMobileSearch,
+            onFilterChange,
+            onOpenMobileSearch,
+            onSearchTermChange,
+            searchTerm,
+            title,
+        ],
     );
+
+    useRouteHeader(header);
+    return null;
 }

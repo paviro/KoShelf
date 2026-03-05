@@ -1,9 +1,14 @@
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import { api } from '../../../shared/api';
-import type { LibraryDetailPreviewResponse } from '../api/library-data';
+import type { LibraryDetailResponse } from '../api/library-data';
 import { sanitizeRichTextHtml } from '../lib/library-detail-formatters';
 import type { LibraryCollection } from '../model/library-model';
+import {
+    fetchLibraryDetailQuery,
+    getCachedLibraryDetailQueryData,
+    libraryDetailCacheKey,
+} from './useLibraryQueries';
 
 interface PreviewCardData {
     title: string;
@@ -57,6 +62,7 @@ class HoverPreviewManager {
     private isUserScrolling = false;
     private hoveredCard: LibraryCardElement | null = null;
     private readonly detailsCache: Map<string, PreviewCardData>;
+    private readonly queryClient: QueryClient;
     private cardListeners: Array<() => void> = [];
 
     private readonly handleScroll = (): void => {
@@ -86,8 +92,12 @@ class HoverPreviewManager {
         }
     };
 
-    constructor(detailsCache: Map<string, PreviewCardData>) {
+    constructor(
+        detailsCache: Map<string, PreviewCardData>,
+        queryClient: QueryClient,
+    ) {
         this.detailsCache = detailsCache;
+        this.queryClient = queryClient;
     }
 
     init(selector: string): () => void {
@@ -410,6 +420,18 @@ class HoverPreviewManager {
         };
     }
 
+    private previewDataFromDetail(
+        detail: LibraryDetailResponse,
+        fallback: PreviewCardData,
+    ): PreviewCardData {
+        return {
+            title: this.clean(detail.item.title) || fallback.title,
+            author: this.formatAuthors(detail.item.authors) || fallback.author,
+            series: this.clean(detail.item.series || '') || fallback.series,
+            description: detail.item.description || '',
+        };
+    }
+
     private async loadPreviewData(
         card: LibraryCardElement,
     ): Promise<PreviewCardData> {
@@ -424,27 +446,33 @@ class HoverPreviewManager {
             return fallback;
         }
 
-        const cacheKey = `${collection}:${itemId}`;
+        const cacheKey = libraryDetailCacheKey(collection, itemId);
         if (this.detailsCache.has(cacheKey)) {
             return this.detailsCache.get(cacheKey)!;
         }
 
-        try {
-            const payload =
-                await api.items.get<LibraryDetailPreviewResponse>(itemId);
+        const cachedDetail = getCachedLibraryDetailQueryData(
+            this.queryClient,
+            collection,
+            itemId,
+        );
+        if (cachedDetail?.item) {
+            const data = this.previewDataFromDetail(cachedDetail, fallback);
+            this.detailsCache.set(cacheKey, data);
+            return data;
+        }
 
-            if (!payload?.item) {
+        try {
+            const detail = await fetchLibraryDetailQuery(
+                this.queryClient,
+                collection,
+                itemId,
+            );
+            if (!detail?.item) {
                 return fallback;
             }
 
-            const item = payload.item;
-
-            const data: PreviewCardData = {
-                title: this.clean(item.title) || fallback.title,
-                author: this.formatAuthors(item.authors) || fallback.author,
-                series: this.clean(item.series || '') || fallback.series,
-                description: item.description || '',
-            };
+            const data = this.previewDataFromDetail(detail, fallback);
 
             this.detailsCache.set(cacheKey, data);
             return data;
@@ -746,10 +774,14 @@ class HoverPreviewManager {
 }
 
 export function useLibraryHoverPreviewEffect(refreshKey: string): void {
+    const queryClient = useQueryClient();
     const detailsCacheRef = useRef<Map<string, PreviewCardData>>(new Map());
 
     useEffect(() => {
-        const manager = new HoverPreviewManager(detailsCacheRef.current);
+        const manager = new HoverPreviewManager(
+            detailsCacheRef.current,
+            queryClient,
+        );
         return manager.init('.book-card');
-    }, [refreshKey]);
+    }, [queryClient, refreshKey]);
 }

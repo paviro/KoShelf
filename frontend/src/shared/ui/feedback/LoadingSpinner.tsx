@@ -23,7 +23,7 @@ export function LoadingSpinner({
     spinnerClassName = '',
     srLabel = 'Loading',
     delayed = true,
-    delayMs = 100,
+    delayMs = 200,
 }: LoadingSpinnerProps) {
     const delayedStyle: CSSProperties | undefined = delayed
         ? { opacity: 0, animationDelay: `${Math.max(0, delayMs)}ms` }

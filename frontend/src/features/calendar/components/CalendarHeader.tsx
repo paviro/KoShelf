@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
+import { useRouteHeader } from '../../../app/shell/route-header';
 import type { ScopeValue } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
@@ -31,45 +33,37 @@ export function CalendarHeader({
     onOpenYearPicker,
     todayDisabled,
 }: CalendarHeaderProps) {
-    return (
-        <header className="fixed top-0 left-0 right-0 lg:left-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-sm border-b border-gray-200/50 dark:border-dark-700/50 px-4 md:px-6 h-[70px] md:h-[80px] z-40">
-            <div className="flex items-center justify-between h-full">
-                <div className="lg:hidden flex items-center">
-                    <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-[0.45rem]">
-                        <button
-                            type="button"
-                            className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                            onClick={onOpenMonthPicker}
-                        >
-                            {monthLabel}
-                        </button>
-                        <button
-                            type="button"
-                            className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                            onClick={onOpenYearPicker}
-                        >
-                            {yearLabel}
-                        </button>
-                    </h1>
-                </div>
-
-                <h2 className="hidden lg:flex text-2xl font-bold text-gray-900 dark:text-white items-center gap-[0.45rem]">
-                    <button
-                        type="button"
-                        className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                        onClick={onOpenMonthPicker}
-                    >
-                        {monthLabel}
-                    </button>
-                    <button
-                        type="button"
-                        className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                        onClick={onOpenYearPicker}
-                    >
-                        {yearLabel}
-                    </button>
+    const titleContent = (
+        <>
+            <button
+                type="button"
+                className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                onClick={onOpenMonthPicker}
+            >
+                {monthLabel}
+            </button>
+            <button
+                type="button"
+                className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                onClick={onOpenYearPicker}
+            >
+                {yearLabel}
+            </button>
+        </>
+    );
+    const header = useMemo(
+        () => ({
+            mobileContent: (
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-[0.45rem]">
+                    {titleContent}
+                </h1>
+            ),
+            desktopContent: (
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white items-center gap-[0.45rem] flex">
+                    {titleContent}
                 </h2>
-
+            ),
+            controls: (
                 <div className="flex items-center space-x-2 md:space-x-4">
                     <div className="flex items-center space-x-1">
                         <button
@@ -121,7 +115,23 @@ export function CalendarHeader({
                         onChange={onScopeChange}
                     />
                 </div>
-            </div>
-        </header>
+            ),
+        }),
+        [
+            monthLabel,
+            onNextMonth,
+            onOpenMonthPicker,
+            onOpenYearPicker,
+            onPreviousMonth,
+            onScopeChange,
+            onToday,
+            scope,
+            showTypeFilter,
+            todayDisabled,
+            yearLabel,
+        ],
     );
+
+    useRouteHeader(header);
+    return null;
 }

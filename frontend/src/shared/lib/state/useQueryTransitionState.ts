@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export const DEFAULT_QUERY_TRANSITION_SPINNER_DELAY_MS = 120;
+export const DEFAULT_QUERY_TRANSITION_SPINNER_DELAY_MS = 200;
 
 type QueryTransitionStateOptions<TData> = {
     data: TData | undefined;

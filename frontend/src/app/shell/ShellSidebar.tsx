@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { LuGithub, LuSettings } from 'react-icons/lu';
-
 import { translation } from '../../shared/i18n';
 import { BRAND_ICON, isActivePath, type NavItem } from './shell-nav';
 
