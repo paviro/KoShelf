@@ -21,7 +21,6 @@ pub struct CalendarItem {
     pub title: String,
     pub authors: Vec<String>,
     pub content_type: ContentType,
-    pub color: String, // Color for the event
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_id: Option<String>, // Canonical item identifier for detail navigation, if available
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -72,43 +71,13 @@ impl CalendarItem {
         item_id: Option<String>,
         item_cover: Option<String>,
     ) -> Self {
-        // Generate a consistent color based on item title
-        let color = Self::generate_color(&title);
-
         Self {
             title,
             authors,
             content_type,
-            color,
             item_id,
             item_cover,
         }
-    }
-
-    /// Generate a consistent color for an item based on its title
-    fn generate_color(title: &str) -> String {
-        // Define a set of pleasant colors for calendar events
-        let colors = [
-            "#3B82F6", // Blue
-            "#10B981", // Green
-            "#F59E0B", // Yellow
-            "#EF4444", // Red
-            "#8B5CF6", // Purple
-            "#F97316", // Orange
-            "#06B6D4", // Cyan
-            "#84CC16", // Lime
-            "#EC4899", // Pink
-            "#6366F1", // Indigo
-        ];
-
-        // Simple hash function to get consistent color based on title
-        let mut hash: u32 = 0;
-        for byte in title.bytes() {
-            hash = hash.wrapping_mul(31).wrapping_add(byte as u32);
-        }
-
-        let index = (hash as usize) % colors.len();
-        colors[index].to_string()
     }
 }
 

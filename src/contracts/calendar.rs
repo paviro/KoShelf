@@ -26,7 +26,6 @@ pub struct CalendarItemResponse {
     pub title: String,
     pub authors: Vec<String>,
     pub content_type: LibraryContentType,
-    pub color: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

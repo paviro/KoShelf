@@ -22,34 +22,21 @@ type EventExtendedProps = {
     rawEvent: CalendarEventResponse;
 };
 
-const STACKED_EVENT_VERTICAL_GAP_PX = 2;
+const STACKED_EVENT_VERTICAL_GAP_PX = 3;
 
-const EVENT_COLOR_PALETTE = [
-    '#3B82F6',
-    '#10B981',
-    '#F59E0B',
-    '#EF4444',
-    '#8B5CF6',
-    '#06B6D4',
-    '#84CC16',
-    '#F97316',
-    '#EC4899',
-    '#6366F1',
-];
+const EVENT_COLOR_PAIR_COUNT = 10;
 
-function fallbackColorForEvent(
-    event: CalendarEventResponse,
-    title: string,
-): string {
+function colorforevent(event: CalendarEventResponse): string {
     let hash = 0;
-    const token = `${title}${event.item_id}`;
+    const token = event.item_id;
 
     for (let index = 0; index < token.length; index += 1) {
         hash = (hash << 5) - hash + token.charCodeAt(index);
         hash |= 0;
     }
 
-    return EVENT_COLOR_PALETTE[Math.abs(hash) % EVENT_COLOR_PALETTE.length];
+    const colorIndex = Math.abs(hash) % EVENT_COLOR_PAIR_COUNT;
+    return `var(--calendar-event-color-${colorIndex})`;
 }
 
 function normalizeToMonth(date: Date): Date {
@@ -123,9 +110,8 @@ export function CalendarGrid({
                     start: event.start,
                     end: event.end || event.start,
                     allDay: true,
-                    backgroundColor:
-                        item?.color ?? fallbackColorForEvent(event, title),
-                    textColor: '#ffffff',
+                    backgroundColor: colorforevent(event),
+                    textColor: 'var(--calendar-event-text-color)',
                     extendedProps: {
                         rawEvent: event,
                     },

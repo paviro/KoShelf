@@ -410,7 +410,6 @@ pub fn map_activity_month_response(
                     title: item.title.clone(),
                     authors: item.authors.clone(),
                     content_type: map_library_content_type(item.content_type),
-                    color: item.color.clone(),
                     item_id: item.item_id.clone(),
                     item_cover: item.item_cover.clone(),
                 },

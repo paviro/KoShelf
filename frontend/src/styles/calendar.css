@@ -77,6 +77,31 @@
 .calendar-container {
     @apply w-full overflow-x-auto flex flex-col flex-1;
     /* flex-1 makes it fill remaining space in the flex parent */
+    --calendar-event-text-color: #ffffff;
+    --calendar-event-color-0: theme('colors.lime.500');
+    --calendar-event-color-1: theme('colors.indigo.500');
+    --calendar-event-color-2: theme('colors.green.600');
+    --calendar-event-color-3: theme('colors.cyan.500');
+    --calendar-event-color-4: theme('colors.pink.600');
+    --calendar-event-color-5: theme('colors.purple.500');
+    --calendar-event-color-6: theme('colors.fuchsia.600');
+    --calendar-event-color-7: theme('colors.rose.500');
+    --calendar-event-color-8: theme('colors.emerald.500');
+    --calendar-event-color-9: theme('colors.yellow.400');
+}
+
+.dark .calendar-container {
+    --calendar-event-text-color: #ffffff;
+    --calendar-event-color-0: theme('colors.lime.600');
+    --calendar-event-color-1: theme('colors.indigo.600');
+    --calendar-event-color-2: theme('colors.green.600');
+    --calendar-event-color-3: theme('colors.cyan.500');
+    --calendar-event-color-4: theme('colors.pink.600');
+    --calendar-event-color-5: theme('colors.purple.600');
+    --calendar-event-color-6: theme('colors.fuchsia.600');
+    --calendar-event-color-7: theme('colors.rose.600');
+    --calendar-event-color-8: theme('colors.emerald.600');
+    --calendar-event-color-9: theme('colors.yellow.500');
 }
 
 .calendar-container .ec {
@@ -218,11 +243,11 @@
 /* Event styling */
 .calendar-container .ec-event {
     @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
-    @apply mx-0.5;
+    margin: 0 0.1rem;
 }
 
 .calendar-container .ec.ec-day-grid {
-    --ec-event-col-gap: 0.3rem;
+    --ec-event-col-gap: 0.25rem;
 }
 
 /* Scrollbar styling */

@@ -18,7 +18,6 @@ export interface CalendarItemResponse {
     title: string;
     authors: string[];
     content_type: CalendarContentType;
-    color: string;
     item_id?: string;
     item_cover?: string;
 }
