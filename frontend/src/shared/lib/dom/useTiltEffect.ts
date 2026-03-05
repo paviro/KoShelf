@@ -260,7 +260,7 @@ export function useRecapCoverTiltEffect(refreshKey: string): void {
             selector: '.recap-cover-tilt',
             maxRotation: 3,
             hoverScale: 1.02,
-            hoverLift: 3,
+            hoverLift: 0,
             shadowBlur: 20,
             shadowOpacity: 0.15,
             enableOverlays: false,
