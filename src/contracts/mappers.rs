@@ -264,15 +264,31 @@ pub fn map_activity_week_response(
     content_type: ContentTypeFilter,
     week_key: impl Into<String>,
     stats: Option<&crate::models::WeeklyStats>,
+    all_daily_activity: &[crate::models::DailyStats],
 ) -> ActivityWeekResponse {
     let week_key = week_key.into();
+    let resolved_stats = stats.cloned().unwrap_or_else(|| zero_weekly_stats(&week_key));
+    let daily_activity = week_daily_activity(&resolved_stats.start_date, &resolved_stats.end_date, all_daily_activity);
 
     ActivityWeekResponse {
         meta,
         content_type,
         week_key: week_key.clone(),
-        stats: stats.cloned().unwrap_or_else(|| zero_weekly_stats(&week_key)),
+        stats: resolved_stats,
+        daily_activity,
     }
+}
+
+fn week_daily_activity(
+    start_date: &str,
+    end_date: &str,
+    all_daily_activity: &[crate::models::DailyStats],
+) -> Vec<crate::models::DailyStats> {
+    all_daily_activity
+        .iter()
+        .filter(|entry| entry.date.as_str() >= start_date && entry.date.as_str() <= end_date)
+        .cloned()
+        .collect()
 }
 
 fn year_daily_activity(

@@ -43,6 +43,7 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     avg_read_time_per_day: 0,
     longest_session_duration: null,
     average_session_duration: null,
+    daily_activity: [],
 };
 
 export function StatisticsRoute() {

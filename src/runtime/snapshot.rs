@@ -436,6 +436,7 @@ mod tests {
                         longest_session_duration: Some(4),
                         average_session_duration: Some(3),
                     },
+                    daily_activity: vec![],
                 },
             )]),
         );

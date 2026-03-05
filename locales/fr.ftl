@@ -254,7 +254,11 @@ december = Décembre
 # Weekday abbreviations (Mon/Thu/Sun)
 weekday =
     .mon = Lun
+    .tue = Mar
+    .wed = Mer
     .thu = Jeu
+    .fri = Ven
+    .sat = Sam
     .sun = Dim
 
 # Chrono date/time format strings

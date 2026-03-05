@@ -9,12 +9,15 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
 import { monthKeyAt, toShortMonthKey } from '../lib/months';
 import { translation } from '../../../shared/i18n';
-import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
 import {
     type MonthlyReadStats,
     type SectionName,
     type YearlySummaryStats,
 } from '../model/statistics-model';
+import {
+    DistributionBarChart,
+    type DistributionBarItem,
+} from '../components/DistributionBarChart';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
@@ -43,10 +46,39 @@ export function YearlyStatsSection({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const chartContentRef = useRef<HTMLDivElement>(null);
 
-    const maxReadTime = useMemo(
+    const monthlyBarItems: DistributionBarItem[] = useMemo(
         () =>
-            Math.max(...yearlyMonthlyStats.map((month) => month.read_time), 0),
-        [yearlyMonthlyStats],
+            Array.from({ length: 12 }, (_, monthIndex) => {
+                const stats = yearlyMonthlyStats[monthIndex] ?? {
+                    read_time: 0,
+                    pages_read: 0,
+                    active_days: 0,
+                };
+
+                const monthLabel = translation.get(monthKeyAt(monthIndex));
+                const valueLabel = DataFormatter.formatReadTime(
+                    stats.read_time,
+                );
+                const pagesLabel = translation.get('pages', stats.pages_read);
+                const activeDaysLabel = translation.get(
+                    'active-days-tooltip',
+                    stats.active_days,
+                );
+                const formattedActiveDays = DataFormatter.formatCount(
+                    stats.active_days,
+                );
+
+                return {
+                    readTime: stats.read_time,
+                    tooltip: selectedYear
+                        ? `${monthLabel} ${selectedYear}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`
+                        : `${monthLabel}: ${valueLabel}`,
+                    label: translation.get(
+                        toShortMonthKey(monthKeyAt(monthIndex)),
+                    ),
+                };
+            }),
+        [yearlyMonthlyStats, selectedYear],
     );
 
     useEffect(() => {
@@ -150,7 +182,7 @@ export function YearlyStatsSection({
                         {translation.get('stats-empty.nothing-here')}
                     </div>
 
-                    <div id="yearlyStatsChart" className="">
+                    <div id="yearlyStatsChart">
                         <div
                             id="yearlyStatsScrollContainer"
                             className="overflow-x-auto overflow-y-hidden scrollbar-hide"
@@ -161,102 +193,12 @@ export function YearlyStatsSection({
                                 className="min-w-[680px] lg:min-w-0"
                                 ref={chartContentRef}
                             >
-                                <div
-                                    id="yearlyStatsBars"
-                                    className="h-56 sm:h-64 lg:h-72 grid grid-cols-12 gap-2 sm:gap-3 items-end"
-                                >
-                                    {Array.from(
-                                        { length: 12 },
-                                        (_, monthIndex) => {
-                                            const stats = yearlyMonthlyStats[
-                                                monthIndex
-                                            ] ?? {
-                                                read_time: 0,
-                                                pages_read: 0,
-                                                active_days: 0,
-                                            };
-
-                                            let heightPercent = 2;
-                                            if (
-                                                maxReadTime > 0 &&
-                                                stats.read_time > 0
-                                            ) {
-                                                heightPercent = Math.max(
-                                                    (stats.read_time /
-                                                        maxReadTime) *
-                                                        100,
-                                                    8,
-                                                );
-                                            }
-
-                                            const monthLabel = translation.get(
-                                                monthKeyAt(monthIndex),
-                                            );
-                                            const valueLabel =
-                                                DataFormatter.formatReadTime(
-                                                    stats.read_time,
-                                                );
-                                            const pagesLabel = translation.get(
-                                                'pages',
-                                                stats.pages_read,
-                                            );
-                                            const activeDaysLabel =
-                                                translation.get(
-                                                    'active-days-tooltip',
-                                                    stats.active_days,
-                                                );
-                                            const formattedActiveDays =
-                                                DataFormatter.formatCount(
-                                                    stats.active_days,
-                                                );
-                                            const tooltip = selectedYear
-                                                ? `${monthLabel} ${selectedYear}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`
-                                                : `${monthLabel}: ${valueLabel}`;
-
-                                            return (
-                                                <div
-                                                    key={monthIndex}
-                                                    className="h-full flex flex-col justify-end"
-                                                >
-                                                    <div className="relative h-full flex items-end">
-                                                        <div
-                                                            className="yearly-stat-bar-fill cursor-pointer w-full rounded-t-sm bg-gradient-to-t from-indigo-600 to-violet-500 shadow-[0_-2px_16px_rgba(99,102,241,0.35)] opacity-35 transition-[height,opacity] duration-500 ease-out overflow-hidden"
-                                                            style={{
-                                                                height: `${heightPercent}%`,
-                                                                opacity:
-                                                                    stats.read_time >
-                                                                    0
-                                                                        ? 1
-                                                                        : 0.35,
-                                                            }}
-                                                            data-tooltip-gap="5"
-                                                            aria-label={tooltip}
-                                                            ref={(element) => {
-                                                                if (element) {
-                                                                    TooltipManager.attach(
-                                                                        element,
-                                                                        tooltip,
-                                                                    );
-                                                                }
-                                                            }}
-                                                        >
-                                                            <span className="block h-[2px] w-full bg-white/75 dark:bg-white/45"></span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-3 text-center text-xs text-gray-500 dark:text-dark-400 leading-none">
-                                                        {translation.get(
-                                                            toShortMonthKey(
-                                                                monthKeyAt(
-                                                                    monthIndex,
-                                                                ),
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        },
-                                    )}
-                                </div>
+                                <DistributionBarChart
+                                    items={monthlyBarItems}
+                                    columns={12}
+                                    heightClassName="h-56 sm:h-64 lg:h-72"
+                                    barClassName="from-indigo-600 to-violet-500 shadow-[0_-2px_16px_rgba(99,102,241,0.35)]"
+                                />
                             </div>
                         </div>
                     </div>

@@ -53,6 +53,7 @@ pub struct ActivityWeekResponse {
     pub week_key: String,
     #[serde(flatten)]
     pub stats: crate::models::WeeklyStats,
+    pub daily_activity: Vec<crate::models::DailyStats>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

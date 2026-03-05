@@ -279,7 +279,11 @@ december = Декабрь
 # Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = Пн
+    .tue = Вт
+    .wed = Ср
     .thu = Чт
+    .fri = Пт
+    .sat = Сб
     .sun = Вс
 
 # Chrono date/time format strings (use %B for full month, %b for short, etc.)

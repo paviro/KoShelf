@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { LuClock3, LuFileText } from 'react-icons/lu';
 
 import type {
+    DailyActivityEntry,
     StatisticsIndexWeek,
     StatisticsWeekResponse,
 } from '../api/statistics-data';
@@ -12,8 +14,53 @@ import {
     type SectionName,
 } from '../model/statistics-model';
 import { WeekSelector } from '../components/WeekSelector';
+import {
+    DistributionBarChart,
+    type DistributionBarItem,
+} from '../components/DistributionBarChart';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
+
+const WEEKDAY_TRANSLATION_KEYS = [
+    'weekday.mon',
+    'weekday.tue',
+    'weekday.wed',
+    'weekday.thu',
+    'weekday.fri',
+    'weekday.sat',
+    'weekday.sun',
+] as const;
+
+function buildWeekdayBarItems(
+    dailyActivity: DailyActivityEntry[],
+    startDate: string,
+): DistributionBarItem[] {
+    const days = WEEKDAY_TRANSLATION_KEYS.map((key) => ({
+        read_time: 0,
+        pages_read: 0,
+        label: translation.get(key),
+    }));
+
+    if (startDate) {
+        for (const entry of dailyActivity) {
+            const start = new Date(startDate + 'T00:00:00');
+            const current = new Date(entry.date + 'T00:00:00');
+            const diffDays = Math.round(
+                (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            if (diffDays >= 0 && diffDays < 7) {
+                days[diffDays].read_time += entry.read_time;
+                days[diffDays].pages_read += entry.pages_read;
+            }
+        }
+    }
+
+    return days.map((day) => ({
+        readTime: day.read_time,
+        tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+        label: day.label,
+    }));
+}
 
 type WeeklyStatsSectionProps = {
     visible: boolean;
@@ -34,6 +81,15 @@ export function WeeklyStatsSection({
     weeklyStats,
     loading,
 }: WeeklyStatsSectionProps) {
+    const weekdayBarItems = useMemo(
+        () =>
+            buildWeekdayBarItems(
+                weeklyStats.daily_activity,
+                weeklyStats.start_date,
+            ),
+        [weeklyStats.daily_activity, weeklyStats.start_date],
+    );
+
     return (
         <CollapsibleSection
             sectionKey="weekly-stats"
@@ -126,6 +182,15 @@ export function WeeklyStatsSection({
                             weeklyStats.average_session_duration,
                         )}
                         label={translation.get('session.average')}
+                    />
+                </div>
+
+                <div className="mt-4 sm:mt-5 bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
+                    <DistributionBarChart
+                        items={weekdayBarItems}
+                        columns={7}
+                        heightClassName="h-44 sm:h-52 lg:h-56"
+                        barClassName="from-blue-600 to-sky-400 shadow-[0_-2px_16px_rgba(56,189,248,0.3)]"
                     />
                 </div>
             </div>

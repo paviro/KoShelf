@@ -252,7 +252,11 @@ december = Diciembre
 # Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = Lun
+    .tue = Mar
+    .wed = Mié
     .thu = Jue
+    .fri = Vie
+    .sat = Sáb
     .sun = Dom
 
 # Chrono date/time format strings (use %B for full month, %b for short, etc.)

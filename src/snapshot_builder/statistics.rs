@@ -90,6 +90,7 @@ impl SnapshotBuilder {
                     filter,
                     week.week_key.clone(),
                     week_stats.get(&week.week_key),
+                    &reading_stats.daily_activity,
                 );
                 weeks_by_key.insert(week.week_key.clone(), week_response);
             }

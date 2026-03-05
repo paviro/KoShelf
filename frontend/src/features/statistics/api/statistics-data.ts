@@ -26,6 +26,7 @@ export interface StatisticsWeekResponse {
     avg_read_time_per_day: number;
     longest_session_duration: number | null;
     average_session_duration: number | null;
+    daily_activity: DailyActivityEntry[];
 }
 
 export interface StatisticsIndexWeek {
