@@ -362,7 +362,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
             <PageContent className="space-y-6 md:space-y-8">
                 {!listQuery.isError && listTransition.showBlockingSpinner && (
-                    <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                    <section className="page-centered-state">
                         <LoadingSpinner size="lg" srLabel="Loading library" />
                     </section>
                 )}

@@ -4,8 +4,8 @@ import { translation } from '../../../shared/i18n';
 
 export function LibraryEmptyState() {
     return (
-        <section className="flex flex-col items-center justify-center text-center min-h-[calc(100vh_-_12.5rem)] md:min-h-[calc(100vh_-_13rem)] lg:min-h-[calc(100vh_-_7.5rem)] py-8">
-            <div className="flex flex-col items-center justify-center -mt-8">
+        <section className="page-centered-state flex-col text-center">
+            <div className="flex flex-col items-center justify-center">
                 <div className="relative mb-8">
                     <div className="absolute inset-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-full blur-2xl" />
                     <div className="relative w-24 h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-2xl">

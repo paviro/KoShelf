@@ -133,7 +133,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             <PageContent className="space-y-6 md:space-y-8">
                 {!detailQuery.isError &&
                     detailTransition.showBlockingSpinner && (
-                        <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                        <section className="page-centered-state">
                             <LoadingSpinner
                                 size="lg"
                                 srLabel="Loading item details"

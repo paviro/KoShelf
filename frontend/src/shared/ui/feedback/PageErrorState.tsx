@@ -78,8 +78,8 @@ export function PageErrorState({
     const Icon = config.icon;
 
     return (
-        <section className="flex flex-col items-center justify-center text-center w-full min-h-[calc(100vh_-_12.5rem)] md:min-h-[calc(100vh_-_13rem)] lg:min-h-[calc(100vh_-_7.5rem)] py-8">
-            <div className="flex flex-col items-center justify-center -mt-8">
+        <section className="page-centered-state flex-col text-center">
+            <div className="flex flex-col items-center justify-center">
                 <div className="relative mb-8">
                     <div
                         className={`absolute inset-0 w-32 h-32 bg-gradient-to-br ${config.glowFrom} ${config.glowTo} rounded-full blur-2xl`}

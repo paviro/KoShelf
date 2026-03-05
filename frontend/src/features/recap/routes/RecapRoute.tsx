@@ -188,7 +188,7 @@ export function RecapRoute() {
             <PageContent className="space-y-6 md:space-y-8">
                 {!recapIndexQuery.isError &&
                     recapIndexTransition.showBlockingSpinner && (
-                        <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                        <section className="page-centered-state">
                             <LoadingSpinner size="lg" srLabel="Loading recap" />
                         </section>
                     )}
@@ -217,7 +217,7 @@ export function RecapRoute() {
 
                         {yearForQuery !== null &&
                             recapYearTransition.showBlockingSpinner && (
-                                <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                                <section className="page-centered-state">
                                     <LoadingSpinner
                                         size="lg"
                                         srLabel="Loading recap year"

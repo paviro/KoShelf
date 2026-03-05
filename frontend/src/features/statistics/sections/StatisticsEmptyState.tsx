@@ -4,9 +4,9 @@ export function StatisticsEmptyState() {
     return (
         <div
             id="dynamicEmptyState"
-            className="flex flex-col items-center justify-center text-center w-full min-h-[calc(100vh_-_12.5rem)] md:min-h-[calc(100vh_-_13rem)] lg:min-h-[calc(100vh_-_7.5rem)] py-8"
+            className="page-centered-state flex-col text-center"
         >
-            <div className="flex flex-col items-center justify-center -mt-8">
+            <div className="flex flex-col items-center justify-center">
                 <div className="relative mb-8">
                     <div className="absolute inset-0 w-32 h-32 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full blur-2xl"></div>
                     <div className="relative w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl">

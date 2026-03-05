@@ -30,6 +30,38 @@
         display: none;
     }
 
+    /*
+     * Full-page status states (error/empty/no-results) live inside PageContent,
+     * which has top/bottom padding around the fixed shell chrome.
+     * This utility neutralizes that extra offset so states center against the
+     * visible viewport below the fixed header and above the mobile nav.
+     */
+    .page-centered-state {
+        /* mobile nav top = bottom-4 (1rem) + nav height (~3.75rem) + safe area */
+        --mobile-nav-top-offset: calc(4.75rem + env(safe-area-inset-bottom));
+        --page-centered-state-edge-padding: 1rem;
+        @apply w-full flex items-center justify-center;
+        min-height: calc(100dvh - 70px - var(--mobile-nav-top-offset));
+        padding-top: var(--page-centered-state-edge-padding);
+        padding-bottom: var(--page-centered-state-edge-padding);
+        margin-top: -1.125rem;
+        margin-bottom: calc(-7rem + var(--mobile-nav-top-offset));
+    }
+
+    @screen md {
+        .page-centered-state {
+            min-height: calc(100dvh - 80px - var(--mobile-nav-top-offset));
+            margin-top: -1rem;
+        }
+    }
+
+    @screen lg {
+        .page-centered-state {
+            min-height: calc(100dvh - 80px);
+            margin-bottom: -1.5rem;
+        }
+    }
+
     /* Dropdown Anchor Positioning */
     .dropdown-trigger {
         anchor-name: --dropdown-anchor;
