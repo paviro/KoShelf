@@ -43,8 +43,10 @@ prefetch-option-disabled = Disabled
 prefetch-setting-connection-note = Note: Prefetch is still skipped automatically when your connection is constrained (for example Data Saver or slower mobile networks).
 language-setting = Language
 region-setting = Region
-locale-setting-description = Choose language and region for translations plus date and number formatting.
-example = Example
+language-setting-hint = Sets the language used for all translations in the interface.
+region-setting-hint = Affects how dates and numbers are formatted.
+preview-date = Preview Date
+preview-number = Preview Number
 
 # -----------------------------------
 #        Book List & Library

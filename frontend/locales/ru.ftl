@@ -43,8 +43,10 @@ prefetch-option-disabled = Выключено
 prefetch-setting-connection-note = Примечание: предзагрузка все равно автоматически отключается при ограниченном соединении (например, режим экономии трафика или более медленные мобильные сети).
 language-setting = Язык
 region-setting = Регион
-locale-setting-description = Выберите язык и регион для переводов, а также формата даты и чисел.
-example = Пример
+language-setting-hint = Задаёт язык для всех переводов интерфейса.
+region-setting-hint = Влияет на формат дат и чисел.
+preview-date = Предпросмотр Дата
+preview-number = Предпросмотр Число
 
 # -----------------------------------
 #        Book List & Library

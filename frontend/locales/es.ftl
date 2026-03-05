@@ -39,8 +39,10 @@ prefetch-option-disabled = Desactivado
 prefetch-setting-connection-note = Nota: la precarga se omite automáticamente cuando tu conexión es limitada (por ejemplo, ahorro de datos o redes móviles lentas).
 language-setting = Idioma
 region-setting = Región
-locale-setting-description = Elige idioma y región para las traducciones y el formato de fecha y números.
-example = Ejemplo
+language-setting-hint = Establece el idioma de todas las traducciones de la interfaz.
+region-setting-hint = Afecta el formato de fechas y números.
+preview-date = Vista previa Fecha
+preview-number = Vista previa Número
 
 # -----------------------------------
 #        Book List & Library
