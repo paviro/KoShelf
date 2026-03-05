@@ -190,7 +190,17 @@
             'Segoe UI Emoji',
             'Segoe UI Symbol',
             'Noto Color Emoji';
+        @apply bg-gray-100;
+        min-height: 100%;
+    }
+
+    html.dark {
+        @apply bg-dark-925;
+    }
+
+    body {
         @apply bg-gray-100 dark:bg-dark-925;
+        min-height: 100%;
     }
 }
 
