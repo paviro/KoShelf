@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { api } from '../../../shared/api';
 import type {
@@ -33,6 +33,7 @@ export function useLibraryListQuery(collection: LibraryCollection) {
     return useQuery({
         queryKey: ['library-list', collection],
         queryFn: () => fetchLibraryList(collection),
+        placeholderData: keepPreviousData,
     });
 }
 
@@ -44,5 +45,6 @@ export function useLibraryDetailQuery(
         queryKey: ['library-detail', collection, id],
         queryFn: () => fetchLibraryDetail(collection, id ?? ''),
         enabled: Boolean(id),
+        placeholderData: keepPreviousData,
     });
 }

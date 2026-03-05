@@ -10,6 +10,7 @@ export function useRecapIndexQuery(scope: RecapScope) {
     return useQuery({
         queryKey: ['recap-index', scope],
         queryFn: () => loadRecapIndex(scope),
+        placeholderData: keepPreviousData,
     });
 }
 

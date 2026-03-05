@@ -11,6 +11,7 @@ export function useStatisticsIndexQuery(scope: StatisticsScope) {
     return useQuery({
         queryKey: ['statistics-index', scope],
         queryFn: () => loadStatisticsIndex(scope),
+        placeholderData: keepPreviousData,
     });
 }
 

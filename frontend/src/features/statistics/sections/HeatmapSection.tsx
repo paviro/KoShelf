@@ -4,6 +4,7 @@ import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
 } from '../../../shared/lib/dom/horizontal-scroll';
+import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
 import { monthKeyAt, toShortMonthKey } from '../lib/months';
 import type { StatisticsYearResponse } from '../api/statistics-data';
@@ -21,6 +22,7 @@ const HEATMAP_ALL_COLOR_CLASSES = HEATMAP_COLOR_CLASSES.flat();
 type HeatmapSectionProps = {
     selectedYear: number | null;
     yearData: StatisticsYearResponse | undefined;
+    loading: boolean;
     animationSeed: string;
 };
 
@@ -35,6 +37,7 @@ function heatmapCellAnimationDelay(): number {
 export function HeatmapSection({
     selectedYear,
     yearData,
+    loading,
     animationSeed,
 }: HeatmapSectionProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -63,14 +66,16 @@ export function HeatmapSection({
         return { map, maxActivity };
     }, [yearData]);
 
+    const effectiveYear = yearData?.year ?? selectedYear;
+
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
         const heatmapContainer = heatmapContainerRef.current;
-        if (!scrollContainer || !heatmapContainer || !selectedYear) {
+        if (!scrollContainer || !heatmapContainer || !effectiveYear) {
             return;
         }
 
-        if (selectedYear === new Date().getFullYear()) {
+        if (effectiveYear === new Date().getFullYear()) {
             const weekWidth = heatmapContainer.scrollWidth / 53;
             const currentWeek = (() => {
                 const today = new Date();
@@ -98,7 +103,7 @@ export function HeatmapSection({
         }
 
         scrollToHorizontalOverflowRatio(scrollContainer, heatmapContainer, 0.8);
-    }, [selectedYear, yearData]);
+    }, [effectiveYear, yearData]);
 
     useEffect(() => {
         const dayLabels = dayLabelsRef.current;
@@ -130,20 +135,20 @@ export function HeatmapSection({
             observer.disconnect();
             window.removeEventListener('resize', syncHeights);
         };
-    }, [selectedYear, yearData]);
+    }, [effectiveYear, yearData]);
 
     const cellsByKey = useMemo(() => {
         const cellMap = new Map<
             string,
             { classes: string; tooltip: string; level: number }
         >();
-        if (!selectedYear) {
+        if (!effectiveYear) {
             return cellMap;
         }
 
         for (let week = 0; week < 53; week += 1) {
             for (let day = 0; day < 7; day += 1) {
-                const date = calculateCellDate(selectedYear, week, day);
+                const date = calculateCellDate(effectiveYear, week, day);
                 const dateIso = formatISODate(date);
                 const activity = activityMap.map.get(dateIso) ?? {
                     pages: 0,
@@ -165,7 +170,7 @@ export function HeatmapSection({
         }
 
         return cellMap;
-    }, [activityMap, selectedYear]);
+    }, [activityMap, effectiveYear]);
 
     useLayoutEffect(() => {
         const grid = heatmapGridRef.current;
@@ -240,7 +245,13 @@ export function HeatmapSection({
     }, [cellsByKey, animationSeed]);
 
     return (
-        <div className="bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
+        <div className="relative bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
+            {loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                    <LoadingSpinner size="md" srLabel="Loading reading heatmap" />
+                </div>
+            )}
+
             <div className="flex">
                 <div className="text-xs text-gray-500 dark:text-dark-400 font-medium w-8 sm:w-12 flex-shrink-0 pr-2 sm:pr-4">
                     <div className="h-6 mb-3"></div>
@@ -283,7 +294,7 @@ export function HeatmapSection({
                         </div>
 
                         <div
-                            key={yearData?.year ?? selectedYear ?? 'none'}
+                            key={effectiveYear ?? 'none'}
                             className="grid grid-cols-53 gap-1 w-full"
                             id="heatmapGrid"
                             ref={heatmapGridRef}

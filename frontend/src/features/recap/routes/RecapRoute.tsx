@@ -5,6 +5,7 @@ import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { useRecapCoverTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
+import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
@@ -45,13 +46,20 @@ export function RecapRoute() {
     });
 
     const recapIndexQuery = useRecapIndexQuery(scope);
+    const recapIndexTransition = useQueryTransitionState({
+        data: recapIndexQuery.data,
+        isLoading: recapIndexQuery.isLoading,
+        isFetching: recapIndexQuery.isFetching,
+        isPlaceholderData: recapIndexQuery.isPlaceholderData,
+    });
+    const recapIndex = recapIndexTransition.displayData;
     const availableYears = useMemo(
-        () => recapIndexQuery.data?.available_years ?? [],
-        [recapIndexQuery.data?.available_years],
+        () => recapIndex?.available_years ?? [],
+        [recapIndex?.available_years],
     );
     const latestYear = resolveLatestYear(
         availableYears,
-        recapIndexQuery.data?.latest_year,
+        recapIndex?.latest_year,
     );
     const yearForQuery = useMemo(() => {
         if (selectedYear !== null && availableYears.includes(selectedYear)) {
@@ -65,7 +73,14 @@ export function RecapRoute() {
     const shareModalOpen = shareModalOpenKey === shareResetKey;
 
     const recapYearQuery = useRecapYearQuery(scope, yearForQuery);
-    const recapYear = recapYearQuery.data ?? null;
+    const recapYearTransition = useQueryTransitionState({
+        data: recapYearQuery.data,
+        enabled: yearForQuery !== null,
+        isLoading: recapYearQuery.isLoading,
+        isFetching: recapYearQuery.isFetching,
+        isPlaceholderData: recapYearQuery.isPlaceholderData,
+    });
+    const recapYear = recapYearTransition.displayData;
     const shareAssets = recapYear?.share_assets ?? null;
 
     const orderedMonths = useMemo(
@@ -103,7 +118,7 @@ export function RecapRoute() {
             return;
         }
 
-        const titleYear = recapYear?.year ?? yearForQuery;
+        const titleYear = yearForQuery ?? recapYear?.year;
         const yearSuffix = titleYear ? ` ${titleYear}` : '';
         document.title = `${translation.get('recap')}${yearSuffix} - ${siteQuery.data.title}`;
     }, [recapYear?.year, siteQuery.data?.title, yearForQuery]);
@@ -114,18 +129,17 @@ export function RecapRoute() {
     );
 
     const showPageLevelEmptyState =
-        !recapIndexQuery.isLoading &&
-        !recapIndexQuery.isError &&
+        recapIndexTransition.hasFreshData &&
         yearForQuery === null &&
         availableYears.length === 0;
-    const recapYearLoading = recapYearQuery.isFetching && recapYear === null;
     const showYearEmptyState =
-        !recapYearLoading &&
+        yearForQuery !== null &&
+        recapYearTransition.hasFreshData &&
         !recapYearQuery.isError &&
         recapYear !== null &&
         recapYear.months.length === 0;
     const showTimeline =
-        !recapYearLoading &&
+        yearForQuery !== null &&
         !recapYearQuery.isError &&
         recapYear !== null &&
         recapYear.months.length > 0;
@@ -171,11 +185,12 @@ export function RecapRoute() {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {recapIndexQuery.isLoading && (
-                    <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                        <LoadingSpinner size="lg" srLabel="Loading recap" />
-                    </section>
-                )}
+                {!recapIndexQuery.isError &&
+                    recapIndexTransition.showBlockingSpinner && (
+                        <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                            <LoadingSpinner size="lg" srLabel="Loading recap" />
+                        </section>
+                    )}
 
                 {recapIndexQuery.isError && (
                     <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
@@ -185,20 +200,27 @@ export function RecapRoute() {
                     </section>
                 )}
 
-                {!recapIndexQuery.isLoading && !recapIndexQuery.isError && (
-                    <>
+                {!recapIndexQuery.isError && recapIndex && (
+                    <div className="relative space-y-6 md:space-y-8">
+                        {recapIndexTransition.showOverlaySpinner && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                                <LoadingSpinner size="md" srLabel="Loading recap" />
+                            </div>
+                        )}
+
                         {showPageLevelEmptyState && (
                             <RecapEmptyState hasYearContext={false} />
                         )}
 
-                        {yearForQuery !== null && recapYearLoading && (
-                            <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                                <LoadingSpinner
-                                    size="lg"
-                                    srLabel="Loading recap year"
-                                />
-                            </section>
-                        )}
+                        {yearForQuery !== null &&
+                            recapYearTransition.showBlockingSpinner && (
+                                <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                                    <LoadingSpinner
+                                        size="lg"
+                                        srLabel="Loading recap year"
+                                    />
+                                </section>
+                            )}
 
                         {yearForQuery !== null && recapYearQuery.isError && (
                             <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
@@ -213,22 +235,32 @@ export function RecapRoute() {
                         )}
 
                         {showTimeline && recapYear && (
-                            <div
-                                className="recap-timeline space-y-6"
-                                id="recapTimeline"
-                            >
-                                <RecapSummarySection
-                                    year={recapYear.year}
-                                    scope={scope}
-                                    summary={recapYear.summary}
-                                />
-                                <RecapTimelineSection
-                                    months={orderedMonths}
-                                    scope={scope}
-                                />
+                            <div className="relative">
+                                {recapYearTransition.showOverlaySpinner && (
+                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                                        <LoadingSpinner
+                                            size="md"
+                                            srLabel="Loading recap year"
+                                        />
+                                    </div>
+                                )}
+                                <div
+                                    className="recap-timeline space-y-6"
+                                    id="recapTimeline"
+                                >
+                                    <RecapSummarySection
+                                        year={recapYear.year}
+                                        scope={scope}
+                                        summary={recapYear.summary}
+                                    />
+                                    <RecapTimelineSection
+                                        months={orderedMonths}
+                                        scope={scope}
+                                    />
+                                </div>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </PageContent>
 

@@ -25,6 +25,7 @@ import {
     useCalendarMonthQuery,
     useCalendarMonthsQuery,
 } from '../hooks/useCalendarQueries';
+import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import type { CalendarEventResponse } from '../api/calendar-data';
 import type { ScopeValue } from '../../../shared/api';
 import { api } from '../../../shared/api';
@@ -125,6 +126,13 @@ export function CalendarRoute() {
         displayedMonthKey,
         currentMonthEnabled,
     );
+    const currentMonthTransition = useQueryTransitionState({
+        data: currentMonthQuery.data,
+        enabled: currentMonthEnabled,
+        isLoading: currentMonthQuery.isLoading,
+        isFetching: currentMonthQuery.isFetching,
+        isPlaceholderData: currentMonthQuery.isPlaceholderData,
+    });
     const nextMonthQuery = useCalendarMonthQuery(
         nextMonthKey,
         nextMonthEnabled,
@@ -154,19 +162,20 @@ export function CalendarRoute() {
         [displayedMonth, locale],
     );
 
+    const currentMonthData = currentMonthTransition.displayData;
     const mergedCalendarData = useMemo(
         () =>
             aggregateCalendarData(
                 [
                     previousMonthQuery.data,
-                    currentMonthQuery.data,
+                    currentMonthData ?? undefined,
                     nextMonthQuery.data,
                 ].filter(
                     (monthData): monthData is NonNullable<typeof monthData> =>
                         Boolean(monthData),
                 ),
             ),
-        [currentMonthQuery.data, nextMonthQuery.data, previousMonthQuery.data],
+        [currentMonthData, nextMonthQuery.data, previousMonthQuery.data],
     );
 
     const filteredEvents = useMemo(
@@ -180,7 +189,10 @@ export function CalendarRoute() {
     const selectedItem = selectedEvent
         ? (mergedCalendarData.items[selectedEvent.item_id] ?? null)
         : null;
-    const monthlyStats = resolveMonthlyStats(currentMonthQuery.data, scope);
+    const monthlyStats = resolveMonthlyStats(
+        currentMonthData ?? undefined,
+        scope,
+    );
 
     const showTypeFilter = Boolean(
         siteQuery.data?.capabilities.has_books &&
@@ -235,9 +247,7 @@ export function CalendarRoute() {
 
     const initialLoading =
         !canStartMonthQueries ||
-        (currentMonthEnabled &&
-            currentMonthQuery.isLoading &&
-            !currentMonthQuery.data);
+        (currentMonthEnabled && currentMonthTransition.showBlockingSpinner);
 
     return (
         <>
@@ -261,7 +271,7 @@ export function CalendarRoute() {
                     todayDisabled={isCurrentMonth(displayedMonth)}
                 />
 
-                <main className="flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-4">
+                <main className="relative flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-4">
                     {initialLoading && (
                         <section className="flex-1 flex items-center justify-center">
                             <LoadingSpinner
@@ -281,6 +291,15 @@ export function CalendarRoute() {
 
                     {!currentMonthQuery.isError && !initialLoading && (
                         <>
+                            {currentMonthTransition.showOverlaySpinner && (
+                                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                                    <LoadingSpinner
+                                        size="md"
+                                        srLabel="Loading calendar"
+                                    />
+                                </div>
+                            )}
+
                             <CalendarMonthlyStatsSection
                                 stats={monthlyStats}
                                 scope={scope}

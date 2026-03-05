@@ -12,6 +12,7 @@ import {
     readRouteState,
 } from '../../../shared/lib/state/route-state-storage';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
+import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
@@ -108,10 +109,17 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         queryFn: () => api.site.get<SiteResponse>(),
     });
     const listQuery = useLibraryListQuery(collection);
+    const listTransition = useQueryTransitionState({
+        data: listQuery.data,
+        isLoading: listQuery.isLoading,
+        isFetching: listQuery.isFetching,
+        isPlaceholderData: listQuery.isPlaceholderData,
+    });
+    const listData = listTransition.displayData;
 
     const sectionBuckets = useMemo(
-        () => bucketLibraryItems(listQuery.data?.items ?? []),
-        [listQuery.data?.items],
+        () => bucketLibraryItems(listData?.items ?? []),
+        [listData?.items],
     );
 
     const hasUnreadItems = sectionBuckets.unread.length > 0;
@@ -352,7 +360,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {listQuery.isLoading && (
+                {!listQuery.isError && listTransition.showBlockingSpinner && (
                     <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
                         <LoadingSpinner size="lg" srLabel="Loading library" />
                     </section>
@@ -366,8 +374,14 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                     </section>
                 )}
 
-                {!listQuery.isLoading && !listQuery.isError && (
-                    <>
+                {!listQuery.isError && listTransition.hasDisplayData && (
+                    <div className="relative space-y-6 md:space-y-8">
+                        {listTransition.showOverlaySpinner && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                                <LoadingSpinner size="md" srLabel="Loading library" />
+                            </div>
+                        )}
+
                         {visibleItemCount === 0 ? (
                             <LibraryEmptyState />
                         ) : (
@@ -399,7 +413,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                                 );
                             })
                         )}
-                    </>
+                    </div>
                 )}
             </PageContent>
         </>

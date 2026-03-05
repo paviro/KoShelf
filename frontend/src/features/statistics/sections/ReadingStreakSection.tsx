@@ -18,6 +18,7 @@ type ReadingStreakSectionProps = {
     selectedYear: number | null;
     onSelectYear: (year: number) => void;
     yearData: StatisticsYearResponse | undefined;
+    loading: boolean;
     animationSeed: string;
     currentStreak: StatisticsIndexResponse['streaks']['current'];
     longestStreak: StatisticsIndexResponse['streaks']['longest'];
@@ -30,6 +31,7 @@ export function ReadingStreakSection({
     selectedYear,
     onSelectYear,
     yearData,
+    loading,
     animationSeed,
     currentStreak,
     longestStreak,
@@ -57,6 +59,7 @@ export function ReadingStreakSection({
                 <HeatmapSection
                     selectedYear={selectedYear}
                     yearData={yearData}
+                    loading={loading}
                     animationSeed={animationSeed}
                 />
 
