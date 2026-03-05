@@ -42,8 +42,7 @@ export function CalendarHeader({
                     onClick={onOpenMonthPicker}
                 >
                     {monthLabel}
-                </button>
-                {' '}
+                </button>{' '}
                 <button
                     type="button"
                     className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"

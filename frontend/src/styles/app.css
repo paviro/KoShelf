@@ -389,14 +389,14 @@
         }
     }
 
-    /* Recap cover max height: slightly larger on mobile, full on md+ */
+    /* Fixed cover frame avoids layout shift; image itself uses object-contain. */
     .recap-cover-max {
-        max-height: 20rem;
+        height: 20rem;
     }
 
     @screen md {
         .recap-cover-max {
-            max-height: 100%;
+            height: 15rem;
         }
     }
 

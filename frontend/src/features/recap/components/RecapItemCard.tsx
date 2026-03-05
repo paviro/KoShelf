@@ -63,7 +63,41 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
         location.search,
     );
     const coverFrameClass =
-        'w-full aspect-[2/3] flex items-center justify-center rounded-md overflow-hidden recap-cover-max';
+        'w-full flex items-center justify-center recap-cover-max';
+    const coverImageClass =
+        'block max-w-full max-h-full object-contain rounded-md';
+    const fallbackFrameClass =
+        'w-full flex items-center justify-center rounded-md overflow-hidden border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-900/70 recap-cover-max';
+    const hasCoverImage = Boolean(coverUrl && !coverFailed);
+    const fallbackCoverClass = `${fallbackFrameClass} text-gray-400 dark:text-dark-400`;
+
+    const coverVisual = hasCoverImage ? (
+        <div className={coverFrameClass}>
+            <img
+                ref={imageRef}
+                className={coverImageClass}
+                src={resolvedCoverSrc}
+                alt={`Cover of ${item.title}`}
+                loading="lazy"
+                onError={onCoverError}
+            />
+        </div>
+    ) : (
+        <div className={fallbackCoverClass}>
+            <LuBookOpen className="w-12 h-12" aria-hidden />
+        </div>
+    );
+    const coverNode = detailPath ? (
+        <Link
+            to={detailPath}
+            state={detailReturnState}
+            className="block w-full recap-cover-tilt"
+        >
+            {coverVisual}
+        </Link>
+    ) : (
+        coverVisual
+    );
 
     const titleNode = detailPath ? (
         <Link
@@ -87,59 +121,8 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
             <span className="recap-dot bg-primary-500"></span>
             <div className="bg-white dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
                 <div className="flex flex-col md:flex-row md:items-stretch">
-                    <div className="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-stretch flex items-center justify-center">
-                        {coverUrl && !coverFailed ? (
-                            detailPath ? (
-                                <Link
-                                    to={detailPath}
-                                    state={detailReturnState}
-                                    className="block w-full recap-cover-tilt rounded-md"
-                                >
-                                    <div className={coverFrameClass}>
-                                        <img
-                                            ref={imageRef}
-                                            className="block max-w-full max-h-full rounded-md"
-                                            src={resolvedCoverSrc}
-                                            alt={`Cover of ${item.title}`}
-                                            loading="lazy"
-                                            onError={onCoverError}
-                                        />
-                                    </div>
-                                </Link>
-                            ) : (
-                                <div className={coverFrameClass}>
-                                    <img
-                                        ref={imageRef}
-                                        className="block max-w-full max-h-full rounded-md"
-                                        src={resolvedCoverSrc}
-                                        alt={`Cover of ${item.title}`}
-                                        loading="lazy"
-                                        onError={onCoverError}
-                                    />
-                                </div>
-                            )
-                        ) : detailPath ? (
-                            <Link
-                                to={detailPath}
-                                state={detailReturnState}
-                                className="block w-full recap-cover-tilt rounded-md"
-                            >
-                                <div
-                                    className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}
-                                >
-                                    <LuBookOpen
-                                        className="w-12 h-12"
-                                        aria-hidden
-                                    />
-                                </div>
-                            </Link>
-                        ) : (
-                            <div
-                                className={`${coverFrameClass} text-gray-400 dark:text-dark-400`}
-                            >
-                                <LuBookOpen className="w-12 h-12" aria-hidden />
-                            </div>
-                        )}
+                    <div className="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-start flex items-center justify-center">
+                        {coverNode}
                     </div>
 
                     <div className="md:flex-1 p-4 md:p-6 md:flex md:flex-col md:justify-center">
