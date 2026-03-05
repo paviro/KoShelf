@@ -6,6 +6,7 @@ let loadPromise: Promise<void> | null = null;
 let loadedLanguage = '';
 
 const FALLBACK_LANGUAGE = 'en-US';
+const LOCALE_STORAGE_KEY = 'koshelf_locale';
 const localeModules = import.meta.glob('../../locales/*.ftl', {
     query: '?raw',
 }) as Record<string, () => Promise<{ default: string }>>;
@@ -22,6 +23,59 @@ function normalizeLanguage(language: string | undefined): string {
     const trimmed = language?.trim();
     if (!trimmed) return FALLBACK_LANGUAGE;
     return trimmed.replaceAll('_', '-');
+}
+
+function readStoredLanguage(): string | null {
+    try {
+        return localStorage.getItem(LOCALE_STORAGE_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function writeStoredLanguage(language: string): void {
+    try {
+        localStorage.setItem(LOCALE_STORAGE_KEY, language);
+    } catch {
+        // Ignore storage write failures.
+    }
+}
+
+function hasSupportedLocale(language: string): boolean {
+    const normalized = normalizeLanguage(language);
+    const parts = normalized.split('-');
+    const base = parts[0]?.toLowerCase();
+    if (!base) return false;
+
+    const region = parts.slice(1).join('_').toUpperCase();
+    const regionalFile = region ? `${base}_${region}.ftl` : null;
+    const baseFile = `${base}.ftl`;
+
+    return (
+        localeLoaders.has(baseFile) ||
+        (regionalFile ? localeLoaders.has(regionalFile) : false)
+    );
+}
+
+function resolveRequestedLanguage(serverLanguage?: string): string {
+    const normalizedDefault = normalizeLanguage(serverLanguage);
+    const storedLanguage = readStoredLanguage();
+    const normalizedStored = storedLanguage
+        ? normalizeLanguage(storedLanguage)
+        : null;
+
+    if (normalizedStored && hasSupportedLocale(normalizedStored)) {
+        return normalizedStored;
+    }
+
+    if (hasSupportedLocale(normalizedDefault)) {
+        if (serverLanguage) {
+            writeStoredLanguage(normalizedDefault);
+        }
+        return normalizedDefault;
+    }
+
+    return FALLBACK_LANGUAGE;
 }
 
 function selectResourceChainFiles(language: string): {
@@ -119,7 +173,7 @@ async function load(language: string): Promise<void> {
 
 export const translation = {
     async init(language?: string): Promise<void> {
-        const requestedLanguage = normalizeLanguage(language);
+        const requestedLanguage = resolveRequestedLanguage(language);
         if (!loadPromise || requestedLanguage !== loadedLanguage) {
             loadPromise = load(requestedLanguage);
         }
