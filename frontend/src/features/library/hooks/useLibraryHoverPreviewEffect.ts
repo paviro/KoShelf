@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { api } from '../../../shared/api';
 import type { LibraryDetailPreviewResponse } from '../api/library-data';
+import { sanitizeRichTextHtml } from '../lib/library-detail-formatters';
 import type { LibraryCollection } from '../model/library-model';
 
 interface PreviewCardData {
@@ -395,7 +396,7 @@ class HoverPreviewManager {
             return;
         }
 
-        descriptionEl.innerHTML = rawDescription;
+        descriptionEl.innerHTML = sanitizeRichTextHtml(rawDescription);
         const hasText = (descriptionEl.textContent || '').trim().length > 0;
         descriptionWrapperEl.classList.toggle('hidden', !hasText);
     }
