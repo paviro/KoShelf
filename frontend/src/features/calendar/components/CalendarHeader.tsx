@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
-import { useRouteHeader } from '../../../app/shell/route-header';
+import { useRouteHeader } from '../../../app/shell/use-route-header';
 import type { ScopeValue } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
@@ -33,26 +33,27 @@ export function CalendarHeader({
     onOpenYearPicker,
     todayDisabled,
 }: CalendarHeaderProps) {
-    const titleContent = (
-        <>
-            <button
-                type="button"
-                className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                onClick={onOpenMonthPicker}
-            >
-                {monthLabel}
-            </button>
-            <button
-                type="button"
-                className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                onClick={onOpenYearPicker}
-            >
-                {yearLabel}
-            </button>
-        </>
-    );
-    const header = useMemo(
-        () => ({
+    const header = useMemo(() => {
+        const titleContent = (
+            <>
+                <button
+                    type="button"
+                    className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                    onClick={onOpenMonthPicker}
+                >
+                    {monthLabel}
+                </button>
+                <button
+                    type="button"
+                    className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                    onClick={onOpenYearPicker}
+                >
+                    {yearLabel}
+                </button>
+            </>
+        );
+
+        return {
             mobileContent: (
                 <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate flex items-center gap-[0.45rem]">
                     {titleContent}
@@ -116,21 +117,20 @@ export function CalendarHeader({
                     />
                 </div>
             ),
-        }),
-        [
-            monthLabel,
-            onNextMonth,
-            onOpenMonthPicker,
-            onOpenYearPicker,
-            onPreviousMonth,
-            onScopeChange,
-            onToday,
-            scope,
-            showTypeFilter,
-            todayDisabled,
-            yearLabel,
-        ],
-    );
+        };
+    }, [
+        monthLabel,
+        onNextMonth,
+        onOpenMonthPicker,
+        onOpenYearPicker,
+        onPreviousMonth,
+        onScopeChange,
+        onToday,
+        scope,
+        showTypeFilter,
+        todayDisabled,
+        yearLabel,
+    ]);
 
     useRouteHeader(header);
     return null;

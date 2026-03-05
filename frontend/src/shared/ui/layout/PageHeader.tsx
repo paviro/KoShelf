@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 
-import { useRouteHeader } from '../../../app/shell/route-header';
+import { useRouteHeader } from '../../../app/shell/use-route-header';
 
 type PageHeaderProps = {
     title: string;

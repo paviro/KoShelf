@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { LuArrowLeft } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 
-import { useRouteHeader } from '../../../app/shell/route-header';
+import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import type { LibraryCollection } from '../model/library-model';

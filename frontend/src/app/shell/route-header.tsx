@@ -1,27 +1,12 @@
-import {
-    createContext,
-    useContext,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
-} from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { translation } from '../../shared/i18n';
 import { matchRoute } from '../routes/route-registry';
-
-export type RouteHeaderConfig = {
-    mobileContent: ReactNode;
-    desktopContent?: ReactNode;
-    controls?: ReactNode;
-};
-
-type RouteHeaderContextValue = {
-    setHeader: (header: RouteHeaderConfig) => void;
-};
-
-const RouteHeaderContext = createContext<RouteHeaderContextValue | null>(null);
+import {
+    RouteHeaderContext,
+    type RouteHeaderConfig,
+    type RouteHeaderContextValue,
+} from './route-header-context';
 
 function resolveFallbackTitle(pathname: string, siteTitle: string): string {
     const routeId = matchRoute(pathname).routeId;
@@ -75,26 +60,31 @@ export function RouteHeaderProvider({
     siteTitle,
     children,
 }: RouteHeaderProviderProps) {
-    const [header, setHeader] = useState<RouteHeaderConfig | null>(null);
-
-    const prevPathRef = useRef(currentPath);
-    if (prevPathRef.current !== currentPath) {
-        prevPathRef.current = currentPath;
-        setHeader(null);
-    }
+    const [headerForPath, setHeaderForPath] = useState<{
+        path: string;
+        config: RouteHeaderConfig;
+    } | null>(null);
 
     const fallbackHeader = useMemo(
         () => createFallbackHeader(currentPath, siteTitle),
         [currentPath, siteTitle],
     );
-    const activeHeader = header ?? fallbackHeader;
+    const activeHeader =
+        headerForPath?.path === currentPath
+            ? headerForPath.config
+            : fallbackHeader;
     const desktopContent =
         activeHeader.desktopContent ?? activeHeader.mobileContent;
     const contextValue = useMemo<RouteHeaderContextValue>(
         () => ({
-            setHeader,
+            setHeader: (header) => {
+                setHeaderForPath({
+                    path: currentPath,
+                    config: header,
+                });
+            },
         }),
-        [],
+        [currentPath],
     );
 
     return (
@@ -113,15 +103,4 @@ export function RouteHeaderProvider({
             {children}
         </RouteHeaderContext.Provider>
     );
-}
-
-export function useRouteHeader(header: RouteHeaderConfig): void {
-    const context = useContext(RouteHeaderContext);
-
-    useLayoutEffect(() => {
-        if (!context) {
-            return;
-        }
-        context.setHeader(header);
-    }, [context, header]);
 }

@@ -18,41 +18,40 @@ type UseLazyImageSourceResult = {
     onError: () => void;
 };
 
+type LazyImageState = {
+    src: string;
+    isIntersecting: boolean;
+    isLoaded: boolean;
+    hasError: boolean;
+};
+
+function createInitialState(src: string): LazyImageState {
+    return {
+        src,
+        isIntersecting: false,
+        isLoaded: false,
+        hasError: false,
+    };
+}
+
 export function useLazyImageSource({
     src,
     rootMargin = '50px 0px',
     threshold = 0.01,
 }: UseLazyImageSourceOptions): UseLazyImageSourceResult {
     const imageRef = useRef<HTMLImageElement>(null);
-    const [isIntersecting, setIsIntersecting] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [hasError, setHasError] = useState(false);
-    const [shouldAnimateReveal, setShouldAnimateReveal] = useState(false);
-    const hasResolvedRevealModeRef = useRef(false);
+    const [state, setState] = useState<LazyImageState>(() =>
+        createInitialState(src),
+    );
     const hasUserScrolled = useHasUserScrolled();
     const supportsIntersectionObserver =
         typeof window !== 'undefined' && 'IntersectionObserver' in window;
+    const currentState = state.src === src ? state : createInitialState(src);
 
     const canLoadByIntersection =
-        !supportsIntersectionObserver || isIntersecting;
+        !supportsIntersectionObserver || currentState.isIntersecting;
     const shouldLoad = canLoadByIntersection;
-
-    useEffect(() => {
-        setIsIntersecting(false);
-        setIsLoaded(false);
-        setHasError(false);
-        setShouldAnimateReveal(false);
-        hasResolvedRevealModeRef.current = false;
-    }, [src]);
-
-    useEffect(() => {
-        if (!shouldLoad || hasResolvedRevealModeRef.current) {
-            return;
-        }
-
-        setShouldAnimateReveal(hasUserScrolled);
-        hasResolvedRevealModeRef.current = true;
-    }, [hasUserScrolled, shouldLoad]);
+    const shouldAnimateReveal = shouldLoad && hasUserScrolled;
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -71,7 +70,19 @@ export function useLazyImageSource({
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries.some((entry) => entry.isIntersecting)) {
-                    setIsIntersecting(true);
+                    setState((previous) => {
+                        const current =
+                            previous.src === src
+                                ? previous
+                                : createInitialState(src);
+                        if (current.isIntersecting) {
+                            return current;
+                        }
+                        return {
+                            ...current,
+                            isIntersecting: true,
+                        };
+                    });
                     observer.disconnect();
                 }
             },
@@ -86,18 +97,41 @@ export function useLazyImageSource({
         return () => {
             observer.disconnect();
         };
-    }, [rootMargin, shouldLoad, threshold]);
+    }, [rootMargin, shouldLoad, src, threshold]);
 
     return {
         imageRef,
         resolvedSrc: shouldLoad ? src : undefined,
-        isLoaded,
-        hasError,
+        isLoaded: currentState.isLoaded,
+        hasError: currentState.hasError,
         shouldAnimateReveal,
-        onLoad: () => setIsLoaded(true),
+        onLoad: () => {
+            setState((previous) => {
+                const current =
+                    previous.src === src ? previous : createInitialState(src);
+                if (current.isLoaded && !current.hasError) {
+                    return current;
+                }
+                return {
+                    ...current,
+                    isLoaded: true,
+                    hasError: false,
+                };
+            });
+        },
         onError: () => {
-            setHasError(true);
-            setIsLoaded(false);
+            setState((previous) => {
+                const current =
+                    previous.src === src ? previous : createInitialState(src);
+                if (current.hasError && !current.isLoaded) {
+                    return current;
+                }
+                return {
+                    ...current,
+                    hasError: true,
+                    isLoaded: false,
+                };
+            });
         },
     };
 }
