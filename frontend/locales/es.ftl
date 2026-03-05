@@ -1,5 +1,5 @@
 # ===========================================
-#      English (en) — Base Language File
+#      Spanish (es) — Base Language File
 # ===========================================
 # This is the base translation file for Spanish, using Spain vocabulary (es_ES).
 # Regional variants (e.g., es_MX.ftl) should only override keys that differ.
