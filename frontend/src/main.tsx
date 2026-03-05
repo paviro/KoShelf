@@ -9,6 +9,7 @@ import { api } from './shared/api';
 import type { SiteResponse } from './shared/contracts';
 import { translation } from './shared/i18n';
 import { RuntimeUpdatesBridge } from './shared/runtime-updates';
+import { initThemePreference } from './shared/theme';
 
 const SERVER_MODE_STORAGE_KEY = 'koshelf_server_mode';
 
@@ -24,6 +25,8 @@ if (window.__KOSHELF_SERVER_MODE !== 'external') {
         // Ignore storage write failures.
     }
 }
+
+initThemePreference();
 
 const queryClient = new QueryClient({
     defaultOptions: {

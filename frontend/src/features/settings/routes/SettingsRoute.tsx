@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
@@ -11,6 +11,12 @@ import {
     splitLocale,
     type SupportedLanguageOption,
 } from '../../../shared/lib/intl/locale-options';
+import {
+    getThemePreference,
+    setThemePreference,
+    THEME_PREFERENCE_CHANGE_EVENT,
+    type ThemePreference,
+} from '../../../shared/theme';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 
@@ -28,6 +34,8 @@ export function SettingsRoute() {
         queryFn: getSupportedLanguageOptions,
         staleTime: Number.POSITIVE_INFINITY,
     });
+    const [selectedThemePreference, setSelectedThemePreference] =
+        useState<ThemePreference>(() => getThemePreference());
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);
@@ -122,6 +130,22 @@ export function SettingsRoute() {
 
         document.title = `${translation.get('settings')} - ${siteQuery.data.title}`;
     }, [currentUiLocale, siteQuery.data?.title]);
+    useEffect(() => {
+        const handleThemePreferenceChange = () => {
+            setSelectedThemePreference(getThemePreference());
+        };
+
+        window.addEventListener(
+            THEME_PREFERENCE_CHANGE_EVENT,
+            handleThemePreferenceChange,
+        );
+        return () => {
+            window.removeEventListener(
+                THEME_PREFERENCE_CHANGE_EVENT,
+                handleThemePreferenceChange,
+            );
+        };
+    }, []);
 
     return (
         <>
@@ -130,6 +154,45 @@ export function SettingsRoute() {
                 <section className="max-w-3xl">
                     <div className="rounded-2xl border border-gray-200/70 dark:border-dark-700/70 bg-white/80 dark:bg-dark-900/80 backdrop-blur-sm p-5 md:p-6 space-y-6">
                         <div className="space-y-2">
+                            <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+                                {translation.get('appearance-setting')}
+                            </h2>
+                            <p className="text-sm text-gray-600 dark:text-dark-300">
+                                {translation.get('theme-setting-description')}
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="settings-theme-preference"
+                                className="block text-sm font-medium text-gray-700 dark:text-dark-200"
+                            >
+                                {translation.get('theme-setting')}
+                            </label>
+                            <select
+                                id="settings-theme-preference"
+                                value={selectedThemePreference}
+                                className="w-full bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/60"
+                                onChange={(event) => {
+                                    const nextPreference = event.target
+                                        .value as ThemePreference;
+                                    setThemePreference(nextPreference);
+                                    setSelectedThemePreference(nextPreference);
+                                }}
+                            >
+                                <option value="auto">
+                                    {translation.get('theme-option-auto')}
+                                </option>
+                                <option value="light">
+                                    {translation.get('theme-option-light')}
+                                </option>
+                                <option value="dark">
+                                    {translation.get('theme-option-dark')}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2 border-t border-gray-200/70 dark:border-dark-700/70 pt-2">
                             <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
                                 {translation.get('language-setting')}
                             </h2>

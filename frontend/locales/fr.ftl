@@ -30,6 +30,12 @@ reading-companion = Compagnon de lecture
 # Used in footer/sidebar for update time
 last-updated = Dernière mise à jour
 view-details = Voir les détails
+appearance-setting = Apparence
+theme-setting = Thème
+theme-setting-description = Choisissez l'apparence de KoShelf. Le mode automatique suit votre préférence système.
+theme-option-auto = Automatique
+theme-option-light = Clair
+theme-option-dark = Sombre
 language-setting = Langue
 region-setting = Région
 locale-setting-description = Choisissez la langue et la région pour les traductions ainsi que le format des dates et des nombres.
