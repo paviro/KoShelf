@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { useIsScrollRestoring } from '../navigation/scroll-restore-state';
+import { useHasUserScrolled } from '../navigation/user-scroll-state';
 
 type UseLazyImageSourceOptions = {
     src: string;
@@ -13,6 +13,7 @@ type UseLazyImageSourceResult = {
     resolvedSrc: string | undefined;
     isLoaded: boolean;
     hasError: boolean;
+    shouldAnimateReveal: boolean;
     onLoad: () => void;
     onError: () => void;
 };
@@ -26,22 +27,38 @@ export function useLazyImageSource({
     const [isIntersecting, setIsIntersecting] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
-    const isScrollRestoring = useIsScrollRestoring();
+    const [shouldAnimateReveal, setShouldAnimateReveal] = useState(false);
+    const hasResolvedRevealModeRef = useRef(false);
+    const hasUserScrolled = useHasUserScrolled();
+    const supportsIntersectionObserver =
+        typeof window !== 'undefined' && 'IntersectionObserver' in window;
 
-    const [prevSrc, setPrevSrc] = useState(src);
-    if (prevSrc !== src) {
-        setPrevSrc(src);
+    const canLoadByIntersection = !supportsIntersectionObserver || isIntersecting;
+    const shouldLoad = canLoadByIntersection;
+
+    useEffect(() => {
         setIsIntersecting(false);
         setIsLoaded(false);
         setHasError(false);
-    }
-
-    const canLoadByIntersection =
-        !('IntersectionObserver' in window) || isIntersecting;
-    const shouldLoad = !isScrollRestoring && canLoadByIntersection;
+        setShouldAnimateReveal(false);
+        hasResolvedRevealModeRef.current = false;
+    }, [src]);
 
     useEffect(() => {
-        if (shouldLoad || isScrollRestoring) {
+        if (!shouldLoad || hasResolvedRevealModeRef.current) {
+            return;
+        }
+
+        setShouldAnimateReveal(hasUserScrolled);
+        hasResolvedRevealModeRef.current = true;
+    }, [hasUserScrolled, shouldLoad]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        if (shouldLoad) {
             return;
         }
 
@@ -68,13 +85,14 @@ export function useLazyImageSource({
         return () => {
             observer.disconnect();
         };
-    }, [isScrollRestoring, rootMargin, shouldLoad, threshold]);
+    }, [rootMargin, shouldLoad, threshold]);
 
     return {
         imageRef,
         resolvedSrc: shouldLoad ? src : undefined,
         isLoaded,
         hasError,
+        shouldAnimateReveal,
         onLoad: () => setIsLoaded(true),
         onError: () => {
             setHasError(true);

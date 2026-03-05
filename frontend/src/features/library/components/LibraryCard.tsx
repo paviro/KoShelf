@@ -55,7 +55,15 @@ export function LibraryCard({
     const annotationCount = item.annotation_count ?? 0;
     const progressPercentage = toProgressPercentage(item.progress_percentage);
 
-    const { imageRef, resolvedSrc, isLoaded, hasError, onLoad, onError } =
+    const {
+        imageRef,
+        resolvedSrc,
+        isLoaded,
+        hasError,
+        shouldAnimateReveal,
+        onLoad,
+        onError,
+    } =
         useLazyImageSource({
             src: item.cover_url,
         });
@@ -92,7 +100,11 @@ export function LibraryCard({
                             ref={imageRef}
                             src={resolvedSrc}
                             alt={item.title}
-                            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${
+                            className={`w-full h-full object-cover ${
+                                shouldAnimateReveal
+                                    ? 'transition-opacity duration-500 ease-out '
+                                    : ''
+                            }${
                                 isLoaded ? 'opacity-100' : 'opacity-0'
                             }`}
                             loading="lazy"
@@ -102,7 +114,11 @@ export function LibraryCard({
                     )}
 
                     <div
-                        className={`absolute inset-0 flex items-center justify-center text-4xl text-gray-400 dark:text-dark-500 bg-gray-300 dark:bg-gray-600 transition-opacity duration-300 ${
+                        className={`absolute inset-0 flex items-center justify-center text-4xl text-gray-400 dark:text-dark-500 bg-gray-300 dark:bg-gray-600 ${
+                            shouldAnimateReveal
+                                ? 'transition-opacity duration-300 '
+                                : ''
+                        }${
                             isLoaded && !hasError
                                 ? 'opacity-0 pointer-events-none'
                                 : 'opacity-100'

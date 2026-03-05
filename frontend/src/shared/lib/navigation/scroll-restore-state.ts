@@ -37,3 +37,7 @@ export function endScrollRestore(): void {
 export function useIsScrollRestoring(): boolean {
     return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+
+export function isScrollRestoringNow(): boolean {
+    return getSnapshot();
+}

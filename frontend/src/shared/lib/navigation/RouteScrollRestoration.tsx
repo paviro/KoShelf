@@ -54,14 +54,12 @@ function resolvePersistScrollY(lastKnownScrollY: number): number {
 function restoreScrollPosition(targetY: number): () => void {
     const html = document.documentElement;
     html.style.overflow = 'hidden';
-    const shouldTrackRestore = targetY > 0;
-    if (shouldTrackRestore) {
-        beginScrollRestore();
-    }
+    beginScrollRestore();
 
     let attempts = 0;
     const maxAttempts = targetY > 0 ? MAX_RESTORE_ATTEMPTS : 1;
     let timerId: number | null = null;
+    let endRestoreFrameId: number | null = null;
     let cancelled = false;
     let hasFinished = false;
 
@@ -72,8 +70,13 @@ function restoreScrollPosition(targetY: number): () => void {
 
         hasFinished = true;
         html.style.overflow = '';
-        if (shouldTrackRestore) {
-            endScrollRestore();
+        // Defer ending restore tracking until the next frame so programmatic
+        // scroll events triggered by scrollTo are still treated as restore events.
+        if (endRestoreFrameId === null) {
+            endRestoreFrameId = window.requestAnimationFrame(() => {
+                endRestoreFrameId = null;
+                endScrollRestore();
+            });
         }
     };
 
@@ -112,6 +115,11 @@ function restoreScrollPosition(targetY: number): () => void {
         cancelled = true;
         if (timerId !== null) {
             window.clearTimeout(timerId);
+        }
+        if (endRestoreFrameId !== null) {
+            window.cancelAnimationFrame(endRestoreFrameId);
+            endRestoreFrameId = null;
+            endScrollRestore();
         }
         finish();
     };
