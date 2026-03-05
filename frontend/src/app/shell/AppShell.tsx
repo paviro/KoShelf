@@ -17,6 +17,7 @@ import {
 } from '../../features/calendar/model/calendar-model';
 import { prefetchRecapIndexQuery } from '../../features/recap/hooks/useRecapQueries';
 import { readStoredRecapScope } from '../../features/recap/model/recap-model';
+import { getPrefetchOnIntentPreference } from '../../shared/lib/network/prefetch-preference';
 import { shouldPrefetchOnCurrentConnection } from '../../shared/lib/network/prefetch-guards';
 import { matchRouteByHref, preloadRoute } from '../routes/lazy-routes';
 import { RouteHeaderProvider } from './route-header';
@@ -134,6 +135,10 @@ export function AppShell({
         const preloadFromAnchor = (anchor: HTMLAnchorElement) => {
             const matchedRoute = matchRouteByHref(anchor.href);
             if (!matchedRoute?.routeId) {
+                return;
+            }
+
+            if (!getPrefetchOnIntentPreference()) {
                 return;
             }
 

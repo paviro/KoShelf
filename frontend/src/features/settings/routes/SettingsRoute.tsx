@@ -17,6 +17,10 @@ import {
     THEME_PREFERENCE_CHANGE_EVENT,
     type ThemePreference,
 } from '../../../shared/theme';
+import {
+    getPrefetchOnIntentPreference,
+    setPrefetchOnIntentPreference,
+} from '../../../shared/lib/network/prefetch-preference';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 
@@ -36,6 +40,9 @@ export function SettingsRoute() {
     });
     const [selectedThemePreference, setSelectedThemePreference] =
         useState<ThemePreference>(() => getThemePreference());
+    const [prefetchOnIntentEnabled, setPrefetchOnIntentEnabled] = useState(
+        () => getPrefetchOnIntentPreference(),
+    );
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);
@@ -190,6 +197,44 @@ export function SettingsRoute() {
                                     {translation.get('theme-option-dark')}
                                 </option>
                             </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label
+                                htmlFor="settings-prefetch-on-intent"
+                                className="block text-sm font-medium text-gray-700 dark:text-dark-200"
+                            >
+                                {translation.get('prefetch-setting')}
+                            </label>
+                            <p className="text-sm text-gray-600 dark:text-dark-300">
+                                {translation.get('prefetch-setting-description')}
+                            </p>
+                            <select
+                                id="settings-prefetch-on-intent"
+                                value={
+                                    prefetchOnIntentEnabled
+                                        ? 'enabled'
+                                        : 'disabled'
+                                }
+                                className="w-full bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/60"
+                                onChange={(event) => {
+                                    const enabled = event.target.value === 'enabled';
+                                    setPrefetchOnIntentPreference(enabled);
+                                    setPrefetchOnIntentEnabled(enabled);
+                                }}
+                            >
+                                <option value="enabled">
+                                    {translation.get('prefetch-option-enabled')}
+                                </option>
+                                <option value="disabled">
+                                    {translation.get('prefetch-option-disabled')}
+                                </option>
+                            </select>
+                            <p className="text-xs text-gray-500 dark:text-dark-400">
+                                {translation.get(
+                                    'prefetch-setting-connection-note',
+                                )}
+                            </p>
                         </div>
 
                         <div className="space-y-2 border-t border-gray-200/70 dark:border-dark-700/70 pt-2">
