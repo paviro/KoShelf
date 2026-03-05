@@ -1,4 +1,5 @@
 import type { IconType } from 'react-icons';
+import { IoStatsChartOutline } from 'react-icons/io5';
 import {
     HiOutlineBookOpen,
     HiOutlineChatBubbleBottomCenterText,
@@ -6,7 +7,6 @@ import {
 import {
     LuCalendarDays,
     LuHistory,
-    LuMicroscope,
     LuSettings,
 } from 'react-icons/lu';
 
@@ -29,7 +29,7 @@ export type NavItem = {
 const ICONS = {
     books: HiOutlineBookOpen,
     comics: HiOutlineChatBubbleBottomCenterText,
-    statistics: LuMicroscope,
+    statistics: IoStatsChartOutline,
     calendar: LuCalendarDays,
     recap: LuHistory,
     settings: LuSettings,
