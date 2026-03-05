@@ -27,8 +27,6 @@ recap = Recap
 github = GitHub
 loading = Loading...
 reload = Reload
-new-version-available = New Version Available
-tap-to-reload = Tap to reload
 reading-companion = Reading Companion
 # Used in footer/sidebar for update time
 last-updated = Last updated
@@ -144,7 +142,6 @@ streak =
     .current = Current Streak
     .longest = Longest Streak
 reading-streak = Reading Streak
-days-read = Days Read
 average-time-day = Average Time/Day
 average-pages-day = Average Pages/Day
 most-pages-in-day = Most Pages in a Day

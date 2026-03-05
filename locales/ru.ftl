@@ -27,8 +27,6 @@ recap = Итоги
 github = GitHub
 loading = Загрузка...
 reload = Обновить
-new-version-available = Доступна новая версия
-tap-to-reload = Нажмите для обновления
 reading-companion = Помощник чтения
 # Used in footer/sidebar for update time
 last-updated = Последнее обновление
@@ -162,7 +160,6 @@ streak =
     .current = Текущая серия
     .longest = Самая длинная серия
 reading-streak = Серия чтения
-days-read = Дней прочитано
 average-time-day = Среднее время/день
 average-pages-day = Средние страницы/день
 most-pages-in-day = Больше всего страниц за день

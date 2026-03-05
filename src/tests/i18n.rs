@@ -184,6 +184,9 @@ fn test_unused_translation_keys() {
             !found_tokens.contains(k)
                 && !found_tokens.contains(&format!("{}_one", k))
                 && !found_tokens.contains(&format!("{}_other", k))
+                // Some keys are built dynamically in TS (e.g. `${monthKey}.short`)
+                && !(k.ends_with(".short")
+                    && found_tokens.contains(k.trim_end_matches(".short")))
                 && !ftl_referenced_keys.contains(k)
         })
         .collect();

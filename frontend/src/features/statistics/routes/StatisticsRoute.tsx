@@ -7,6 +7,7 @@ import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 import { OverallStatsSection } from '../sections/OverallStatsSection';
 import { ReadingStreakSection } from '../sections/ReadingStreakSection';
 import { ScopeFilter } from '../components/ScopeFilter';
+import { StatisticsEmptyState } from '../sections/StatisticsEmptyState';
 import { WeeklyStatsSection } from '../sections/WeeklyStatsSection';
 import { YearlyStatsSection } from '../sections/YearlyStatsSection';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
@@ -248,13 +249,7 @@ export function StatisticsRoute() {
                 {statsIndex && (
                     <>
                         {showPageEmptyState ? (
-                            <section className="bg-white dark:bg-dark-850/50 rounded-lg p-8 border border-dashed border-gray-300/80 dark:border-dark-700 text-center">
-                                <p className="text-sm text-gray-500 dark:text-dark-300">
-                                    {translation.get(
-                                        'stats-empty.nothing-here',
-                                    )}
-                                </p>
-                            </section>
+                            <StatisticsEmptyState />
                         ) : (
                             <>
                                 <OverallStatsSection
