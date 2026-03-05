@@ -3,6 +3,7 @@ import {
     useContext,
     useLayoutEffect,
     useMemo,
+    useRef,
     useState,
     type ReactNode,
 } from 'react';
@@ -73,9 +74,11 @@ export function RouteHeaderProvider({
 }: RouteHeaderProviderProps) {
     const [header, setHeader] = useState<RouteHeaderConfig | null>(null);
 
-    useLayoutEffect(() => {
+    const prevPathRef = useRef(currentPath);
+    if (prevPathRef.current !== currentPath) {
+        prevPathRef.current = currentPath;
         setHeader(null);
-    }, [currentPath]);
+    }
 
     const fallbackHeader = useMemo(
         () => createFallbackHeader(currentPath, siteTitle),
