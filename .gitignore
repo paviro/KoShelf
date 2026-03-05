@@ -8,6 +8,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # Site output
 site/
