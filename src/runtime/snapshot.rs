@@ -326,37 +326,36 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::field_reassign_with_default)]
     fn snapshot_roundtrip_persists_model_centric_layout() {
-        let mut snapshot = ContractSnapshot::default();
-
-        snapshot.site = Some(SiteResponse {
-            meta: sample_meta(),
-            title: "Test".to_string(),
-            language: "en_US".to_string(),
-            capabilities: SiteCapabilities {
-                has_books: true,
-                has_comics: true,
-                has_activity: true,
-                has_completions: true,
-            },
-        });
-
-        snapshot.items = Some(LibraryListResponse {
-            meta: sample_meta(),
-            items: vec![LibraryListItem {
-                id: "item-1".to_string(),
-                title: "Item One".to_string(),
-                authors: vec!["Author".to_string()],
-                series: None,
-                status: LibraryStatus::Reading,
-                progress_percentage: Some(0.5),
-                rating: None,
-                annotation_count: 0,
-                cover_url: "/assets/covers/item-1.webp".to_string(),
-                content_type: LibraryContentType::Book,
-            }],
-        });
+        let mut snapshot = ContractSnapshot {
+            site: Some(SiteResponse {
+                meta: sample_meta(),
+                title: "Test".to_string(),
+                language: "en_US".to_string(),
+                capabilities: SiteCapabilities {
+                    has_books: true,
+                    has_comics: true,
+                    has_activity: true,
+                    has_completions: true,
+                },
+            }),
+            items: Some(LibraryListResponse {
+                meta: sample_meta(),
+                items: vec![LibraryListItem {
+                    id: "item-1".to_string(),
+                    title: "Item One".to_string(),
+                    authors: vec!["Author".to_string()],
+                    series: None,
+                    status: LibraryStatus::Reading,
+                    progress_percentage: Some(0.5),
+                    rating: None,
+                    annotation_count: 0,
+                    cover_url: "/assets/covers/item-1.webp".to_string(),
+                    content_type: LibraryContentType::Book,
+                }],
+            }),
+            ..Default::default()
+        };
 
         snapshot.activity_weeks.insert(
             "all".to_string(),
