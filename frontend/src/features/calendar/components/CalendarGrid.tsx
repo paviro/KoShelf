@@ -7,6 +7,7 @@ import type {
     CalendarEventResponse,
     CalendarItemResponse,
 } from '../api/calendar-data';
+import { applyDayGridStackedEventGap } from '../model/day-grid-event-spacing';
 
 type CalendarGridProps = {
     locale: string;
@@ -20,6 +21,8 @@ type CalendarGridProps = {
 type EventExtendedProps = {
     rawEvent: CalendarEventResponse;
 };
+
+const STACKED_EVENT_VERTICAL_GAP_PX = 2;
 
 const EVENT_COLOR_PALETTE = [
     '#3B82F6',
@@ -64,6 +67,7 @@ export function CalendarGrid({
     const containerRef = useRef<HTMLElement | null>(null);
     const calendarRef = useRef<Calendar | null>(null);
     const scrollTimeoutRef = useRef<number | null>(null);
+    const stackGapAnimationFrameRef = useRef<number | null>(null);
     const optionRefs = useRef<{
         locale: string;
         displayedMonth: Date;
@@ -130,6 +134,29 @@ export function CalendarGrid({
         [events, items],
     );
 
+    const applyStackedEventVerticalGap = useCallback(() => {
+        const calendarContainer = containerRef.current;
+        if (!calendarContainer) {
+            return;
+        }
+
+        applyDayGridStackedEventGap(
+            calendarContainer,
+            STACKED_EVENT_VERTICAL_GAP_PX,
+        );
+    }, []);
+
+    const scheduleStackedEventVerticalGap = useCallback(() => {
+        if (stackGapAnimationFrameRef.current !== null) {
+            window.cancelAnimationFrame(stackGapAnimationFrameRef.current);
+        }
+
+        stackGapAnimationFrameRef.current = window.requestAnimationFrame(() => {
+            stackGapAnimationFrameRef.current = null;
+            applyStackedEventVerticalGap();
+        });
+    }, [applyStackedEventVerticalGap]);
+
     useEffect(() => {
         optionRefs.current = { locale, displayedMonth, mappedEvents };
     }, [locale, displayedMonth, mappedEvents]);
@@ -155,6 +182,9 @@ export function CalendarGrid({
             if (scrollTimeoutRef.current !== null) {
                 window.clearTimeout(scrollTimeoutRef.current);
             }
+            if (stackGapAnimationFrameRef.current !== null) {
+                window.cancelAnimationFrame(stackGapAnimationFrameRef.current);
+            }
         };
     }, []);
 
@@ -167,6 +197,10 @@ export function CalendarGrid({
         },
         [onEventSelect],
     );
+
+    const handleEventAllUpdated = useCallback(() => {
+        scheduleStackedEventVerticalGap();
+    }, [scheduleStackedEventVerticalGap]);
 
     useEffect(() => {
         if (!containerRef.current) {
@@ -186,6 +220,7 @@ export function CalendarGrid({
             eventDurationEditable: false,
             events: opts.mappedEvents,
             eventClick: handleEventClick,
+            eventAllUpdated: handleEventAllUpdated,
             datesSet: handleDatesSet,
         });
 
@@ -195,7 +230,7 @@ export function CalendarGrid({
             void destroyCalendar(instance);
             calendarRef.current = null;
         };
-    }, [handleDatesSet, handleEventClick]);
+    }, [handleDatesSet, handleEventAllUpdated, handleEventClick]);
 
     useEffect(() => {
         calendarRef.current?.setOption('events', mappedEvents);
@@ -208,6 +243,16 @@ export function CalendarGrid({
     useEffect(() => {
         calendarRef.current?.setOption('locale', locale);
     }, [locale]);
+
+    useEffect(() => {
+        window.addEventListener('resize', scheduleStackedEventVerticalGap);
+        return () => {
+            window.removeEventListener(
+                'resize',
+                scheduleStackedEventVerticalGap,
+            );
+        };
+    }, [scheduleStackedEventVerticalGap]);
 
     return (
         <section

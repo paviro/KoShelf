@@ -218,13 +218,11 @@
 /* Event styling */
 .calendar-container .ec-event {
     @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
-    @apply mb-1.5 mx-0.5;
+    @apply mx-0.5;
 }
 
-/* Month view stacked-event spacing (v5 positions rows in JS, so add visual row gap via transparent border) */
-.calendar-container .ec.ec-day-grid .ec-event {
-    border-bottom: 3px solid transparent;
-    background-clip: padding-box;
+.calendar-container .ec.ec-day-grid {
+    --ec-event-col-gap: 0.3rem;
 }
 
 /* Scrollbar styling */
