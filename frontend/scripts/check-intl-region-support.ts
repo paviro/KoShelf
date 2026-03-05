@@ -43,14 +43,17 @@ const localesDir = path.resolve(__dirname, '..', 'locales');
 const require = createRequire(import.meta.url);
 
 const likelySubtags =
-    (require('cldr-core/supplemental/likelySubtags.json') as LikelySubtagsPayload)
-        .supplemental?.likelySubtags ?? {};
+    (
+        require('cldr-core/supplemental/likelySubtags.json') as LikelySubtagsPayload
+    ).supplemental?.likelySubtags ?? {};
 
 const territoryInfo =
-    (require('cldr-core/supplemental/territoryInfo.json') as TerritoryInfoPayload)
-        .supplemental?.territoryInfo ?? {};
+    (
+        require('cldr-core/supplemental/territoryInfo.json') as TerritoryInfoPayload
+    ).supplemental?.territoryInfo ?? {};
 
-const countries = require('i18n-iso-countries') as typeof import('i18n-iso-countries');
+const countries =
+    require('i18n-iso-countries') as typeof import('i18n-iso-countries');
 
 const ALL_REGION_CODES = Object.keys(countries.getAlpha2Codes())
     .map((code) => code.toUpperCase())
@@ -65,7 +68,9 @@ const OFFICIAL_STATUSES: ReadonlySet<OfficialStatus> = new Set([
 
 function readMetadata(content: string, key: string): string | null {
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = content.match(new RegExp(`^\\s*${escapedKey}\\s*=\\s*(.+)$`, 'm'));
+    const match = content.match(
+        new RegExp(`^\\s*${escapedKey}\\s*=\\s*(.+)$`, 'm'),
+    );
     if (!match) {
         return null;
     }
@@ -135,7 +140,9 @@ function buildOfficialRegionCodesByLanguage(): Map<string, string[]> {
                 continue;
             }
 
-            const existingCodes = regionCodesByLanguage.get(normalizedLanguageCode);
+            const existingCodes = regionCodesByLanguage.get(
+                normalizedLanguageCode,
+            );
             if (existingCodes) {
                 existingCodes.add(normalizedRegionCode);
             } else {
@@ -148,10 +155,9 @@ function buildOfficialRegionCodesByLanguage(): Map<string, string[]> {
     }
 
     return new Map(
-        Array.from(regionCodesByLanguage.entries()).map(([languageCode, codes]) => [
-            languageCode,
-            Array.from(codes).sort(),
-        ]),
+        Array.from(regionCodesByLanguage.entries()).map(
+            ([languageCode, codes]) => [languageCode, Array.from(codes).sort()],
+        ),
     );
 }
 
@@ -164,7 +170,10 @@ function readSupportedLanguagesFromLocales(): LocaleMetadata[] {
         .sort();
 
     return localeFiles.map((fileName) => {
-        const content = fs.readFileSync(path.join(localesDir, fileName), 'utf8');
+        const content = fs.readFileSync(
+            path.join(localesDir, fileName),
+            'utf8',
+        );
         const languageCode =
             readMetadata(content, '-lang-code') ||
             fileName.replace(/\.ftl$/i, '').toLowerCase();
@@ -192,7 +201,10 @@ function getSuggestedRegionCodes(
     for (const [fromLocale, toLocale] of Object.entries(likelySubtags)) {
         const fromLanguage = extractLanguage(fromLocale);
         const toLanguage = extractLanguage(toLocale);
-        if (fromLanguage !== normalizedLanguage && toLanguage !== normalizedLanguage) {
+        if (
+            fromLanguage !== normalizedLanguage &&
+            toLanguage !== normalizedLanguage
+        ) {
             continue;
         }
 
@@ -302,7 +314,9 @@ function main(): void {
 
     console.log('--------------------------------');
     console.log(`Total combos checked: ${totalCombos}`);
-    console.log(`Retain requested region: ${retainedRegionCount}/${totalCombos}`);
+    console.log(
+        `Retain requested region: ${retainedRegionCount}/${totalCombos}`,
+    );
     console.log(
         `Accepted by supportedLocalesOf: ${acceptedCount}/${totalCombos}`,
     );

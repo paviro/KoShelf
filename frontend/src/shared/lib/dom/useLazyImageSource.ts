@@ -33,7 +33,8 @@ export function useLazyImageSource({
     const supportsIntersectionObserver =
         typeof window !== 'undefined' && 'IntersectionObserver' in window;
 
-    const canLoadByIntersection = !supportsIntersectionObserver || isIntersecting;
+    const canLoadByIntersection =
+        !supportsIntersectionObserver || isIntersecting;
     const shouldLoad = canLoadByIntersection;
 
     useEffect(() => {

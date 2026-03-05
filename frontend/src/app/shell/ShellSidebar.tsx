@@ -98,21 +98,25 @@ export function ShellSidebar({
                     aria-label={translation.get('settings')}
                 >
                     <div className="flex items-center">
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center mr-2 ${
-                            settingsActive
-                                ? 'bg-gradient-to-br from-primary-400 to-primary-500'
-                                : 'bg-gradient-to-br from-gray-500 to-gray-600'
-                        }`}>
+                        <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center mr-2 ${
+                                settingsActive
+                                    ? 'bg-gradient-to-br from-primary-400 to-primary-500'
+                                    : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                            }`}
+                        >
                             <LuSettings
                                 className="w-3 h-3 text-white"
                                 aria-hidden="true"
                             />
                         </div>
-                        <span className={`text-xs font-medium ${
-                            settingsActive
-                                ? 'text-primary-700 dark:text-primary-300'
-                                : 'text-gray-500 dark:text-dark-400'
-                        }`}>
+                        <span
+                            className={`text-xs font-medium ${
+                                settingsActive
+                                    ? 'text-primary-700 dark:text-primary-300'
+                                    : 'text-gray-500 dark:text-dark-400'
+                            }`}
+                        >
                             {translation.get('settings')}
                         </span>
                     </div>

@@ -44,7 +44,10 @@ export function App() {
             setI18nVersion((value) => value + 1);
         };
 
-        window.addEventListener(I18N_LANGUAGE_CHANGE_EVENT, handleLanguageChange);
+        window.addEventListener(
+            I18N_LANGUAGE_CHANGE_EVENT,
+            handleLanguageChange,
+        );
         return () => {
             window.removeEventListener(
                 I18N_LANGUAGE_CHANGE_EVENT,

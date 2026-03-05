@@ -38,7 +38,10 @@ function resolveShouldUseDark(preference: ThemePreference): boolean {
     if (preference === 'light') {
         return false;
     }
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
         return false;
     }
     return window.matchMedia(DARK_MEDIA_QUERY).matches;
@@ -51,7 +54,9 @@ function applyThemePreference(preference: ThemePreference): void {
 
     const shouldUseDark = resolveShouldUseDark(preference);
     document.documentElement.classList.toggle('dark', shouldUseDark);
-    document.documentElement.style.colorScheme = shouldUseDark ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = shouldUseDark
+        ? 'dark'
+        : 'light';
 }
 
 function detachSystemThemeListener(): void {
@@ -61,7 +66,10 @@ function detachSystemThemeListener(): void {
 }
 
 function attachSystemThemeListener(): void {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
         return;
     }
 
@@ -77,7 +85,10 @@ function attachSystemThemeListener(): void {
     if (typeof mediaQueryList.addEventListener === 'function') {
         mediaQueryList.addEventListener('change', handleSystemThemeChange);
         removeMediaQueryListener = () => {
-            mediaQueryList?.removeEventListener('change', handleSystemThemeChange);
+            mediaQueryList?.removeEventListener(
+                'change',
+                handleSystemThemeChange,
+            );
         };
         return;
     }

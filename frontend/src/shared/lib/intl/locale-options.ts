@@ -71,12 +71,17 @@ const OFFICIAL_LANGUAGE_STATUSES: ReadonlySet<OfficialStatus> = new Set([
     'official_regional',
 ]);
 const OFFICIAL_REGION_CODES_BY_LANGUAGE = buildOfficialRegionCodesByLanguage();
-const RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE = new Map<string, Set<string>>();
+const RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE = new Map<
+    string,
+    Set<string>
+>();
 let baseLocaleMetadataPromise: Promise<BaseLocaleMetadata[]> | null = null;
 
 function readMetadata(content: string, key: string): string | null {
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = content.match(new RegExp(`^\\s*${escapedKey}\\s*=\\s*(.+)$`, 'm'));
+    const match = content.match(
+        new RegExp(`^\\s*${escapedKey}\\s*=\\s*(.+)$`, 'm'),
+    );
     if (!match) {
         return null;
     }
@@ -86,28 +91,36 @@ function readMetadata(content: string, key: string): string | null {
 
 async function loadBaseLocaleMetadata(): Promise<BaseLocaleMetadata[]> {
     const metadataEntries = await Promise.all(
-        Object.entries(localeModuleLoaders).map(async ([modulePath, loader]) => {
-            const fileName = modulePath.split('/').pop() ?? '';
-            if (!fileName.endsWith('.ftl') || fileName.includes('_')) {
-                return null;
-            }
+        Object.entries(localeModuleLoaders).map(
+            async ([modulePath, loader]) => {
+                const fileName = modulePath.split('/').pop() ?? '';
+                if (!fileName.endsWith('.ftl') || fileName.includes('_')) {
+                    return null;
+                }
 
-            const localeModule = await loader().catch(() => null);
-            if (!localeModule) {
-                return null;
-            }
+                const localeModule = await loader().catch(() => null);
+                if (!localeModule) {
+                    return null;
+                }
 
-            const code = fileName.replace(/\.ftl$/i, '').toLowerCase();
-            const dialect = readMetadata(localeModule.default, '-lang-dialect');
-            const nativeName = readMetadata(localeModule.default, '-lang-name');
+                const code = fileName.replace(/\.ftl$/i, '').toLowerCase();
+                const dialect = readMetadata(
+                    localeModule.default,
+                    '-lang-dialect',
+                );
+                const nativeName = readMetadata(
+                    localeModule.default,
+                    '-lang-name',
+                );
 
-            return {
-                code,
-                dialect,
-                nativeName,
-                defaultRegion: extractRegion(dialect),
-            };
-        }),
+                return {
+                    code,
+                    dialect,
+                    nativeName,
+                    defaultRegion: extractRegion(dialect),
+                };
+            },
+        ),
     );
 
     return metadataEntries
@@ -212,7 +225,9 @@ function buildOfficialRegionCodesByLanguage(): Map<string, string[]> {
                 continue;
             }
 
-            const existingCodes = regionCodesByLanguage.get(normalizedLanguageCode);
+            const existingCodes = regionCodesByLanguage.get(
+                normalizedLanguageCode,
+            );
             if (existingCodes) {
                 existingCodes.add(normalizedRegionCode);
                 continue;
@@ -226,10 +241,9 @@ function buildOfficialRegionCodesByLanguage(): Map<string, string[]> {
     }
 
     return new Map(
-        Array.from(regionCodesByLanguage.entries()).map(([languageCode, codes]) => [
-            languageCode,
-            Array.from(codes).sort(),
-        ]),
+        Array.from(regionCodesByLanguage.entries()).map(
+            ([languageCode, codes]) => [languageCode, Array.from(codes).sort()],
+        ),
     );
 }
 
@@ -278,7 +292,8 @@ function getRuntimeSupportedRegionCodes(languageCode: string): Set<string> {
         return new Set();
     }
 
-    const cached = RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE.get(normalizedLanguage);
+    const cached =
+        RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE.get(normalizedLanguage);
     if (cached) {
         return cached;
     }
@@ -303,19 +318,22 @@ export async function getSupportedLanguageOptions(): Promise<
 > {
     const metadata = await getBaseLocaleMetadata();
 
-    return metadata.map((entry) => {
-        const baseName = entry.nativeName?.replace(/\s*\(.*\)$/, '') ?? null;
-        const label = baseName
-            ? `${entry.code.toUpperCase()} - ${baseName}`
-            : entry.code.toUpperCase();
+    return metadata
+        .map((entry) => {
+            const baseName =
+                entry.nativeName?.replace(/\s*\(.*\)$/, '') ?? null;
+            const label = baseName
+                ? `${entry.code.toUpperCase()} - ${baseName}`
+                : entry.code.toUpperCase();
 
-        return {
-            code: entry.code,
-            label,
-            defaultRegion: entry.defaultRegion,
-            dialect: entry.dialect,
-        };
-    }).sort((left, right) => left.code.localeCompare(right.code));
+            return {
+                code: entry.code,
+                label,
+                defaultRegion: entry.defaultRegion,
+                dialect: entry.dialect,
+            };
+        })
+        .sort((left, right) => left.code.localeCompare(right.code));
 }
 
 export function getLikelyRegionCodes(
@@ -348,7 +366,9 @@ export function getLikelyRegionCodes(
         }
     }
 
-    const normalizedPreferredDefaultRegion = extractRegion(preferredDefaultRegion);
+    const normalizedPreferredDefaultRegion = extractRegion(
+        preferredDefaultRegion,
+    );
     if (normalizedPreferredDefaultRegion) {
         likelyRegions.add(normalizedPreferredDefaultRegion);
     }
@@ -375,10 +395,9 @@ export function getRegionOptionsForLanguage(
     const runtimeSupportedRegionCodes =
         getRuntimeSupportedRegionCodes(normalizedLanguage);
     const likelyCodes = new Set(
-        getLikelyRegionCodes(
-            normalizedLanguage,
-            preferredDefaultRegion,
-        ).filter((code) => runtimeSupportedRegionCodes.has(code)),
+        getLikelyRegionCodes(normalizedLanguage, preferredDefaultRegion).filter(
+            (code) => runtimeSupportedRegionCodes.has(code),
+        ),
     );
 
     const allRegions = ALL_REGION_CODES.filter((code) =>
@@ -388,7 +407,9 @@ export function getRegionOptionsForLanguage(
         label: `${code} - ${toRegionLabel(regionDisplayNames, code)}`,
     }));
 
-    const likelyRegions = allRegions.filter((option) => likelyCodes.has(option.code));
+    const likelyRegions = allRegions.filter((option) =>
+        likelyCodes.has(option.code),
+    );
 
     return {
         likelyRegions,

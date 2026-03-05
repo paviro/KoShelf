@@ -16,7 +16,10 @@ export function getPrefetchOnIntentPreference(): boolean {
         return currentValue;
     }
 
-    const legacyValue = StorageManager.getByKey(LEGACY_PREFETCH_STORAGE_KEY, null);
+    const legacyValue = StorageManager.getByKey(
+        LEGACY_PREFETCH_STORAGE_KEY,
+        null,
+    );
     if (typeof legacyValue === 'boolean') {
         StorageManager.setByKey(PREFETCH_STORAGE_KEY, legacyValue);
         return legacyValue;

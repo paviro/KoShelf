@@ -63,10 +63,9 @@ export function LibraryCard({
         shouldAnimateReveal,
         onLoad,
         onError,
-    } =
-        useLazyImageSource({
-            src: item.cover_url,
-        });
+    } = useLazyImageSource({
+        src: item.cover_url,
+    });
 
     const detailsAriaLabel = useMemo(() => {
         if (primaryAuthor) {
@@ -104,9 +103,7 @@ export function LibraryCard({
                                 shouldAnimateReveal
                                     ? 'transition-opacity duration-500 ease-out '
                                     : ''
-                            }${
-                                isLoaded ? 'opacity-100' : 'opacity-0'
-                            }`}
+                            }${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                             loading="lazy"
                             onLoad={onLoad}
                             onError={onError}

@@ -45,7 +45,10 @@ function resolveFallbackTitle(pathname: string, siteTitle: string): string {
     }
 }
 
-function createFallbackHeader(pathname: string, siteTitle: string): RouteHeaderConfig {
+function createFallbackHeader(
+    pathname: string,
+    siteTitle: string,
+): RouteHeaderConfig {
     const title = resolveFallbackTitle(pathname, siteTitle);
     return {
         mobileContent: (
@@ -85,7 +88,8 @@ export function RouteHeaderProvider({
         [currentPath, siteTitle],
     );
     const activeHeader = header ?? fallbackHeader;
-    const desktopContent = activeHeader.desktopContent ?? activeHeader.mobileContent;
+    const desktopContent =
+        activeHeader.desktopContent ?? activeHeader.mobileContent;
     const contextValue = useMemo<RouteHeaderContextValue>(
         () => ({
             setHeader,

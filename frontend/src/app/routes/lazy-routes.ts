@@ -21,7 +21,8 @@ function lazyWithPreload<Props>(
 }
 
 const importStatisticsRoute = async () => {
-    const module = await import('../../features/statistics/routes/StatisticsRoute');
+    const module =
+        await import('../../features/statistics/routes/StatisticsRoute');
     return { default: module.StatisticsRoute };
 };
 
@@ -36,12 +37,14 @@ const importSettingsRoute = async () => {
 };
 
 const importLibraryListRoute = async () => {
-    const module = await import('../../features/library/routes/LibraryListRoute');
+    const module =
+        await import('../../features/library/routes/LibraryListRoute');
     return { default: module.LibraryListRoute };
 };
 
 const importLibraryDetailRoute = async () => {
-    const module = await import('../../features/library/routes/LibraryDetailRoute');
+    const module =
+        await import('../../features/library/routes/LibraryDetailRoute');
     return { default: module.LibraryDetailRoute };
 };
 
@@ -53,14 +56,12 @@ const importRecapRoute = async () => {
 export const StatisticsRoute = lazyWithPreload(importStatisticsRoute);
 export const CalendarRoute = lazyWithPreload(importCalendarRoute);
 export const SettingsRoute = lazyWithPreload(importSettingsRoute);
-export const LibraryListRoute =
-    lazyWithPreload<{ collection: LibraryCollectionRoute }>(
-        importLibraryListRoute,
-    );
-export const LibraryDetailRoute =
-    lazyWithPreload<{ collection: LibraryCollectionRoute }>(
-        importLibraryDetailRoute,
-    );
+export const LibraryListRoute = lazyWithPreload<{
+    collection: LibraryCollectionRoute;
+}>(importLibraryListRoute);
+export const LibraryDetailRoute = lazyWithPreload<{
+    collection: LibraryCollectionRoute;
+}>(importLibraryDetailRoute);
 export const RecapRoute = lazyWithPreload(importRecapRoute);
 
 const preloadedRoutePromises = new Map<RouteId, Promise<void>>();

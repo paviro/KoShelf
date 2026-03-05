@@ -37,11 +37,7 @@ function RouteChunkFallback() {
     return (
         <PageContent>
             <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                <LoadingSpinner
-                    size="lg"
-                    srLabel="Loading page"
-                    delayMs={10}
-                />
+                <LoadingSpinner size="lg" srLabel="Loading page" delayMs={10} />
             </section>
         </PageContent>
     );

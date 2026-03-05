@@ -135,7 +135,10 @@ export function CalendarRoute() {
         isFetching: currentMonthQuery.isFetching,
         isPlaceholderData: currentMonthQuery.isPlaceholderData,
     });
-    const nextMonthQuery = useCalendarMonthQuery(nextMonthKey, nextMonthEnabled);
+    const nextMonthQuery = useCalendarMonthQuery(
+        nextMonthKey,
+        nextMonthEnabled,
+    );
 
     useEffect(() => {
         persistCalendarViewState({

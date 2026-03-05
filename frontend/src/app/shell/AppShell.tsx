@@ -57,10 +57,7 @@ export function AppShell({
 
             if (routeId === 'statistics') {
                 const statisticsScope = readStoredStatisticsViewState().scope;
-                void prefetchStatisticsIndexQuery(
-                    queryClient,
-                    statisticsScope,
-                );
+                void prefetchStatisticsIndexQuery(queryClient, statisticsScope);
                 return;
             }
 
@@ -90,7 +87,8 @@ export function AppShell({
             }
 
             if (routeId === 'books-list' || routeId === 'comics-list') {
-                const collection = routeId === 'comics-list' ? 'comics' : 'books';
+                const collection =
+                    routeId === 'comics-list' ? 'comics' : 'books';
                 void prefetchLibraryListQuery(queryClient, collection);
                 return;
             }
@@ -101,17 +99,21 @@ export function AppShell({
                     return;
                 }
 
-                const collection = routeId === 'comics-detail' ? 'comics' : 'books';
+                const collection =
+                    routeId === 'comics-detail' ? 'comics' : 'books';
                 const detailKey = libraryDetailCacheKey(collection, itemId);
                 if (inFlightDetailPrefetches.has(detailKey)) {
                     return;
                 }
 
                 inFlightDetailPrefetches.add(detailKey);
-                void prefetchLibraryDetailQuery(queryClient, collection, itemId)
-                    .finally(() => {
-                        inFlightDetailPrefetches.delete(detailKey);
-                    });
+                void prefetchLibraryDetailQuery(
+                    queryClient,
+                    collection,
+                    itemId,
+                ).finally(() => {
+                    inFlightDetailPrefetches.delete(detailKey);
+                });
             }
         };
 
@@ -185,7 +187,11 @@ export function AppShell({
         document.addEventListener('focusin', handleFocusIn, true);
         document.addEventListener('touchstart', handleTouchStart, true);
         return () => {
-            document.removeEventListener('pointerover', handlePointerOver, true);
+            document.removeEventListener(
+                'pointerover',
+                handlePointerOver,
+                true,
+            );
             document.removeEventListener('focusin', handleFocusIn, true);
             document.removeEventListener('touchstart', handleTouchStart, true);
         };
@@ -202,7 +208,10 @@ export function AppShell({
             />
             <ShellMobileNav navItems={navItems} currentPath={currentPath} />
 
-            <RouteHeaderProvider currentPath={currentPath} siteTitle={siteTitle}>
+            <RouteHeaderProvider
+                currentPath={currentPath}
+                siteTitle={siteTitle}
+            >
                 <div className="min-h-full lg:ml-64">{children}</div>
             </RouteHeaderProvider>
         </div>
