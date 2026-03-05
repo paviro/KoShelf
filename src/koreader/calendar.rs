@@ -6,6 +6,13 @@ use chrono::Datelike;
 use chrono::{Duration, NaiveDate};
 use std::collections::{BTreeMap, HashMap};
 
+#[derive(Clone)]
+struct LibraryLookupEntry {
+    item_id: String,
+    item_cover: String,
+    content_type: ContentType,
+}
+
 pub struct CalendarGenerator;
 
 impl CalendarGenerator {
@@ -27,12 +34,12 @@ impl CalendarGenerator {
         let mut calendar_events = Vec::new();
         let mut calendar_items: BTreeMap<String, CalendarItem> = BTreeMap::new();
 
-        // Build a lookup map from partial MD5 checksum to the corresponding book detail path,
+        // Build a lookup map from partial MD5 checksum to the corresponding canonical item id,
         // cover path, and content type.
         //
         // Prefer MD5 from KOReader metadata, but fall back to calculating a compatible partial MD5
         // from the file. This enables calendar → detail linking even for items without metadata.
-        let md5_to_book_info: HashMap<String, (String, String, ContentType)> = books
+        let md5_to_book_info: HashMap<String, LibraryLookupEntry> = books
             .iter()
             .filter_map(|b| {
                 let md5 = b
@@ -45,14 +52,11 @@ impl CalendarGenerator {
                 md5.map(|md5| {
                     (
                         md5.to_lowercase(),
-                        (
-                            match b.content_type() {
-                                ContentType::Book => format!("/books/{}/", b.id),
-                                ContentType::Comic => format!("/comics/{}/", b.id),
-                            },
-                            format!("/assets/covers/{}.webp", b.id),
-                            b.content_type(),
-                        ),
+                        LibraryLookupEntry {
+                            item_id: b.id.clone(),
+                            item_cover: format!("/assets/covers/{}.webp", b.id),
+                            content_type: b.content_type(),
+                        },
                     )
                 })
             })
@@ -75,9 +79,15 @@ impl CalendarGenerator {
             // Create the item metadata entry if we haven't already
             if !calendar_items.contains_key(&calendar_item_id) {
                 let authors = Self::parse_authors(&stat_book.authors);
-                let (item_path, item_cover, content_type_from_library) = md5_to_book_info
+                let (item_id, item_cover, content_type_from_library) = md5_to_book_info
                     .get(&stat_book.md5.to_lowercase())
-                    .map(|(path, cover, ct)| (Some(path.clone()), Some(cover.clone()), Some(*ct)))
+                    .map(|entry| {
+                        (
+                            Some(entry.item_id.clone()),
+                            Some(entry.item_cover.clone()),
+                            Some(entry.content_type),
+                        )
+                    })
                     .unwrap_or((None, None, None));
 
                 let content_type = content_type_from_library
@@ -88,7 +98,7 @@ impl CalendarGenerator {
                     stat_book.title.clone(),
                     authors,
                     content_type,
-                    item_path,
+                    item_id,
                     item_cover,
                 );
                 calendar_items.insert(calendar_item_id.clone(), calendar_item);
@@ -102,7 +112,7 @@ impl CalendarGenerator {
             let mut sessions_by_day: HashMap<NaiveDate, Vec<&PageStat>> = HashMap::new();
             for session in &sorted_sessions {
                 if let Ok(date) = NaiveDate::parse_from_str(
-                    &Self::timestamp_to_date_string(session.start_time, time_config),
+                    &time_config.format_date(session.start_time),
                     "%Y-%m-%d",
                 ) {
                     sessions_by_day.entry(date).or_default().push(session);
@@ -325,11 +335,6 @@ impl CalendarGenerator {
         );
 
         calendar_events.push(event);
-    }
-
-    /// Convert Unix timestamp to ISO date string (yyyy-mm-dd)
-    fn timestamp_to_date_string(timestamp: i64, time_config: &TimeConfig) -> String {
-        time_config.format_date(timestamp)
     }
 
     /// Build per-month reading statistics from raw `StatisticsData`.

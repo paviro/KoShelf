@@ -29,7 +29,7 @@ pub struct StatBook {
 }
 
 /// Additional statistics calculated for a book from its reading sessions
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BookSessionStats {
     pub session_count: i64,
     pub average_session_duration: Option<i64>, // in seconds

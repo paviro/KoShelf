@@ -6,15 +6,16 @@
 pub mod app;
 pub mod cli;
 pub mod config;
+pub mod contracts;
 pub mod i18n;
 pub mod koreader;
 pub mod library;
 pub mod models;
 pub mod parsers;
+pub mod runtime;
 pub mod server;
 pub mod share;
-pub mod site_generator;
-pub mod templates;
+pub mod snapshot_builder;
 pub mod time_config;
 pub mod utils;
 

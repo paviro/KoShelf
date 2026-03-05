@@ -388,7 +388,7 @@ pub struct BookInfo {
     pub description: Option<String>,
     pub language: Option<String>,
     pub publisher: Option<String>,
-    pub identifiers: Vec<Identifier>, // Changed from single identifier to vector
+    pub identifiers: Vec<Identifier>, // Supports multiple identifiers per item
     pub subjects: Vec<String>,        // Genres/subjects/tags
     pub series: Option<String>,
     pub series_number: Option<String>,

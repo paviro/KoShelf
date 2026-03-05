@@ -5,88 +5,31 @@ use std::process::Command;
 
 fn main() {
     rerun_if_changed_recursive(Path::new("assets"));
-    rerun_if_changed_recursive(Path::new("templates"));
     rerun_if_changed_recursive(Path::new("src"));
-    println!("cargo:rerun-if-changed=tailwind.config.js");
-    println!("cargo:rerun-if-changed=package.json");
-    println!("cargo:rerun-if-changed=package-lock.json");
-    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NODE_BUILD");
+    rerun_if_changed_recursive(Path::new("locales"));
+    rerun_if_changed_recursive(Path::new("frontend/src"));
+    rerun_if_changed_recursive(Path::new("frontend/public"));
+    println!("cargo:rerun-if-changed=frontend/index.html");
+    println!("cargo:rerun-if-changed=frontend/package.json");
+    println!("cargo:rerun-if-changed=frontend/package-lock.json");
+    println!("cargo:rerun-if-changed=frontend/vite.config.ts");
+    println!("cargo:rerun-if-changed=frontend/tsconfig.json");
+    println!("cargo:rerun-if-changed=frontend/tsconfig.node.json");
+    println!("cargo:rerun-if-changed=frontend/postcss.config.cjs");
+    println!("cargo:rerun-if-changed=frontend/tailwind.config.cjs");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NPM_INSTALL");
+    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_REACT_BUILD");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_FONT_DOWNLOAD");
     println!("cargo:rerun-if-env-changed=KOSHELF_FONT_CACHE_DIR");
 
-    let skip_node_build = env_flag("KOSHELF_SKIP_NODE_BUILD");
     let skip_npm_install = env_flag("KOSHELF_SKIP_NPM_INSTALL");
+    let skip_react_build = env_flag("KOSHELF_SKIP_REACT_BUILD");
     let skip_font_download = env_flag("KOSHELF_SKIP_FONT_DOWNLOAD");
-
-    // Check if we have the node_modules and package.json for Tailwind
-    if !Path::new("package.json").exists() {
-        panic!("package.json not found. Please ensure Tailwind CSS dependencies are configured.");
-    }
-
-    // Install dependencies if node_modules doesn't exist or if package-lock.json is newer than node_modules
-    let should_install = !Path::new("node_modules").exists()
-        || (Path::new("package-lock.json").exists()
-            && Path::new("node_modules")
-                .metadata()
-                .and_then(|m| m.modified())
-                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
-                < Path::new("package-lock.json")
-                    .metadata()
-                    .and_then(|m| m.modified())
-                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH));
-
-    if should_install && !skip_npm_install && !skip_node_build {
-        eprintln!("Installing npm dependencies...");
-        let mut cmd = Command::new("npm");
-        if Path::new("package-lock.json").exists() {
-            // Deterministic install based on lockfile (better for CI / reproducibility).
-            cmd.arg("ci");
-        } else {
-            cmd.arg("install");
-        }
-        let install_output = cmd
-            .output()
-            .expect("Failed to run npm install. Make sure Node.js and npm are installed.");
-
-        if !install_output.status.success() {
-            panic!(
-                "npm install failed: {}",
-                String::from_utf8_lossy(&install_output.stderr)
-            );
-        }
-        eprintln!("npm install completed successfully");
-    } else if should_install && (skip_npm_install || skip_node_build) {
-        panic!(
-            "node_modules missing/outdated but npm install is disabled (KOSHELF_SKIP_NODE_BUILD or KOSHELF_SKIP_NPM_INSTALL). \
-             Run `npm ci`/`npm install` manually, or unset the env var(s)."
-        );
-    }
 
     let out_dir = std::env::var("OUT_DIR").unwrap();
 
-    if !skip_node_build {
-        // Compile CSS bundles
-        compile_tailwind_css(
-            &out_dir,
-            "Tailwind",
-            Path::new("assets/css/input.css"),
-            "compiled_style.css",
-        );
-
-        let compiled_calendar = compile_tailwind_css(
-            &out_dir,
-            "calendar Tailwind",
-            Path::new("assets/css/calendar.css"),
-            "compiled_calendar.css",
-        );
-        bundle_css_with_esbuild("calendar", &compiled_calendar, &out_dir);
-
-        // Compile TypeScript with esbuild
-        compile_typescript(&out_dir);
-    } else {
-        eprintln!("Skipping Tailwind/CSS/TypeScript build (KOSHELF_SKIP_NODE_BUILD=1)");
-    }
+    // Build React + Vite frontend.
+    compile_react_frontend(skip_npm_install, skip_react_build);
 
     // Download and embed fonts for SVG rendering
     download_fonts(&out_dir, skip_font_download);
@@ -137,176 +80,83 @@ fn write_if_changed(path: &Path, bytes: &[u8]) -> io::Result<bool> {
     }
 }
 
-/// Compile a Tailwind CSS entrypoint into OUT_DIR.
-/// Returns the output file path in OUT_DIR.
-fn compile_tailwind_css(
-    out_dir: &str,
-    display_name: &str,
-    input: &Path,
-    out_filename: &str,
-) -> std::path::PathBuf {
-    if !input.exists() {
-        panic!(
-            "{} not found (required for {} styling)",
-            input.display(),
-            display_name
-        );
-    }
+/// Build the React+Vite frontend used by the runtime and static export paths.
+fn compile_react_frontend(skip_npm_install: bool, skip_react_build: bool) {
+    let frontend_dir = Path::new("frontend");
+    let frontend_package = frontend_dir.join("package.json");
 
-    eprintln!("Compiling {} CSS...", display_name);
-    // Use OUT_DIR for intermediates to avoid collisions across parallel builds.
-    let tmp_path = Path::new(out_dir).join(format!("{}.tmp", out_filename));
-    let dest_path = Path::new(out_dir).join(out_filename);
-
-    let output = Command::new("npx")
-        .args([
-            "tailwindcss",
-            "-i",
-            &input.to_string_lossy(),
-            "-o",
-            &tmp_path.to_string_lossy(),
-            "--minify",
-        ])
-        .output()
-        .expect("Failed to run Tailwind CSS. Make sure Node.js and npm are installed.");
-
-    if !output.status.success() {
-        panic!(
-            "{} CSS compilation failed:\nstderr: {}",
-            display_name,
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
-    let css_bytes = fs::read(&tmp_path).expect("Failed to read generated CSS");
-    let _wrote = write_if_changed(&dest_path, &css_bytes)
-        .expect("Failed to write generated CSS to output directory");
-    let _ = fs::remove_file(&tmp_path);
-
-    eprintln!("{} CSS compilation completed", display_name);
-    dest_path
-}
-
-/// Bundle and minify a CSS file using esbuild
-/// - `name`: Display name for logging (e.g., "calendar")
-/// - `input_path`: Path to the source CSS file
-/// - `out_dir`: Output directory for the bundled file
-fn bundle_css_with_esbuild(name: &str, input_path: &Path, out_dir: &str) {
-    if !input_path.exists() {
-        panic!(
-            "{} not found (required for {} styling)",
-            input_path.display(),
-            name
-        );
-    }
-
-    eprintln!("Bundling {} CSS...", name);
-    let output_name = format!("{}.css", name);
-    let outfile = Path::new(out_dir).join(&output_name);
-    let tmpfile = Path::new(out_dir).join(format!("{}.css.tmp", name));
-
-    let output = Command::new("npx")
-        .args([
-            "esbuild",
-            &input_path.to_string_lossy(),
-            "--bundle",
-            "--minify",
-            "--loader:.css=css",
-            &format!("--outfile={}", tmpfile.to_string_lossy()),
-        ])
-        .output()
-        .unwrap_or_else(|e| {
-            panic!(
-                "Failed to run esbuild for {} CSS. Make sure Node.js and npm are installed. Error: {}",
-                name, e
-            )
-        });
-
-    if !output.status.success() {
-        panic!(
-            "{} CSS bundling failed:\nstdout: {}\nstderr: {}",
-            name,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
-    let css_bytes = fs::read(&tmpfile).expect("Failed to read bundled CSS");
-    let _wrote = write_if_changed(&outfile, &css_bytes).expect("Failed to write bundled CSS");
-    let _ = fs::remove_file(&tmpfile);
-
-    eprintln!("{} CSS bundling completed", name);
-}
-
-/// Compile TypeScript files with esbuild
-/// Outputs JavaScript files to the OUT_DIR for embedding via include_str!
-fn compile_typescript(out_dir: &str) {
-    let ts_dir = Path::new("assets/ts");
-
-    // Skip if no TypeScript directory exists yet (allows gradual migration)
-    if !ts_dir.exists() {
-        eprintln!("No assets/ts directory found, skipping TypeScript compilation");
+    if !frontend_package.exists() {
+        eprintln!("No frontend/package.json found, skipping React frontend build");
         return;
     }
 
-    // Explicit entrypoints: we want a small shared base bundle + a few page bundles.
-    // Helper modules are imported by these entrypoints and should not be emitted as standalone files.
-    let ts_files: Vec<String> = vec![
-        "assets/ts/app/base.ts",
-        "assets/ts/pages/library_list.ts",
-        "assets/ts/pages/item_detail.ts",
-        "assets/ts/pages/statistics.ts",
-        "assets/ts/pages/recap.ts",
-        "assets/ts/pages/calendar.ts",
-        // Service worker must remain its own top-level script.
-        "assets/ts/app/service-worker.ts",
-    ]
-    .into_iter()
-    .map(|p| p.to_string())
-    .collect();
+    if skip_react_build {
+        eprintln!("Skipping React frontend build (KOSHELF_SKIP_REACT_BUILD=1)");
+        return;
+    }
 
-    // Ensure all entrypoints exist to keep build errors actionable.
-    for entry in &ts_files {
-        if !Path::new(entry).exists() {
-            panic!("TypeScript entrypoint not found: {}", entry);
+    let frontend_lock = frontend_dir.join("package-lock.json");
+    let frontend_node_modules = frontend_dir.join("node_modules");
+
+    let should_install = !frontend_node_modules.exists()
+        || (frontend_lock.exists()
+            && frontend_node_modules
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                < frontend_lock
+                    .metadata()
+                    .and_then(|m| m.modified())
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH));
+
+    if should_install {
+        if skip_npm_install {
+            panic!(
+                "frontend/node_modules missing/outdated but npm install is disabled (KOSHELF_SKIP_NPM_INSTALL). \
+                 Run `npm --prefix frontend ci`/`npm --prefix frontend install`, or unset the env var."
+            );
+        }
+
+        eprintln!("Installing frontend npm dependencies...");
+        let mut cmd = Command::new("npm");
+        cmd.args(["--prefix", "frontend"]);
+        if frontend_lock.exists() {
+            cmd.arg("ci");
+        } else {
+            cmd.arg("install");
+        }
+
+        let install_output = cmd
+            .output()
+            .expect("Failed to install frontend npm dependencies.");
+        if !install_output.status.success() {
+            panic!(
+                "frontend npm install failed:\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&install_output.stdout),
+                String::from_utf8_lossy(&install_output.stderr)
+            );
         }
     }
 
-    if ts_files.is_empty() {
-        eprintln!("No TypeScript files found in assets/ts/, skipping compilation");
-        return;
-    }
-
-    eprintln!("Compiling {} TypeScript files...", ts_files.len());
-
-    let mut args = vec![
-        "esbuild".to_string(),
-        "--bundle".to_string(),
-        "--format=esm".to_string(),
-        "--target=es2020".to_string(),
-        "--minify".to_string(),
-        // Flatten output names so Rust can embed OUT_DIR/<name>.js.
-        // Without this, esbuild preserves folders (e.g. pages/calendar.ts -> OUT_DIR/pages/calendar.js),
-        // and stale OUT_DIR/calendar.js can remain and accidentally get embedded/served.
-        "--entry-names=[name]".to_string(),
-        format!("--outdir={}", out_dir),
-    ];
-    args.extend(ts_files);
-
-    let esbuild_output = Command::new("npx")
-        .args(&args)
+    eprintln!("Building React frontend with Vite...");
+    let build_output = Command::new("npm")
+        .args(["--prefix", "frontend", "run", "build"])
         .output()
-        .expect("Failed to run esbuild. Make sure Node.js and npm are installed.");
+        .expect("Failed to run frontend build.");
 
-    if !esbuild_output.status.success() {
+    if !build_output.status.success() {
         panic!(
-            "TypeScript compilation failed:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&esbuild_output.stdout),
-            String::from_utf8_lossy(&esbuild_output.stderr)
+            "React frontend build failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&build_output.stdout),
+            String::from_utf8_lossy(&build_output.stderr)
         );
     }
 
-    eprintln!("TypeScript compilation completed successfully");
+    let dist_dir = frontend_dir.join("dist");
+    if !dist_dir.exists() {
+        panic!("frontend build completed but dist directory was not found");
+    }
+    eprintln!("React frontend build completed: {}", dist_dir.display());
 }
 
 /// Download Gelasio font files for SVG rendering

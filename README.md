@@ -16,31 +16,33 @@
 
 ![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
 
-######  A Rust CLI tool that generates a beautiful static website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+###### A Rust CLI tool that generates a beautiful website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
 
 </div>
-
 
 ## Table of Contents
 
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Installation](#installation)
-  - [Home Assistant](#home-assistant)
-  - [Prebuilt Binaries](#prebuilt-binaries)
-  - [From Source](#from-source)
+    - [Home Assistant](#home-assistant)
+    - [Prebuilt Binaries](#prebuilt-binaries)
+    - [From Source](#from-source)
 - [Usage](#usage)
-  - [Basic Usage](#basic-usage)
-  - [Operation Modes](#operation-modes)
-  - [Command Line Options](#command-line-options)
-  - [Example](#example)
+    - [Basic Usage](#basic-usage)
+    - [Operation Modes](#operation-modes)
+    - [Command Line Options](#command-line-options)
+    - [Example](#example)
 - [KoReader Setup](#koreader-setup)
-  - [Metadata Storage Options](#metadata-storage-options)
-  - [Typical Deployment Setup](#typical-deployment-setup)
+    - [Metadata Storage Options](#metadata-storage-options)
+    - [Typical Deployment Setup](#typical-deployment-setup)
 - [Supported Data](#supported-data)
-  - [From EPUB Files](#from-epub-files)
-  - [From KoReader Metadata](#from-koreader-metadata)
-  - [From KoReader Statistics Database](#from-koreader-statistics-database-statisticssqlite3)
+    - [From EPUB Files](#from-epub-files)
+    - [From KoReader Metadata](#from-koreader-metadata)
+    - [From KoReader Statistics Database](#from-koreader-statistics-database-statisticssqlite3)
+- [API Shape](#api-shape)
+    - [Content Type Filter](#content-type-filter)
+    - [Model Resources](#model-resources)
 - [Generated Site Structure](#generated-site-structure)
 - [Credits](#credits)
 - [Disclaimer](#disclaimer)
@@ -51,9 +53,9 @@
 - 🎨 **Modern UI**: Beautiful design powered by Tailwind CSS with clean typography and responsive layout
 - 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page with elegant formatting
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
-- 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with books read on each day and monthly statistics
-- 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished books, hours read), and rich per‑book details
-- 📈 **Per-Book Statistics**: Detailed statistics for each book including session count, average session duration, reading speed, and last read date
+- 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with items read on each day and monthly statistics
+- 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished items, hours read), and rich per-item details
+- 📈 **Per-Item Statistics**: Detailed statistics for each item including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
 - 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
@@ -66,9 +68,6 @@
 ![Reading calendar](https://github.com/user-attachments/assets/a4ac51f1-927e-463d-b2d6-72c29fdc4323)
 ![Recap](https://github.com/user-attachments/assets/9558eea9-dee1-4b0a-adac-1bc0157f0181)
 
-
-
-
 ## Installation
 
 ### Home Assistant
@@ -78,27 +77,32 @@ Using Home Assistant? Install KoShelf as an add-on with just one click below.
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
 
 ### Docker Compose Deployment
+
 Deploy KoShelf easily using the community-maintained Docker image.
+
 #### Quick Start
+
 1. Create a docker-compose.yml file:
 
 ```yaml
 services:
-  koshelf:
-    image: ghcr.io/devtigro/koshelf:latest
-    ports:
-     - "3000:3000"
-    volumes:
-      - /path/to/your/books:/books:ro
-      - /path/to/your/settings:/settings:ro
-    restart: unless-stopped
+    koshelf:
+        image: ghcr.io/devtigro/koshelf:latest
+        ports:
+            - '3000:3000'
+        volumes:
+            - /path/to/your/books:/books:ro
+            - /path/to/your/settings:/settings:ro
+        restart: unless-stopped
 ```
 
 2. Update the volume paths:
+
 - Replace `/path/to/your/books` with the absolute path to your book library
 - Replace `/path/to/your/settings` with the absolute path to your settings directory
 
 3. Start the container:
+
 ```bash
 docker compose up -d
 ```
@@ -127,17 +131,20 @@ Please note that KoShelf is a command line tool, so you will need to execute it 
 If you've never used a command line before, here's how to get started:
 
 **Windows:**
+
 1. Press `Win + R`, type `powershell`, and press Enter
 2. Navigate to where you downloaded the KoShelf binary (e.g., `cd C:\Users\YourName\Downloads`)
 3. Run the tool with your desired arguments (see examples below)
 
 **macOS and Linux:**
+
 1. Press `Cmd + Space`, type `terminal`, and press Enter
 2. Navigate to where you downloaded the KoShelf binary (e.g., `cd ~/Downloads`)
 3. Make the file executable: `chmod +x koshelf` (should not be needed on macOS as the binary is signed)
 4. Run the tool with your desired arguments (see examples below)
 
 **Example:**
+
 ```bash
 # Navigate to your downloads folder
 cd ~/Downloads  # macOS/Linux
@@ -166,7 +173,7 @@ If you prefer to build from source or need a custom build:
 #### Prerequisites
 
 - Rust 1.70+ (for building)
-- Node.js and npm (for Tailwind CSS compilation)
+- Node.js and npm (React frontend build pipeline)
 
 #### Building the tool
 
@@ -180,7 +187,7 @@ cargo build --release
 
 The binary will be available at `target/release/koshelf`.
 
-**Note:** Tailwind CSS will be compiled during build and added to the binary.
+**Note:** The React frontend is built during `cargo build` and embedded into the binary.
 
 ## Usage
 
@@ -195,15 +202,15 @@ The binary will be available at `target/release/koshelf`.
 KoShelf can operate in several modes:
 
 1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
-2. **Web Server Mode**: Builds a static site in a temporary folder and serves it, automatically rebuilds on book changes (default when `--output` is not specified) 
+2. **Web Server Mode**: Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified)
 3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
 
 ### Command Line Options
 
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
-- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--books-path`, mutually exclusive with `--hashdocsettings-path`)
-- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--books-path`, mutually exclusive with `--docsettings-path`)
-- `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--books-path` is provided)
+- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
+- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
+- `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided)
 - `-o, --output`: Output directory for the generated site
 - `-p, --port`: Port for web server mode (default: 3000)
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
@@ -214,8 +221,8 @@ KoShelf can operate in several modes:
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
 - `--min-pages-per-day`: Minimum pages read per book per day to be counted in statistics (optional)
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
-  > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
-- `--include-all-stats`: By default, statistics are filtered to only include books present in your `--books-path` directory. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
+    > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
+- `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
 - `-l, --language`: Language for UI translations. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
@@ -295,10 +302,8 @@ KOReaderSettings/
             └── metadata.epub.lua
 ```
 
-
-
-
 **Usage:**
+
 ```bash
 ./koshelf --library-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
 ```
@@ -319,9 +324,10 @@ KOReaderSettings/
                     └── metadata.epub.lua
 ```
 
-**Note:**  Unlike KOReader, KOShelf matches books by filename only, since the folder structure reflects the device path (which may differ from your local path). If you have multiple books with the same filename, KOShelf will show an error - use `hashdocsettings` or `book folder` instead.
+**Note:** Unlike KOReader, KOShelf matches books by filename only, since the folder structure reflects the device path (which may differ from your local path). If you have multiple books with the same filename, KOShelf will show an error - use `hashdocsettings` or `book folder` instead.
 
 **Usage:**
+
 ```bash
 ./koshelf --library-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
 ```
@@ -331,11 +337,12 @@ KOReaderSettings/
 Although there are many ways to use this tool here is how I use it:
 
 1. **Syncthing Sync**: I use [Syncthing](https://syncthing.net/) to sync both my books folder and KoReader settings folder from my e-reader to my server
-2. **Books and Statistics**: I point to the synced books folder with `--books-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
+2. **Books and Statistics**: I point to the synced books folder with `--library-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
 3. **Web Server Mode**: I then run KoShelf in web server mode (without `--output`) - it will automatically rebuild when files change
 4. **Nginx Reverse Proxy**: I use an nginx reverse proxy for HTTPS and to restrict access
 
 My actual setup:
+
 ```bash
 # My server command - runs continuously with file watching and statistics
 ./koshelf --library-path ~/syncthing/Books \
@@ -352,6 +359,7 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 ## Supported Data
 
 ### Supported Formats
+
 - ePUB
 - fb2 / fb2.zip
 - mobi (unencrypted)
@@ -359,6 +367,7 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - CBR (not supported on Windows - use the linux build under [WSL](https://learn.microsoft.com/de-de/windows/wsl/install) if you need it)
 
 ### From EPUB Files
+
 - Book title
 - Authors
 - Description (sanitized HTML)
@@ -370,6 +379,7 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Subjects/Genres
 
 ### From FB2 Files
+
 - Book title
 - Authors
 - Description (sanitized HTML)
@@ -381,6 +391,7 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Subjects/Genres
 
 ### From MOBI Files (unencrypted)
+
 - Book title
 - Authors
 - Description
@@ -391,7 +402,9 @@ See [Syncthing Setups](docs/syncthing_setups/README.md) for community-contribute
 - Subjects/Genres
 
 ### From Comic Files (CBZ/CBR)
+
 Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
+
 - Book title (from metadata or filename)
 - Series information (Series and Number)
 - Authors (writers, artists, editors, etc.)
@@ -402,6 +415,7 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Cover image (first image in archive)
 
 ### From KoReader Metadata
+
 - Reading status (reading/complete)
 - Highlights and annotations with chapter information
 - Notes attached to highlights
@@ -410,6 +424,7 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Summary note (the one you can fill out at the end of the book)
 
 ### From KoReader Statistics Database (statistics.sqlite3)
+
 - Total reading time and pages
 - Weekly reading statistics
 - Reading activity heatmap with customizable scaling (automatic or fixed maximum)
@@ -418,95 +433,138 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Session duration tracking
 - Book completions (used by Yearly Recap)
 
+## API Shape
+
+KoShelf uses a model-centric API. Endpoints map to core resources (`items`, `activity`, `completions`).
+
+### Content Type Filter
+
+- Optional query parameter: `content_type`
+- Supported values: `all` (default), `books`, `comics`
+- Applied uniformly across activity/completion resources and supported by `GET /api/items`
+
+### Model Resources
+
+- `GET /api/site`
+- `GET /api/locales`
+- `GET /api/items`
+- `GET /api/items/{id}`
+- `GET /api/activity/weeks`
+- `GET /api/activity/weeks/{week_key}`
+- `GET /api/activity/years/{year}/daily`
+- `GET /api/activity/years/{year}/summary`
+- `GET /api/activity/months`
+- `GET /api/activity/months/{month_key}`
+- `GET /api/completions/years`
+- `GET /api/completions/years/{year}`
+- `GET /api/events/stream`
+
+In static output mode, these resources are mirrored under `data/**`, and the frontend API client composes or reshapes them for view-specific needs.
+
 ## Generated Site Structure
 
 ```
 site/
-├── index.html              # Main library page (books list if any books exist; otherwise comics list)
-├── manifest.json           # PWA Manifest
-├── service-worker.js       # PWA Service Worker
-├── cache-manifest.json     # PWA Smart Cache Manifest
-├── version.txt             # Version timestamp for lightweight polling
-├── recap/                  # Yearly Recap pages
-│   ├── index.html          # Empty state / Recap landing
-│   ├── 2024/
-│   │   ├── index.html      # Yearly recap page
-│   │   ├── books/
-│   │   │   └── index.html  # Yearly recap page (books only; only generated when both books+comics exist)
-│   │   └── comics/
-│   │       └── index.html  # Yearly recap page (comics only; only generated when both books+comics exist)
-│   └── ...
-├── statistics/
-│   ├── index.html          # Reading statistics dashboard
-│   ├── books/
-│   │   └── index.html      # Reading statistics dashboard (books only; only generated when both books+comics exist)
-│   └── comics/
-│       └── index.html      # Reading statistics dashboard (comics only; only generated when both books+comics exist)
-├── calendar/
-│   └── index.html          # Reading calendar view
-├── books/                  # Individual book pages
-│   ├── list.json           # Manifest of all books (convenience only; not used by frontend)
-│   ├── book-id1/           
-│   │   ├── index.html      # Book detail page with annotations
-│   │   ├── details.md      # Markdown export (human-readable)
-│   │   └── details.json    # JSON export (machine-readable)
-│   └── ...
-├── comics/                 # Comics list + individual comic pages
-│   ├── index.html          # Comics list page (only when books also exist; otherwise list is at /index.html)
-│   ├── list.json           # Manifest of all comics (convenience only; not used by frontend)
-│   ├── comic-id1/
-│   │   ├── index.html      # Comic detail page with annotations
-│   │   ├── details.md      # Markdown export (human-readable)
-│   │   └── details.json    # JSON export (machine-readable)
-│   └── ...
-└── assets/
-    ├── covers/             # Optimized cover images
-    │   ├── book-id1.webp
-    │   └── ...
-    ├── recap/              # Social media share images (generated per year)
-    │   ├── 2024_share_story.webp
-    │   ├── 2024_share_story.svg
-    │   ├── 2024_share_square.webp
-    │   ├── 2024_share_square.svg
-    │   ├── 2024_share_banner.webp
-    │   └── 2024_share_banner.svg
-    ├── css/
-    │   ├── style.css       # Compiled Tailwind CSS
-    │   └── event-calendar.min.css # Event calendar library styles
-    ├── js/
-    │   ├── library_list.js # Search and filtering functionality
-    │   ├── item_detail.js  # Item detail page functionality
-    │   ├── lazy-loading.js # Image lazy loading
-    │   ├── section-toggle.js # Section collapsing/expanding
-    │   ├── statistics.js   # Statistics page functionality
-    │   ├── heatmap.js      # Activity heatmap visualization
-    │   ├── calendar.js     # Calendar initialization
-    │   ├── event-calendar.min.js # Event calendar library
-    │   ├── recap.js        # Recap page interactions
-    │   ├── storage-manager.js # Centralized local storage management
-    │   └── pwa.js          # PWA installation and update logic
-    ├── icons/              # PWA icons
-    │   ├── icon-192.png
-    │   └── icon-512.png
-    └── json/               # Data files used by the frontend (for dynamic loading)
-        ├── locales.json        # UI translations for the selected language
-        ├── calendar/           # Calendar data split by month
-        │   ├── available_months.json 
-        │   ├── 2024-01.json   
-        │   └── ...            
-        └── statistics/         # Statistics data
-            ├── all/            # Always generated when stats are enabled
-            │   ├── week_0.json
-            │   ├── ...
-            │   └── daily_activity_2024.json
-            ├── books/          # Only generated when both books+comics exist
-            │   ├── week_0.json
-            │   ├── ...
-            │   └── daily_activity_2024.json
-            └── comics/         # Only generated when both books+comics exist
-                ├── week_0.json
-                ├── ...
-                └── daily_activity_2024.json
+├── index.html              # React app shell (routes handled via HashRouter)
+├── manifest.json           # PWA manifest
+├── assets/
+│   ├── covers/             # Optimized cover images
+│   │   ├── <item-id>.webp
+│   │   └── ...
+│   ├── recap/              # Social media share images (generated per year)
+│   │   ├── 2024_share_story.webp
+│   │   ├── 2024_share_story.svg
+│   │   ├── 2024_share_square.webp
+│   │   ├── 2024_share_square.svg
+│   │   ├── 2024_share_banner.webp
+│   │   └── 2024_share_banner.svg
+│   ├── css/
+│   │   └── <hashed>.css    # Vite frontend bundles
+│   ├── js/
+│   │   └── <hashed>.js     # Vite frontend bundles
+│   └── icons/              # PWA icons
+│       ├── icon-192.png
+│       └── icon-512.png
+└── data/                   # Contract payloads used by static mode (not available when using server mode)
+    ├── site.json
+    ├── locales.json
+    ├── items/
+    │   ├── index.json
+    │   └── by_id/
+    │       ├── <item-id>.json
+    │       └── ...
+    ├── activity/
+    │   ├── weeks/
+    │   │   ├── all/
+    │   │   │   ├── index.json
+    │   │   │   └── by_key/
+    │   │   │       ├── 2024-01-01.json
+    │   │   │       └── ...
+    │   │   ├── books/
+    │   │   │   ├── index.json
+    │   │   │   └── by_key/
+    │   │   │       ├── 2024-01-01.json
+    │   │   │       └── ...
+    │   │   └── comics/
+    │   │       ├── index.json
+    │   │       └── by_key/
+    │   │           ├── 2024-01-01.json
+    │   │           └── ...
+    │   ├── years/
+    │   │   ├── all/
+    │   │   │   ├── daily/
+    │   │   │   │   ├── 2024.json
+    │   │   │   │   └── ...
+    │   │   │   └── summary/
+    │   │   │       ├── 2024.json
+    │   │   │       └── ...
+    │   │   ├── books/
+    │   │   │   ├── daily/
+    │   │   │   │   ├── 2024.json
+    │   │   │   │   └── ...
+    │   │   │   └── summary/
+    │   │   │       ├── 2024.json
+    │   │   │       └── ...
+    │   │   └── comics/
+    │   │       ├── daily/
+    │   │       │   ├── 2024.json
+    │   │       │   └── ...
+    │   │       └── summary/
+    │   │           ├── 2024.json
+    │   │           └── ...
+    │   └── months/
+    │       ├── all/
+    │       │   ├── index.json
+    │       │   └── by_key/
+    │       │       ├── 2024-01.json
+    │       │       └── ...
+    │       ├── books/
+    │       │   ├── index.json
+    │       │   └── by_key/
+    │       │       ├── 2024-01.json
+    │       │       └── ...
+    │       └── comics/
+    │           ├── index.json
+    │           └── by_key/
+    │               ├── 2024-01.json
+    │               └── ...
+    └── completions/
+        └── years/
+            ├── all/
+            │   ├── index.json
+            │   └── by_key/
+            │       ├── 2024.json
+            │       └── ...
+            ├── books/
+            │   ├── index.json
+            │   └── by_key/
+            │       ├── 2024.json
+            │       └── ...
+            └── comics/
+                ├── index.json
+                └── by_key/
+                    ├── 2024.json
+                    └── ...
 ```
 
 ## Credits
@@ -515,8 +573,7 @@ Design and feature inspiration taken from [KoInsight](https://github.com/GeorgeS
 
 The calendar feature is powered by [EventCalendar](https://github.com/vkurko/calendar) - a lightweight, full-featured JavaScript event calendar library.
 
-Styled with [Tailwind CSS](https://tailwindcss.com/) for modern, responsive design.
 
 ## Disclaimer
 
-This is a weekend project and was built for personal use - it relies heavily on AI-generated code. While I've tested everything and use it daily, I take no responsibility for any issues you might encounter. Use at your own risk.
+This was built for personal use and relies heavily on AI-generated code. While I've tested everything and use it daily, I take no responsibility for any issues you might encounter. Use at your own risk.

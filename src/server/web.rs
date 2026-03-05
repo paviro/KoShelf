@@ -1,47 +1,95 @@
-use super::version::SharedVersionNotifier;
+use super::ServerState;
+use super::api;
+use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
 use anyhow::Result;
-use axum::{Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{
+    Router,
+    extract::Path,
+    http::{StatusCode, header::CONTENT_TYPE},
+    response::{IntoResponse, Response},
+    routing::get,
+};
+use include_dir::{Dir, include_dir};
 use log::info;
 use std::path::PathBuf;
-use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
-use tower_http::set_status::SetStatus;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
+
+static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 
 pub struct WebServer {
-    site_dir: PathBuf,
+    media_cache_dir: PathBuf,
     port: u16,
-    version_notifier: SharedVersionNotifier,
+    snapshot_store: SharedSnapshotStore,
+    update_notifier: SnapshotUpdateNotifier,
 }
 
 impl WebServer {
-    pub fn new(site_dir: PathBuf, port: u16, version_notifier: SharedVersionNotifier) -> Self {
+    pub fn new(
+        media_cache_dir: PathBuf,
+        port: u16,
+        snapshot_store: SharedSnapshotStore,
+        update_notifier: SnapshotUpdateNotifier,
+    ) -> Self {
         Self {
-            site_dir,
+            media_cache_dir,
             port,
-            version_notifier,
+            snapshot_store,
+            update_notifier,
         }
     }
 
     pub async fn run(self) -> Result<()> {
-        // Serve the generated static 404 page.
-        let not_found_service = SetStatus::new(
-            ServeFile::new(self.site_dir.join("404.html")),
-            StatusCode::NOT_FOUND,
-        );
+        let state = ServerState {
+            snapshot_store: self.snapshot_store.clone(),
+            update_notifier: self.update_notifier.clone(),
+        };
+        let covers_cache_dir = self.media_cache_dir.join("covers");
+        let recap_cache_dir = self.media_cache_dir.join("recap");
 
-        let app = Router::new()
-            // Long-poll endpoint for version changes
-            .route("/api/events/version", get(version_poll_handler))
-            .with_state(self.version_notifier.clone())
-            .fallback_service(ServeDir::new(&self.site_dir).not_found_service(not_found_service))
-            .layer(
-                ServiceBuilder::new()
-                    .layer(CompressionLayer::new())
-                    .layer(CorsLayer::permissive()),
-            );
+        let mut app = Router::new()
+            // API endpoints
+            .route("/api/site", get(api::site))
+            .route("/api/locales", get(api::locales))
+            .route("/api/items", get(api::items))
+            .route("/api/items/{id}", get(api::item_detail))
+            .route("/api/activity/weeks", get(api::activity_weeks))
+            .route("/api/activity/weeks/{week_key}", get(api::activity_week))
+            .route(
+                "/api/activity/years/{year}/daily",
+                get(api::activity_year_daily),
+            )
+            .route(
+                "/api/activity/years/{year}/summary",
+                get(api::activity_year_summary),
+            )
+            .route("/api/activity/months", get(api::activity_months))
+            .route("/api/activity/months/{month_key}", get(api::activity_month))
+            .route("/api/completions/years", get(api::completion_years))
+            .route(
+                "/api/completions/years/{year}",
+                get(api::completion_year),
+            )
+            .route("/api/events/stream", get(api::events_stream))
+            // Embedded React shell mounted at /.
+            .route("/", get(react_shell_index_handler))
+            .route("/index.html", get(react_shell_index_handler))
+            .route("/manifest.json", get(react_shell_manifest_handler))
+            .route("/assets/icons/{*path}", get(react_shell_icon_handler))
+            .route("/assets/js/{*path}", get(react_shell_js_handler))
+            .route("/assets/css/{*path}", get(react_shell_css_handler))
+            .with_state(state)
+            // Runtime-generated media cache directories are mounted under public /assets URLs.
+            .nest_service("/assets/covers", ServeDir::new(covers_cache_dir))
+            .nest_service("/assets/recap", ServeDir::new(recap_cache_dir));
+
+        app = app.layer(
+            ServiceBuilder::new()
+                .layer(CompressionLayer::new())
+                .layer(CorsLayer::permissive()),
+        );
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 
@@ -56,27 +104,62 @@ impl WebServer {
     }
 }
 
-/// Long-poll handler that waits for version changes.
-/// Returns the new version when available, or times out after 60 seconds.
-async fn version_poll_handler(State(notifier): State<SharedVersionNotifier>) -> impl IntoResponse {
-    let mut receiver = notifier.subscribe();
+async fn react_shell_index_handler() -> Response {
+    serve_embedded_frontend_file("index.html")
+}
 
-    // Wait up to 60 seconds for a version change
-    match tokio::time::timeout(Duration::from_secs(60), receiver.recv()).await {
-        Ok(Ok(version)) => {
-            // New version available
-            (StatusCode::OK, version)
-        }
-        Ok(Err(_)) => {
-            // Channel closed (shouldn't happen in normal operation)
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Channel closed".to_string(),
-            )
-        }
-        Err(_) => {
-            // Timeout - client should reconnect
-            (StatusCode::NO_CONTENT, String::new())
-        }
+async fn react_shell_manifest_handler() -> Response {
+    serve_embedded_frontend_file("manifest.json")
+}
+
+async fn react_shell_icon_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/icons/{}", path);
+    serve_embedded_frontend_file(&full_path)
+}
+
+async fn react_shell_js_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/js/{}", path);
+    serve_embedded_frontend_file(&full_path)
+}
+
+async fn react_shell_css_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("assets/css/{}", path);
+    serve_embedded_frontend_file(&full_path)
+}
+
+fn serve_embedded_frontend_file(path: &str) -> Response {
+    let Some(file) = FRONTEND_DIST.get_file(path) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    (
+        StatusCode::OK,
+        [(CONTENT_TYPE, guess_content_type(path))],
+        file.contents(),
+    )
+        .into_response()
+}
+
+fn guess_content_type(path: &str) -> &'static str {
+    if path.ends_with(".html") {
+        "text/html; charset=utf-8"
+    } else if path.ends_with(".js") {
+        "application/javascript; charset=utf-8"
+    } else if path.ends_with(".css") {
+        "text/css; charset=utf-8"
+    } else if path.ends_with(".json") {
+        "application/json; charset=utf-8"
+    } else if path.ends_with(".svg") {
+        "image/svg+xml"
+    } else if path.ends_with(".png") {
+        "image/png"
+    } else if path.ends_with(".webp") {
+        "image/webp"
+    } else if path.ends_with(".ico") {
+        "image/x-icon"
+    } else if path.ends_with(".map") {
+        "application/json; charset=utf-8"
+    } else {
+        "application/octet-stream"
     }
 }
