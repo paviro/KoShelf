@@ -93,22 +93,6 @@ impl ContractSnapshot {
     pub fn write_to_data_dir(&self, data_dir: &Path) -> Result<()> {
         fs::create_dir_all(data_dir)?;
 
-        // Ensure data dir contains only current contract outputs.
-        for legacy_file in ["books.json", "comics.json", "locales.json"] {
-            if let Err(error) = fs::remove_file(data_dir.join(legacy_file))
-                && error.kind() != std::io::ErrorKind::NotFound
-            {
-                return Err(error.into());
-            }
-        }
-        for legacy_dir in ["books", "comics", "statistics", "calendar", "recap"] {
-            if let Err(error) = fs::remove_dir_all(data_dir.join(legacy_dir))
-                && error.kind() != std::io::ErrorKind::NotFound
-            {
-                return Err(error.into());
-            }
-        }
-
         Self::write_optional_json(&data_dir.join("site.json"), self.site.as_ref())?;
 
         let items_dir = data_dir.join("items");
