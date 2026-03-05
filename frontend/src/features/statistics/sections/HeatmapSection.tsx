@@ -248,7 +248,10 @@ export function HeatmapSection({
         <div className="relative bg-white dark:bg-dark-850/50 rounded-lg p-3 sm:p-4 md:p-5 border border-gray-200/30 dark:border-dark-700/70">
             {loading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                    <LoadingSpinner size="md" srLabel="Loading reading heatmap" />
+                    <LoadingSpinner
+                        size="md"
+                        srLabel="Loading reading heatmap"
+                    />
                 </div>
             )}
 

@@ -32,6 +32,7 @@ import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
 
 const FALLBACK_LOCALE = 'en-US';
@@ -282,11 +283,10 @@ export function CalendarRoute() {
                     )}
 
                     {currentMonthQuery.isError && currentMonthEnabled && (
-                        <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                            <p className="text-sm text-red-600 dark:text-red-400">
-                                Failed to load calendar data.
-                            </p>
-                        </section>
+                        <PageErrorState
+                            error={currentMonthQuery.error}
+                            onRetry={() => currentMonthQuery.refetch()}
+                        />
                     )}
 
                     {!currentMonthQuery.isError && !initialLoading && (

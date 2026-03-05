@@ -201,6 +201,14 @@ stats-empty =
     .start-reading = Empieza a leer con KoReader para ver tus estadísticas aquí.
     .info-question = ¿Cómo funciona el seguimiento de lectura?
     .info-answer = KoReader rastrea automáticamente tus sesiones de lectura, incluido el tiempo empleado y las páginas leídas. Sincroniza tu base de datos de estadísticas con KoShelf para ver tu actividad visualizada aquí.
+error-state =
+    .title = Algo salió mal
+    .description = No se pudieron cargar los datos. Por favor, inténtalo de nuevo.
+    .not-found-title = No encontrado
+    .not-found-description = La página que buscas no existe o ha sido eliminada.
+    .connection-title = Conexión fallida
+    .connection-description = No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.
+    .retry = Reintentar
 
 # Navigation and sorting
 sort-order =

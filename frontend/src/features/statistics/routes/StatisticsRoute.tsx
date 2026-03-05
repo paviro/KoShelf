@@ -29,6 +29,7 @@ import {
 } from '../model/statistics-model';
 import { api } from '../../../shared/api';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import type { SiteResponse } from '../../../shared/contracts';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
@@ -265,20 +266,19 @@ export function StatisticsRoute() {
             <PageContent className="space-y-6 md:space-y-8">
                 {!statsIndexQuery.isError &&
                     statsIndexTransition.showBlockingSpinner && (
-                    <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                        <LoadingSpinner
-                            size="lg"
-                            srLabel="Loading statistics"
-                        />
-                    </section>
-                )}
+                        <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                            <LoadingSpinner
+                                size="lg"
+                                srLabel="Loading statistics"
+                            />
+                        </section>
+                    )}
 
                 {statsIndexQuery.isError && (
-                    <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                        <p className="text-sm text-red-600 dark:text-red-400">
-                            Failed to load statistics data.
-                        </p>
-                    </section>
+                    <PageErrorState
+                        error={statsIndexQuery.error}
+                        onRetry={() => statsIndexQuery.refetch()}
+                    />
                 )}
 
                 {statsIndex && (

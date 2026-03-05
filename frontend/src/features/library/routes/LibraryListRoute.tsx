@@ -14,6 +14,7 @@ import {
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
 import { LibraryHeader } from '../components/LibraryHeader';
@@ -367,18 +368,20 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                 )}
 
                 {listQuery.isError && (
-                    <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                        <p className="text-sm text-red-600 dark:text-red-400">
-                            Failed to load library data.
-                        </p>
-                    </section>
+                    <PageErrorState
+                        error={listQuery.error}
+                        onRetry={() => listQuery.refetch()}
+                    />
                 )}
 
                 {!listQuery.isError && listTransition.hasDisplayData && (
                     <div className="relative space-y-6 md:space-y-8">
                         {listTransition.showOverlaySpinner && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner size="md" srLabel="Loading library" />
+                                <LoadingSpinner
+                                    size="md"
+                                    srLabel="Loading library"
+                                />
                             </div>
                         )}
 

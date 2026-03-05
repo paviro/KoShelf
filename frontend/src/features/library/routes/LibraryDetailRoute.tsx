@@ -14,6 +14,7 @@ import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-r
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
@@ -130,27 +131,28 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {!detailQuery.isError && detailTransition.showBlockingSpinner && (
-                    <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
-                        <LoadingSpinner
-                            size="lg"
-                            srLabel="Loading item details"
-                        />
-                    </section>
-                )}
+                {!detailQuery.isError &&
+                    detailTransition.showBlockingSpinner && (
+                        <section className="min-h-[calc(100vh-14rem)] flex items-center justify-center">
+                            <LoadingSpinner
+                                size="lg"
+                                srLabel="Loading item details"
+                            />
+                        </section>
+                    )}
 
                 {detailQuery.isError && (
-                    <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                        <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-                            Failed to load item details.
-                        </p>
+                    <PageErrorState
+                        error={detailQuery.error}
+                        onRetry={() => detailQuery.refetch()}
+                    >
                         <Link
                             to={backHref}
-                            className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                            className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                         >
                             {collectionTitle(collection)}
                         </Link>
-                    </section>
+                    </PageErrorState>
                 )}
 
                 {!detailQuery.isError && item && (

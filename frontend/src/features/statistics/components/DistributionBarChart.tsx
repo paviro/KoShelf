@@ -29,7 +29,9 @@ export function DistributionBarChart({
     return (
         <div
             className={`${heightClassName} grid gap-2 sm:gap-3 items-end`}
-            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+            style={{
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            }}
         >
             {items.map((item, index) => {
                 let heightPercent = 2;
@@ -41,7 +43,10 @@ export function DistributionBarChart({
                 }
 
                 return (
-                    <div key={index} className="h-full flex flex-col justify-end">
+                    <div
+                        key={index}
+                        className="h-full flex flex-col justify-end"
+                    >
                         <div className="relative h-full flex items-end">
                             <div
                                 className={`w-full cursor-pointer rounded-t-sm bg-gradient-to-t opacity-35 transition-[height,opacity] duration-500 ease-out overflow-hidden ${barClassName}`}

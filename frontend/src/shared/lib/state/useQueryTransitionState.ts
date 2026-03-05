@@ -34,7 +34,7 @@ export function useQueryTransitionState<TData>({
 
     const hasFreshData = enabled && data !== undefined && !isPlaceholderData;
     const displayData =
-        !enabled && clearOnDisabled ? null : (data === undefined ? null : data);
+        !enabled && clearOnDisabled ? null : data === undefined ? null : data;
 
     const hasDisplayData = displayData !== null;
     const isTransitioning =

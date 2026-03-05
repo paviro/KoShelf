@@ -7,6 +7,7 @@ import { translation } from '../../../shared/i18n';
 import { useRecapCoverTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 import { RecapHeaderControls } from '../components/RecapHeaderControls';
@@ -193,18 +194,20 @@ export function RecapRoute() {
                     )}
 
                 {recapIndexQuery.isError && (
-                    <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                        <p className="text-sm text-red-600 dark:text-red-400">
-                            Failed to load recap data.
-                        </p>
-                    </section>
+                    <PageErrorState
+                        error={recapIndexQuery.error}
+                        onRetry={() => recapIndexQuery.refetch()}
+                    />
                 )}
 
                 {!recapIndexQuery.isError && recapIndex && (
                     <div className="relative space-y-6 md:space-y-8">
                         {recapIndexTransition.showOverlaySpinner && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner size="md" srLabel="Loading recap" />
+                                <LoadingSpinner
+                                    size="md"
+                                    srLabel="Loading recap"
+                                />
                             </div>
                         )}
 
@@ -223,11 +226,10 @@ export function RecapRoute() {
                             )}
 
                         {yearForQuery !== null && recapYearQuery.isError && (
-                            <section className="bg-white dark:bg-dark-850/50 rounded-lg p-6 border border-gray-200/30 dark:border-dark-700/70">
-                                <p className="text-sm text-red-600 dark:text-red-400">
-                                    Failed to load recap year data.
-                                </p>
-                            </section>
+                            <PageErrorState
+                                error={recapYearQuery.error}
+                                onRetry={() => recapYearQuery.refetch()}
+                            />
                         )}
 
                         {showYearEmptyState && (
