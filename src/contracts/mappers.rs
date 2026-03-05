@@ -459,6 +459,9 @@ fn map_recap_item(item: &crate::models::RecapItem) -> RecapItemResponse {
         reading_time: item.reading_time,
         session_count: item.session_count,
         pages_read: item.pages_read,
+        calendar_length_days: item.calendar_length_days,
+        average_speed: item.average_speed,
+        avg_session_duration: item.avg_session_duration,
         rating: item.rating,
         review_note: item.review_note.clone(),
         series: item.series_display.clone(),
@@ -492,7 +495,6 @@ fn map_recap_summary(summary: &crate::models::YearlySummary) -> RecapSummaryResp
         active_days_percentage: summary.active_days_percentage,
         longest_streak: summary.longest_streak,
         best_month_name: summary.best_month_name.clone(),
-        best_month_time_display: summary.best_month_time_display.clone(),
     }
 }
 

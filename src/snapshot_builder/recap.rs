@@ -202,22 +202,15 @@ fn group_completions_by_year_month(
                     reading_time: c.reading_time,
                     session_count: c.session_count,
                     pages_read: c.pages_read,
+                    calendar_length_days: c.calendar_length_days(),
                     rating,
                     review_note,
                     series_display,
                     item_id,
                     item_cover,
                     content_type,
-                    star_display: {
-                        let mut stars = [false; 5];
-                        if let Some(r) = rating {
-                            let n = std::cmp::min(r as usize, 5);
-                            for star in stars.iter_mut().take(n) {
-                                *star = true;
-                            }
-                        }
-                        stars
-                    },
+                    average_speed: c.average_speed(),
+                    avg_session_duration: c.avg_session_duration(),
                 };
 
                 year_month_items
@@ -343,7 +336,6 @@ fn compute_yearly_summary(
 
     let best_month_name = if let Some((ym, secs)) = best_month {
         if secs > 0 {
-            
             chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
                 .ok()
                 .map(|d| d.format("%B").to_string())
@@ -380,7 +372,6 @@ fn compute_yearly_summary(
         active_days_percentage,
         longest_streak,
         best_month_name,
-        best_month_time_display: None,
     }
 }
 

@@ -13,6 +13,8 @@ pub struct RecapItem {
     pub session_count: i64,
     pub pages_read: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub calendar_length_days: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rating: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub review_note: Option<String>,
@@ -24,7 +26,10 @@ pub struct RecapItem {
     pub item_cover: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<ContentType>,
-    pub star_display: [bool; 5],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub average_speed: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_session_duration: Option<i64>,
 }
 
 /// Recap view month summary and entries
@@ -52,5 +57,4 @@ pub struct YearlySummary {
     pub active_days_percentage: f64,
     pub longest_streak: i64,
     pub best_month_name: Option<String>,
-    pub best_month_time_display: Option<String>,
 }

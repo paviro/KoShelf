@@ -326,6 +326,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::field_reassign_with_default)]
     fn snapshot_roundtrip_persists_model_centric_layout() {
         let mut snapshot = ContractSnapshot::default();
 
@@ -514,7 +515,6 @@ mod tests {
                         active_days_percentage: 1.0,
                         longest_streak: 1,
                         best_month_name: Some("March".to_string()),
-                        best_month_time_display: Some("10m".to_string()),
                     },
                     months: vec![RecapMonthResponse {
                         month_key: "2026-03".to_string(),

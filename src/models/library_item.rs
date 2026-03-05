@@ -172,17 +172,6 @@ impl LibraryItem {
             .and_then(|s| s.rating)
     }
 
-    pub fn star_display(&self) -> [bool; 5] {
-        let rating = self.rating().unwrap_or(0);
-        [
-            rating >= 1,
-            rating >= 2,
-            rating >= 3,
-            rating >= 4,
-            rating >= 5,
-        ]
-    }
-
     pub fn review_note(&self) -> Option<&String> {
         self.koreader_metadata
             .as_ref()
@@ -194,12 +183,6 @@ impl LibraryItem {
         self.koreader_metadata
             .as_ref()
             .and_then(|m| m.percent_finished)
-    }
-
-    pub fn progress_percentage_display(&self) -> u32 {
-        self.progress_percentage()
-            .map(|p| (p * 100.0).round() as u32)
-            .unwrap_or(0)
     }
 
     pub fn annotations(&self) -> &[super::koreader_metadata::Annotation] {
@@ -301,15 +284,6 @@ impl LibraryItem {
     /// Get subjects/genres from EPUB metadata
     pub fn subjects(&self) -> &Vec<String> {
         &self.book_info.subjects
-    }
-
-    /// Get a formatted display string for subjects/genres
-    pub fn subjects_display(&self) -> Option<String> {
-        if self.book_info.subjects.is_empty() {
-            None
-        } else {
-            Some(self.book_info.subjects.join(", "))
-        }
     }
 
     /// Get normalized Hardcover-related identifiers (slug and editions).

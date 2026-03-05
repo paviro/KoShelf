@@ -21,7 +21,6 @@ export interface RecapSummaryResponse {
     active_days_percentage: number;
     longest_streak: number;
     best_month_name?: string | null;
-    best_month_time_display?: string | null;
 }
 
 export interface RecapItemResponse {
@@ -33,6 +32,9 @@ export interface RecapItemResponse {
     reading_time: number;
     session_count: number;
     pages_read: number;
+    calendar_length_days?: number | null;
+    average_speed?: number | null;
+    avg_session_duration?: number | null;
     rating?: number | null;
     review_note?: string | null;
     series?: string | null;
