@@ -70,7 +70,9 @@ pub struct Cli {
     #[arg(long, default_value = "false", display_order = 15)]
     pub include_all_stats: bool,
 
-    /// Language for UI translations. Use full locale (e.g., en_US, de_DE) for correct date formatting. Use --list-languages to see available options
+    /// Default server language for UI translations.
+    /// Frontend language/region settings can override this per browser.
+    /// Use full locale (e.g., en_US, de_DE) for correct date formatting. Use --list-languages to see available options.
     #[arg(long, short = 'l', default_value = "en_US", display_order = 16)]
     pub language: String,
 

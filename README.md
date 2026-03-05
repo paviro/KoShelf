@@ -223,7 +223,7 @@ KoShelf can operate in several modes:
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
-- `-l, --language`: Language for UI translations. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
+- `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
 
@@ -457,6 +457,8 @@ KoShelf uses a model-centric API. Endpoints map to core resources (`items`, `act
 - `GET /api/completions/years`
 - `GET /api/completions/years/{year}`
 - `GET /api/events/stream`
+
+`GET /api/site` includes the server's default `language`. The frontend uses this as the initial locale, but users can override language/region in Settings and that preference is stored per browser.
 
 In static output mode, these resources are mirrored under `data/**`, and the frontend API client composes or reshapes them for view-specific needs.
 
