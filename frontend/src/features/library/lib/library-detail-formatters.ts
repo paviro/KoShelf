@@ -250,7 +250,9 @@ export function sanitizeRichTextHtml(rawHtml: string): string {
 
             if (
                 (attributeName === 'href' || attributeName === 'src') &&
-                attributeValue.startsWith('javascript:')
+                (attributeValue.startsWith('javascript:') ||
+                    attributeValue.startsWith('data:') ||
+                    attributeValue.startsWith('vbscript:'))
             ) {
                 element.removeAttribute(attribute.name);
             }
