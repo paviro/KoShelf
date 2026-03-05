@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
 import {
-    LuBookOpen,
     LuCalendarDays,
     LuClock3,
     LuFileText,
@@ -84,7 +84,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
         </div>
     ) : (
         <div className={fallbackCoverClass}>
-            <LuBookOpen className="w-12 h-12" aria-hidden />
+            <HiOutlineBookOpen className="w-12 h-12" aria-hidden />
         </div>
     );
     const coverNode = detailPath ? (
@@ -254,7 +254,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
 
                             <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
                                 <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 flex-shrink-0">
-                                    <LuBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
+                                    <HiOutlineBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
                                 </div>
                                 <div>
                                     <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">

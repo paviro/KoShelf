@@ -1,10 +1,5 @@
-import {
-    LuBookOpen,
-    LuClock3,
-    LuFlame,
-    LuSparkles,
-    LuZap,
-} from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuClock3, LuFlame, LuSparkles, LuZap } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -153,7 +148,7 @@ export function RecapSummarySection({
                         <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-400/20 dark:bg-blue-400/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="flex items-center gap-3 relative z-10">
                             <div className="w-10 h-10 rounded-xl bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                                <LuBookOpen
+                                <HiOutlineBookOpen
                                     className="w-5 h-5 text-blue-600 dark:text-white"
                                     aria-hidden
                                 />

@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import {
-    LuBookOpen,
-    LuClock3,
-    LuEye,
-    LuFileText,
-    LuUser,
-    LuX,
-} from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
@@ -100,7 +94,7 @@ export function CalendarEventModal({
                             />
                         ) : (
                             <div className="w-20 aspect-square rounded-lg shadow-lg bg-gradient-to-br from-primary-500/20 to-primary-600/20 border border-primary-500/30 flex items-center justify-center">
-                                <LuBookOpen
+                                <HiOutlineBookOpen
                                     className="w-8 h-8 text-primary-400/70"
                                     aria-hidden="true"
                                 />

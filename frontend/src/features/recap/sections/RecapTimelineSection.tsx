@@ -1,4 +1,5 @@
-import { LuBookOpen, LuClock3 } from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuClock3 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
@@ -44,7 +45,7 @@ export function RecapTimelineSection({
 
                             <div className="flex items-center gap-2">
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-400/5 dark:from-blue-500/20 dark:to-blue-400/10 border border-blue-200/50 dark:border-blue-700/30 text-blue-700 dark:text-blue-300 text-sm">
-                                    <LuBookOpen
+                                    <HiOutlineBookOpen
                                         className="w-4 h-4"
                                         aria-hidden
                                     />

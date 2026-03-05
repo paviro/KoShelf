@@ -1,9 +1,5 @@
-import {
-    LuBookOpen,
-    LuCalendarDays,
-    LuClock3,
-    LuFileText,
-} from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuCalendarDays, LuClock3, LuFileText } from 'react-icons/lu';
 
 import type { ScopeValue } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
@@ -29,7 +25,7 @@ export function CalendarMonthlyStatsSection({
     return (
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
             <MetricCard
-                icon={LuBookOpen}
+                icon={HiOutlineBookOpen}
                 iconContainerClassName="bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600"
                 iconClassName="text-blue-600 dark:text-white"
                 value={stats.items_read}

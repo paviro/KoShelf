@@ -1,10 +1,12 @@
 import type { IconType } from 'react-icons';
 import {
-    LuBookMarked,
-    LuBookOpen,
+    HiOutlineBookOpen,
+    HiOutlineChatBubbleBottomCenterText,
+} from 'react-icons/hi2';
+import {
     LuCalendarDays,
-    LuChartNoAxesColumn,
     LuClock3,
+    LuMicroscope,
     LuSettings,
 } from 'react-icons/lu';
 
@@ -25,9 +27,9 @@ export type NavItem = {
 };
 
 const ICONS = {
-    books: LuBookOpen,
-    comics: LuBookMarked,
-    statistics: LuChartNoAxesColumn,
+    books: HiOutlineBookOpen,
+    comics: HiOutlineChatBubbleBottomCenterText,
+    statistics: LuMicroscope,
     calendar: LuCalendarDays,
     recap: LuClock3,
     settings: LuSettings,

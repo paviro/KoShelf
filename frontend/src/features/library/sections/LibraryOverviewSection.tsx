@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BsHighlighter } from 'react-icons/bs';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
 import {
     LuArrowUpRight,
-    LuBookOpen,
     LuCheck,
     LuFileText,
     LuLanguages,
@@ -115,7 +115,7 @@ export function LibraryOverviewSection({
                             <div className="@container bg-primary-50 dark:bg-dark-850/50 border border-primary-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
                                 <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
                                     <div className="w-10 h-10 bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <LuBookOpen
+                                        <HiOutlineBookOpen
                                             className="w-5 h-5 text-primary-600 dark:text-white"
                                             aria-hidden="true"
                                         />
@@ -279,7 +279,7 @@ export function LibraryOverviewSection({
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                                 <div className="w-8 h-8 bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600 rounded-lg flex items-center justify-center mr-3">
-                                    <LuBookOpen
+                                    <HiOutlineBookOpen
                                         className="w-4 h-4 text-pink-600 dark:text-white"
                                         aria-hidden="true"
                                     />

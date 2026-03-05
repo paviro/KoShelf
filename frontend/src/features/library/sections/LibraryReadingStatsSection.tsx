@@ -1,10 +1,5 @@
-import {
-    LuBookOpen,
-    LuCalendarDays,
-    LuClock3,
-    LuInfo,
-    LuZap,
-} from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuCalendarDays, LuClock3, LuInfo, LuZap } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -61,7 +56,7 @@ export function LibraryReadingStatsSection({
                 />
 
                 <MetricCard
-                    icon={LuBookOpen}
+                    icon={HiOutlineBookOpen}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     value={formatNumber(sessionStats.session_count)}
@@ -166,7 +161,7 @@ export function LibraryReadingStatsSection({
                                                 </span>
 
                                                 <span className="flex items-center whitespace-nowrap">
-                                                    <LuBookOpen
+                                                    <HiOutlineBookOpen
                                                         className="w-3.5 h-3.5 mr-1"
                                                         aria-hidden="true"
                                                     />

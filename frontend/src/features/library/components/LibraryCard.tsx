@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaHighlighter, FaPause, FaStar } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
-import { LuBookOpen } from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
 
 import {
     buildRoutePath,
@@ -123,7 +123,10 @@ export function LibraryCard({
                                 : 'opacity-100'
                         }`}
                     >
-                        <LuBookOpen className="w-10 h-10" aria-hidden="true" />
+                        <HiOutlineBookOpen
+                            className="w-10 h-10"
+                            aria-hidden="true"
+                        />
                     </div>
 
                     {(sectionKey === 'reading' ||

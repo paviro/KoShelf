@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { LuBookOpen, LuCalendarDays, LuClock3 } from 'react-icons/lu';
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+import { LuCalendarDays, LuClock3 } from 'react-icons/lu';
 
 import {
     scrollToHorizontalOverflowRatio,
@@ -139,7 +140,7 @@ export function YearlyStatsSection({
 
                 <MetricCard
                     variant="compact"
-                    icon={LuBookOpen}
+                    icon={HiOutlineBookOpen}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     valueId="yearlyStatsCompletedCount"
