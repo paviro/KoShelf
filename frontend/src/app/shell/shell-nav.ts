@@ -5,7 +5,7 @@ import {
 } from 'react-icons/hi2';
 import {
     LuCalendarDays,
-    LuClock3,
+    LuHistory,
     LuMicroscope,
     LuSettings,
 } from 'react-icons/lu';
@@ -31,7 +31,7 @@ const ICONS = {
     comics: HiOutlineChatBubbleBottomCenterText,
     statistics: LuMicroscope,
     calendar: LuCalendarDays,
-    recap: LuClock3,
+    recap: LuHistory,
     settings: LuSettings,
 } as const;
 
