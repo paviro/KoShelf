@@ -65,6 +65,10 @@ function initTilt(options: TiltOptions): Cleanup {
         return () => {};
     }
 
+    if (!window.matchMedia('(hover: hover)').matches) {
+        return () => {};
+    }
+
     const opts = { ...DEFAULT_OPTIONS, ...options };
     const elements = Array.from(
         document.querySelectorAll<HTMLElement>(opts.selector),

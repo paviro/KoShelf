@@ -65,7 +65,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
     const coverFrameClass =
         'w-full flex items-center justify-center recap-cover-max';
     const coverImageClass =
-        'block max-w-full max-h-full object-contain rounded-md';
+        'block max-w-full max-h-full object-contain rounded-md recap-cover-tilt';
     const fallbackFrameClass =
         'w-full flex items-center justify-center rounded-md overflow-hidden border border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-900/70 recap-cover-max';
     const hasCoverImage = Boolean(coverUrl && !coverFailed);
@@ -91,7 +91,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
         <Link
             to={detailPath}
             state={detailReturnState}
-            className="block w-full recap-cover-tilt"
+            className="block w-full"
         >
             {coverVisual}
         </Link>
