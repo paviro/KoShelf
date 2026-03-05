@@ -11,7 +11,6 @@ use std::path::Path;
 
 use crate::contracts::calendar::{ActivityMonthResponse, ActivityMonthsResponse};
 use crate::contracts::library::{LibraryDetailResponse, LibraryListResponse};
-use crate::contracts::locales::LocalesResponse;
 use crate::contracts::recap::{CompletionYearResponse, CompletionYearsResponse};
 use crate::contracts::site::SiteResponse;
 use crate::contracts::statistics::{
@@ -24,7 +23,6 @@ const FILTER_KEYS: [&str; 3] = ["all", "books", "comics"];
 #[derive(Debug, Clone, Default)]
 pub struct ContractSnapshot {
     pub site: Option<SiteResponse>,
-    pub locales: Option<LocalesResponse>,
     pub items: Option<LibraryListResponse>,
     pub item_details: HashMap<String, LibraryDetailResponse>,
     pub activity_weeks: HashMap<String, ActivityWeeksResponse>,
@@ -44,7 +42,6 @@ impl ContractSnapshot {
 
         Ok(Self {
             site: Self::read_optional_json(&data_dir.join("site.json"))?,
-            locales: Self::read_optional_json(&data_dir.join("locales.json"))?,
             items: Self::read_optional_json(&data_dir.join("items").join("index.json"))?,
             item_details: Self::read_json_map_from_dir(&data_dir.join("items").join("by_id"))?,
             activity_weeks: Self::read_filtered_index_json(&activity_dir.join("weeks"))?,
@@ -75,7 +72,6 @@ impl ContractSnapshot {
 
     pub fn is_empty(&self) -> bool {
         self.site.is_none()
-            && self.locales.is_none()
             && self.items.is_none()
             && self.item_details.is_empty()
             && self.activity_weeks.is_empty()
@@ -98,7 +94,7 @@ impl ContractSnapshot {
         fs::create_dir_all(data_dir)?;
 
         // Ensure data dir contains only current contract outputs.
-        for legacy_file in ["books.json", "comics.json"] {
+        for legacy_file in ["books.json", "comics.json", "locales.json"] {
             if let Err(error) = fs::remove_file(data_dir.join(legacy_file))
                 && error.kind() != std::io::ErrorKind::NotFound
             {
@@ -114,7 +110,6 @@ impl ContractSnapshot {
         }
 
         Self::write_optional_json(&data_dir.join("site.json"), self.site.as_ref())?;
-        Self::write_optional_json(&data_dir.join("locales.json"), self.locales.as_ref())?;
 
         let items_dir = data_dir.join("items");
         Self::write_optional_json(&items_dir.join("index.json"), self.items.as_ref())?;
@@ -145,10 +140,7 @@ impl ContractSnapshot {
         )?;
 
         let completions_dir = data_dir.join("completions");
-        Self::write_filtered_index_json(
-            &completions_dir.join("years"),
-            &self.completion_years,
-        )?;
+        Self::write_filtered_index_json(&completions_dir.join("years"), &self.completion_years)?;
         Self::write_filtered_json_maps(
             &completions_dir.join("years"),
             "by_key",
@@ -323,7 +315,9 @@ impl ContractSnapshot {
 #[cfg(test)]
 mod tests {
     use super::ContractSnapshot;
-    use crate::contracts::calendar::{ActivityMonthResponse, ActivityMonthsResponse, CalendarMonthlyStats};
+    use crate::contracts::calendar::{
+        ActivityMonthResponse, ActivityMonthsResponse, CalendarMonthlyStats,
+    };
     use crate::contracts::common::{ApiMeta, ContentTypeFilter};
     use crate::contracts::library::{
         LibraryContentType, LibraryListItem, LibraryListResponse, LibraryStatus,
@@ -354,6 +348,7 @@ mod tests {
         snapshot.site = Some(SiteResponse {
             meta: sample_meta(),
             title: "Test".to_string(),
+            language: "en_US".to_string(),
             capabilities: SiteCapabilities {
                 has_books: true,
                 has_comics: true,

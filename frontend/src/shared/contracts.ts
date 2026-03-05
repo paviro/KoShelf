@@ -13,6 +13,7 @@ export interface SiteCapabilities {
 export interface SiteResponse {
     meta: ApiMeta;
     title: string;
+    language: string;
     capabilities: SiteCapabilities;
 }
 

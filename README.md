@@ -446,7 +446,6 @@ KoShelf uses a model-centric API. Endpoints map to core resources (`items`, `act
 ### Model Resources
 
 - `GET /api/site`
-- `GET /api/locales`
 - `GET /api/items`
 - `GET /api/items/{id}`
 - `GET /api/activity/weeks`
@@ -487,7 +486,6 @@ site/
 │       └── icon-512.png
 └── data/                   # Contract payloads used by static mode (not available when using server mode)
     ├── site.json
-    ├── locales.json
     ├── items/
     │   ├── index.json
     │   └── by_id/

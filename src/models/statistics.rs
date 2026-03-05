@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::{Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::ContentType;
@@ -120,50 +119,6 @@ impl StreakInfo {
             days,
             start_date,
             end_date,
-        }
-    }
-
-    /// Format the date range for display
-    pub fn date_range_display(&self, translations: &crate::i18n::Translations) -> Option<String> {
-        match (&self.start_date, &self.end_date) {
-            (Some(start), Some(end)) => {
-                if start == end {
-                    Self::format_date_display(start, translations)
-                        .to_string()
-                        .into()
-                } else {
-                    Some(format!(
-                        "{} - {}",
-                        Self::format_date_display(start, translations),
-                        Self::format_date_display(end, translations)
-                    ))
-                }
-            }
-            (Some(start), None) => Some(format!(
-                "{} - now",
-                Self::format_date_display(start, translations)
-            )),
-            _ => None,
-        }
-    }
-
-    /// Format a date string for display (convert from YYYY-MM-DD to more readable format)
-    pub fn format_date_display(date_str: &str, translations: &crate::i18n::Translations) -> String {
-        if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-            let current_year = Utc::now().year();
-            let locale = translations.locale();
-
-            // Get appropriate format string from translations
-            let format_key = if date.year() == current_year {
-                "datetime.short-current-year"
-            } else {
-                "datetime.short-with-year"
-            };
-            let format_str = translations.get(format_key);
-
-            date.format_localized(&format_str, locale).to_string()
-        } else {
-            date_str.to_string()
         }
     }
 }

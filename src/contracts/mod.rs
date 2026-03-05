@@ -2,7 +2,6 @@ pub mod calendar;
 pub mod common;
 pub mod error;
 pub mod library;
-pub mod locales;
 pub mod mappers;
 pub mod recap;
 pub mod site;

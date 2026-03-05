@@ -132,6 +132,26 @@ export function formatCompletionDateRange(
     return `${formatOne(start)} – ${formatOne(end)}`;
 }
 
+export function formatIsoDate(value: string | null | undefined): string {
+    if (!value) {
+        return '--';
+    }
+
+    const parsed = parseIsoDate(value);
+    if (!parsed) {
+        return value;
+    }
+
+    const currentYear = new Date().getUTCFullYear();
+    const includeYear = parsed.getUTCFullYear() !== currentYear;
+    return safeDateFormat(parsed, {
+        month: 'short',
+        day: 'numeric',
+        ...(includeYear ? { year: 'numeric' as const } : {}),
+        timeZone: 'UTC',
+    });
+}
+
 export function formatAnnotationDatetime(
     value: string | null | undefined,
 ): string | null {

@@ -1,5 +1,5 @@
-//! Internationalization using fluent-bundle.
+//! Locale metadata helpers for CLI language listing.
 
 pub mod translations;
 
-pub use translations::{Translations, list_supported_languages};
+pub use translations::list_supported_languages;

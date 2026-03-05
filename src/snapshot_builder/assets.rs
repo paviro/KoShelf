@@ -150,12 +150,6 @@ impl SnapshotBuilder {
         let generated_at = self.get_last_updated();
         let meta = mappers::build_meta(version.clone(), generated_at.clone());
 
-        // New /data/locales.json contract payload.
-        let locales_response =
-            mappers::map_locales_response(meta.clone(), &self.translations.to_json_string())
-                .context("Failed to build /data/locales.json")?;
-        snapshot.locales = Some(locales_response);
-
         // New /data/site.json contract payload.
         let has_books = items.iter().any(|item| item.is_book());
         let has_comics = items.iter().any(|item| item.is_comic());
@@ -163,6 +157,7 @@ impl SnapshotBuilder {
         let site_response = mappers::map_site_response(
             meta,
             &self.site_title,
+            &self.language,
             SiteCapabilities {
                 has_books,
                 has_comics,

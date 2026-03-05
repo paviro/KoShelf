@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use super::calendar::{
@@ -11,7 +10,6 @@ use super::library::{
     LibraryDetailStatistics, LibraryIdentifier, LibraryListItem, LibraryListResponse,
     LibraryStatus,
 };
-use super::locales::LocalesResponse;
 use super::recap::{
     CompletionYearResponse, CompletionYearsResponse, RecapItemResponse, RecapMonthResponse,
     RecapShareAssets, RecapSummaryResponse,
@@ -34,32 +32,15 @@ pub fn build_meta(version: impl Into<String>, generated_at: impl Into<String>) -
 pub fn map_site_response(
     meta: ApiMeta,
     title: impl Into<String>,
+    language: impl Into<String>,
     capabilities: SiteCapabilities,
 ) -> SiteResponse {
     SiteResponse {
         meta,
         title: title.into(),
+        language: language.into(),
         capabilities,
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct LocalesPayload {
-    language: String,
-    resources: Vec<String>,
-}
-
-pub fn map_locales_response(
-    meta: ApiMeta,
-    locales_json: &str,
-) -> Result<LocalesResponse, serde_json::Error> {
-    let payload: LocalesPayload = serde_json::from_str(locales_json)?;
-
-    Ok(LocalesResponse {
-        meta,
-        language: payload.language,
-        resources: payload.resources,
-    })
 }
 
 pub fn map_library_content_type(content_type: ContentType) -> LibraryContentType {
@@ -267,8 +248,14 @@ pub fn map_activity_week_response(
     all_daily_activity: &[crate::models::DailyStats],
 ) -> ActivityWeekResponse {
     let week_key = week_key.into();
-    let resolved_stats = stats.cloned().unwrap_or_else(|| zero_weekly_stats(&week_key));
-    let daily_activity = week_daily_activity(&resolved_stats.start_date, &resolved_stats.end_date, all_daily_activity);
+    let resolved_stats = stats
+        .cloned()
+        .unwrap_or_else(|| zero_weekly_stats(&week_key));
+    let daily_activity = week_daily_activity(
+        &resolved_stats.start_date,
+        &resolved_stats.end_date,
+        all_daily_activity,
+    );
 
     ActivityWeekResponse {
         meta,
@@ -592,24 +579,4 @@ pub fn available_years_from_stats(
     let mut years: Vec<i32> = years.into_iter().collect();
     years.sort_by(|a, b| b.cmp(a));
     years
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{build_meta, map_locales_response};
-
-    #[test]
-    fn locales_mapper_wraps_payload() {
-        let raw = r#"{
-            "language": "en-US",
-            "resources": ["foo = bar"]
-        }"#;
-
-        let mapped = map_locales_response(build_meta("1.0.0", "2026-03-03T20:15:00+01:00"), raw)
-            .expect("locales JSON should deserialize");
-
-        assert_eq!(mapped.language, "en-US");
-        assert_eq!(mapped.resources.len(), 1);
-        assert_eq!(mapped.meta.version, "1.0.0");
-    }
 }

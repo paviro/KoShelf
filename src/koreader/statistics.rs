@@ -4,7 +4,6 @@ use std::collections::{HashMap, HashSet};
 
 use super::completion::{CompletionConfig, ReadCompletionDetector};
 use super::session;
-use crate::i18n::Translations;
 use crate::models::*;
 use crate::time_config::TimeConfig;
 
@@ -14,7 +13,6 @@ pub trait BookStatistics {
         &self,
         page_stats: &[PageStat],
         time_config: &TimeConfig,
-        translations: &Translations,
     ) -> BookSessionStats;
 }
 
@@ -24,7 +22,6 @@ impl BookStatistics for StatBook {
         &self,
         page_stats: &[PageStat],
         time_config: &TimeConfig,
-        translations: &Translations,
     ) -> BookSessionStats {
         let book_sessions: Vec<&PageStat> = page_stats
             .iter()
@@ -48,18 +45,7 @@ impl BookStatistics for StatBook {
             .max()
             .map(|timestamp| {
                 let date = time_config.date_for_timestamp(timestamp);
-                let current_year = time_config.today_date().year();
-                let locale = translations.locale();
-
-                // Get appropriate format string from translations
-                let format_key = if date.year() == current_year {
-                    "datetime.short-current-year"
-                } else {
-                    "datetime.short-with-year"
-                };
-                let format_str = translations.get(format_key);
-
-                date.format_localized(&format_str, locale).to_string()
+                date.format("%Y-%m-%d").to_string()
             });
 
         let reading_speed = if let (Some(total_time), Some(total_pages)) =

@@ -1,4 +1,3 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::BookStatus;
@@ -28,21 +27,6 @@ pub struct Annotation {
 }
 
 impl Annotation {
-    pub fn formatted_datetime(&self, translations: &crate::i18n::Translations) -> Option<String> {
-        self.datetime.as_ref().and_then(|dt| {
-            NaiveDateTime::parse_from_str(dt, "%Y-%m-%d %H:%M:%S")
-                .ok()
-                .map(|ndt| {
-                    let locale = translations.locale();
-                    let format_str = translations.get("datetime.full");
-
-                    // format_localized is only available on NaiveDate and DateTime<Tz>, not NaiveDateTime - we need to convert to a DateTime<Utc> first
-                    let dt_utc: DateTime<Utc> = DateTime::from_naive_utc_and_offset(ndt, Utc);
-                    dt_utc.format_localized(&format_str, locale).to_string()
-                })
-        })
-    }
-
     /// Returns true if this annotation is a bookmark (no pos0/pos1), false if it's a highlight/quote
     pub fn is_bookmark(&self) -> bool {
         self.pos0.is_none() && self.pos1.is_none()

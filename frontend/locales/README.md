@@ -17,6 +17,7 @@ English Fallback (en.ftl)          ← ultimate fallback
 **Key principle**: The base language file is whichever regional dialect is added first.
 
 For example:
+
 - If Brazilian Portuguese (`pt_BR`) is contributed first, `pt.ftl` uses Brazilian Portuguese
 - A later `pt_PT.ftl` would contain only European Portuguese overrides
 - This is the opposite of what you might expect, but reflects real contribution order
@@ -50,10 +51,10 @@ Every base language file **must** include machine-readable metadata (used by `--
 -lang-dialect = fr_FR
 ```
 
-| Key | Purpose |
-|-----|---------|
-| `-lang-code` | ISO 639-1 base language code (e.g., `fr`, `de`) |
-| `-lang-name` | Native name of the language |
+| Key             | Purpose                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `-lang-code`    | ISO 639-1 base language code (e.g., `fr`, `de`)               |
+| `-lang-name`    | Native name of the language                                   |
 | `-lang-dialect` | Full locale code for date formatting (e.g., `fr_FR`, `de_AT`) |
 
 ### 3. Adding Regional Variants (Optional)
@@ -72,23 +73,25 @@ filter-completed = Terminé
 
 ## File Naming Convention
 
-| File | Purpose |
-|------|---------|
-| `en.ftl` | English base (required, ultimate fallback) |
-| `de.ftl` | German base |
-| `de_AT.ftl` | Austrian German overrides |
-| `pt.ftl` | Portuguese base (whichever dialect first) |
+| File        | Purpose                                       |
+| ----------- | --------------------------------------------- |
+| `en.ftl`    | English base (required, ultimate fallback)    |
+| `de.ftl`    | German base                                   |
+| `de_AT.ftl` | Austrian German overrides                     |
+| `pt.ftl`    | Portuguese base (whichever dialect first)     |
 | `pt_BR.ftl` | Brazilian overrides (if `pt.ftl` is European) |
 
 ## FTL Syntax Reference
 
 ### Simple Keys
+
 ```ftl
 books = Books
 loading = Loading...
 ```
 
 ### Pluralization
+
 KoShelf supports the full set of [Unicode CLDR plural categories](http://cldr.unicode.org/index/cldr-spec/plural-rules): `zero`, `one`, `two`, `few`, `many`, and `other`.
 
 ```ftl
@@ -105,14 +108,17 @@ items-found = { $count ->
 }
 ```
 
-**Important**: The categories (`zero`, `one`, `two`, `few`, `many`, `other`) follow strict [CLDR Plural Rules](https://cldr.unicode.org/index/cldr-spec/plural-rules) for each language. 
+**Important**: The categories (`zero`, `one`, `two`, `few`, `many`, `other`) follow strict [CLDR Plural Rules](https://cldr.unicode.org/index/cldr-spec/plural-rules) for each language.
+
 - You do NOT need to define all categories. Only define those used by your language.
-- `[zero]` refers to the *grammatical* category "zero" (present in languages like Latvian or Arabic), NOT necessarily the number 0. 
+- `[zero]` refers to the _grammatical_ category "zero" (present in languages like Latvian or Arabic), NOT necessarily the number 0.
 - In many languages (like English), the number 0 falls into `[other]` or `[one]`, so you would handle it there.
 - The `*` prefix marks the **default variant** (e.g., `*[other]`). You **MUST** have exactly one default variant per plural block. It is standard practice to attach this to the `[other]` category, as that catches everything not covered by specific rules.
 
 ### Variables
+
 KoShelf's parser allows variables, but with strict limitations for pluralized/numeric strings:
+
 - **Only `$count` is supported** for automatic number formatting.
 - **Strict formatting**: You must use `{$count}` or `{ $count }`.
 
@@ -122,6 +128,7 @@ yearly-summary = Yearly Summary { $count }
 ```
 
 ### Multiline Messages
+
 Long messages can be split across multiple lines. Continuation lines **must be indented**:
 
 ```ftl
@@ -133,13 +140,14 @@ introduction =
 
 ## Testing
 
-Run the i18n tests to verify your translations:
+Run the frontend locale checks to verify your translations:
 
 ```bash
-cargo test i18n
+npm --prefix frontend run i18n:check
 ```
 
-The test suite checks:
+The validation checks:
+
 - All keys in non-English files exist in `en.ftl`
-- FTL syntax is valid
-- Pluralization works correctly
+- Base language files include required metadata keys
+- Regional variants only contain override keys

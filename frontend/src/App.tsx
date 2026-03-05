@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { AppRoutes } from './app/routes/AppRoutes';
@@ -6,6 +7,7 @@ import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { SiteResponse } from './shared/contracts';
+import { translation } from './shared/i18n';
 
 function resolveDefaultRoute(
     site: SiteResponse | undefined,
@@ -23,6 +25,7 @@ function resolveDefaultRoute(
 
 export function App() {
     const location = useLocation();
+    const [, setI18nVersion] = useState(0);
 
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -30,6 +33,15 @@ export function App() {
     });
 
     const site = siteQuery.data;
+    useEffect(() => {
+        const language = site?.language;
+        if (!language) return;
+
+        void translation.init(language).then(() => {
+            setI18nVersion((value) => value + 1);
+        });
+    }, [site?.language]);
+
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);
 

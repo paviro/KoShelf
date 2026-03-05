@@ -133,18 +133,6 @@ pub async fn site(State(state): State<ServerState>) -> Response {
     }
 }
 
-pub async fn locales(State(state): State<ServerState>) -> Response {
-    let snapshot = match runtime_snapshot(&state) {
-        Ok(snapshot) => snapshot,
-        Err(error) => return error.into_response(),
-    };
-
-    match snapshot.locales.as_ref() {
-        Some(locales) => (StatusCode::OK, Json(locales.clone())).into_response(),
-        None => not_found(),
-    }
-}
-
 fn item_matches_content_type(
     content_type: ContentTypeFilter,
     item_content_type: LibraryContentType,
@@ -190,9 +178,11 @@ pub async fn items(
     };
 
     match snapshot.items.as_ref() {
-        Some(items) => {
-            (StatusCode::OK, Json(filter_library_items(items, content_type))).into_response()
-        }
+        Some(items) => (
+            StatusCode::OK,
+            Json(filter_library_items(items, content_type)),
+        )
+            .into_response(),
         None => not_found(),
     }
 }

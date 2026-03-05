@@ -1,7 +1,7 @@
 //! Yearly recap payload computation with share images.
 
 use super::SnapshotBuilder;
-use super::utils::{completion_year_and_month, format_day_month, format_duration};
+use super::utils::completion_year_and_month;
 use crate::contracts::{common::ContentTypeFilter, mappers, recap::RecapShareAssets};
 use crate::models::{
     ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
@@ -29,7 +29,6 @@ fn build_monthly_recaps(
     month_hours_all: &HashMap<String, i64>,
     month_hours_books: &HashMap<String, i64>,
     month_hours_comics: &HashMap<String, i64>,
-    translations: &crate::i18n::Translations,
 ) -> MonthlyRecaps {
     // Keep the same behavior as before:
     // - month iteration order is determined by the BTreeMap key order (YYYY-MM ascending)
@@ -61,7 +60,6 @@ fn build_monthly_recaps(
             month_label: month_label.clone(),
             books_finished: items.len(),
             hours_read_seconds: hours,
-            hours_read_display: format_duration(hours, translations),
             items: items.clone(),
         };
         monthly.insert(ym.clone(), month_recap);
@@ -82,7 +80,6 @@ fn build_monthly_recaps(
                     month_label: month_label.clone(),
                     books_finished: items_books.len(),
                     hours_read_seconds: hours_books,
-                    hours_read_display: format_duration(hours_books, translations),
                     items: items_books,
                 },
             );
@@ -104,7 +101,6 @@ fn build_monthly_recaps(
                     month_label: month_label.clone(),
                     books_finished: items_comics.len(),
                     hours_read_seconds: hours_comics,
-                    hours_read_display: format_duration(hours_comics, translations),
                     items: items_comics,
                 },
             );
@@ -135,7 +131,6 @@ fn build_md5_to_item(items: &[LibraryItem]) -> HashMap<String, &LibraryItem> {
 fn group_completions_by_year_month(
     stats_data: &StatisticsData,
     md5_to_item: &HashMap<String, &LibraryItem>,
-    translations: &crate::i18n::Translations,
 ) -> (YearMonthItems, Vec<i32>) {
     // Build year -> month (YYYY-MM) -> Vec<RecapItem>
     let mut year_month_items: YearMonthItems = HashMap::new();
@@ -204,10 +199,7 @@ fn group_completions_by_year_month(
                     authors,
                     start_date: c.start_date.clone(),
                     end_date: c.end_date.clone(),
-                    start_display: format_day_month(&c.start_date, translations),
-                    end_display: format_day_month(&c.end_date, translations),
                     reading_time: c.reading_time,
-                    reading_time_display: format_duration(c.reading_time, translations),
                     session_count: c.session_count,
                     pages_read: c.pages_read,
                     rating,
@@ -261,7 +253,6 @@ fn compute_yearly_summary(
     reading_stats: &ReadingStats,
     page_stats: &[PageStat],
     ids_filter: Option<&HashSet<i64>>,
-    translations: &crate::i18n::Translations,
 ) -> YearlySummary {
     // 1. Basic sums from monthly data
     let mut total_books = 0usize;
@@ -350,17 +341,17 @@ fn compute_yearly_summary(
         .max_by_key(|(_, secs)| *secs)
         .map(|(ym, secs)| (ym.clone(), *secs));
 
-    let (best_month_name, best_month_time_display) = if let Some((ym, secs)) = best_month {
+    let best_month_name = if let Some((ym, secs)) = best_month {
         if secs > 0 {
-            let month_name = chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
+            
+            chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
                 .ok()
-                .map(|d| d.format("%B").to_string());
-            (month_name, Some(format_duration(secs, translations)))
+                .map(|d| d.format("%B").to_string())
         } else {
-            (None, None)
+            None
         }
     } else {
-        (None, None)
+        None
     };
 
     // Convert totals into days/hours for display components
@@ -389,7 +380,7 @@ fn compute_yearly_summary(
         active_days_percentage,
         longest_streak,
         best_month_name,
-        best_month_time_display,
+        best_month_time_display: None,
     }
 }
 
@@ -605,8 +596,7 @@ impl SnapshotBuilder {
         let book_ids: HashSet<i64> = books_stats_data.books.iter().map(|b| b.id).collect();
         let comic_ids: HashSet<i64> = comics_stats_data.books.iter().map(|b| b.id).collect();
 
-        let (year_month_items, years) =
-            group_completions_by_year_month(stats_data, &md5_to_book, &self.translations);
+        let (year_month_items, years) = group_completions_by_year_month(stats_data, &md5_to_book);
         let years_books = mappers::years_for_content_type(&year_month_items, ContentType::Book);
         let years_comics = mappers::years_for_content_type(&year_month_items, ContentType::Comic);
         let years_books_set: HashSet<i32> = years_books.iter().copied().collect();
@@ -664,7 +654,6 @@ impl SnapshotBuilder {
                 &month_hours_all,
                 &month_hours_books,
                 &month_hours_comics,
-                &self.translations,
             );
 
             // ------------------------------------------------------------------
@@ -677,7 +666,6 @@ impl SnapshotBuilder {
                 &reading_stats_all,
                 &stats_data.page_stats,
                 None,
-                &self.translations,
             );
             let summary_books = compute_yearly_summary(
                 *year,
@@ -686,7 +674,6 @@ impl SnapshotBuilder {
                 &reading_stats_books,
                 &stats_data.page_stats,
                 Some(&book_ids),
-                &self.translations,
             );
             let summary_comics = compute_yearly_summary(
                 *year,
@@ -695,7 +682,6 @@ impl SnapshotBuilder {
                 &reading_stats_comics,
                 &stats_data.page_stats,
                 Some(&comic_ids),
-                &self.translations,
             );
 
             self.render_share_images_for_year(*year, &summary).await?;

@@ -20,6 +20,7 @@ import {
     calculateCalendarLengthDays,
     formatCompletionDateRange,
     formatDurationFromSeconds,
+    formatIsoDate,
     formatReadingSpeed,
 } from '../lib/library-detail-formatters';
 
@@ -102,7 +103,7 @@ export function LibraryReadingStatsSection({
                     icon={LuCalendarDays}
                     iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                     iconClassName="text-purple-600 dark:text-white"
-                    value={sessionStats.last_read_date ?? '--'}
+                    value={formatIsoDate(sessionStats.last_read_date)}
                     label={translation.get('last-read')}
                 />
             </div>

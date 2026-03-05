@@ -14,5 +14,6 @@ pub struct SiteCapabilities {
 pub struct SiteResponse {
     pub meta: ApiMeta,
     pub title: String,
+    pub language: String,
     pub capabilities: SiteCapabilities,
 }

@@ -42,11 +42,9 @@ impl SnapshotBuilder {
 
             // Calculate session statistics if we have item stats
             let session_stats = match (stats_data.as_ref(), &item_stats) {
-                (Some(stats), Some(stat)) => Some(stat.calculate_session_stats(
-                    &stats.page_stats,
-                    &self.time_config,
-                    &self.translations,
-                )),
+                (Some(stats), Some(stat)) => {
+                    Some(stat.calculate_session_stats(&stats.page_stats, &self.time_config))
+                }
                 _ => None,
             };
 
@@ -63,7 +61,9 @@ impl SnapshotBuilder {
                 item_stats.clone(),
                 session_stats,
             );
-            snapshot.item_details.insert(item.id.clone(), contract_detail);
+            snapshot
+                .item_details
+                .insert(item.id.clone(), contract_detail);
         }
 
         Ok(())

@@ -25,8 +25,6 @@ statistics = Статистика
 calendar = Календар
 recap = Підсумки
 github = GitHub
-loading = Завантаження...
-reload = Оновити
 reading-companion = Супутник читання
 # Used in footer/sidebar for update time
 last-updated = Останнє оновлення
@@ -250,7 +248,6 @@ search =
     .aria-label = Пошук
 close-search =
     .aria-label = Закрити пошук
-close = Закрити
     .aria-label = Закрити
 go-back =
     .aria-label = Назад
@@ -293,12 +290,6 @@ weekday =
     .fri = Пт
     .sat = Сб
     .sun = Нд
-
-# Chrono date/time format strings (use %B for full month, %b for short, etc.)
-datetime =
-    .full = %-d %B %Y о %H:%M
-    .short-current-year = %-d %b
-    .short-with-year = %-d %b %Y
 
 # Time units: w=weeks, d=days, h=hours, m=minutes
 units =

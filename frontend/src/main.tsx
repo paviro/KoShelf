@@ -5,6 +5,8 @@ import { HashRouter } from 'react-router-dom';
 
 import './styles/app.css';
 import { App } from './App';
+import { api } from './shared/api';
+import type { SiteResponse } from './shared/contracts';
 import { translation } from './shared/i18n';
 import { RuntimeUpdatesBridge } from './shared/runtime-updates';
 
@@ -34,7 +36,15 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap(): Promise<void> {
-    await translation.init();
+    let initialSite: SiteResponse | null = null;
+    try {
+        initialSite = await api.site.get<SiteResponse>();
+        queryClient.setQueryData(['site'], initialSite);
+    } catch {
+        initialSite = null;
+    }
+
+    await translation.init(initialSite?.language);
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
         <React.StrictMode>

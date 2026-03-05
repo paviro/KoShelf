@@ -182,12 +182,6 @@ export const api = {
         },
     },
 
-    locales: {
-        async get<T>(): Promise<T> {
-            return request<T>(route('/api/locales', '/data/locales.json'));
-        },
-    },
-
     items: {
         async list<T>(scope?: ScopeValue): Promise<T> {
             return requestItemsList<T>(scope);

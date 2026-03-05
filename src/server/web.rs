@@ -52,7 +52,6 @@ impl WebServer {
         let mut app = Router::new()
             // API endpoints
             .route("/api/site", get(api::site))
-            .route("/api/locales", get(api::locales))
             .route("/api/items", get(api::items))
             .route("/api/items/{id}", get(api::item_detail))
             .route("/api/activity/weeks", get(api::activity_weeks))
@@ -68,10 +67,7 @@ impl WebServer {
             .route("/api/activity/months", get(api::activity_months))
             .route("/api/activity/months/{month_key}", get(api::activity_month))
             .route("/api/completions/years", get(api::completion_years))
-            .route(
-                "/api/completions/years/{year}",
-                get(api::completion_year),
-            )
+            .route("/api/completions/years/{year}", get(api::completion_year))
             .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))

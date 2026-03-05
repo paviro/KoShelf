@@ -9,10 +9,7 @@ pub struct RecapItem {
     pub authors: Vec<String>,
     pub start_date: String,
     pub end_date: String,
-    pub start_display: String,
-    pub end_display: String,
     pub reading_time: i64,
-    pub reading_time_display: String,
     pub session_count: i64,
     pub pages_read: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,12 +30,11 @@ pub struct RecapItem {
 /// Recap view month summary and entries
 #[derive(Debug, Clone, Serialize)]
 pub struct MonthRecap {
-    pub month_key: String,          // YYYY-MM
-    pub month_label: String,        // e.g. March
-    pub books_finished: usize,      // number of completions in this month
-    pub hours_read_seconds: i64,    // total reading time in month from daily activity
-    pub hours_read_display: String, // formatted e.g. "12h 30m"
-    pub items: Vec<RecapItem>,      // enriched completion entries (sorted by end date)
+    pub month_key: String,       // YYYY-MM
+    pub month_label: String,     // e.g. March
+    pub books_finished: usize,   // number of completions in this month
+    pub hours_read_seconds: i64, // total reading time in month from daily activity
+    pub items: Vec<RecapItem>,   // enriched completion entries (sorted by end date)
 }
 
 /// Aggregated yearly statistics for the recap header

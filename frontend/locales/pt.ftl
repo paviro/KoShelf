@@ -25,8 +25,6 @@ statistics = Estatísticas
 calendar = Calendário
 recap = Retrospectiva
 github = GitHub
-loading = Carregando...
-reload = Recarregar
 reading-companion = Companheiro de Leitura
 # Used in footer/sidebar for update time
 last-updated = Última atualização
@@ -224,7 +222,6 @@ search =
     .aria-label = Buscar
 close-search = 
     .aria-label = Fechar busca
-close = Fechar
     .aria-label = Fechar
 go-back =
     .aria-label = Voltar
@@ -267,12 +264,6 @@ weekday =
     .fri = Sex
     .sat = Sáb
     .sun = Dom
-
-# Chrono date/time format strings (use %B for full month, %b for short, etc.)
-datetime =
-    .full = %d de %B de %Y às %H:%M
-    .short-current-year = %d de %b
-    .short-with-year = %d %b %Y
 
 # Time units: w=weeks, d=days, h=hours, m=minutes
 units =

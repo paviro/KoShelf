@@ -16,7 +16,6 @@ mod statistics;
 mod utils;
 
 use crate::config::SiteConfig;
-use crate::i18n::Translations;
 use crate::koreader::{StatisticsCalculator, StatisticsParser, calculate_partial_md5};
 use crate::library::scan_library;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
@@ -25,7 +24,6 @@ use anyhow::Result;
 use log::info;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::rc::Rc;
 
 #[derive(Debug)]
 struct SnapshotInputs {
@@ -37,8 +35,6 @@ struct SnapshotInputs {
 
 pub struct SnapshotBuilder {
     config: SiteConfig,
-    /// Translations for i18n
-    translations: Rc<Translations>,
 }
 
 impl std::ops::Deref for SnapshotBuilder {
@@ -50,20 +46,7 @@ impl std::ops::Deref for SnapshotBuilder {
 
 impl SnapshotBuilder {
     pub fn new(config: SiteConfig) -> Self {
-        // Load translations for the configured language
-        let translations = Rc::new(Translations::load(&config.language).unwrap_or_else(|e| {
-            log::warn!(
-                "Failed to load translations for '{}': {}. Falling back to English.",
-                config.language,
-                e
-            );
-            Translations::load("en").expect("English translations must exist")
-        }));
-
-        Self {
-            config,
-            translations,
-        }
+        Self { config }
     }
 
     pub(crate) fn assets_dir(&self) -> PathBuf {

@@ -20,7 +20,8 @@ impl SnapshotBuilder {
         info!("Computing statistics data...");
 
         // Calculate reading stats for ALL content.
-        let reading_stats_all = StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
+        let reading_stats_all =
+            StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
         let completion_counts_all = completion_counts_by_year(stats_data);
 
         // Build per-type stats for contract exports.
@@ -28,17 +29,13 @@ impl SnapshotBuilder {
         let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
 
         let mut books_stats_data = books_data.clone();
-        let reading_stats_books = StatisticsCalculator::calculate_stats(
-            &mut books_stats_data,
-            &self.time_config,
-        );
+        let reading_stats_books =
+            StatisticsCalculator::calculate_stats(&mut books_stats_data, &self.time_config);
         let completion_counts_books = completion_counts_by_year(&books_stats_data);
 
         let mut comics_stats_data = comics_data.clone();
-        let reading_stats_comics = StatisticsCalculator::calculate_stats(
-            &mut comics_stats_data,
-            &self.time_config,
-        );
+        let reading_stats_comics =
+            StatisticsCalculator::calculate_stats(&mut comics_stats_data, &self.time_config);
         let completion_counts_comics = completion_counts_by_year(&comics_stats_data);
 
         let max_scale_seconds = self.heatmap_scale_max.map(i64::from).unwrap_or(0);
@@ -69,7 +66,8 @@ impl SnapshotBuilder {
 
         for (filter, reading_stats, completion_counts) in filters {
             let filter_key = filter.as_str().to_string();
-            let available_years = mappers::available_years_from_stats(reading_stats, completion_counts);
+            let available_years =
+                mappers::available_years_from_stats(reading_stats, completion_counts);
 
             let weeks_response = mappers::map_activity_weeks_response(
                 meta.clone(),

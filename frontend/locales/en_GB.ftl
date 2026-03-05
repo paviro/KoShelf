@@ -13,7 +13,3 @@
 # -----------------------------------
 # Date Formats (Day before Month)
 # Time: 24-hour format
-datetime =
-    .full = %-d %B %Y at %H:%M
-    .short-current-year = %-d %b
-    .short-with-year = %-d %b %Y
