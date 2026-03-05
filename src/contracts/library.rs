@@ -19,12 +19,19 @@ pub enum LibraryStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibrarySeries {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryListItem {
     pub id: String,
     pub title: String,
     pub authors: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub series: Option<String>,
+    pub series: Option<LibrarySeries>,
     pub status: LibraryStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_percentage: Option<f64>,
@@ -57,7 +64,7 @@ pub struct LibraryDetailItem {
     pub title: String,
     pub authors: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub series: Option<String>,
+    pub series: Option<LibrarySeries>,
     pub status: LibraryStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_percentage: Option<f64>,

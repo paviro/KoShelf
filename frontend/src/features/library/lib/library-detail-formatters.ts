@@ -1,5 +1,6 @@
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import type { LibrarySeries } from '../api/library-data';
 
 const FALLBACK_LOCALE = 'en-US';
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -82,6 +83,22 @@ export function toProgressPercentage(
 
     const percent = progress * 100;
     return Math.min(100, Math.max(0, Math.round(percent)));
+}
+
+export function formatSeriesDisplay(
+    series: LibrarySeries | null | undefined,
+): string {
+    const normalizedName = (series?.name ?? '').trim();
+    if (!normalizedName) {
+        return '';
+    }
+
+    const normalizedIndex = (series?.index ?? '').trim();
+    if (!normalizedIndex) {
+        return normalizedName;
+    }
+
+    return `${normalizedName} #${normalizedIndex}`;
 }
 
 export function formatDurationFromSeconds(

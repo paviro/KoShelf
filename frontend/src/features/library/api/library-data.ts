@@ -4,11 +4,16 @@ export type LibraryContentType = 'book' | 'comic';
 
 export type LibraryStatus = 'reading' | 'complete' | 'abandoned' | 'unknown';
 
+export interface LibrarySeries {
+    name: string;
+    index?: string | null;
+}
+
 export interface LibraryListItem {
     id: string;
     title: string;
     authors: string[];
-    series?: string | null;
+    series?: LibrarySeries | null;
     status: LibraryStatus;
     progress_percentage?: number | null;
     rating?: number | null;
@@ -25,7 +30,7 @@ export interface LibraryListResponse {
 export interface LibraryDetailPreviewItem {
     title: string;
     authors: string[];
-    series?: string | null;
+    series?: LibrarySeries | null;
     description?: string | null;
 }
 
@@ -44,7 +49,7 @@ export interface LibraryDetailItem {
     id: string;
     title: string;
     authors: string[];
-    series?: string | null;
+    series?: LibrarySeries | null;
     status: LibraryStatus;
     progress_percentage?: number | null;
     rating?: number | null;

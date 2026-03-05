@@ -121,12 +121,14 @@ export function itemMatchesSearch(
 
     const title = item.title.toLowerCase();
     const authors = item.authors.join(', ').toLowerCase();
-    const series = (item.series ?? '').toLowerCase();
+    const seriesName = (item.series?.name ?? '').toLowerCase();
+    const seriesIndex = (item.series?.index ?? '').toLowerCase();
 
     return (
         title.includes(normalizedSearchTerm) ||
         authors.includes(normalizedSearchTerm) ||
-        series.includes(normalizedSearchTerm)
+        seriesName.includes(normalizedSearchTerm) ||
+        seriesIndex.includes(normalizedSearchTerm)
     );
 }
 

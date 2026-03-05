@@ -2,7 +2,10 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
 import type { LibraryDetailResponse } from '../api/library-data';
-import { sanitizeRichTextHtml } from '../lib/library-detail-formatters';
+import {
+    formatSeriesDisplay,
+    sanitizeRichTextHtml,
+} from '../lib/library-detail-formatters';
 import type { LibraryCollection } from '../model/library-model';
 import {
     fetchLibraryDetailQuery,
@@ -427,7 +430,9 @@ class HoverPreviewManager {
         return {
             title: this.clean(detail.item.title) || fallback.title,
             author: this.formatAuthors(detail.item.authors) || fallback.author,
-            series: this.clean(detail.item.series || '') || fallback.series,
+            series:
+                this.clean(formatSeriesDisplay(detail.item.series)) ||
+                fallback.series,
             description: detail.item.description || '',
         };
     }

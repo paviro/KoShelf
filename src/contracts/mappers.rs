@@ -8,7 +8,7 @@ use super::common::{ApiMeta, ContentTypeFilter};
 use super::library::{
     LibraryAnnotation, LibraryContentType, LibraryDetailItem, LibraryDetailResponse,
     LibraryDetailStatistics, LibraryIdentifier, LibraryListItem, LibraryListResponse,
-    LibraryStatus,
+    LibrarySeries, LibraryStatus,
 };
 use super::recap::{
     CompletionYearResponse, CompletionYearsResponse, RecapItemResponse, RecapMonthResponse,
@@ -59,12 +59,19 @@ pub fn map_library_status(status: BookStatus) -> LibraryStatus {
     }
 }
 
+fn map_library_series(item: &LibraryItem) -> Option<LibrarySeries> {
+    item.series().cloned().map(|name| LibrarySeries {
+        name,
+        index: item.series_number().cloned(),
+    })
+}
+
 pub fn map_library_list_item(item: &LibraryItem) -> LibraryListItem {
     LibraryListItem {
         id: item.id.clone(),
         title: item.book_info.title.clone(),
         authors: item.book_info.authors.clone(),
-        series: item.series_display(),
+        series: map_library_series(item),
         status: map_library_status(item.status()),
         progress_percentage: item.progress_percentage(),
         rating: item.rating(),
@@ -135,7 +142,7 @@ pub fn map_library_detail_response(
             id: item.id.clone(),
             title: item.book_info.title.clone(),
             authors: item.book_info.authors.clone(),
-            series: item.series_display(),
+            series: map_library_series(item),
             status: map_library_status(item.status()),
             progress_percentage: item.progress_percentage(),
             rating: item.rating(),

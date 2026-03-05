@@ -20,6 +20,7 @@ import type {
     LibraryItemStats,
 } from '../api/library-data';
 import {
+    formatSeriesDisplay,
     formatLanguageDisplayName,
     sanitizeRichTextHtml,
     toProgressPercentage,
@@ -43,25 +44,6 @@ function cardValueOrUnknown(value: number | null | undefined): string {
     return formatNumber(value);
 }
 
-function normalizeSeriesSearchTerm(series: string | null | undefined): string {
-    const raw = series?.trim();
-    if (!raw) {
-        return '';
-    }
-
-    const markerIndex = raw.lastIndexOf(' #');
-    if (markerIndex <= 0) {
-        return raw;
-    }
-
-    const suffix = raw.slice(markerIndex + 2);
-    if (!/^\d+(?:[./]\d+)?$/.test(suffix)) {
-        return raw;
-    }
-
-    return raw.slice(0, markerIndex).trim();
-}
-
 export function LibraryOverviewSection({
     item,
     itemStats,
@@ -79,11 +61,12 @@ export function LibraryOverviewSection({
         item.status === 'reading' || item.status === 'abandoned';
     const showCompletedStatus = item.status === 'complete';
     const isBook = item.content_type === 'book';
-    const hasSeries = Boolean(item.series?.trim());
+    const seriesDisplay = formatSeriesDisplay(item.series);
+    const hasSeries = Boolean(seriesDisplay);
     const hasSubjects = item.subjects.length > 0;
     const pagesCount = item.pages ?? itemStats?.pages;
     const seriesSearchBasePath = item.search_base_path?.trim() || '/';
-    const seriesSearchTerm = normalizeSeriesSearchTerm(item.series);
+    const seriesSearchTerm = (item.series?.name ?? '').trim();
     const sanitizedDescription = useMemo(
         () => sanitizeRichTextHtml(item.description ?? ''),
         [item.description],
@@ -308,7 +291,7 @@ export function LibraryOverviewSection({
                                 to={`${seriesSearchBasePath}?search=${encodeURIComponent(seriesSearchTerm)}`}
                                 className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-650 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors"
                             >
-                                {item.series}
+                                {seriesDisplay}
                                 <LuArrowUpRight
                                     className="w-4 h-4 ml-2"
                                     aria-hidden="true"

@@ -12,6 +12,7 @@ import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { LibraryListItem } from '../api/library-data';
+import { formatSeriesDisplay } from '../lib/library-detail-formatters';
 import type {
     LibraryCollection,
     LibrarySectionKey,
@@ -54,6 +55,7 @@ export function LibraryCard({
     const primaryAuthor = item.authors[0];
     const annotationCount = item.annotation_count ?? 0;
     const progressPercentage = toProgressPercentage(item.progress_percentage);
+    const seriesDisplay = formatSeriesDisplay(item.series);
 
     const {
         imageRef,
@@ -85,7 +87,7 @@ export function LibraryCard({
             data-library-collection={collection}
             data-library-item-title={item.title}
             data-library-item-authors={item.authors.join(', ')}
-            data-library-item-series={item.series ?? ''}
+            data-library-item-series={seriesDisplay}
         >
             <Link
                 to={detailPath}
