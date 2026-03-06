@@ -270,7 +270,7 @@ export function HeatmapSection({
                 </div>
 
                 <div
-                    className="flex-1 min-w-0 overflow-x-auto scrollbar-hide"
+                    className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-hide"
                     id="heatmapScrollContainer"
                     ref={scrollContainerRef}
                 >
