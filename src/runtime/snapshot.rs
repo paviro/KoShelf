@@ -513,11 +513,10 @@ mod tests {
                         active_days: 1,
                         active_days_percentage: 1.0,
                         longest_streak: 1,
-                        best_month_name: Some("March".to_string()),
+                        best_month: Some("2026-03".to_string()),
                     },
                     months: vec![RecapMonthResponse {
                         month_key: "2026-03".to_string(),
-                        month_label: "March".to_string(),
                         items_finished: 1,
                         read_time: 10,
                         items: vec![],

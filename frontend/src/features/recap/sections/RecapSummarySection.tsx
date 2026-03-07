@@ -5,7 +5,7 @@ import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import type { RecapScope, RecapSummaryResponse } from '../api/recap-data';
 import {
-    formatRecapMonthLabel,
+    formatRecapMonth,
     formatRecapPercentage,
 } from '../lib/recap-formatters';
 
@@ -35,8 +35,8 @@ export function RecapSummarySection({
     summary,
 }: RecapSummarySectionProps) {
     const daysInYear = isLeapYear(year) ? 366 : 365;
-    const bestMonth = summary.best_month_name
-        ? formatRecapMonthLabel(summary.best_month_name)
+    const bestMonth = summary.best_month
+        ? formatRecapMonth(summary.best_month)
         : null;
     const yearlySummaryLabel = translation.get('yearly-summary', {
         count: String(year),

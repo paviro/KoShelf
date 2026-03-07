@@ -6,9 +6,10 @@ use super::calendar::{
 };
 use super::common::{ApiMeta, ContentTypeFilter};
 use super::library::{
-    LibraryAnnotation, LibraryContentType, LibraryDetailItem, LibraryDetailResponse,
-    LibraryDetailStatistics, LibraryIdentifier, LibraryListItem, LibraryListResponse,
-    LibrarySeries, LibraryStatus,
+    LibraryAnnotation, LibraryCompletionEntry, LibraryCompletions, LibraryContentType,
+    LibraryDetailItem, LibraryDetailResponse, LibraryDetailStatistics, LibraryIdentifier,
+    LibraryItemStats, LibraryListItem, LibraryListResponse, LibrarySeries, LibrarySessionStats,
+    LibraryStatus,
 };
 use super::recap::{
     CompletionYearResponse, CompletionYearsResponse, RecapItemResponse, RecapMonthResponse,
@@ -21,6 +22,7 @@ use super::statistics::{
     MonthlyAggregate, YearlySummary,
 };
 use crate::models::{BookStatus, ContentType, LibraryItem};
+use crate::time_config::TimeConfig;
 
 pub fn build_meta(version: impl Into<String>, generated_at: impl Into<String>) -> ApiMeta {
     ApiMeta {
@@ -103,13 +105,72 @@ fn map_library_identifier(identifier: crate::models::Identifier) -> LibraryIdent
     }
 }
 
-fn map_library_annotation(annotation: &crate::models::Annotation) -> LibraryAnnotation {
+fn map_library_annotation(
+    annotation: &crate::models::Annotation,
+    time_config: &TimeConfig,
+) -> LibraryAnnotation {
     LibraryAnnotation {
         chapter: annotation.chapter.clone(),
-        datetime: annotation.datetime.clone(),
+        datetime: annotation
+            .datetime
+            .as_deref()
+            .and_then(|value| time_config.normalize_naive_datetime_to_rfc3339(value)),
         pageno: annotation.pageno,
         text: annotation.text.clone(),
         note: annotation.note.clone(),
+    }
+}
+
+fn map_library_completion_entry(
+    completion: &crate::models::completions::ReadCompletion,
+) -> LibraryCompletionEntry {
+    LibraryCompletionEntry {
+        start_date: completion.start_date.clone(),
+        end_date: completion.end_date.clone(),
+        reading_time: completion.reading_time,
+        session_count: completion.session_count,
+        pages_read: completion.pages_read,
+    }
+}
+
+fn map_library_completions(
+    completions: &crate::models::completions::BookCompletions,
+) -> LibraryCompletions {
+    LibraryCompletions {
+        entries: completions
+            .entries
+            .iter()
+            .map(map_library_completion_entry)
+            .collect(),
+        total_completions: completions.total_completions,
+        last_completion_date: completions.last_completion_date.clone(),
+    }
+}
+
+fn map_library_item_stats(
+    item_stats: &crate::models::StatBook,
+    time_config: &TimeConfig,
+) -> LibraryItemStats {
+    LibraryItemStats {
+        notes: item_stats.notes,
+        last_open_at: item_stats
+            .last_open
+            .map(|timestamp| time_config.format_timestamp_rfc3339(timestamp)),
+        highlights: item_stats.highlights,
+        pages: item_stats.pages,
+        total_read_time: item_stats.total_read_time,
+    }
+}
+
+fn map_library_session_stats(
+    session_stats: &crate::models::BookSessionStats,
+) -> LibrarySessionStats {
+    LibrarySessionStats {
+        session_count: session_stats.session_count,
+        average_session_duration: session_stats.average_session_duration,
+        longest_session_duration: session_stats.longest_session_duration,
+        last_read_date: session_stats.last_read_date.clone(),
+        reading_speed: session_stats.reading_speed,
     }
 }
 
@@ -119,22 +180,24 @@ pub fn map_library_detail_response(
     search_base_path: impl Into<String>,
     item_stats: Option<crate::models::StatBook>,
     session_stats: Option<crate::models::BookSessionStats>,
+    time_config: &TimeConfig,
 ) -> LibraryDetailResponse {
     let highlights = item
         .annotations()
         .iter()
         .filter(|annotation| annotation.is_highlight())
-        .map(map_library_annotation)
+        .map(|annotation| map_library_annotation(annotation, time_config))
         .collect::<Vec<_>>();
     let bookmarks = item
         .annotations()
         .iter()
         .filter(|annotation| annotation.is_bookmark())
-        .map(map_library_annotation)
+        .map(|annotation| map_library_annotation(annotation, time_config))
         .collect::<Vec<_>>();
     let completions = item_stats
         .as_ref()
-        .and_then(|stats| stats.completions.clone());
+        .and_then(|stats| stats.completions.as_ref())
+        .map(map_library_completions);
 
     LibraryDetailResponse {
         meta,
@@ -164,8 +227,10 @@ pub fn map_library_detail_response(
         highlights,
         bookmarks,
         statistics: LibraryDetailStatistics {
-            item_stats,
-            session_stats,
+            item_stats: item_stats
+                .as_ref()
+                .map(|stats| map_library_item_stats(stats, time_config)),
+            session_stats: session_stats.as_ref().map(map_library_session_stats),
             completions,
         },
     }
@@ -480,7 +545,6 @@ fn map_recap_item(item: &crate::models::RecapItem) -> RecapItemResponse {
 fn map_recap_month(month: &crate::models::MonthRecap) -> RecapMonthResponse {
     RecapMonthResponse {
         month_key: month.month_key.clone(),
-        month_label: month.month_label.clone(),
         items_finished: month.books_finished,
         read_time: month.hours_read_seconds,
         items: month.items.iter().map(map_recap_item).collect(),
@@ -500,7 +564,7 @@ fn map_recap_summary(summary: &crate::models::YearlySummary) -> RecapSummaryResp
         active_days: summary.active_days,
         active_days_percentage: summary.active_days_percentage,
         longest_streak: summary.longest_streak,
-        best_month_name: summary.best_month_name.clone(),
+        best_month: summary.best_month.clone(),
     }
 }
 

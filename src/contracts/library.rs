@@ -91,6 +91,7 @@ pub struct LibraryDetailItem {
 pub struct LibraryAnnotation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chapter: Option<String>,
+    /// RFC3339 instant normalized from KOReader's timezone-less wall-clock metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub datetime: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -102,13 +103,57 @@ pub struct LibraryAnnotation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryCompletionEntry {
+    pub start_date: String,
+    pub end_date: String,
+    pub reading_time: i64,
+    pub session_count: i64,
+    pub pages_read: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryCompletions {
+    pub entries: Vec<LibraryCompletionEntry>,
+    pub total_completions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_completion_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryItemStats {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_open_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub highlights: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pages: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_read_time: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibrarySessionStats {
+    pub session_count: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub average_session_duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub longest_session_duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_read_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_speed: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryDetailStatistics {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub item_stats: Option<crate::models::StatBook>,
+    pub item_stats: Option<LibraryItemStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_stats: Option<crate::models::BookSessionStats>,
+    pub session_stats: Option<LibrarySessionStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub completions: Option<crate::models::BookCompletions>,
+    pub completions: Option<LibraryCompletions>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

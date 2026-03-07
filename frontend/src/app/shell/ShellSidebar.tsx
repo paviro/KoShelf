@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { LuGithub, LuSettings } from 'react-icons/lu';
 import { translation } from '../../shared/i18n';
+import { formatInstant } from '../../shared/lib/intl/formatDate';
 import { BRAND_ICON, isActivePath, type NavItem } from './shell-nav';
 
 type ShellSidebarProps = {
@@ -19,6 +20,10 @@ export function ShellSidebar({
     version,
 }: ShellSidebarProps) {
     const BrandIcon = BRAND_ICON;
+    const formattedGeneratedAt = formatInstant(generatedAt, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
     const primaryNavItems = navItems.filter(
         (item) => item.routeId !== 'settings',
     );
@@ -142,7 +147,8 @@ export function ShellSidebar({
                         </span>
                     </div>
                     <div className="text-[0.65rem] leading-tight text-gray-400 dark:text-dark-500">
-                        {translation.get('last-updated')}: {generatedAt ?? '--'}
+                        {translation.get('last-updated')}:{' '}
+                        {formattedGeneratedAt}
                     </div>
                 </div>
             </div>

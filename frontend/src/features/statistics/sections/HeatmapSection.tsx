@@ -4,9 +4,12 @@ import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
 } from '../../../shared/lib/dom/horizontal-scroll';
+import {
+    formatMonthOfYear,
+    formatPlainDate,
+} from '../../../shared/lib/intl/formatDate';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
-import { monthKeyAt, toShortMonthKey } from '../lib/months';
 import type { StatisticsYearResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
@@ -159,7 +162,11 @@ export function HeatmapSection({
                     activityMap.maxActivity,
                 );
                 const colorClasses = HEATMAP_COLOR_CLASSES[level].join(' ');
-                const tooltip = `${dateIso}: ${DataFormatter.formatReadTime(activity.read)}, ${DataFormatter.formatCount(activity.pages)} ${translation.get('pages-label', activity.pages)}`;
+                const tooltipDate = formatPlainDate(dateIso, {
+                    monthStyle: 'long',
+                    yearDisplay: 'auto',
+                });
+                const tooltip = `${tooltipDate}: ${DataFormatter.formatReadTime(activity.read)}, ${DataFormatter.formatCount(activity.pages)} ${translation.get('pages-label', activity.pages)}`;
 
                 cellMap.set(`${week}-${day}`, {
                     classes: colorClasses,
@@ -286,11 +293,9 @@ export function HeatmapSection({
                                         key={monthIndex}
                                         className="w-8 text-center"
                                     >
-                                        {translation.get(
-                                            toShortMonthKey(
-                                                monthKeyAt(monthIndex),
-                                            ),
-                                        )}
+                                        {formatMonthOfYear(monthIndex, {
+                                            monthStyle: 'short',
+                                        })}
                                     </div>
                                 ))}
                             </div>

@@ -6,6 +6,7 @@ import type {
     StatisticsIndexWeek,
     StatisticsWeekResponse,
 } from '../api/statistics-data';
+import { parsePlainDate } from '../../../shared/lib/intl/formatDate';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
@@ -42,9 +43,20 @@ function buildWeekdayBarItems(
     }));
 
     if (startDate) {
+        const start = parsePlainDate(startDate);
+        if (!start) {
+            return days.map((day) => ({
+                readTime: day.read_time,
+                tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+                label: day.label,
+            }));
+        }
+
         for (const entry of dailyActivity) {
-            const start = new Date(startDate + 'T00:00:00');
-            const current = new Date(entry.date + 'T00:00:00');
+            const current = parsePlainDate(entry.date);
+            if (!current) {
+                continue;
+            }
             const diffDays = Math.round(
                 (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
             );

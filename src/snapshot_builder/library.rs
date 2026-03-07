@@ -60,6 +60,7 @@ impl SnapshotBuilder {
                 search_base_path,
                 item_stats.clone(),
                 session_stats,
+                &self.time_config,
             );
             snapshot
                 .item_details

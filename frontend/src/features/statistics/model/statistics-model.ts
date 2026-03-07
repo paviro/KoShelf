@@ -3,14 +3,16 @@ import type {
     StatisticsIndexWeek,
     StatisticsScope,
 } from '../api/statistics-data';
-import { DateFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
+import {
+    formatPlainDate,
+    formatPlainDateRange,
+} from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import {
     patchRouteState,
     readRouteState,
 } from '../../../shared/lib/state/route-state-storage';
-import { monthKeyAt } from '../lib/months';
 
 export const SECTION_NAMES = [
     'overall-stats',
@@ -141,30 +143,12 @@ export function formatSessionDuration(seconds: number | null): string {
     return `${formatNumber(minutes)}${translation.get('units.m')}`;
 }
 
-function tryFormatSingleDayRange(dateStr: string): string | null {
-    const day = Number.parseInt(dateStr.slice(8, 10), 10);
-    const month = Number.parseInt(dateStr.slice(5, 7), 10) - 1;
-    const year = Number.parseInt(dateStr.slice(0, 4), 10);
-
-    if (
-        Number.isNaN(day) ||
-        Number.isNaN(month) ||
-        Number.isNaN(year) ||
-        month < 0 ||
-        month > 11
-    ) {
-        return null;
-    }
-
-    const currentYear = new Date().getFullYear();
-    const includeYear = year !== currentYear;
-    return includeYear
-        ? `${day} ${translation.get(monthKeyAt(month))} ${year}`
-        : `${day} ${translation.get(monthKeyAt(month))}`;
-}
-
 function formatSingleStreakDate(dateStr: string): string {
-    return tryFormatSingleDayRange(dateStr) ?? dateStr;
+    return formatPlainDate(dateStr, {
+        monthStyle: 'long',
+        yearDisplay: 'auto',
+        fallback: dateStr,
+    });
 }
 
 export function formatStreakDateRange(
@@ -176,7 +160,7 @@ export function formatStreakDateRange(
     }
 
     if (startDate && !endDate) {
-        return `${formatSingleStreakDate(startDate)} - now`;
+        return `${formatSingleStreakDate(startDate)} – ${translation.get('today')}`;
     }
 
     if (!startDate || !endDate) {
@@ -184,15 +168,13 @@ export function formatStreakDateRange(
     }
 
     if (startDate === endDate) {
-        return (
-            tryFormatSingleDayRange(startDate) ??
-            DateFormatter.formatDateRange(startDate, endDate, 'long')
-        );
+        return formatSingleStreakDate(startDate);
     }
 
-    const formattedStart = formatSingleStreakDate(startDate);
-    const formattedEnd = formatSingleStreakDate(endDate);
-    return `${formattedStart} - ${formattedEnd}`;
+    return formatPlainDateRange(startDate, endDate, {
+        monthStyle: 'long',
+        yearDisplay: 'auto',
+    });
 }
 
 export function isCurrentStreakActive(endDate: string | null): boolean {

@@ -21,6 +21,7 @@ import {
     shiftMonth,
     shiftMonthKey,
 } from '../model/calendar-model';
+import { formatDateObjectToParts } from '../../../shared/lib/intl/formatDate';
 import {
     useCalendarMonthQuery,
     useCalendarMonthsQuery,
@@ -34,23 +35,6 @@ import { translation } from '../../../shared/i18n';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
-
-const FALLBACK_LOCALE = 'en-US';
-
-function safeFormatDateLabel(
-    date: Date,
-    locale: string,
-    options: Intl.DateTimeFormatOptions,
-): string {
-    try {
-        return new Intl.DateTimeFormat(
-            locale || FALLBACK_LOCALE,
-            options,
-        ).format(date);
-    } catch {
-        return new Intl.DateTimeFormat(FALLBACK_LOCALE, options).format(date);
-    }
-}
 
 export function CalendarRoute() {
     const [initialCalendarView] = useState(() =>
@@ -155,12 +139,16 @@ export function CalendarRoute() {
 
     const locale = translation.getLanguage() || 'en-US';
 
-    const monthLabel = useMemo(
-        () => safeFormatDateLabel(displayedMonth, locale, { month: 'long' }),
-        [displayedMonth, locale],
-    );
-    const yearLabel = useMemo(
-        () => safeFormatDateLabel(displayedMonth, locale, { year: 'numeric' }),
+    const monthYearParts = useMemo(
+        () =>
+            formatDateObjectToParts(
+                displayedMonth,
+                {
+                    month: 'long',
+                    year: 'numeric',
+                },
+                locale,
+            ),
         [displayedMonth, locale],
     );
 
@@ -255,8 +243,7 @@ export function CalendarRoute() {
         <>
             <div className="min-h-screen flex flex-col">
                 <CalendarHeader
-                    monthLabel={monthLabel}
-                    yearLabel={yearLabel}
+                    monthYearParts={monthYearParts}
                     scope={scope}
                     showTypeFilter={showTypeFilter}
                     onScopeChange={setScope}

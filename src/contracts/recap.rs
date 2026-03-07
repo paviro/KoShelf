@@ -26,7 +26,7 @@ pub struct RecapSummaryResponse {
     pub active_days_percentage: f64,
     pub longest_streak: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub best_month_name: Option<String>,
+    pub best_month: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +61,6 @@ pub struct RecapItemResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecapMonthResponse {
     pub month_key: String,
-    pub month_label: String,
     pub items_finished: usize,
     pub read_time: i64,
     pub items: Vec<RecapItemResponse>,

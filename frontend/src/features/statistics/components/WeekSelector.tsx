@@ -62,9 +62,6 @@ export function WeekSelector({
               selectedWeek.end_date,
           )
         : 'No weeks available';
-    const selectedYearText = selectedWeek
-        ? selectedWeek.start_date.substring(0, 4)
-        : '';
 
     const weeksForSelectedYear = weeks.filter(
         (week) => week.start_date.substring(0, 4) === (selectedYear ?? ''),
@@ -99,9 +96,6 @@ export function WeekSelector({
                             <>
                                 <span className="font-bold">
                                     {selectedText}
-                                </span>{' '}
-                                <span className="text-primary-400">
-                                    {selectedYearText}
                                 </span>
                             </>
                         ) : (

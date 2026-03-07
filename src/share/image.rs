@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
 
@@ -165,7 +166,7 @@ pub fn generate_share_svg(
 fn fill_template(data: &ShareImageData, format: ShareFormat) -> String {
     let template = format.template();
     let reading_time = format_reading_time(data.reading_time_hours, data.reading_time_days);
-    let best_month = data.best_month.as_deref().unwrap_or("-");
+    let best_month = best_month_display(data.best_month.as_deref());
 
     template
         .replace("{{YEAR}}", &data.year.to_string())
@@ -174,7 +175,17 @@ fn fill_template(data: &ShareImageData, format: ShareFormat) -> String {
         .replace("{{ACTIVE_DAYS}}", &data.active_days.to_string())
         .replace("{{ACTIVE_PCT}}", &data.active_days_percentage.to_string())
         .replace("{{STREAK}}", &data.longest_streak.to_string())
-        .replace("{{BEST_MONTH}}", best_month)
+        .replace("{{BEST_MONTH}}", &best_month)
+}
+
+fn best_month_display(best_month: Option<&str>) -> String {
+    let Some(best_month) = best_month else {
+        return "-".to_string();
+    };
+
+    NaiveDate::parse_from_str(&format!("{}-01", best_month), "%Y-%m-%d")
+        .map(|date| date.format("%B").to_string())
+        .unwrap_or_else(|_| best_month.to_string())
 }
 
 /// Format reading time display
@@ -183,5 +194,21 @@ fn format_reading_time(hours: u32, days: u32) -> String {
         format!("{}d {}h", days, hours)
     } else {
         format!("{}h", hours)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::best_month_display;
+
+    #[test]
+    fn best_month_display_formats_month_keys_as_english_month_names() {
+        assert_eq!(best_month_display(Some("2026-03")), "March");
+    }
+
+    #[test]
+    fn best_month_display_preserves_non_month_values() {
+        assert_eq!(best_month_display(Some("March")), "March");
+        assert_eq!(best_month_display(None), "-");
     }
 }

@@ -46,18 +46,9 @@ fn build_monthly_recaps(
         // Sort items by end_date descending (Newest first)
         items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
-        let month_label = if let Ok(date) =
-            chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
-        {
-            date.format("%B").to_string()
-        } else {
-            ym.clone()
-        };
-
         let hours = *month_hours_all.get(&ym).unwrap_or(&0);
         let month_recap = MonthRecap {
             month_key: ym.clone(),
-            month_label: month_label.clone(),
             books_finished: items.len(),
             hours_read_seconds: hours,
             items: items.clone(),
@@ -77,7 +68,6 @@ fn build_monthly_recaps(
                 ym.clone(),
                 MonthRecap {
                     month_key: ym.clone(),
-                    month_label: month_label.clone(),
                     books_finished: items_books.len(),
                     hours_read_seconds: hours_books,
                     items: items_books,
@@ -98,7 +88,6 @@ fn build_monthly_recaps(
                 ym.clone(),
                 MonthRecap {
                     month_key: ym.clone(),
-                    month_label: month_label.clone(),
                     books_finished: items_comics.len(),
                     hours_read_seconds: hours_comics,
                     items: items_comics,
@@ -334,17 +323,7 @@ fn compute_yearly_summary(
         .max_by_key(|(_, secs)| *secs)
         .map(|(ym, secs)| (ym.clone(), *secs));
 
-    let best_month_name = if let Some((ym, secs)) = best_month {
-        if secs > 0 {
-            chrono::NaiveDate::parse_from_str(&format!("{}-01", ym), "%Y-%m-%d")
-                .ok()
-                .map(|d| d.format("%B").to_string())
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    let best_month = best_month.and_then(|(ym, secs)| (secs > 0).then_some(ym));
 
     // Convert totals into days/hours for display components
     let total_minutes = total_time_seconds / 60;
@@ -371,7 +350,7 @@ fn compute_yearly_summary(
         active_days,
         active_days_percentage,
         longest_streak,
-        best_month_name,
+        best_month,
     }
 }
 
@@ -447,7 +426,7 @@ impl SnapshotBuilder {
             active_days: summary.active_days as u32,
             active_days_percentage: summary.active_days_percentage as u8,
             longest_streak: summary.longest_streak as u32,
-            best_month: summary.best_month_name.clone(),
+            best_month: summary.best_month.clone(),
         };
 
         // Regenerate share images only when stats DB mtime differs.

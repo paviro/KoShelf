@@ -3,10 +3,7 @@ import { LuClock3 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
-import {
-    formatRecapDuration,
-    formatRecapMonthLabel,
-} from '../lib/recap-formatters';
+import { formatRecapDuration, formatRecapMonth } from '../lib/recap-formatters';
 import { RecapItemCard } from '../components/RecapItemCard';
 
 type RecapTimelineSectionProps = {
@@ -40,7 +37,7 @@ export function RecapTimelineSection({
                         <span className="recap-dot bg-gray-400 dark:bg-dark-400"></span>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                             <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                {formatRecapMonthLabel(month.month_label)}
+                                {formatRecapMonth(month.month_key)}
                             </h3>
 
                             <div className="flex items-center gap-2">

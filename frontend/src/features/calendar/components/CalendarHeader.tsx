@@ -7,8 +7,7 @@ import { translation } from '../../../shared/i18n';
 import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
 
 type CalendarHeaderProps = {
-    monthLabel: string;
-    yearLabel: string;
+    monthYearParts: Intl.DateTimeFormatPart[];
     scope: ScopeValue;
     showTypeFilter: boolean;
     onScopeChange: (scope: ScopeValue) => void;
@@ -21,8 +20,7 @@ type CalendarHeaderProps = {
 };
 
 export function CalendarHeader({
-    monthLabel,
-    yearLabel,
+    monthYearParts,
     scope,
     showTypeFilter,
     onScopeChange,
@@ -34,24 +32,35 @@ export function CalendarHeader({
     todayDisabled,
 }: CalendarHeaderProps) {
     const header = useMemo(() => {
-        const titleContent = (
-            <>
-                <button
-                    type="button"
-                    className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                    onClick={onOpenMonthPicker}
-                >
-                    {monthLabel}
-                </button>{' '}
-                <button
-                    type="button"
-                    className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                    onClick={onOpenYearPicker}
-                >
-                    {yearLabel}
-                </button>
-            </>
-        );
+        const titleContent = monthYearParts.map((part, index) => {
+            if (part.type === 'month') {
+                return (
+                    <button
+                        key={`${part.type}-${index}`}
+                        type="button"
+                        className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                        onClick={onOpenMonthPicker}
+                    >
+                        {part.value}
+                    </button>
+                );
+            }
+
+            if (part.type === 'year') {
+                return (
+                    <button
+                        key={`${part.type}-${index}`}
+                        type="button"
+                        className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                        onClick={onOpenYearPicker}
+                    >
+                        {part.value}
+                    </button>
+                );
+            }
+
+            return <span key={`${part.type}-${index}`}>{part.value}</span>;
+        });
 
         return {
             mobileContent: (
@@ -119,7 +128,7 @@ export function CalendarHeader({
             ),
         };
     }, [
-        monthLabel,
+        monthYearParts,
         onNextMonth,
         onOpenMonthPicker,
         onOpenYearPicker,
@@ -129,7 +138,6 @@ export function CalendarHeader({
         scope,
         showTypeFilter,
         todayDisabled,
-        yearLabel,
     ]);
 
     useRouteHeader(header);

@@ -89,11 +89,10 @@ export interface LibraryCompletions {
 
 export interface LibraryItemStats {
     notes?: number | null;
-    last_open?: number | null;
+    last_open_at?: string | null;
     highlights?: number | null;
     pages?: number | null;
     total_read_time?: number | null;
-    completions?: LibraryCompletions | null;
 }
 
 export interface LibrarySessionStats {

@@ -36,7 +36,6 @@ pub struct RecapItem {
 #[derive(Debug, Clone, Serialize)]
 pub struct MonthRecap {
     pub month_key: String,       // YYYY-MM
-    pub month_label: String,     // e.g. March
     pub books_finished: usize,   // number of completions in this month
     pub hours_read_seconds: i64, // total reading time in month from daily activity
     pub items: Vec<RecapItem>,   // enriched completion entries (sorted by end date)
@@ -56,5 +55,5 @@ pub struct YearlySummary {
     pub active_days: usize,
     pub active_days_percentage: f64,
     pub longest_streak: i64,
-    pub best_month_name: Option<String>,
+    pub best_month: Option<String>, // YYYY-MM
 }

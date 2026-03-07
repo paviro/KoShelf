@@ -29,7 +29,7 @@ fn empty_recap_summary_response() -> RecapSummaryResponse {
         active_days: 0,
         active_days_percentage: 0.0,
         longest_streak: 0,
-        best_month_name: None,
+        best_month: None,
     }
 }
 

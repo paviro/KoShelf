@@ -124,7 +124,7 @@ impl FileWatcher {
                             let generated_at = snapshot
                                 .generated_at()
                                 .map(str::to_owned)
-                                .unwrap_or_else(|| config_clone.time_config.now_formatted());
+                                .unwrap_or_else(|| config_clone.time_config.now_rfc3339());
 
                             if !config_clone.is_internal_server
                                 && let Err(error) = snapshot

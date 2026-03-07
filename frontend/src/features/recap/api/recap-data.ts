@@ -20,7 +20,7 @@ export interface RecapSummaryResponse {
     active_days: number;
     active_days_percentage: number;
     longest_streak: number;
-    best_month_name?: string | null;
+    best_month?: string | null;
 }
 
 export interface RecapItemResponse {
@@ -44,7 +44,6 @@ export interface RecapItemResponse {
 
 export interface RecapMonthResponse {
     month_key: string;
-    month_label: string;
     items_finished: number;
     read_time: number;
     items: RecapItemResponse[];

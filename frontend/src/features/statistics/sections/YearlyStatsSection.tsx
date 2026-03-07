@@ -6,9 +6,12 @@ import {
     scrollToHorizontalOverflowRatio,
     scrollToHorizontalPosition,
 } from '../../../shared/lib/dom/horizontal-scroll';
+import {
+    formatMonthKey,
+    formatMonthOfYear,
+} from '../../../shared/lib/intl/formatDate';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
-import { monthKeyAt, toShortMonthKey } from '../lib/months';
 import { translation } from '../../../shared/i18n';
 import {
     type MonthlyReadStats,
@@ -56,7 +59,13 @@ export function YearlyStatsSection({
                     active_days: 0,
                 };
 
-                const monthLabel = translation.get(monthKeyAt(monthIndex));
+                const monthKey = `${selectedYear ?? 2026}-${String(
+                    monthIndex + 1,
+                ).padStart(2, '0')}`;
+                const monthLabel = formatMonthKey(monthKey, {
+                    monthStyle: 'long',
+                    includeYear: Boolean(selectedYear),
+                });
                 const valueLabel = DataFormatter.formatReadTime(
                     stats.read_time,
                 );
@@ -71,12 +80,10 @@ export function YearlyStatsSection({
 
                 return {
                     readTime: stats.read_time,
-                    tooltip: selectedYear
-                        ? `${monthLabel} ${selectedYear}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`
-                        : `${monthLabel}: ${valueLabel}`,
-                    label: translation.get(
-                        toShortMonthKey(monthKeyAt(monthIndex)),
-                    ),
+                    tooltip: `${monthLabel}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`,
+                    label: formatMonthOfYear(monthIndex, {
+                        monthStyle: 'short',
+                    }),
                 };
             }),
         [yearlyMonthlyStats, selectedYear],

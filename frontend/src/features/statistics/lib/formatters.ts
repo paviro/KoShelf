@@ -1,53 +1,21 @@
 import { translation } from '../../../shared/i18n';
+import { formatPlainDateRange } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
-import { monthKeyAt, toShortMonthKey } from './months';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
     return value !== null && value !== undefined && Number.isFinite(value);
 }
 
 export class DateFormatter {
-    static parseISODate(dateStr: string): Date {
-        const parsedDate = new Date(dateStr);
-
-        if (Number.isNaN(parsedDate.getTime())) {
-            return new Date();
-        }
-
-        return parsedDate;
-    }
-
     static formatDateRange(
         startDateStr: string,
         endDateStr: string,
         monthStyle: 'short' | 'long' = 'short',
     ): string {
-        const startDate = this.parseISODate(startDateStr);
-        const endDate = this.parseISODate(endDateStr);
-
-        const startDay = startDate.getDate();
-        const startMonth = startDate.getMonth();
-        const endDay = endDate.getDate();
-        const endMonth = endDate.getMonth();
-        const startYear = startDate.getFullYear();
-        const endYear = endDate.getFullYear();
-
-        const startMonthKey = monthKeyAt(startMonth);
-        const endMonthKey = monthKeyAt(endMonth);
-        const startMonthLabel =
-            monthStyle === 'long'
-                ? translation.get(startMonthKey)
-                : translation.get(toShortMonthKey(startMonthKey));
-        const endMonthLabel =
-            monthStyle === 'long'
-                ? translation.get(endMonthKey)
-                : translation.get(toShortMonthKey(endMonthKey));
-
-        if (startMonth === endMonth && startYear === endYear) {
-            return `${startDay}-${endDay} ${startMonthLabel}`;
-        }
-
-        return `${startDay} ${startMonthLabel} - ${endDay} ${endMonthLabel}`;
+        return formatPlainDateRange(startDateStr, endDateStr, {
+            monthStyle,
+            yearDisplay: 'auto',
+        });
     }
 }
 

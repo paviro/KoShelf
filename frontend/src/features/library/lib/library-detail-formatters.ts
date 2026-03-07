@@ -1,77 +1,15 @@
 import { translation } from '../../../shared/i18n';
+import {
+    formatInstant,
+    formatPlainDate,
+    formatPlainDateRange,
+    parsePlainDate,
+} from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import type { LibrarySeries } from '../api/library-data';
 
-const FALLBACK_LOCALE = 'en-US';
-const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
-const ISO_DATETIME_REGEX =
-    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
-
 function isFiniteNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value);
-}
-
-function currentLocale(): string {
-    return translation.getLanguage() || FALLBACK_LOCALE;
-}
-
-function safeDateFormat(
-    date: Date,
-    options: Intl.DateTimeFormatOptions,
-): string {
-    try {
-        return new Intl.DateTimeFormat(currentLocale(), options).format(date);
-    } catch {
-        return new Intl.DateTimeFormat(FALLBACK_LOCALE, options).format(date);
-    }
-}
-
-function parseIsoDate(value: string): Date | null {
-    const match = ISO_DATE_REGEX.exec(value.trim());
-    if (!match) {
-        return null;
-    }
-
-    const year = Number.parseInt(match[1], 10);
-    const month = Number.parseInt(match[2], 10);
-    const day = Number.parseInt(match[3], 10);
-
-    if (
-        !Number.isFinite(year) ||
-        !Number.isFinite(month) ||
-        !Number.isFinite(day)
-    ) {
-        return null;
-    }
-
-    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
-}
-
-function parseIsoDateTime(value: string): Date | null {
-    const match = ISO_DATETIME_REGEX.exec(value.trim());
-    if (!match) {
-        return null;
-    }
-
-    const year = Number.parseInt(match[1], 10);
-    const month = Number.parseInt(match[2], 10);
-    const day = Number.parseInt(match[3], 10);
-    const hour = Number.parseInt(match[4], 10);
-    const minute = Number.parseInt(match[5], 10);
-    const second = Number.parseInt(match[6] ?? '0', 10);
-
-    if (
-        !Number.isFinite(year) ||
-        !Number.isFinite(month) ||
-        !Number.isFinite(day) ||
-        !Number.isFinite(hour) ||
-        !Number.isFinite(minute) ||
-        !Number.isFinite(second)
-    ) {
-        return null;
-    }
-
-    return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 }
 
 export function toProgressPercentage(
@@ -124,48 +62,16 @@ export function formatCompletionDateRange(
     startDate: string,
     endDate: string,
 ): string {
-    const start = parseIsoDate(startDate);
-    const end = parseIsoDate(endDate);
-
-    if (!start || !end) {
-        return startDate === endDate ? startDate : `${startDate} – ${endDate}`;
-    }
-
-    const currentYear = new Date().getUTCFullYear();
-    const formatOne = (date: Date): string => {
-        const includeYear = date.getUTCFullYear() !== currentYear;
-        return safeDateFormat(date, {
-            month: 'short',
-            day: 'numeric',
-            ...(includeYear ? { year: 'numeric' as const } : {}),
-            timeZone: 'UTC',
-        });
-    };
-
-    if (startDate === endDate) {
-        return formatOne(start);
-    }
-
-    return `${formatOne(start)} – ${formatOne(end)}`;
+    return formatPlainDateRange(startDate, endDate, {
+        monthStyle: 'short',
+        yearDisplay: 'auto',
+    });
 }
 
 export function formatIsoDate(value: string | null | undefined): string {
-    if (!value) {
-        return '--';
-    }
-
-    const parsed = parseIsoDate(value);
-    if (!parsed) {
-        return value;
-    }
-
-    const currentYear = new Date().getUTCFullYear();
-    const includeYear = parsed.getUTCFullYear() !== currentYear;
-    return safeDateFormat(parsed, {
-        month: 'short',
-        day: 'numeric',
-        ...(includeYear ? { year: 'numeric' as const } : {}),
-        timeZone: 'UTC',
+    return formatPlainDate(value, {
+        monthStyle: 'short',
+        yearDisplay: 'auto',
     });
 }
 
@@ -176,15 +82,9 @@ export function formatAnnotationDatetime(
         return null;
     }
 
-    const parsed = parseIsoDateTime(value);
-    if (!parsed) {
-        return value;
-    }
-
-    return safeDateFormat(parsed, {
+    return formatInstant(value, {
         dateStyle: 'long',
         timeStyle: 'short',
-        timeZone: 'UTC',
     });
 }
 
@@ -203,9 +103,12 @@ export function formatLanguageDisplayName(
     }
 
     try {
-        const displayNames = new Intl.DisplayNames([currentLocale()], {
-            type: 'language',
-        });
+        const displayNames = new Intl.DisplayNames(
+            [translation.getLanguage() || 'en-US'],
+            {
+                type: 'language',
+            },
+        );
         return (
             displayNames.of(baseLanguage.toLowerCase()) ??
             normalized.toUpperCase()
@@ -245,8 +148,8 @@ export function calculateCalendarLengthDays(
     startDate: string,
     endDate: string,
 ): number | null {
-    const start = parseIsoDate(startDate);
-    const end = parseIsoDate(endDate);
+    const start = parsePlainDate(startDate);
+    const end = parsePlainDate(endDate);
 
     if (!start || !end) {
         return null;

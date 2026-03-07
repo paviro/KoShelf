@@ -37,8 +37,8 @@ impl SnapshotBuilder {
         env!("CARGO_PKG_VERSION").to_string()
     }
 
-    /// Get current datetime as formatted string
+    /// Get current snapshot timestamp as an RFC3339 instant.
     pub(crate) fn get_last_updated(&self) -> String {
-        self.time_config.now_formatted()
+        self.time_config.now_rfc3339()
     }
 }

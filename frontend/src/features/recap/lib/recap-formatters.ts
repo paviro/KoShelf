@@ -1,41 +1,11 @@
 import { translation } from '../../../shared/i18n';
+import {
+    formatMonthKey,
+    formatPlainDate,
+    formatPlainDateRange,
+} from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import type { RecapItemResponse } from '../api/recap-data';
-
-const FALLBACK_LOCALE = 'en-US';
-const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-function parseIsoDate(value: string): Date | null {
-    const match = ISO_DATE_REGEX.exec(value.trim());
-    if (!match) {
-        return null;
-    }
-
-    const year = Number.parseInt(match[1], 10);
-    const month = Number.parseInt(match[2], 10);
-    const day = Number.parseInt(match[3], 10);
-    if (
-        !Number.isFinite(year) ||
-        !Number.isFinite(month) ||
-        !Number.isFinite(day)
-    ) {
-        return null;
-    }
-
-    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
-}
-
-function safeDateFormat(
-    date: Date,
-    options: Intl.DateTimeFormatOptions,
-): string {
-    const locale = translation.getLanguage() || FALLBACK_LOCALE;
-    try {
-        return new Intl.DateTimeFormat(locale, options).format(date);
-    } catch {
-        return new Intl.DateTimeFormat(FALLBACK_LOCALE, options).format(date);
-    }
-}
 
 export function formatRecapDuration(totalSeconds: number): string {
     if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
@@ -83,19 +53,9 @@ export function formatRecapHoursAndMinutes(
 }
 
 export function formatRecapDate(dateIso: string): string {
-    const parsed = parseIsoDate(dateIso);
-    if (!parsed) {
-        return dateIso;
-    }
-
-    const currentYear = new Date().getUTCFullYear();
-    const includeYear = parsed.getUTCFullYear() !== currentYear;
-
-    return safeDateFormat(parsed, {
-        month: 'short',
-        day: 'numeric',
-        ...(includeYear ? { year: 'numeric' as const } : {}),
-        timeZone: 'UTC',
+    return formatPlainDate(dateIso, {
+        monthStyle: 'short',
+        yearDisplay: 'auto',
     });
 }
 
@@ -103,17 +63,17 @@ export function formatRecapDateRange(
     startDateIso: string,
     endDateIso: string,
 ): string {
-    if (startDateIso === endDateIso) {
-        return formatRecapDate(startDateIso);
-    }
-
-    return `${formatRecapDate(startDateIso)} – ${formatRecapDate(endDateIso)}`;
+    return formatPlainDateRange(startDateIso, endDateIso, {
+        monthStyle: 'short',
+        yearDisplay: 'auto',
+    });
 }
 
-export function formatRecapMonthLabel(monthLabel: string): string {
-    const key = monthLabel.trim().toLowerCase();
-    const translated = translation.get(key);
-    return translated === key ? monthLabel : translated;
+export function formatRecapMonth(monthKey: string): string {
+    return formatMonthKey(monthKey, {
+        monthStyle: 'long',
+        includeYear: false,
+    });
 }
 
 export function formatRecapPercentage(value: number): string {

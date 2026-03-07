@@ -20,6 +20,7 @@ import type {
     LibraryItemStats,
 } from '../api/library-data';
 import {
+    formatIsoDate,
     formatSeriesDisplay,
     formatLanguageDisplayName,
     sanitizeRichTextHtml,
@@ -151,7 +152,7 @@ export function LibraryOverviewSection({
                                         </div>
                                         <div className="text-sm text-gray-500 dark:text-dark-400">
                                             {completions?.last_completion_date
-                                                ? `${translation.get('last')}: ${completions.last_completion_date}`
+                                                ? `${translation.get('last')}: ${formatIsoDate(completions.last_completion_date)}`
                                                 : translation.get(
                                                       'reading-progress',
                                                   )}

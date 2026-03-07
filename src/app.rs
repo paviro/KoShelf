@@ -132,7 +132,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             let initial_generated_at = initial_snapshot
                 .generated_at()
                 .map(str::to_owned)
-                .unwrap_or_else(|| config.time_config.now_formatted());
+                .unwrap_or_else(|| config.time_config.now_rfc3339());
             let snapshot_store = Arc::new(SnapshotStore::new());
             snapshot_store.replace(initial_snapshot);
             let update_notifier = SnapshotUpdateNotifier::new(initial_generated_at);
