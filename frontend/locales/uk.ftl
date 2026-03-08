@@ -47,6 +47,8 @@ language-setting-hint = Визначає мову для всіх перекла
 region-setting-hint = Впливає на формат дат і чисел.
 preview-date = Попередній перегляд Дата
 preview-number = Попередній перегляд Число
+region-setting-majority-group = Регіони з мовною більшістю
+region-setting-all-group = Усі підтримувані регіони
 
 # -----------------------------------
 #        Book List & Library

@@ -43,6 +43,8 @@ language-setting-hint = Establece el idioma de todas las traducciones de la inte
 region-setting-hint = Afecta el formato de fechas y números.
 preview-date = Vista previa Fecha
 preview-number = Vista previa Número
+region-setting-majority-group = Regiones de mayoría lingüística
+region-setting-all-group = Todas las regiones compatibles
 
 # -----------------------------------
 #        Book List & Library

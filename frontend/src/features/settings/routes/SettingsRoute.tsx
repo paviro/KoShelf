@@ -168,34 +168,25 @@ export function SettingsRoute() {
         ],
     );
     const selectedRegion = currentLocaleParts.regionCode;
-
-    const visibleRegionOptions = useMemo(() => {
-        const options = [...regionOptions.likelyRegions];
-
-        if (selectedRegion) {
-            const hasSelectedRegion = options.some(
-                (option) => option.code === selectedRegion,
-            );
-            if (!hasSelectedRegion) {
-                const matchingRegion = regionOptions.allRegions.find(
-                    (option) => option.code === selectedRegion,
-                );
-                if (matchingRegion) {
-                    options.unshift(matchingRegion);
-                }
-            }
-        }
-
-        return options;
-    }, [regionOptions, selectedRegion]);
+    const likelyRegionOptions = regionOptions.likelyRegions;
+    const otherRegionOptions = useMemo(() => {
+        const likelyCodes = new Set(
+            regionOptions.likelyRegions.map((option) => option.code),
+        );
+        return regionOptions.allRegions.filter(
+            (option) => !likelyCodes.has(option.code),
+        );
+    }, [regionOptions]);
 
     const effectiveSelectedRegion =
         selectedRegion &&
-        visibleRegionOptions.some((option) => option.code === selectedRegion)
+        regionOptions.allRegions.some(
+            (option) => option.code === selectedRegion,
+        )
             ? selectedRegion
             : (selectedLanguageOption?.defaultRegion ??
               regionOptions.likelyRegions[0]?.code ??
-              visibleRegionOptions[0]?.code ??
+              regionOptions.allRegions[0]?.code ??
               null);
     const previewLocale = joinLocale(selectedLanguage, effectiveSelectedRegion);
     const localePreview = useMemo(() => {
@@ -354,6 +345,7 @@ export function SettingsRoute() {
                                 const fallbackRegion =
                                     nextLanguageOption?.defaultRegion ??
                                     nextRegions.likelyRegions[0]?.code ??
+                                    nextRegions.allRegions[0]?.code ??
                                     null;
                                 void applyLocale(nextLanguage, fallbackRegion);
                             }}
@@ -389,11 +381,51 @@ export function SettingsRoute() {
                                 void applyLocale(selectedLanguage, nextRegion);
                             }}
                         >
-                            {visibleRegionOptions.map((option) => (
-                                <option key={option.code} value={option.code}>
-                                    {option.label}
-                                </option>
-                            ))}
+                            {likelyRegionOptions.length > 0 ? (
+                                <>
+                                    <optgroup
+                                        label={translation.get(
+                                            'region-setting-majority-group',
+                                        )}
+                                    >
+                                        {likelyRegionOptions.map((option) => (
+                                            <option
+                                                key={option.code}
+                                                value={option.code}
+                                            >
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    {otherRegionOptions.length > 0 ? (
+                                        <optgroup
+                                            label={translation.get(
+                                                'region-setting-all-group',
+                                            )}
+                                        >
+                                            {otherRegionOptions.map(
+                                                (option) => (
+                                                    <option
+                                                        key={option.code}
+                                                        value={option.code}
+                                                    >
+                                                        {option.label}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </optgroup>
+                                    ) : null}
+                                </>
+                            ) : (
+                                regionOptions.allRegions.map((option) => (
+                                    <option
+                                        key={option.code}
+                                        value={option.code}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))
+                            )}
                         </SettingsSelect>
                     </SettingsField>
 

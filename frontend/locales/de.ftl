@@ -47,6 +47,8 @@ language-setting-hint = Legt die Sprache für alle Übersetzungen der Oberfläch
 region-setting-hint = Beeinflusst die Formatierung von Daten und Zahlen.
 preview-date = Vorschau Datum
 preview-number = Vorschau Zahl
+region-setting-majority-group = Regionen mit Sprachmehrheit
+region-setting-all-group = Alle unterstützten Regionen
 
 # -----------------------------------
 #        Book List & Library

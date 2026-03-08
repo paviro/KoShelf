@@ -4,11 +4,7 @@ import {
     HiOutlineBookOpen,
     HiOutlineChatBubbleBottomCenterText,
 } from 'react-icons/hi2';
-import {
-    LuCalendarDays,
-    LuHistory,
-    LuSettings,
-} from 'react-icons/lu';
+import { LuCalendarDays, LuHistory, LuSettings } from 'react-icons/lu';
 
 import type { SiteResponse } from '../../shared/contracts';
 import { translation } from '../../shared/i18n';

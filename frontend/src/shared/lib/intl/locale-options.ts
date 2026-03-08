@@ -1,4 +1,3 @@
-import likelySubtagsJson from 'cldr-core/supplemental/likelySubtags.json';
 import territoryInfoJson from 'cldr-core/supplemental/territoryInfo.json';
 import countries from 'i18n-iso-countries';
 
@@ -8,20 +7,18 @@ type LocaleFileModule = {
 
 type LocaleFileLoader = () => Promise<LocaleFileModule>;
 
-type LikelySubtagsPayload = {
-    supplemental?: {
-        likelySubtags?: Record<string, string>;
-    };
-};
-
 type TerritoryInfoPayload = {
     supplemental?: {
         territoryInfo?: Record<
             string,
             {
+                _population?: string;
                 languagePopulation?: Record<
                     string,
-                    { _officialStatus?: OfficialStatus }
+                    {
+                        _populationPercent?: string;
+                        _officialStatus?: OfficialStatus;
+                    }
                 >;
             }
         >;
@@ -53,24 +50,16 @@ const localeModuleLoaders = import.meta.glob('../../../../locales/*.ftl', {
     query: '?raw',
 }) as Record<string, LocaleFileLoader>;
 
-const likelySubtags =
-    (likelySubtagsJson as LikelySubtagsPayload).supplemental?.likelySubtags ??
-    {};
 const territoryInfo =
     (territoryInfoJson as TerritoryInfoPayload).supplemental?.territoryInfo ??
     {};
 
 const ALL_REGION_CODES = Object.keys(countries.getAlpha2Codes())
     .map((code) => code.toUpperCase())
-    .sort();
+    .sort((left, right) => left.localeCompare(right));
 
 const ALL_REGION_CODE_SET = new Set(ALL_REGION_CODES);
-const OFFICIAL_LANGUAGE_STATUSES: ReadonlySet<OfficialStatus> = new Set([
-    'official',
-    'de_facto_official',
-    'official_regional',
-]);
-const OFFICIAL_REGION_CODES_BY_LANGUAGE = buildOfficialRegionCodesByLanguage();
+const MIN_LIKELY_LANGUAGE_SHARE_PERCENT = 60;
 const RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE = new Map<
     string,
     Set<string>
@@ -181,8 +170,11 @@ function extractRegion(value: string | null | undefined): string | null {
         }
     }
 
-    // Fallback: accept case-insensitive 2-letter parts (e.g. bare "at" input).
-    for (const part of parts) {
+    // Fallback: accept case-insensitive region subtags after the language
+    // subtag (e.g. "de-at"), but do not treat bare language tags like "de"
+    // or "fr" as if they were country codes.
+    for (let index = 1; index < parts.length; index += 1) {
+        const part = parts[index];
         if (/^[A-Za-z]{2}$/.test(part)) {
             const upper = part.toUpperCase();
             if (ALL_REGION_CODE_SET.has(upper)) {
@@ -199,52 +191,6 @@ function toRegionLabel(
     code: string,
 ): string {
     return displayNames?.of(code) ?? code;
-}
-
-function buildOfficialRegionCodesByLanguage(): Map<string, string[]> {
-    const regionCodesByLanguage = new Map<string, Set<string>>();
-
-    for (const [regionCode, regionInfo] of Object.entries(territoryInfo)) {
-        const normalizedRegionCode = regionCode.toUpperCase();
-        if (!ALL_REGION_CODE_SET.has(normalizedRegionCode)) {
-            continue;
-        }
-
-        for (const [languageCode, languageInfo] of Object.entries(
-            regionInfo.languagePopulation ?? {},
-        )) {
-            const normalizedLanguageCode = extractLanguage(languageCode);
-            if (!normalizedLanguageCode) {
-                continue;
-            }
-
-            if (
-                !languageInfo._officialStatus ||
-                !OFFICIAL_LANGUAGE_STATUSES.has(languageInfo._officialStatus)
-            ) {
-                continue;
-            }
-
-            const existingCodes = regionCodesByLanguage.get(
-                normalizedLanguageCode,
-            );
-            if (existingCodes) {
-                existingCodes.add(normalizedRegionCode);
-                continue;
-            }
-
-            regionCodesByLanguage.set(
-                normalizedLanguageCode,
-                new Set([normalizedRegionCode]),
-            );
-        }
-    }
-
-    return new Map(
-        Array.from(regionCodesByLanguage.entries()).map(
-            ([languageCode, codes]) => [languageCode, Array.from(codes).sort()],
-        ),
-    );
 }
 
 export function splitLocale(locale: string): {
@@ -272,20 +218,6 @@ export function joinLocale(
     return `${normalizedLanguage}-${normalizedRegion}`;
 }
 
-function isRuntimeLocaleRegionSupported(
-    languageCode: string,
-    regionCode: string,
-): boolean {
-    try {
-        const resolvedLocale = new Intl.DateTimeFormat(
-            joinLocale(languageCode, regionCode),
-        ).resolvedOptions().locale;
-        return extractRegion(resolvedLocale) === regionCode;
-    } catch {
-        return false;
-    }
-}
-
 function getRuntimeSupportedRegionCodes(languageCode: string): Set<string> {
     const normalizedLanguage = extractLanguage(languageCode);
     if (!normalizedLanguage) {
@@ -300,8 +232,29 @@ function getRuntimeSupportedRegionCodes(languageCode: string): Set<string> {
 
     const supportedRegionCodes = new Set<string>();
     for (const regionCode of ALL_REGION_CODES) {
-        if (isRuntimeLocaleRegionSupported(normalizedLanguage, regionCode)) {
-            supportedRegionCodes.add(regionCode);
+        const locale = joinLocale(normalizedLanguage, regionCode);
+
+        try {
+            const resolvedDateLocale = new Intl.DateTimeFormat(
+                locale,
+            ).resolvedOptions().locale;
+            if (extractRegion(resolvedDateLocale) === regionCode) {
+                supportedRegionCodes.add(regionCode);
+                continue;
+            }
+        } catch {
+            // Ignore unsupported locale/region pairs.
+        }
+
+        try {
+            const resolvedNumberLocale = new Intl.NumberFormat(
+                locale,
+            ).resolvedOptions().locale;
+            if (extractRegion(resolvedNumberLocale) === regionCode) {
+                supportedRegionCodes.add(regionCode);
+            }
+        } catch {
+            // Ignore unsupported locale/region pairs.
         }
     }
 
@@ -345,41 +298,85 @@ export function getLikelyRegionCodes(
         return [];
     }
 
-    const likelyRegions = new Set<string>();
-
-    for (const [fromLocale, toLocale] of Object.entries(likelySubtags)) {
-        const fromLang = extractLanguage(fromLocale);
-        const toLang = extractLanguage(toLocale);
-
-        if (fromLang !== normalizedLanguage && toLang !== normalizedLanguage) {
-            continue;
-        }
-
-        const fromRegion = extractRegion(fromLocale);
-        if (fromRegion) {
-            likelyRegions.add(fromRegion);
-        }
-
-        const toRegion = extractRegion(toLocale);
-        if (toRegion) {
-            likelyRegions.add(toRegion);
-        }
-    }
-
     const normalizedPreferredDefaultRegion = extractRegion(
         preferredDefaultRegion,
     );
+    const rankedLikelyRegions = Object.entries(territoryInfo)
+        .map(([regionCode, regionInfo]) => {
+            const normalizedRegionCode = regionCode.toUpperCase();
+            if (!ALL_REGION_CODE_SET.has(normalizedRegionCode)) {
+                return null;
+            }
+
+            const languageInfo = Object.entries(
+                regionInfo.languagePopulation ?? {},
+            ).find(
+                ([candidateLanguage]) =>
+                    extractLanguage(candidateLanguage) === normalizedLanguage,
+            )?.[1];
+            if (!languageInfo) {
+                return null;
+            }
+
+            if (
+                languageInfo._officialStatus !== 'official' &&
+                languageInfo._officialStatus !== 'de_facto_official'
+            ) {
+                return null;
+            }
+
+            const populationPercent = Number(
+                languageInfo._populationPercent ?? 0,
+            );
+            if (populationPercent < MIN_LIKELY_LANGUAGE_SHARE_PERCENT) {
+                return null;
+            }
+
+            const population = Number(regionInfo._population ?? 0);
+
+            return {
+                code: normalizedRegionCode,
+                score: populationPercent * Math.log10(Math.max(population, 10)),
+                populationPercent,
+                population,
+            };
+        })
+        .filter(
+            (
+                entry,
+            ): entry is {
+                code: string;
+                score: number;
+                populationPercent: number;
+                population: number;
+            } => Boolean(entry),
+        )
+        .sort(
+            (left, right) =>
+                right.score - left.score ||
+                right.populationPercent - left.populationPercent ||
+                right.population - left.population ||
+                left.code.localeCompare(right.code),
+        );
+
+    const likelyRegions: string[] = [];
+    const seen = new Set<string>();
+
     if (normalizedPreferredDefaultRegion) {
-        likelyRegions.add(normalizedPreferredDefaultRegion);
+        likelyRegions.push(normalizedPreferredDefaultRegion);
+        seen.add(normalizedPreferredDefaultRegion);
     }
 
-    const officialRegionCodes =
-        OFFICIAL_REGION_CODES_BY_LANGUAGE.get(normalizedLanguage) ?? [];
-    for (const regionCode of officialRegionCodes) {
-        likelyRegions.add(regionCode);
+    for (const region of rankedLikelyRegions) {
+        if (seen.has(region.code)) {
+            continue;
+        }
+
+        seen.add(region.code);
+        likelyRegions.push(region.code);
     }
 
-    return Array.from(likelyRegions).sort();
+    return likelyRegions;
 }
 
 export function getRegionOptionsForLanguage(

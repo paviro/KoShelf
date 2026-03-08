@@ -47,6 +47,8 @@ language-setting-hint = Sets the language used for all translations in the inter
 region-setting-hint = Affects how dates and numbers are formatted.
 preview-date = Preview Date
 preview-number = Preview Number
+region-setting-majority-group = Majority-speaking regions
+region-setting-all-group = All Supported Regions
 
 # -----------------------------------
 #        Book List & Library

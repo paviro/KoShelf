@@ -47,6 +47,8 @@ language-setting-hint = Define o idioma utilizado para todas as traduções da i
 region-setting-hint = Afeta a formatação de datas e números.
 preview-date = Pré-visualização Data
 preview-number = Pré-visualização Número
+region-setting-majority-group = Regiões de maioria linguística
+region-setting-all-group = Todas as regiões compatíveis
 
 # -----------------------------------
 #        Book List & Library

@@ -47,6 +47,8 @@ language-setting-hint = Définit la langue utilisée pour toutes les traductions
 region-setting-hint = Affecte le format des dates et des nombres.
 preview-date = Aperçu Date
 preview-number = Aperçu Nombre
+region-setting-majority-group = Régions à majorité linguistique
+region-setting-all-group = Toutes les régions prises en charge
 
 # -----------------------------------
 #        Book List & Library
