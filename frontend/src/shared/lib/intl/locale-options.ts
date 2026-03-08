@@ -46,6 +46,12 @@ export type RegionOption = {
     label: string;
 };
 
+type RegionLanguageCandidate = {
+    languageCode: string;
+    officialRank: number;
+    populationPercent: number;
+};
+
 const localeModuleLoaders = import.meta.glob('../../../../locales/*.ftl', {
     query: '?raw',
 }) as Record<string, LocaleFileLoader>;
@@ -64,6 +70,7 @@ const RUNTIME_SUPPORTED_REGION_CODES_BY_LANGUAGE = new Map<
     string,
     Set<string>
 >();
+const REGION_PATTERN_LOCALE_BY_KEY = new Map<string, string | null>();
 let baseLocaleMetadataPromise: Promise<BaseLocaleMetadata[]> | null = null;
 
 function readMetadata(content: string, key: string): string | null {
@@ -193,6 +200,74 @@ function toRegionLabel(
     return displayNames?.of(code) ?? code;
 }
 
+function getOfficialStatusRank(
+    status: OfficialStatus | null | undefined,
+): number {
+    switch (status) {
+        case 'official':
+        case 'de_facto_official':
+            return 3;
+        case 'official_regional':
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+function compareRegionLanguageCandidates(
+    left: RegionLanguageCandidate,
+    right: RegionLanguageCandidate,
+): number {
+    return (
+        right.officialRank - left.officialRank ||
+        right.populationPercent - left.populationPercent ||
+        left.languageCode.localeCompare(right.languageCode)
+    );
+}
+
+function supportsDatePatternLocale(locale: string, regionCode: string): boolean {
+    try {
+        const resolvedLocale = new Intl.DateTimeFormat(
+            locale,
+        ).resolvedOptions().locale;
+        return extractRegion(resolvedLocale) === regionCode;
+    } catch {
+        return false;
+    }
+}
+
+function getRegionLanguageCandidates(regionCode: string): RegionLanguageCandidate[] {
+    const regionInfo = territoryInfo[regionCode];
+    if (!regionInfo) {
+        return [];
+    }
+
+    const candidateByLanguage = new Map<string, RegionLanguageCandidate>();
+    for (const [candidateLanguage, languageInfo] of Object.entries(
+        regionInfo.languagePopulation ?? {},
+    )) {
+        const languageCode = extractLanguage(candidateLanguage);
+        if (!languageCode) {
+            continue;
+        }
+
+        const candidate: RegionLanguageCandidate = {
+            languageCode,
+            officialRank: getOfficialStatusRank(languageInfo._officialStatus),
+            populationPercent: Number(languageInfo._populationPercent ?? 0),
+        };
+        const existing = candidateByLanguage.get(languageCode);
+        if (
+            !existing ||
+            compareRegionLanguageCandidates(existing, candidate) > 0
+        ) {
+            candidateByLanguage.set(languageCode, candidate);
+        }
+    }
+
+    return [...candidateByLanguage.values()].sort(compareRegionLanguageCandidates);
+}
+
 export function splitLocale(locale: string): {
     languageCode: string;
     regionCode: string | null;
@@ -216,6 +291,94 @@ export function joinLocale(
     }
 
     return `${normalizedLanguage}-${normalizedRegion}`;
+}
+
+export function getRegionPatternLocale(
+    regionCode: string | null | undefined,
+    preferredLanguageCode?: string | null,
+): string | null {
+    const normalizedRegion = extractRegion(regionCode);
+    if (!normalizedRegion) {
+        return null;
+    }
+
+    const normalizedPreferredLanguage = extractLanguage(preferredLanguageCode);
+    const cacheKey = `${normalizedRegion}:${normalizedPreferredLanguage ?? ''}`;
+    if (REGION_PATTERN_LOCALE_BY_KEY.has(cacheKey)) {
+        return REGION_PATTERN_LOCALE_BY_KEY.get(cacheKey) ?? null;
+    }
+
+    const candidates = getRegionLanguageCandidates(normalizedRegion);
+
+    if (normalizedPreferredLanguage) {
+        const preferredCandidate = candidates.find(
+            (candidate) =>
+                candidate.languageCode === normalizedPreferredLanguage &&
+                candidate.officialRank > 0,
+        );
+        if (preferredCandidate) {
+            const preferredLocale = joinLocale(
+                normalizedPreferredLanguage,
+                normalizedRegion,
+            );
+            if (supportsDatePatternLocale(preferredLocale, normalizedRegion)) {
+                REGION_PATTERN_LOCALE_BY_KEY.set(cacheKey, preferredLocale);
+                return preferredLocale;
+            }
+        }
+    }
+
+    for (const candidate of candidates) {
+        const locale = joinLocale(candidate.languageCode, normalizedRegion);
+        if (supportsDatePatternLocale(locale, normalizedRegion)) {
+            REGION_PATTERN_LOCALE_BY_KEY.set(cacheKey, locale);
+            return locale;
+        }
+    }
+
+    const fallbackLocale = normalizedPreferredLanguage
+        ? joinLocale(normalizedPreferredLanguage, normalizedRegion)
+        : null;
+    if (
+        fallbackLocale &&
+        supportsDatePatternLocale(fallbackLocale, normalizedRegion)
+    ) {
+        REGION_PATTERN_LOCALE_BY_KEY.set(cacheKey, fallbackLocale);
+        return fallbackLocale;
+    }
+
+    REGION_PATTERN_LOCALE_BY_KEY.set(cacheKey, null);
+    return null;
+}
+
+export function resolveLocalePatternContext(locale: string): {
+    valueLocale: string;
+    patternLocale: string | null;
+} {
+    const { languageCode, regionCode } = splitLocale(locale);
+    const patternLocale = getRegionPatternLocale(regionCode, languageCode);
+    if (!patternLocale) {
+        return {
+            valueLocale: locale,
+            patternLocale: null,
+        };
+    }
+
+    const patternParts = splitLocale(patternLocale);
+    if (
+        patternParts.languageCode === languageCode &&
+        patternParts.regionCode === regionCode
+    ) {
+        return {
+            valueLocale: locale,
+            patternLocale: null,
+        };
+    }
+
+    return {
+        valueLocale: locale,
+        patternLocale,
+    };
 }
 
 function getRuntimeSupportedRegionCodes(languageCode: string): Set<string> {

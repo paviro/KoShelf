@@ -6,6 +6,7 @@ import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
+import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import {
     getRegionOptionsForLanguage,
     getSupportedLanguageOptions,
@@ -201,17 +202,14 @@ export function SettingsRoute() {
         [previewLocale],
     );
     const numberPreview = useMemo(() => {
-        try {
-            return new Intl.NumberFormat(previewLocale, {
+        return formatNumber(
+            PREVIEW_NUMBER,
+            {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
-            }).format(PREVIEW_NUMBER);
-        } catch {
-            return new Intl.NumberFormat('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            }).format(PREVIEW_NUMBER);
-        }
+            },
+            previewLocale,
+        );
     }, [previewLocale]);
 
     const applyLocale = useCallback(
