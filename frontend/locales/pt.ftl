@@ -112,13 +112,11 @@ highlights-label = { $count ->
     [one] Destaque
    *[other] Destaques
 }
-notes = Notas
 notes-label = { $count ->
     [one] Nota
    *[other] Notas
 }
 bookmarks = Marcadores
-page = Página
 page-bookmark = Marcador de Página
 bookmark-anchor = Âncora do Marcador
 highlights-quotes = Destaques & Citações

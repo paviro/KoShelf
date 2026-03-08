@@ -11,14 +11,14 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "npm run i18n:check && tsc -b && vite build",
+        "build": "npm run test && tsc -b && vite build",
         "preview": "vite preview",
         "typecheck": "tsc --noEmit",
-        "i18n:check": "node scripts/validate-locales.mjs",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test": "vitest run"
     },
     "dependencies": {
         "@event-calendar/build": "^5.4.1",
@@ -37,6 +37,8 @@
         "@fluent/syntax": "^0.19.0",
         "@tailwindcss/container-queries": "^0.1.1",
         "@tailwindcss/typography": "^0.5.10",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
         "@types/event-calendar__core": "^5.0.0",
         "@types/node": "^25.3.3",
         "@types/react": "^19.2.14",
@@ -46,10 +48,12 @@
         "eslint-plugin-react-hooks": "^7.0.1",
         "eslint-plugin-react-refresh": "^0.5.2",
         "globals": "^17.4.0",
+        "jsdom": "^28.1.0",
         "prettier": "^3.8.1",
         "tailwindcss": "^3.4.0",
         "typescript": "^5.7.3",
         "typescript-eslint": "^8.56.1",
-        "vite": "^6.0.11"
+        "vite": "^6.0.11",
+        "vitest": "^4.0.18"
     }
 }

@@ -122,7 +122,6 @@ highlights-label = { $count ->
     [many] Выделений
    *[other] Выделений
 }
-notes = Заметки
 notes-label = { $count ->
     [one] Заметка
     [few] Заметки
@@ -130,7 +129,6 @@ notes-label = { $count ->
    *[other] Заметок
 }
 bookmarks = Закладки
-page = Страница
 page-bookmark = Закладка страницы
 bookmark-anchor = Якорь закладки
 highlights-quotes = Выделения и цитаты

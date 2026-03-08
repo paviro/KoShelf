@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useCallback } from 'react';
 
+import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import { translation } from '../../../shared/i18n';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 
@@ -20,12 +21,15 @@ export function CalendarMonthPickerModal({
     onClose,
     onSelectMonth,
 }: CalendarMonthPickerModalProps) {
-    const monthFormatter = useMemo(
-        () =>
-            new Intl.DateTimeFormat(locale || 'en', {
-                month: 'short',
-            }),
-        [locale],
+    const formatMonth = useCallback(
+        (monthIndex: number) =>
+            formatDateObject(
+                new Date(year, monthIndex, 1),
+                { month: 'short' },
+                '--',
+                locale || 'en',
+            ),
+        [locale, year],
     );
 
     return (
@@ -41,9 +45,7 @@ export function CalendarMonthPickerModal({
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                     {Array.from({ length: 12 }, (_, monthIndex) => {
-                        const monthName = monthFormatter.format(
-                            new Date(year, monthIndex, 1),
-                        );
+                        const monthName = formatMonth(monthIndex);
                         const active = monthIndex === selectedMonthIndex;
 
                         return (

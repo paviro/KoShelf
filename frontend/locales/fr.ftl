@@ -112,13 +112,11 @@ highlights-label = { $count ->
     [one] Surlignage
    *[other] Surlignages
 }
-notes = Notes
 notes-label = { $count ->
     [one] Note
    *[other] Notes
 }
 bookmarks = Signets
-page = Page
 page-bookmark = Signet de page
 bookmark-anchor = Ancre du signet
 highlights-quotes = Surlignages & Citations

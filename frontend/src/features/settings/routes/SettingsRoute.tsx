@@ -5,6 +5,7 @@ import { LuChevronDown } from 'react-icons/lu';
 import { api } from '../../../shared/api';
 import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
+import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import {
     getRegionOptionsForLanguage,
     getSupportedLanguageOptions,
@@ -189,19 +190,16 @@ export function SettingsRoute() {
               regionOptions.allRegions[0]?.code ??
               null);
     const previewLocale = joinLocale(selectedLanguage, effectiveSelectedRegion);
-    const localePreview = useMemo(() => {
-        try {
-            return new Intl.DateTimeFormat(previewLocale, {
-                dateStyle: 'full',
-                timeStyle: 'short',
-            }).format(PREVIEW_DATE);
-        } catch {
-            return new Intl.DateTimeFormat('en-US', {
-                dateStyle: 'full',
-                timeStyle: 'short',
-            }).format(PREVIEW_DATE);
-        }
-    }, [previewLocale]);
+    const localePreview = useMemo(
+        () =>
+            formatDateObject(
+                PREVIEW_DATE,
+                { dateStyle: 'full', timeStyle: 'short' },
+                '--',
+                previewLocale,
+            ),
+        [previewLocale],
+    );
     const numberPreview = useMemo(() => {
         try {
             return new Intl.NumberFormat(previewLocale, {
