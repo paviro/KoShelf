@@ -100,12 +100,10 @@ highlights = Kiemelések
 highlights-label = { $count ->
    *[other] Kiemelés
 }
-notes = Jegyzetek
 notes-label = { $count ->
    *[other] Jegyzet
 }
 bookmarks = Könyvjelzők
-page = Oldal
 page-bookmark = Oldal könyvjelző
 bookmark-anchor = Könyvjelző horgony
 highlights-quotes = Kiemelések és idézetek
