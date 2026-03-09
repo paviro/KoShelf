@@ -68,19 +68,15 @@ status =
     .completed = Befejezve
     .unread = Olvasatlan
 book-label = { $count ->
-    [one] Könyv
    *[other] Könyv
 }
 comic-label = { $count ->
-    [one] Képregény
    *[other] Képregény
 }
 books-finished = { $count ->
-    [one] { book-label } befejezve
    *[other] { book-label } befejezve
 }
 comics-finished = { $count ->
-    [one] { comic-label } befejezve
    *[other] { comic-label } befejezve
 }
 unknown-book = Ismeretlen könyv
@@ -102,12 +98,10 @@ my-review = Értékelésem
 my-note = Jegyzetem
 highlights = Kiemelések
 highlights-label = { $count ->
-    [one] Kiemelés
    *[other] Kiemelés
 }
 notes = Jegyzetek
 notes-label = { $count ->
-    [one] Jegyzet
    *[other] Jegyzet
 }
 bookmarks = Könyvjelzők
@@ -120,11 +114,9 @@ reading-progress = Olvasási folyamat
 page-number = { $count }. oldal
 last-read = Utoljára olvasva
 pages = { $count ->
-    [one] { $count } oldal
    *[other] { $count } oldal
 }
 pages-label = { $count ->
-    [one] Oldal
    *[other] Oldal
 }
 
@@ -141,7 +133,6 @@ pages-per-hour = Oldal/óra
 # Abbreviation for Pages Per Hour
 pph-abbreviation = old./ó.
 reading-sessions-label = { $count ->
-    [one] Olvasási alkalom
    *[other] Olvasási alkalom
 }
 session =
@@ -163,12 +154,10 @@ statistics-from-koreader = Statisztikák a KoReader munkameneteiből
 reading-time = Olvasási idő
 pages-read = Elolvasott oldalak
 units-days = { $count ->
-    [one] { $count } nap
    *[other] { $count } nap
 }
 units-sessions = { $count ->
-    [one] { $count } olvasási alkalom
-   *[other] { $count } olvasási alkalom
+   *[other] { $count } olvasás
 }
 
 # -----------------------------------
@@ -187,11 +176,9 @@ recap-banner = Transzparens (Banner)
     .details = 2400 x 1260 — Vízszintes 2:1
 best-month = Legjobb hónap
 active-days = { $count ->
-    [one] Aktív nap
    *[other] Aktív nap
 }
 active-days-tooltip = { $count ->
-    [one] aktív nap
    *[other] aktív nap
 }
 toggle =
@@ -294,14 +281,11 @@ last = Utolsó
 
 # Time unit labels (standalone word forms for displaying after numbers)
 days_label = { $count ->
-    [one] nap
    *[other] nap
 }
 hours_label = { $count ->
-    [one] óra
    *[other] óra
 }
 minutes_label = { $count ->
-    [one] perc
    *[other] perc
 }
