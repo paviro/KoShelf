@@ -35,6 +35,11 @@ fn test_parse_koreader_generated_metadata() {
             },
             doc_pages = 250,
             doc_path = "/storage/Books/My Book.epub",
+            pagemap_use_page_labels = true,
+            pagemap_chars_per_synthetic_page = 1500,
+            pagemap_doc_pages = 320,
+            pagemap_current_page_label = "12",
+            pagemap_last_page_label = "320",
             doc_props = {
                 authors = "John Smith",
                 description = "A fascinating book about programming.",
@@ -88,6 +93,11 @@ fn test_parse_koreader_generated_metadata() {
     );
     assert!((metadata.percent_finished.unwrap() - 0.25).abs() < 0.0001);
     assert_eq!(metadata.text_lang.as_deref(), Some("en-US"));
+    assert_eq!(metadata.pagemap_use_page_labels, Some(true));
+    assert_eq!(metadata.pagemap_chars_per_synthetic_page, Some(1500));
+    assert_eq!(metadata.pagemap_doc_pages, Some(320));
+    assert_eq!(metadata.pagemap_current_page_label.as_deref(), Some("12"));
+    assert_eq!(metadata.pagemap_last_page_label.as_deref(), Some("320"));
 
     // Verify doc_props
     let doc_props = metadata.doc_props.expect("doc_props should be present");

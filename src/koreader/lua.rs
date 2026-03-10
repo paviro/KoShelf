@@ -44,6 +44,14 @@ impl LuaParser {
         let doc_pages = self.get_optional_u32(&table, "doc_pages")?;
         let doc_path = self.get_optional_string(&table, "doc_path")?;
         let doc_props = self.parse_doc_props(&table)?;
+        let pagemap_use_page_labels = self.get_optional_bool(&table, "pagemap_use_page_labels")?;
+        let pagemap_chars_per_synthetic_page =
+            self.get_optional_u32(&table, "pagemap_chars_per_synthetic_page")?;
+        let pagemap_doc_pages = self.get_optional_u32(&table, "pagemap_doc_pages")?;
+        let pagemap_current_page_label =
+            self.get_optional_string(&table, "pagemap_current_page_label")?;
+        let pagemap_last_page_label =
+            self.get_optional_string(&table, "pagemap_last_page_label")?;
         let partial_md5_checksum = self.get_optional_string(&table, "partial_md5_checksum")?;
         let percent_finished = self.get_optional_f64(&table, "percent_finished")?;
         let stats = self.parse_stats(&table)?;
@@ -55,6 +63,11 @@ impl LuaParser {
             doc_pages,
             doc_path,
             doc_props,
+            pagemap_use_page_labels,
+            pagemap_chars_per_synthetic_page,
+            pagemap_doc_pages,
+            pagemap_current_page_label,
+            pagemap_last_page_label,
             partial_md5_checksum,
             percent_finished,
             stats,
@@ -168,11 +181,41 @@ impl LuaParser {
 
     fn get_optional_u32(&self, table: &Table, key: &str) -> Result<Option<u32>> {
         match table.get(key) {
-            Ok(Value::Integer(i)) => Ok(Some(i as u32)),
-            Ok(Value::Number(n)) => Ok(Some(n as u32)),
+            Ok(Value::Integer(i)) => match u32::try_from(i) {
+                Ok(value) => Ok(Some(value)),
+                Err(_) => {
+                    warn!("Ignoring out-of-range integer for key '{}': {}", key, i);
+                    Ok(None)
+                }
+            },
+            Ok(Value::Number(n)) => {
+                if !n.is_finite() {
+                    warn!("Ignoring non-finite number for key '{}': {}", key, n);
+                    return Ok(None);
+                }
+
+                if n < 0.0 || n > u32::MAX as f64 {
+                    warn!("Ignoring out-of-range number for key '{}': {}", key, n);
+                    return Ok(None);
+                }
+
+                Ok(Some(n as u32))
+            }
             Ok(Value::Nil) => Ok(None),
             Ok(_) => {
                 warn!("Expected number for key '{}', got different type", key);
+                Ok(None)
+            }
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_optional_bool(&self, table: &Table, key: &str) -> Result<Option<bool>> {
+        match table.get(key) {
+            Ok(Value::Boolean(value)) => Ok(Some(value)),
+            Ok(Value::Nil) => Ok(None),
+            Ok(_) => {
+                warn!("Expected boolean for key '{}', got different type", key);
                 Ok(None)
             }
             Err(_) => Ok(None),

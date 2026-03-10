@@ -214,11 +214,40 @@ impl LibraryItem {
     }
 
     pub fn doc_pages(&self) -> Option<u32> {
-        // Prefer KOReader metadata pages, fall back to format-extracted pages
-        self.koreader_metadata
-            .as_ref()
-            .and_then(|m| m.doc_pages)
+        // Prefer stable page labels when available, then KOReader rendered pages,
+        // then format-extracted pages.
+        self.stable_display_page_total()
+            .or_else(|| {
+                self.koreader_metadata
+                    .as_ref()
+                    .and_then(|m| m.doc_pages)
+                    .filter(|pages| *pages > 0)
+            })
             .or(self.book_info.pages)
+    }
+
+    /// Stable page total for display-only usage.
+    ///
+    /// Valid when KOReader page labels are enabled and `pagemap_doc_pages` is present.
+    pub fn stable_display_page_total(&self) -> Option<u32> {
+        let metadata = self.koreader_metadata.as_ref()?;
+
+        if metadata.pagemap_use_page_labels != Some(true) {
+            return None;
+        }
+
+        metadata.pagemap_doc_pages.filter(|pages| *pages > 0)
+    }
+
+    /// Stable page total for synthetic scaling usage.
+    ///
+    /// Valid only when stable labels are enabled and KOReader synthetic mode metadata is present.
+    pub fn synthetic_scaling_page_total(&self) -> Option<u32> {
+        let metadata = self.koreader_metadata.as_ref()?;
+
+        metadata.pagemap_chars_per_synthetic_page?;
+
+        self.stable_display_page_total()
     }
 
     pub fn note_count(&self) -> usize {
@@ -352,6 +381,78 @@ impl LibraryItem {
     /// Check if this is a book (EPUB/FB2/MOBI)
     pub fn is_book(&self) -> bool {
         self.content_type() == ContentType::Book
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_item(metadata: Option<KoReaderMetadata>) -> LibraryItem {
+        LibraryItem {
+            id: "id-1".to_string(),
+            book_info: BookInfo {
+                title: "Title".to_string(),
+                authors: vec!["Author".to_string()],
+                description: None,
+                language: None,
+                publisher: None,
+                identifiers: Vec::new(),
+                subjects: Vec::new(),
+                series: None,
+                series_number: None,
+                pages: Some(123),
+                cover_data: None,
+                cover_mime_type: None,
+            },
+            koreader_metadata: metadata,
+            file_path: PathBuf::from("/tmp/book.epub"),
+            format: LibraryItemFormat::Epub,
+        }
+    }
+
+    fn metadata_for_pages(use_labels: bool, synthetic: bool) -> KoReaderMetadata {
+        KoReaderMetadata {
+            annotations: Vec::new(),
+            doc_pages: Some(200),
+            doc_path: None,
+            doc_props: None,
+            pagemap_use_page_labels: Some(use_labels),
+            pagemap_chars_per_synthetic_page: synthetic.then_some(1500),
+            pagemap_doc_pages: Some(300),
+            pagemap_current_page_label: Some("12".to_string()),
+            pagemap_last_page_label: Some("300".to_string()),
+            partial_md5_checksum: Some("md5".to_string()),
+            percent_finished: None,
+            stats: None,
+            summary: None,
+            text_lang: None,
+        }
+    }
+
+    #[test]
+    fn prefers_stable_display_pages_when_labels_enabled() {
+        let item = test_item(Some(metadata_for_pages(true, false)));
+
+        assert_eq!(item.stable_display_page_total(), Some(300));
+        assert_eq!(item.synthetic_scaling_page_total(), None);
+        assert_eq!(item.doc_pages(), Some(300));
+    }
+
+    #[test]
+    fn enables_synthetic_scaling_only_when_synthetic_metadata_exists() {
+        let item = test_item(Some(metadata_for_pages(true, true)));
+
+        assert_eq!(item.stable_display_page_total(), Some(300));
+        assert_eq!(item.synthetic_scaling_page_total(), Some(300));
+    }
+
+    #[test]
+    fn falls_back_to_rendered_doc_pages_when_stable_display_is_unavailable() {
+        let item = test_item(Some(metadata_for_pages(false, true)));
+
+        assert_eq!(item.stable_display_page_total(), None);
+        assert_eq!(item.doc_pages(), Some(200));
     }
 }
 

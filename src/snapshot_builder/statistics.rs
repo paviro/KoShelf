@@ -1,6 +1,7 @@
 //! Statistics payload computation.
 
 use super::SnapshotBuilder;
+use super::scaling::PageScaling;
 use super::utils::completion_counts_by_year;
 use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::mappers;
@@ -15,13 +16,15 @@ impl SnapshotBuilder {
     pub(crate) fn compute_statistics_data(
         &self,
         stats_data: &mut StatisticsData,
+        page_scaling: &PageScaling,
         snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!("Computing statistics data...");
 
         // Calculate reading stats for ALL content.
-        let reading_stats_all =
+        let mut reading_stats_all =
             StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
+        page_scaling.apply_to_reading_stats(stats_data, &mut reading_stats_all, &self.time_config);
         let completion_counts_all = completion_counts_by_year(stats_data);
 
         // Build per-type stats for contract exports.
@@ -29,13 +32,23 @@ impl SnapshotBuilder {
         let comics_data = stats_data.filtered_by_content_type(ContentType::Comic);
 
         let mut books_stats_data = books_data.clone();
-        let reading_stats_books =
+        let mut reading_stats_books =
             StatisticsCalculator::calculate_stats(&mut books_stats_data, &self.time_config);
+        page_scaling.apply_to_reading_stats(
+            &books_stats_data,
+            &mut reading_stats_books,
+            &self.time_config,
+        );
         let completion_counts_books = completion_counts_by_year(&books_stats_data);
 
         let mut comics_stats_data = comics_data.clone();
-        let reading_stats_comics =
+        let mut reading_stats_comics =
             StatisticsCalculator::calculate_stats(&mut comics_stats_data, &self.time_config);
+        page_scaling.apply_to_reading_stats(
+            &comics_stats_data,
+            &mut reading_stats_comics,
+            &self.time_config,
+        );
         let completion_counts_comics = completion_counts_by_year(&comics_stats_data);
 
         let max_scale_seconds = self.heatmap_scale_max.map(i64::from).unwrap_or(0);

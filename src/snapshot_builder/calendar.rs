@@ -1,6 +1,7 @@
 //! Calendar payload computation.
 
 use super::SnapshotBuilder;
+use super::scaling::PageScaling;
 use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::mappers;
 use crate::koreader::CalendarGenerator;
@@ -15,13 +16,15 @@ impl SnapshotBuilder {
         &self,
         stats_data: &mut StatisticsData,
         items: &[LibraryItem],
+        page_scaling: &PageScaling,
         snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!("Computing calendar data...");
 
         // Generate per-month calendar payloads.
-        let calendar_months =
+        let mut calendar_months =
             CalendarGenerator::generate_calendar_months(stats_data, items, &self.time_config);
+        page_scaling.apply_to_calendar_months(&mut calendar_months, stats_data, &self.time_config);
 
         // Available months (newest first).
         let mut available_months: Vec<String> = calendar_months.keys().cloned().collect();

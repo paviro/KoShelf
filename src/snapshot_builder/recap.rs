@@ -1,6 +1,7 @@
 //! Yearly recap payload computation with share images.
 
 use super::SnapshotBuilder;
+use super::scaling::PageScaling;
 use super::utils::completion_year_and_month;
 use crate::contracts::{common::ContentTypeFilter, mappers, recap::RecapShareAssets};
 use crate::models::{
@@ -111,7 +112,7 @@ fn build_md5_to_item(items: &[LibraryItem]) -> HashMap<String, &LibraryItem> {
             .as_ref()
             .and_then(|m| m.partial_md5_checksum.as_ref())
         {
-            md5_to_book.insert(md5.clone(), book);
+            md5_to_book.insert(md5.to_lowercase(), book);
         }
     }
     md5_to_book
@@ -120,6 +121,7 @@ fn build_md5_to_item(items: &[LibraryItem]) -> HashMap<String, &LibraryItem> {
 fn group_completions_by_year_month(
     stats_data: &StatisticsData,
     md5_to_item: &HashMap<String, &LibraryItem>,
+    page_scaling: &PageScaling,
 ) -> (YearMonthItems, Vec<i32>) {
     // Build year -> month (YYYY-MM) -> Vec<RecapItem>
     let mut year_month_items: YearMonthItems = HashMap::new();
@@ -144,7 +146,7 @@ fn group_completions_by_year_month(
                     item_id,
                     item_cover,
                     content_type,
-                ) = if let Some(item) = md5_to_item.get(&sb.md5) {
+                ) = if let Some(item) = md5_to_item.get(&sb.md5.to_lowercase()) {
                     let title = item.book_info.title.clone();
                     let authors = item.book_info.authors.clone();
                     let rating = item.rating();
@@ -183,6 +185,13 @@ fn group_completions_by_year_month(
                     )
                 };
 
+                let pages_read = page_scaling.scale_pages_for_md5(&sb.md5, c.pages_read);
+                let average_speed = if c.reading_time > 0 && pages_read > 0 {
+                    Some(pages_read as f64 / (c.reading_time as f64 / 3600.0))
+                } else {
+                    None
+                };
+
                 let item = RecapItem {
                     title,
                     authors,
@@ -190,7 +199,7 @@ fn group_completions_by_year_month(
                     end_date: c.end_date.clone(),
                     reading_time: c.reading_time,
                     session_count: c.session_count,
-                    pages_read: c.pages_read,
+                    pages_read,
                     calendar_length_days: c.calendar_length_days(),
                     rating,
                     review_note,
@@ -198,7 +207,7 @@ fn group_completions_by_year_month(
                     item_id,
                     item_cover,
                     content_type,
-                    average_speed: c.average_speed(),
+                    average_speed,
                     avg_session_duration: c.avg_session_duration(),
                 };
 
@@ -538,6 +547,7 @@ impl SnapshotBuilder {
         &self,
         stats_data: &mut StatisticsData,
         books: &[LibraryItem],
+        page_scaling: &PageScaling,
         snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!("Computing recap data and share assets...");
@@ -566,7 +576,8 @@ impl SnapshotBuilder {
         let book_ids: HashSet<i64> = books_stats_data.books.iter().map(|b| b.id).collect();
         let comic_ids: HashSet<i64> = comics_stats_data.books.iter().map(|b| b.id).collect();
 
-        let (year_month_items, years) = group_completions_by_year_month(stats_data, &md5_to_book);
+        let (year_month_items, years) =
+            group_completions_by_year_month(stats_data, &md5_to_book, page_scaling);
         let years_books = mappers::years_for_content_type(&year_month_items, ContentType::Book);
         let years_comics = mappers::years_for_content_type(&year_month_items, ContentType::Comic);
         let years_books_set: HashSet<i32> = years_books.iter().copied().collect();

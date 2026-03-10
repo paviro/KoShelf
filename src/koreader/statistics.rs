@@ -431,7 +431,7 @@ impl StatisticsCalculator {
         // 1. Get IDs of books to keep (those whose MD5 is in library_md5s)
         let mut ids_to_keep: HashSet<i64> = HashSet::new();
         stats_data.books.retain(|book| {
-            if library_md5s.contains(&book.md5) {
+            if library_md5s.contains(&book.md5) || library_md5s.contains(&book.md5.to_lowercase()) {
                 ids_to_keep.insert(book.id);
                 true
             } else {
@@ -449,9 +449,9 @@ impl StatisticsCalculator {
             .retain(|stat| ids_to_keep.contains(&stat.id_book));
 
         // 3. Update stats_by_md5 map to only include kept books
-        stats_data
-            .stats_by_md5
-            .retain(|md5, _| library_md5s.contains(md5));
+        stats_data.stats_by_md5.retain(|md5, _| {
+            library_md5s.contains(md5) || library_md5s.contains(&md5.to_lowercase())
+        });
 
         let filtered_count = original_count - stats_data.books.len();
         log::info!(

@@ -32,6 +32,7 @@
     - [Basic Usage](#basic-usage)
     - [Operation Modes](#operation-modes)
     - [Command Line Options](#command-line-options)
+    - [Stable Page Metadata & Scaling](#stable-page-metadata--scaling)
     - [Example](#example)
 - [KoReader Setup](#koreader-setup)
     - [Metadata Storage Options](#metadata-storage-options)
@@ -223,9 +224,31 @@ KoShelf can operate in several modes:
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
+- `--disable-synthetic-page-scaling`: Disable synthetic stable-page scaling for page-based metrics (pages read, pages/hour, recap pages, calendar pages). By default, KoShelf auto-applies this scaling only when compatible KOReader synthetic metadata is available.
 - `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
+
+### Stable Page Metadata & Scaling
+
+KoShelf can use KOReader stable page metadata to improve page totals and page-based stats.
+
+- **Stable total pages for display** are used when KOReader metadata contains:
+  - `pagemap_use_page_labels = true`
+  - `pagemap_doc_pages > 0`
+- This display behavior works for both publisher labels and synthetic mode.
+- **Synthetic page scaling for statistics** is applied only when synthetic metadata is also present:
+  - `pagemap_chars_per_synthetic_page`
+- If you use publisher labels without synthetic override, KoShelf still shows stable total pages, but page-based statistics stay unscaled.
+- Why publisher-label mode stays unscaled: KoShelf rescales stats using one linear factor (`stable_total / rendered_total`) across page events. That works for KOReader synthetic pagination (uniform char-based pages), but publisher labels are often non-linear (front matter, skipped/duplicate labels, appendix jumps). Applying one factor there would distort pages/day and pages/hour.
+- If these `pagemap_*` fields are missing, KoShelf uses KOReader's normal `doc_pages`/statistics values and does not apply synthetic scaling.
+
+For consistent page-based comparisons between books, enable KOReader's `Override publisher page numbers` setting. This makes KOReader persist synthetic metadata, which lets KoShelf rescale page metrics across books.
+
+Compatibility note:
+
+- This feature requires KOReader nightly builds or a future stable release after `2025.10 "Ghost"`.
+- KOReader `2025.10 "Ghost"` does not write the required `pagemap_*` metadata fields, so KoShelf uses its standard unscaled page behavior.
 
 ### Example
 
@@ -262,6 +285,9 @@ KoShelf can operate in several modes:
 
 # Generate site with German UI language
 ./koshelf -i ~/Library -o ~/my-reading-site --language de_DE
+
+# Keep stable page display but disable synthetic page scaling for stats
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --disable-synthetic-page-scaling
 ```
 
 ## KoReader Setup
@@ -422,6 +448,7 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 - Reading progress percentage
 - Rating (stars out of 5)
 - Summary note (the one you can fill out at the end of the book)
+- Stable page metadata (`pagemap_*`) for stable page totals and optional synthetic page scaling (nightly / post-2025.10)
 
 ### From KoReader Statistics Database (statistics.sqlite3)
 

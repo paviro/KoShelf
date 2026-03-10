@@ -1,6 +1,7 @@
 //! Book/comic detail payload computation.
 
 use super::SnapshotBuilder;
+use super::scaling::PageScaling;
 use crate::contracts::mappers;
 use crate::koreader::BookStatistics;
 use crate::models::{ContentType, LibraryItem, StatisticsData};
@@ -23,6 +24,7 @@ impl SnapshotBuilder {
         content_type: ContentType,
         items: &[LibraryItem],
         stats_data: &mut Option<StatisticsData>,
+        page_scaling: &PageScaling,
         snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
         info!(
@@ -36,17 +38,51 @@ impl SnapshotBuilder {
                 item.koreader_metadata
                     .as_ref()
                     .and_then(|metadata| metadata.partial_md5_checksum.as_ref())
-                    .and_then(|md5| stats.stats_by_md5.get(md5))
+                    .and_then(|md5| {
+                        stats
+                            .stats_by_md5
+                            .get(md5)
+                            .or_else(|| stats.stats_by_md5.get(&md5.to_lowercase()))
+                            .or_else(|| stats.stats_by_md5.get(&md5.to_uppercase()))
+                    })
                     .cloned()
             });
 
+            let scale_factor = item_stats
+                .as_ref()
+                .and_then(|stats| page_scaling.factor_for_md5(&stats.md5));
+
+            let mut item_stats = item_stats;
+            if let Some(scale_factor) = scale_factor
+                && let Some(stats) = item_stats.as_mut()
+            {
+                stats.pages = stats
+                    .pages
+                    .map(|pages| PageScaling::scale_pages_with_factor(pages, scale_factor));
+
+                if let Some(completions) = stats.completions.as_mut() {
+                    for entry in &mut completions.entries {
+                        entry.pages_read =
+                            PageScaling::scale_pages_with_factor(entry.pages_read, scale_factor);
+                    }
+                }
+            }
+
             // Calculate session statistics if we have item stats
-            let session_stats = match (stats_data.as_ref(), &item_stats) {
+            let mut session_stats = match (stats_data.as_ref(), &item_stats) {
                 (Some(stats), Some(stat)) => {
                     Some(stat.calculate_session_stats(&stats.page_stats, &self.time_config))
                 }
                 _ => None,
             };
+
+            if let (Some(scale_factor), Some(session_stats)) =
+                (scale_factor, session_stats.as_mut())
+            {
+                session_stats.reading_speed = session_stats
+                    .reading_speed
+                    .map(|speed| speed * scale_factor);
+            }
 
             let search_base_path = match content_type {
                 ContentType::Book => "/books".to_string(),

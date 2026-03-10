@@ -33,4 +33,6 @@ pub struct SiteConfig {
     pub is_internal_server: bool,
     /// Language for UI translations (e.g., "en_US", "de_DE")
     pub language: String,
+    /// Whether synthetic stable-page scaling is enabled for page-based metrics
+    pub use_synthetic_page_scaling: bool,
 }

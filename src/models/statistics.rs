@@ -60,10 +60,16 @@ impl StatisticsData {
     /// Any books not found in the map will keep `content_type = None`.
     pub fn tag_content_types(&mut self, md5_to_content_type: &HashMap<String, ContentType>) {
         for b in &mut self.books {
-            b.content_type = md5_to_content_type.get(&b.md5).copied();
+            b.content_type = md5_to_content_type
+                .get(&b.md5)
+                .copied()
+                .or_else(|| md5_to_content_type.get(&b.md5.to_lowercase()).copied());
         }
         for (md5, b) in &mut self.stats_by_md5 {
-            b.content_type = md5_to_content_type.get(md5).copied();
+            b.content_type = md5_to_content_type
+                .get(md5)
+                .copied()
+                .or_else(|| md5_to_content_type.get(&md5.to_lowercase()).copied());
         }
     }
 

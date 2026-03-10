@@ -12,6 +12,7 @@ mod assets;
 mod calendar;
 mod library;
 mod recap;
+mod scaling;
 mod statistics;
 mod utils;
 
@@ -22,6 +23,7 @@ use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::runtime::ContractSnapshot;
 use anyhow::Result;
 use log::info;
+use scaling::PageScaling;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
@@ -135,7 +137,7 @@ impl SnapshotBuilder {
                     .or_else(|| calculate_partial_md5(&item.file_path).ok());
 
                 if let Some(md5) = md5 {
-                    md5_to_content_type.insert(md5, item.content_type());
+                    md5_to_content_type.insert(md5.to_lowercase(), item.content_type());
                 } else {
                     log::debug!(
                         "Could not determine MD5 for {:?}; stats content_type tagging may be incomplete",
@@ -167,6 +169,11 @@ impl SnapshotBuilder {
             );
         }
         let mut ctx = self.collect_snapshot_inputs().await?;
+        let page_scaling = PageScaling::from_inputs(
+            self.use_synthetic_page_scaling,
+            &ctx.all_items,
+            ctx.stats_data.as_ref(),
+        );
         let mut snapshot = ContractSnapshot::default();
 
         // Create output directories for media and static assets.
@@ -186,22 +193,29 @@ impl SnapshotBuilder {
             ContentType::Book,
             &ctx.books,
             &mut ctx.stats_data,
+            &page_scaling,
             &mut snapshot,
         )?;
         self.compute_content_detail_data(
             ContentType::Comic,
             &ctx.comics,
             &mut ctx.stats_data,
+            &page_scaling,
             &mut snapshot,
         )?;
 
         if let Some(ref mut stats_data) = ctx.stats_data {
-            self.compute_statistics_data(stats_data, &mut snapshot)?;
+            self.compute_statistics_data(stats_data, &page_scaling, &mut snapshot)?;
 
-            self.compute_calendar_data(stats_data, &ctx.all_items, &mut snapshot)?;
+            self.compute_calendar_data(stats_data, &ctx.all_items, &page_scaling, &mut snapshot)?;
 
-            self.compute_recap_data_and_share_images(stats_data, &ctx.all_items, &mut snapshot)
-                .await?;
+            self.compute_recap_data_and_share_images(
+                stats_data,
+                &ctx.all_items,
+                &page_scaling,
+                &mut snapshot,
+            )
+            .await?;
         }
 
         if self.is_internal_server {
