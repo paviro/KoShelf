@@ -85,10 +85,10 @@ pub struct Cli {
     #[arg(long, display_order = 18)]
     pub github: bool,
 
-    /// Disable synthetic stable-page scaling for page-based statistics.
-    /// By default, synthetic scaling is enabled when compatible KOReader metadata is available.
+    /// Ignore KOReader stable page metadata for page totals and page-based stats scaling.
+    /// By default, stable page metadata is used when available.
     #[arg(long, default_value = "false", display_order = 19)]
-    pub disable_synthetic_page_scaling: bool,
+    pub ignore_stable_page_metadata: bool,
 }
 
 /// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds.

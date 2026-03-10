@@ -170,7 +170,7 @@ impl SnapshotBuilder {
         }
         let mut ctx = self.collect_snapshot_inputs().await?;
         let page_scaling = PageScaling::from_inputs(
-            self.use_synthetic_page_scaling,
+            self.use_stable_page_metadata,
             &ctx.all_items,
             ctx.stats_data.as_ref(),
         );

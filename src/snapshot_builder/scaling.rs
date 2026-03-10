@@ -474,6 +474,32 @@ mod tests {
     }
 
     #[test]
+    fn builds_factors_even_when_page_labels_are_disabled() {
+        let mut item = test_item("1", "md5-synth-no-labels", true, 300);
+        if let Some(metadata) = item.koreader_metadata.as_mut() {
+            metadata.pagemap_use_page_labels = Some(false);
+        }
+
+        let books = vec![test_stat_book(
+            1,
+            "md5-synth-no-labels",
+            200,
+            ContentType::Book,
+        )];
+        let stats_data = StatisticsData {
+            books: books.clone(),
+            page_stats: Vec::new(),
+            stats_by_md5: books
+                .into_iter()
+                .map(|book| (book.md5.clone(), book))
+                .collect(),
+        };
+
+        let scaling = PageScaling::from_inputs(true, &[item], Some(&stats_data));
+        assert_eq!(scaling.factor_for_book_id(1), Some(1.5));
+    }
+
+    #[test]
     fn applies_scaled_pages_to_reading_stats() {
         let books = vec![test_stat_book(1, "md5-synth", 200, ContentType::Book)];
         let mut stats_data = StatisticsData {

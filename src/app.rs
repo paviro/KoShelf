@@ -105,7 +105,7 @@ pub async fn run(cli: Cli) -> Result<()> {
         include_all_stats: cli.include_all_stats,
         is_internal_server,
         language: cli.language.clone(),
-        use_synthetic_page_scaling: !cli.disable_synthetic_page_scaling,
+        use_stable_page_metadata: !cli.ignore_stable_page_metadata,
     };
 
     // Create snapshot builder - it handles library scanning and stats loading internally.

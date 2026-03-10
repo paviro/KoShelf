@@ -180,6 +180,7 @@ pub fn map_library_detail_response(
     search_base_path: impl Into<String>,
     item_stats: Option<crate::models::StatBook>,
     session_stats: Option<crate::models::BookSessionStats>,
+    use_stable_page_metadata: bool,
     time_config: &TimeConfig,
 ) -> LibraryDetailResponse {
     let highlights = item
@@ -215,7 +216,7 @@ pub fn map_library_detail_response(
             publisher: item.publisher().cloned(),
             description: item.book_info.description.clone(),
             review_note: item.review_note().cloned(),
-            pages: item.doc_pages(),
+            pages: item.doc_pages_with_stable_metadata(use_stable_page_metadata),
             search_base_path: search_base_path.into(),
             subjects: item.subjects().clone(),
             identifiers: item

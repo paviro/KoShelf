@@ -214,9 +214,19 @@ impl LibraryItem {
     }
 
     pub fn doc_pages(&self) -> Option<u32> {
+        self.doc_pages_with_stable_metadata(true)
+    }
+
+    pub fn doc_pages_with_stable_metadata(&self, use_stable_page_metadata: bool) -> Option<u32> {
         // Prefer stable page labels when available, then KOReader rendered pages,
         // then format-extracted pages.
-        self.stable_display_page_total()
+        let stable_page_total = if use_stable_page_metadata {
+            self.stable_display_page_total()
+        } else {
+            None
+        };
+
+        stable_page_total
             .or_else(|| {
                 self.koreader_metadata
                     .as_ref()
@@ -241,13 +251,13 @@ impl LibraryItem {
 
     /// Stable page total for synthetic scaling usage.
     ///
-    /// Valid only when stable labels are enabled and KOReader synthetic mode metadata is present.
+    /// Valid when KOReader synthetic mode metadata is present and `pagemap_doc_pages` is set.
     pub fn synthetic_scaling_page_total(&self) -> Option<u32> {
         let metadata = self.koreader_metadata.as_ref()?;
 
         metadata.pagemap_chars_per_synthetic_page?;
 
-        self.stable_display_page_total()
+        metadata.pagemap_doc_pages.filter(|pages| *pages > 0)
     }
 
     pub fn note_count(&self) -> usize {
@@ -440,6 +450,13 @@ mod tests {
     }
 
     #[test]
+    fn can_disable_stable_page_metadata_for_display_totals() {
+        let item = test_item(Some(metadata_for_pages(true, false)));
+
+        assert_eq!(item.doc_pages_with_stable_metadata(false), Some(200));
+    }
+
+    #[test]
     fn enables_synthetic_scaling_only_when_synthetic_metadata_exists() {
         let item = test_item(Some(metadata_for_pages(true, true)));
 
@@ -452,6 +469,7 @@ mod tests {
         let item = test_item(Some(metadata_for_pages(false, true)));
 
         assert_eq!(item.stable_display_page_total(), None);
+        assert_eq!(item.synthetic_scaling_page_total(), Some(300));
         assert_eq!(item.doc_pages(), Some(200));
     }
 }

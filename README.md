@@ -224,7 +224,7 @@ KoShelf can operate in several modes:
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "30s", "15m", "1h", `off`). Default is `30s`.
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics. Since `--min-time-per-day` defaults to `30s`, it is active unless explicitly overridden. Use `--min-time-per-day off` to disable this filter.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
-- `--disable-synthetic-page-scaling`: Disable synthetic stable-page scaling for page-based metrics (pages read, pages/hour, recap pages, calendar pages). By default, KoShelf auto-applies this scaling only when compatible KOReader synthetic metadata is available.
+- `--ignore-stable-page-metadata`: Ignore KOReader stable page metadata for page totals and page-based stats scaling. By default, stable metadata is used when available.
 - `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--list-languages`: List all supported languages and exit
 - `--github`: Print GitHub repository URL
@@ -234,10 +234,10 @@ KoShelf can operate in several modes:
 KoShelf can use KOReader stable page metadata to improve page totals and page-based stats.
 
 - **Stable total pages for display** are used when KOReader metadata contains:
-  - `pagemap_use_page_labels = true`
   - `pagemap_doc_pages > 0`
 - This display behavior works for both publisher labels and synthetic mode.
 - **Synthetic page scaling for statistics** is applied only when synthetic metadata is also present:
+  - `pagemap_doc_pages > 0`
   - `pagemap_chars_per_synthetic_page`
 - If you use publisher labels without synthetic override, KoShelf still shows stable total pages, but page-based statistics stay unscaled.
 - Why publisher-label mode stays unscaled: KoShelf rescales stats using one linear factor (`stable_total / rendered_total`) across page events. That works for KOReader synthetic pagination (uniform char-based pages), but publisher labels are often non-linear (front matter, skipped/duplicate labels, appendix jumps). Applying one factor there would distort pages/day and pages/hour.
@@ -286,8 +286,8 @@ Compatibility note:
 # Generate site with German UI language
 ./koshelf -i ~/Library -o ~/my-reading-site --language de_DE
 
-# Keep stable page display but disable synthetic page scaling for stats
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --disable-synthetic-page-scaling
+# Ignore stable metadata page totals and synthetic scaling
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --ignore-stable-page-metadata
 ```
 
 ## KoReader Setup
