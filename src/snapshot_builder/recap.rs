@@ -245,13 +245,18 @@ fn compute_yearly_summary(
     page_stats: &[PageStat],
     ids_filter: Option<&HashSet<i64>>,
 ) -> YearlySummary {
-    // 1. Basic sums from monthly data
-    let mut total_books = 0usize;
-    let mut total_time_seconds = 0i64;
-    for m in monthly {
-        total_books += m.books_finished;
-        total_time_seconds += m.hours_read_seconds;
-    }
+    let year_str = format!("{}", year);
+    let year_prefix = format!("{}-", year);
+
+    // 1. Completed item count from recap months + read-time totals from daily activity.
+    //    Read-time totals intentionally come from month_hours (daily activity) so recap
+    //    matches the yearly statistics page, even for months without a completion.
+    let total_books = monthly.iter().map(|month| month.books_finished).sum();
+    let total_time_seconds: i64 = month_hours
+        .iter()
+        .filter(|(month_key, _)| month_key.starts_with(&year_prefix))
+        .map(|(_, seconds)| *seconds)
+        .sum();
 
     // 2. Session stats from page_stats (filtered by year and (optional) id set)
     let year_page_stats: Vec<PageStat> = page_stats
@@ -283,7 +288,6 @@ fn compute_yearly_summary(
     };
 
     // 3. Active days (from daily activity)
-    let year_str = format!("{}", year);
     let active_days: usize = reading_stats
         .daily_activity
         .iter()
@@ -328,11 +332,11 @@ fn compute_yearly_summary(
     // 5. Best month (highest reading time) in this year
     let best_month: Option<(String, i64)> = month_hours
         .iter()
-        .filter(|(ym, _)| ym.starts_with(&year_str))
-        .max_by_key(|(_, secs)| *secs)
-        .map(|(ym, secs)| (ym.clone(), *secs));
+        .filter(|(month_key, _)| month_key.starts_with(&year_prefix))
+        .max_by_key(|(_, seconds)| *seconds)
+        .map(|(month_key, seconds)| (month_key.clone(), *seconds));
 
-    let best_month = best_month.and_then(|(ym, secs)| (secs > 0).then_some(ym));
+    let best_month = best_month.and_then(|(month_key, seconds)| (seconds > 0).then_some(month_key));
 
     // Convert totals into days/hours for display components
     let total_minutes = total_time_seconds / 60;
@@ -725,5 +729,60 @@ impl SnapshotBuilder {
         self.cleanup_stale_recap_outputs(&current_years)?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::StreakInfo;
+    use std::collections::HashMap;
+
+    fn empty_reading_stats() -> ReadingStats {
+        ReadingStats {
+            total_read_time: 0,
+            total_page_reads: 0,
+            longest_read_time_in_day: 0,
+            most_pages_in_day: 0,
+            average_session_duration: None,
+            longest_session_duration: None,
+            total_completions: 0,
+            books_completed: 0,
+            most_completions: 0,
+            longest_streak: StreakInfo::new(0, None, None),
+            current_streak: StreakInfo::new(0, None, None),
+            weeks: Vec::new(),
+            daily_activity: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn yearly_summary_includes_months_without_completions() {
+        let monthly = vec![MonthRecap {
+            month_key: "2025-02".to_string(),
+            books_finished: 2,
+            hours_read_seconds: 352_800,
+            items: Vec::new(),
+        }];
+        let month_hours = HashMap::from([
+            ("2025-01".to_string(), 36_000),
+            ("2025-02".to_string(), 352_800),
+            ("2024-12".to_string(), 99_999),
+        ]);
+
+        let summary = compute_yearly_summary(
+            2025,
+            &monthly,
+            &month_hours,
+            &empty_reading_stats(),
+            &[],
+            None,
+        );
+
+        assert_eq!(summary.total_books, 2);
+        assert_eq!(summary.total_time_seconds, 388_800);
+        assert_eq!(summary.total_time_days, 4);
+        assert_eq!(summary.total_time_hours, 12);
+        assert_eq!(summary.best_month.as_deref(), Some("2025-02"));
     }
 }
