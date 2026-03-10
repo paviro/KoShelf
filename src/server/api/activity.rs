@@ -76,8 +76,6 @@ fn empty_activity_week_response(
             end_date,
             read_time: 0,
             pages_read: 0,
-            avg_pages_per_day: 0.0,
-            avg_read_time_per_day: 0.0,
             longest_session_duration: None,
             average_session_duration: None,
         },

@@ -177,7 +177,6 @@ impl PageScaling {
         for week in &mut reading_stats.weeks {
             let scaled_pages = weekly_pages.get(&week.start_date).copied().unwrap_or(0);
             week.pages_read = scaled_pages;
-            week.avg_pages_per_day = scaled_pages as f64 / 7.0;
         }
 
         let (longest_streak, current_streak) =
@@ -521,7 +520,6 @@ mod tests {
         assert_eq!(reading_stats.total_page_reads, 5);
         assert_eq!(reading_stats.most_pages_in_day, 3);
         assert_eq!(reading_stats.weeks[0].pages_read, 5);
-        assert!((reading_stats.weeks[0].avg_pages_per_day - (5.0 / 7.0)).abs() < f64::EPSILON);
     }
 
     #[test]

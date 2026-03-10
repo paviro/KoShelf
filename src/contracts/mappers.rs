@@ -305,8 +305,6 @@ fn zero_weekly_stats(week_key: &str) -> crate::models::WeeklyStats {
         end_date: week_end_date_from_key(week_key),
         read_time: 0,
         pages_read: 0,
-        avg_pages_per_day: 0.0,
-        avg_read_time_per_day: 0.0,
         longest_session_duration: None,
         average_session_duration: None,
     }

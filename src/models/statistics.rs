@@ -163,8 +163,6 @@ pub struct WeeklyStats {
     pub end_date: String,   // ISO format yyyy-mm-dd
     pub read_time: i64,     // seconds
     pub pages_read: i64,
-    pub avg_pages_per_day: f64,
-    pub avg_read_time_per_day: f64,            // seconds
     pub longest_session_duration: Option<i64>, // seconds
     pub average_session_duration: Option<i64>, // seconds
 }

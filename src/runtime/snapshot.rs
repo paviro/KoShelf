@@ -410,8 +410,6 @@ mod tests {
                         end_date: "2026-03-08".to_string(),
                         read_time: 10,
                         pages_read: 20,
-                        avg_pages_per_day: 2.0,
-                        avg_read_time_per_day: 1.0,
                         longest_session_duration: Some(4),
                         average_session_duration: Some(3),
                     },

@@ -32,6 +32,8 @@ const WEEKDAY_TRANSLATION_KEYS = [
     'weekday.sun',
 ] as const;
 
+const MILLIS_PER_DAY = 1000 * 60 * 60 * 24;
+
 function buildWeekdayBarItems(
     dailyActivity: DailyActivityEntry[],
     startDate: string,
@@ -74,6 +76,27 @@ function buildWeekdayBarItems(
     }));
 }
 
+function weekAverageDayCount(startDate: string, endDate: string): number {
+    const start = parsePlainDate(startDate);
+    const end = parsePlainDate(endDate);
+    if (!start || !end) {
+        return 7;
+    }
+
+    const now = new Date();
+    const today = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0),
+    );
+
+    if (today < start || today > end) {
+        return 7;
+    }
+
+    const elapsedDays =
+        Math.floor((today.getTime() - start.getTime()) / MILLIS_PER_DAY) + 1;
+    return Math.min(Math.max(elapsedDays, 1), 7);
+}
+
 type WeeklyStatsSectionProps = {
     visible: boolean;
     onToggle: (sectionName: SectionName) => void;
@@ -101,6 +124,12 @@ export function WeeklyStatsSection({
             ),
         [weeklyStats.daily_activity, weeklyStats.start_date],
     );
+    const averageDayCount = weekAverageDayCount(
+        weeklyStats.start_date,
+        weeklyStats.end_date,
+    );
+    const averagePagesPerDay = weeklyStats.pages_read / averageDayCount;
+    const averageReadTimePerDay = weeklyStats.read_time / averageDayCount;
 
     return (
         <CollapsibleSection
@@ -157,9 +186,7 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
                         iconClassName="text-amber-600 dark:text-white"
                         valueId="weekAvgPagesPerDay"
-                        value={DataFormatter.formatAvgPages(
-                            weeklyStats.avg_pages_per_day,
-                        )}
+                        value={DataFormatter.formatAvgPages(averagePagesPerDay)}
                         label={translation.get('average-pages-day')}
                     />
 
@@ -169,7 +196,7 @@ export function WeeklyStatsSection({
                         iconClassName="text-green-600 dark:text-white"
                         valueId="weekAvgReadTimePerDay"
                         value={DataFormatter.formatMinutes(
-                            weeklyStats.avg_read_time_per_day / 60,
+                            averageReadTimePerDay / 60,
                         )}
                         label={translation.get('average-time-day')}
                     />

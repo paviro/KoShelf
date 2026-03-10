@@ -40,8 +40,6 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     end_date: '',
     read_time: 0,
     pages_read: 0,
-    avg_pages_per_day: 0,
-    avg_read_time_per_day: 0,
     longest_session_duration: null,
     average_session_duration: null,
     daily_activity: [],

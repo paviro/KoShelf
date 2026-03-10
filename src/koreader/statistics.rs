@@ -183,8 +183,6 @@ impl StatisticsCalculator {
                 end_date: end_date.format("%Y-%m-%d").to_string(),
                 read_time,
                 pages_read,
-                avg_pages_per_day: pages_read as f64 / 7.0,
-                avg_read_time_per_day: read_time as f64 / 7.0,
                 longest_session_duration,
                 average_session_duration,
             };

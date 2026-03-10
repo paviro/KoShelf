@@ -22,8 +22,6 @@ export interface StatisticsWeekResponse {
     end_date: string;
     read_time: number;
     pages_read: number;
-    avg_pages_per_day: number;
-    avg_read_time_per_day: number;
     longest_session_duration: number | null;
     average_session_duration: number | null;
     daily_activity: DailyActivityEntry[];
