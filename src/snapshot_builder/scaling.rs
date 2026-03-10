@@ -373,72 +373,17 @@ fn round_map(source: &HashMap<String, f64>) -> HashMap<String, i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{
-        BookInfo, BookStatus, CalendarEvent, CalendarItem, CalendarMonthData, KoReaderMetadata,
-        MonthlyStats, PageStat, StatBook, StatisticsData, Summary,
-    };
+    use crate::models::{CalendarEvent, CalendarItem, CalendarMonthData, MonthlyStats};
+    use crate::tests::fixtures;
     use crate::time_config::TimeConfig;
     use std::collections::BTreeMap;
-    use std::path::PathBuf;
 
     fn test_item(id: &str, md5: &str, synthetic: bool, stable_total: u32) -> LibraryItem {
-        LibraryItem {
-            id: id.to_string(),
-            book_info: BookInfo {
-                title: "Item".to_string(),
-                authors: vec!["Author".to_string()],
-                description: None,
-                language: None,
-                publisher: None,
-                identifiers: Vec::new(),
-                subjects: Vec::new(),
-                series: None,
-                series_number: None,
-                pages: Some(123),
-                cover_data: None,
-                cover_mime_type: None,
-            },
-            koreader_metadata: Some(KoReaderMetadata {
-                annotations: Vec::new(),
-                doc_pages: Some(200),
-                doc_path: None,
-                doc_props: None,
-                pagemap_use_page_labels: Some(true),
-                pagemap_chars_per_synthetic_page: synthetic.then_some(1500),
-                pagemap_doc_pages: Some(stable_total),
-                pagemap_current_page_label: None,
-                pagemap_last_page_label: None,
-                partial_md5_checksum: Some(md5.to_string()),
-                percent_finished: None,
-                stats: None,
-                summary: Some(Summary {
-                    modified: None,
-                    note: None,
-                    rating: None,
-                    status: BookStatus::Reading,
-                }),
-                text_lang: None,
-            }),
-            file_path: PathBuf::from("/tmp/item.epub"),
-            format: crate::models::LibraryItemFormat::Epub,
-        }
-    }
-
-    fn test_stat_book(id: i64, md5: &str, pages: i64, content_type: ContentType) -> StatBook {
-        StatBook {
-            id,
-            title: "Stat Book".to_string(),
-            authors: "Author".to_string(),
-            notes: None,
-            last_open: None,
-            highlights: None,
-            pages: Some(pages),
-            md5: md5.to_string(),
-            content_type: Some(content_type),
-            total_read_time: Some(3600),
-            total_read_pages: Some(10),
-            completions: None,
-        }
+        let mut metadata =
+            fixtures::koreader_metadata_for_pages(md5, true, synthetic, stable_total);
+        metadata.pagemap_current_page_label = None;
+        metadata.pagemap_last_page_label = None;
+        fixtures::library_item(id, Some(metadata))
     }
 
     #[test]
@@ -447,17 +392,10 @@ mod tests {
         let item_publisher_only = test_item("2", "md5-pub", false, 400);
 
         let books = vec![
-            test_stat_book(1, "md5-synth", 200, ContentType::Book),
-            test_stat_book(2, "md5-pub", 200, ContentType::Book),
+            fixtures::stat_book(1, "md5-synth", 200, ContentType::Book),
+            fixtures::stat_book(2, "md5-pub", 200, ContentType::Book),
         ];
-        let stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: Vec::new(),
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        let stats_data = fixtures::statistics_data(books.clone(), Vec::new());
 
         let scaling = PageScaling::from_inputs(
             true,
@@ -480,20 +418,13 @@ mod tests {
             metadata.pagemap_use_page_labels = Some(false);
         }
 
-        let books = vec![test_stat_book(
+        let books = vec![fixtures::stat_book(
             1,
             "md5-synth-no-labels",
             200,
             ContentType::Book,
         )];
-        let stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: Vec::new(),
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        let stats_data = fixtures::statistics_data(books.clone(), Vec::new());
 
         let scaling = PageScaling::from_inputs(true, &[item], Some(&stats_data));
         assert_eq!(scaling.factor_for_book_id(1), Some(1.5));
@@ -501,34 +432,15 @@ mod tests {
 
     #[test]
     fn applies_scaled_pages_to_reading_stats() {
-        let books = vec![test_stat_book(1, "md5-synth", 200, ContentType::Book)];
-        let mut stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: vec![
-                PageStat {
-                    id_book: 1,
-                    page: 1,
-                    start_time: 1_704_067_200, // 2024-01-01
-                    duration: 120,
-                },
-                PageStat {
-                    id_book: 1,
-                    page: 2,
-                    start_time: 1_704_070_800, // 2024-01-01
-                    duration: 60,
-                },
-                PageStat {
-                    id_book: 1,
-                    page: 3,
-                    start_time: 1_704_153_600, // 2024-01-02
-                    duration: 90,
-                },
+        let books = vec![fixtures::stat_book(1, "md5-synth", 200, ContentType::Book)];
+        let mut stats_data = fixtures::statistics_data(
+            books.clone(),
+            vec![
+                fixtures::page_stat(1, 1, 1_704_067_200, 120),
+                fixtures::page_stat(1, 2, 1_704_070_800, 60),
+                fixtures::page_stat(1, 3, 1_704_153_600, 90),
             ],
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        );
 
         let item = test_item("1", "md5-synth", true, 300);
         let time_config = TimeConfig::new(None, 0);
@@ -551,42 +463,18 @@ mod tests {
     #[test]
     fn uses_per_book_factors_for_mixed_daily_totals() {
         let books = vec![
-            test_stat_book(1, "md5-a", 200, ContentType::Book),
-            test_stat_book(2, "md5-b", 200, ContentType::Book),
+            fixtures::stat_book(1, "md5-a", 200, ContentType::Book),
+            fixtures::stat_book(2, "md5-b", 200, ContentType::Book),
         ];
-        let mut stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: vec![
-                PageStat {
-                    id_book: 1,
-                    page: 1,
-                    start_time: 1_704_067_200, // 2024-01-01
-                    duration: 60,
-                },
-                PageStat {
-                    id_book: 1,
-                    page: 2,
-                    start_time: 1_704_070_800, // 2024-01-01
-                    duration: 60,
-                },
-                PageStat {
-                    id_book: 2,
-                    page: 1,
-                    start_time: 1_704_153_600, // 2024-01-02
-                    duration: 60,
-                },
-                PageStat {
-                    id_book: 2,
-                    page: 2,
-                    start_time: 1_704_157_200, // 2024-01-02
-                    duration: 60,
-                },
+        let mut stats_data = fixtures::statistics_data(
+            books.clone(),
+            vec![
+                fixtures::page_stat(1, 1, 1_704_067_200, 60),
+                fixtures::page_stat(1, 2, 1_704_070_800, 60),
+                fixtures::page_stat(2, 1, 1_704_153_600, 60),
+                fixtures::page_stat(2, 2, 1_704_157_200, 60),
             ],
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        );
 
         let item_a = test_item("1", "md5-a", true, 300); // factor 1.5
         let item_b = test_item("2", "md5-b", true, 100); // factor 0.5
@@ -606,7 +494,7 @@ mod tests {
 
     #[test]
     fn recomputes_streaks_when_scaled_pages_round_to_zero() {
-        let books = vec![test_stat_book(1, "md5-low", 100, ContentType::Book)];
+        let books = vec![fixtures::stat_book(1, "md5-low", 100, ContentType::Book)];
         let timezone = "UTC".parse().expect("timezone should parse");
         let time_config = TimeConfig::new(Some(timezone), 0);
         let today = time_config.today_date();
@@ -616,19 +504,10 @@ mod tests {
             .and_utc()
             .timestamp();
 
-        let mut stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: vec![PageStat {
-                id_book: 1,
-                page: 1,
-                start_time: today_timestamp,
-                duration: 60,
-            }],
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        let mut stats_data = fixtures::statistics_data(
+            books.clone(),
+            vec![fixtures::page_stat(1, 1, today_timestamp, 60)],
+        );
 
         let mut reading_stats =
             crate::koreader::StatisticsCalculator::calculate_stats(&mut stats_data, &time_config);
@@ -646,28 +525,14 @@ mod tests {
 
     #[test]
     fn applies_scaled_pages_to_calendar_payloads() {
-        let books = vec![test_stat_book(1, "md5-synth", 200, ContentType::Book)];
-        let stats_data = StatisticsData {
-            books: books.clone(),
-            page_stats: vec![
-                PageStat {
-                    id_book: 1,
-                    page: 1,
-                    start_time: 1_704_067_200,
-                    duration: 120,
-                },
-                PageStat {
-                    id_book: 1,
-                    page: 2,
-                    start_time: 1_704_070_800,
-                    duration: 60,
-                },
+        let books = vec![fixtures::stat_book(1, "md5-synth", 200, ContentType::Book)];
+        let stats_data = fixtures::statistics_data(
+            books.clone(),
+            vec![
+                fixtures::page_stat(1, 1, 1_704_067_200, 120),
+                fixtures::page_stat(1, 2, 1_704_070_800, 60),
             ],
-            stats_by_md5: books
-                .into_iter()
-                .map(|book| (book.md5.clone(), book))
-                .collect(),
-        };
+        );
 
         let item = test_item("1", "md5-synth", true, 300);
         let scaling = PageScaling::from_inputs(true, &[item], Some(&stats_data));

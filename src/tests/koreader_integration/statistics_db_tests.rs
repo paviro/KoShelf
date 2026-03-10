@@ -1,3 +1,4 @@
+use super::lua_mocks::compose_lua_mocks;
 use super::*;
 use crate::koreader::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
@@ -237,9 +238,10 @@ fn format_percent_d(template: &str, values: &[i64]) -> String {
 }
 
 fn build_statistics_lua_script(root: &Path) -> String {
+    let mocks = compose_lua_mocks(LUA_STATISTICS_MOCKS_EXTRA);
     LUA_STATISTICS_TEMPLATE
         .replace("__ROOT__", &root.display().to_string())
-        .replace("__MOCKS__", LUA_STATISTICS_MOCKS)
+        .replace("__MOCKS__", &mocks)
 }
 
 const LUA_STATISTICS_TEMPLATE: &str = r#"
@@ -301,7 +303,7 @@ return {
 }
 "#;
 
-const LUA_STATISTICS_MOCKS: &str = r#"
+const LUA_STATISTICS_MOCKS_EXTRA: &str = r#"
 package.path = table.concat({
     root .. "/?.lua",
     root .. "/?/init.lua",
@@ -311,14 +313,6 @@ package.path = table.concat({
     root .. "/plugins/?/init.lua",
     package.path,
 }, ";")
-
-local noop = function() end
-
-local function stub_module(name, value)
-    package.preload[name] = function()
-        return value
-    end
-end
 
 stub_module("ui/bidi", {})
 
@@ -333,11 +327,6 @@ function ConfirmBox:new()
     return setmetatable({}, { __index = self })
 end
 stub_module("ui/widget/confirmbox", ConfirmBox)
-
-stub_module("datastorage", {
-    getDataDir = function() return "/tmp/koreader" end,
-    getSettingsDir = function() return "/tmp/koreader" end,
-})
 
 stub_module("device", {
     canUseWAL = function() return true end,
@@ -405,44 +394,6 @@ stub_module("ui/widget/widget", Widget)
 
 stub_module("datetime", {})
 
-stub_module("ffi/util", {
-    template = function(_, text) return text end,
-    basename = function(path) return path end,
-    copyFile = noop,
-    fsyncDirectory = noop,
-    joinPath = function(path, name) return path .. "/" .. name end,
-})
-
-stub_module("libs/libkoreader-lfs", {
-    attributes = function()
-        return nil
-    end,
-})
-
-stub_module("logger", {
-    dbg = noop,
-    info = noop,
-    warn = noop,
-})
-
-stub_module("util", {
-    partialMD5 = function()
-        return "deadbeefdeadbeefdeadbeefdeadbeef"
-    end,
-    tableSize = function(tbl)
-        local count = 0
-        if tbl then
-            for _ in pairs(tbl) do
-                count = count + 1
-            end
-        end
-        return count
-    end,
-    splitFilePathName = function(path)
-        return "", path
-    end,
-})
-
 local gettext = {}
 function gettext.pgettext(_, text)
     return text
@@ -460,10 +411,4 @@ setmetatable(gettext, {
     end,
 })
 stub_module("gettext", gettext)
-
-_G.G_reader_settings = {
-    readSetting = function(_, _, default) return default end,
-    has = function() return false end,
-    isTrue = function() return false end,
-}
 "#;

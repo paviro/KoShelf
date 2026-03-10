@@ -391,53 +391,16 @@ impl LibraryItem {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    fn test_item(metadata: Option<KoReaderMetadata>) -> LibraryItem {
-        LibraryItem {
-            id: "id-1".to_string(),
-            book_info: BookInfo {
-                title: "Title".to_string(),
-                authors: vec!["Author".to_string()],
-                description: None,
-                language: None,
-                publisher: None,
-                identifiers: Vec::new(),
-                subjects: Vec::new(),
-                series: None,
-                series_number: None,
-                pages: Some(123),
-                cover_data: None,
-                cover_mime_type: None,
-            },
-            koreader_metadata: metadata,
-            file_path: PathBuf::from("/tmp/book.epub"),
-            format: LibraryItemFormat::Epub,
-        }
-    }
-
-    fn metadata_for_pages(use_labels: bool, synthetic: bool) -> KoReaderMetadata {
-        KoReaderMetadata {
-            annotations: Vec::new(),
-            doc_pages: Some(200),
-            doc_path: None,
-            doc_props: None,
-            pagemap_use_page_labels: Some(use_labels),
-            pagemap_chars_per_synthetic_page: synthetic.then_some(1500),
-            pagemap_doc_pages: Some(300),
-            pagemap_current_page_label: Some("12".to_string()),
-            pagemap_last_page_label: Some("300".to_string()),
-            partial_md5_checksum: Some("md5".to_string()),
-            percent_finished: None,
-            stats: None,
-            summary: None,
-            text_lang: None,
-        }
-    }
+    use crate::tests::fixtures;
 
     #[test]
     fn prefers_stable_display_pages_when_labels_enabled() {
-        let item = test_item(Some(metadata_for_pages(true, false)));
+        let item = fixtures::library_item(
+            "id-1",
+            Some(fixtures::koreader_metadata_for_pages(
+                "md5", true, false, 300,
+            )),
+        );
 
         assert_eq!(item.stable_display_page_total(), Some(300));
         assert_eq!(item.synthetic_scaling_page_total(), None);
@@ -446,14 +409,24 @@ mod tests {
 
     #[test]
     fn can_disable_stable_page_metadata_for_display_totals() {
-        let item = test_item(Some(metadata_for_pages(true, false)));
+        let item = fixtures::library_item(
+            "id-1",
+            Some(fixtures::koreader_metadata_for_pages(
+                "md5", true, false, 300,
+            )),
+        );
 
         assert_eq!(item.doc_pages_with_stable_metadata(false), Some(200));
     }
 
     #[test]
     fn enables_synthetic_scaling_only_when_synthetic_metadata_exists() {
-        let item = test_item(Some(metadata_for_pages(true, true)));
+        let item = fixtures::library_item(
+            "id-1",
+            Some(fixtures::koreader_metadata_for_pages(
+                "md5", true, true, 300,
+            )),
+        );
 
         assert_eq!(item.stable_display_page_total(), Some(300));
         assert_eq!(item.synthetic_scaling_page_total(), Some(300));
@@ -461,9 +434,9 @@ mod tests {
 
     #[test]
     fn falls_back_to_rendered_doc_pages_when_stable_display_is_unavailable() {
-        let mut metadata = metadata_for_pages(true, true);
+        let mut metadata = fixtures::koreader_metadata_for_pages("md5", true, true, 300);
         metadata.pagemap_doc_pages = None;
-        let item = test_item(Some(metadata));
+        let item = fixtures::library_item("id-1", Some(metadata));
 
         assert_eq!(item.stable_display_page_total(), None);
         assert_eq!(item.synthetic_scaling_page_total(), None);

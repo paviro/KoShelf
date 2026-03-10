@@ -1,85 +1,35 @@
+use super::lua_mocks::compose_lua_mocks;
 use super::*;
 use mlua::Lua;
 
+const LUA_DOCSETTINGS_MOCKS_EXTRA: &str = r#"
+    package.preload["luasettings"] = function()
+        local LuaSettings = {}
+        LuaSettings.__index = LuaSettings
+
+        function LuaSettings:extend(base)
+            base = base or {}
+            base.__index = base
+            setmetatable(base, self)
+            return base
+        end
+
+        function LuaSettings:readSetting(_, default)
+            return default
+        end
+
+        return LuaSettings
+    end
+
+    package.preload["dump"] = function()
+        return function() return "" end
+    end
+"#;
+
 fn load_koreader_docsettings(lua: &Lua, source: &str) -> (mlua::Function, mlua::Function) {
-    const LUA_MOCKS: &str = r#"
-        package = package or {}
-        package.preload = package.preload or {}
+    let mocks = compose_lua_mocks(LUA_DOCSETTINGS_MOCKS_EXTRA);
 
-        local function noop(...) return nil end
-
-        package.preload["datastorage"] = function()
-            local base = "/tmp/koreader"
-            return {
-                getHistoryDir = function() return base .. "/history" end,
-                getDocSettingsDir = function() return base .. "/docsettings" end,
-                getDocSettingsHashDir = function() return base .. "/hashdocsettings" end,
-            }
-        end
-
-        package.preload["luasettings"] = function()
-            local LuaSettings = {}
-            LuaSettings.__index = LuaSettings
-
-            function LuaSettings:extend(base)
-                base = base or {}
-                base.__index = base
-                setmetatable(base, self)
-                return base
-            end
-
-            function LuaSettings:readSetting(_, default)
-                return default
-            end
-
-            return LuaSettings
-        end
-
-        package.preload["dump"] = function()
-            return function() return "" end
-        end
-
-        package.preload["ffi/util"] = function()
-            local ffiutil = {}
-            function ffiutil.basename(path) return path end
-            function ffiutil.copyFile(...) return true end
-            function ffiutil.fsyncDirectory(...) end
-            function ffiutil.joinPath(path, name) return path .. "/" .. name end
-            return ffiutil
-        end
-
-        package.preload["libs/libkoreader-lfs"] = function()
-            local lfs = {}
-            function lfs.attributes()
-                return nil
-            end
-            return lfs
-        end
-
-        package.preload["logger"] = function()
-            return {
-                dbg = function() end,
-            }
-        end
-
-        package.preload["util"] = function()
-            return {
-                partialMD5 = function() return "deadbeefdeadbeefdeadbeefdeadbeef" end,
-                makePath = noop,
-                writeToFile = function() return true end,
-                splitFileNameSuffix = function() return "" end,
-                getFileNameSuffix = function() return "" end,
-            }
-        end
-
-        G_reader_settings = {
-            readSetting = function(_, _, default)
-                return default
-            end,
-        }
-    "#;
-
-    lua.load(LUA_MOCKS)
+    lua.load(&mocks)
         .set_name("docsettings_mocks")
         .exec()
         .expect("Failed to set up Lua mocks for docsettings.lua");
