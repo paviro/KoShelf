@@ -44,8 +44,8 @@ pub struct Cli {
     #[arg(long, default_value = "false", display_order = 9)]
     pub include_unread: bool,
 
-    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity.
-    #[arg(long, default_value = "auto", display_order = 10)]
+    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "2h".
+    #[arg(long, default_value = "2h", display_order = 10)]
     pub heatmap_scale_max: String,
 
     /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
@@ -60,8 +60,9 @@ pub struct Cli {
     #[arg(long, display_order = 13)]
     pub min_pages_per_day: Option<u32>,
 
-    /// Minimum reading time per day to be counted in statistics (e.g., "15m", "1h"). (optional)
-    #[arg(long, display_order = 14)]
+    /// Minimum reading time per day to be counted in statistics (e.g., "30s", "15m", "1h", "off").
+    /// Default is "30s". Use "off" to disable this filter.
+    #[arg(long, default_value = "30s", display_order = 14)]
     pub min_time_per_day: Option<String>,
 
     /// Include statistics for all books in the database, not just those in --books-path.
@@ -92,9 +93,9 @@ pub struct Cli {
 
 /// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds.
 ///
-/// Special case: "auto" returns `Ok(None)`.
+/// Special cases: "auto" and "off" return `Ok(None)`.
 pub fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
-    if time_str.eq_ignore_ascii_case("auto") {
+    if time_str.eq_ignore_ascii_case("auto") || time_str.eq_ignore_ascii_case("off") {
         return Ok(None);
     }
 
@@ -219,5 +220,20 @@ impl Cli {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_time_to_seconds;
+
+    #[test]
+    fn parse_time_off_alias_maps_to_none() {
+        assert_eq!(parse_time_to_seconds("off").unwrap(), None);
+    }
+
+    #[test]
+    fn parse_time_auto_maps_to_none() {
+        assert_eq!(parse_time_to_seconds("auto").unwrap(), None);
     }
 }

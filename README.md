@@ -217,12 +217,12 @@ KoShelf can operate in several modes:
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
 - `-t, --title`: Site title (default: "KoShelf")
 - `--include-unread`: Include unread items (files without KoReader metadata)
-- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "auto" for automatic scaling
+- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is `2h` (pass `auto` for automatic scaling)
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
 - `--min-pages-per-day`: Minimum pages read per book per day to be counted in statistics (optional)
-- `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "15m", "1h") (optional)
-    > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics.
+- `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "30s", "15m", "1h", `off`). Default is `30s`.
+    > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics. Since `--min-time-per-day` defaults to `30s`, it is active unless explicitly overridden. Use `--min-time-per-day off` to disable this filter.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
 - `--disable-synthetic-page-scaling`: Disable synthetic stable-page scaling for page-based metrics (pages read, pages/hour, recap pages, calendar pages). By default, KoShelf auto-applies this scaling only when compatible KOReader synthetic metadata is available.
 - `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
@@ -268,8 +268,8 @@ Compatibility note:
 # Generate static site with file watching and statistics
 ./koshelf --library-path ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
 
-# Generate site with custom heatmap color scaling (2 hours = highest intensity)
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 2h
+# Generate site with custom heatmap color scaling (3 hours = highest intensity)
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 3h
 
 # Generate site with custom heatmap color scaling (1.5 hours = highest intensity)
 ./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
