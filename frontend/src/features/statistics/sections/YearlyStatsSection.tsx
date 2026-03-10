@@ -23,6 +23,7 @@ import {
     type DistributionBarItem,
 } from '../components/DistributionBarChart';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 
@@ -139,9 +140,13 @@ export function YearlyStatsSection({
                     iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
                     valueId="yearlyStatsReadTime"
-                    value={DataFormatter.formatReadTimeWithDays(
-                        yearlySummary.read_time,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={DataFormatter.formatReadTimeWithDaysParts(
+                                yearlySummary.read_time,
+                            )}
+                        />
+                    }
                     label={translation.get('total-read-time')}
                 />
 

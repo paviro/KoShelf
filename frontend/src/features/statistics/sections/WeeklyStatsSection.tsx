@@ -11,7 +11,7 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { DataFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
 import {
-    formatSessionDuration,
+    formatSessionDurationParts,
     type SectionName,
 } from '../model/statistics-model';
 import { WeekSelector } from '../components/WeekSelector';
@@ -20,6 +20,7 @@ import {
     type DistributionBarItem,
 } from '../components/DistributionBarChart';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 
 const WEEKDAY_TRANSLATION_KEYS = [
@@ -164,9 +165,13 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                         iconClassName="text-primary-600 dark:text-white"
                         valueId="weekReadTime"
-                        value={DataFormatter.formatReadTime(
-                            weeklyStats.read_time,
-                        )}
+                        value={
+                            <MetricCardUnitValue
+                                value={DataFormatter.formatReadTimeParts(
+                                    weeklyStats.read_time,
+                                )}
+                            />
+                        }
                         label={translation.get('total-read-time')}
                     />
 
@@ -195,9 +200,13 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                         iconClassName="text-green-600 dark:text-white"
                         valueId="weekAvgReadTimePerDay"
-                        value={DataFormatter.formatMinutes(
-                            averageReadTimePerDay / 60,
-                        )}
+                        value={
+                            <MetricCardUnitValue
+                                value={DataFormatter.formatMinutesParts(
+                                    averageReadTimePerDay / 60,
+                                )}
+                            />
+                        }
                         label={translation.get('average-time-day')}
                     />
 
@@ -206,9 +215,13 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                         iconClassName="text-pink-600 dark:text-white"
                         valueId="weekLongestSession"
-                        value={formatSessionDuration(
-                            weeklyStats.longest_session_duration,
-                        )}
+                        value={
+                            <MetricCardUnitValue
+                                value={formatSessionDurationParts(
+                                    weeklyStats.longest_session_duration,
+                                )}
+                            />
+                        }
                         label={translation.get('session.longest')}
                     />
 
@@ -217,9 +230,13 @@ export function WeeklyStatsSection({
                         iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                         iconClassName="text-purple-600 dark:text-white"
                         valueId="weekAverageSession"
-                        value={formatSessionDuration(
-                            weeklyStats.average_session_duration,
-                        )}
+                        value={
+                            <MetricCardUnitValue
+                                value={formatSessionDurationParts(
+                                    weeklyStats.average_session_duration,
+                                )}
+                            />
+                        }
                         label={translation.get('session.average')}
                     />
                 </div>

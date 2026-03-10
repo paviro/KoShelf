@@ -4,11 +4,12 @@ import { LuClock3, LuFileText, LuSun } from 'react-icons/lu';
 import { DataFormatter } from '../lib/formatters';
 import { translation } from '../../../shared/i18n';
 import {
-    formatReadTimeWithWeeks,
-    formatSessionDuration,
+    formatReadTimeWithWeeksParts,
+    formatSessionDurationParts,
     type SectionName,
 } from '../model/statistics-model';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 
 type OverallStatsSectionProps = {
@@ -35,7 +36,13 @@ export function OverallStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
-                    value={formatReadTimeWithWeeks(overview.total_read_time)}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatReadTimeWithWeeksParts(
+                                overview.total_read_time,
+                            )}
+                        />
+                    }
                     label={translation.get('total-read-time')}
                 />
 
@@ -61,9 +68,13 @@ export function OverallStatsSection({
                     icon={LuSun}
                     iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
                     iconClassName="text-amber-600 dark:text-white"
-                    value={DataFormatter.formatReadTime(
-                        overview.longest_read_time_in_day,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={DataFormatter.formatReadTimeParts(
+                                overview.longest_read_time_in_day,
+                            )}
+                        />
+                    }
                     label={translation.get('longest-daily-reading')}
                 />
 
@@ -71,9 +82,13 @@ export function OverallStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
-                    value={formatSessionDuration(
-                        overview.longest_session_duration,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatSessionDurationParts(
+                                overview.longest_session_duration,
+                            )}
+                        />
+                    }
                     label={translation.get('session.longest')}
                 />
 
@@ -81,9 +96,13 @@ export function OverallStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                     iconClassName="text-purple-600 dark:text-white"
-                    value={formatSessionDuration(
-                        overview.average_session_duration,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatSessionDurationParts(
+                                overview.average_session_duration,
+                            )}
+                        />
+                    }
                     label={translation.get('session.average')}
                 />
             </div>

@@ -16,11 +16,12 @@ import {
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import type { RecapItemResponse } from '../api/recap-data';
 import {
     buildStarDisplay,
     formatRecapDateRange,
-    formatRecapDuration,
+    formatRecapDurationParts,
     resolveRecapSearchBasePath,
 } from '../lib/recap-formatters';
 
@@ -230,7 +231,12 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                         {translation.get('reading-time')}
                                     </div>
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                                        {formatRecapDuration(item.reading_time)}
+                                        <MetricCardUnitValue
+                                            value={formatRecapDurationParts(
+                                                item.reading_time,
+                                            )}
+                                            size="compact"
+                                        />
                                     </div>
                                 </div>
                             </div>

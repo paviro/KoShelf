@@ -1,4 +1,6 @@
 import type { ScopeValue } from '../../../shared/api';
+import { joinUnitValueParts } from '../../../shared/lib/intl/unit-value';
+import type { UnitValuePart } from '../../../shared/lib/intl/unit-value';
 import {
     patchRouteState,
     readRouteState,
@@ -130,23 +132,39 @@ export function resolveMonthlyStats(
 }
 
 export function formatDuration(totalSeconds: number): string {
+    return joinUnitValueParts(formatDurationParts(totalSeconds));
+}
+
+export function formatDurationParts(totalSeconds: number): UnitValuePart[] {
     if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
-        return '0s';
+        return [{ amount: '0', unit: 's' }];
     }
 
     if (totalSeconds < 60) {
-        return `${Math.floor(totalSeconds)}s`;
+        return [{ amount: String(Math.floor(totalSeconds)), unit: 's' }];
     }
 
     if (totalSeconds < 3600) {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = Math.floor(totalSeconds % 60);
-        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+        if (seconds > 0) {
+            return [
+                { amount: String(minutes), unit: 'm' },
+                { amount: String(seconds), unit: 's' },
+            ];
+        }
+        return [{ amount: String(minutes), unit: 'm' }];
     }
 
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    if (minutes > 0) {
+        return [
+            { amount: String(hours), unit: 'h' },
+            { amount: String(minutes), unit: 'm' },
+        ];
+    }
+    return [{ amount: String(hours), unit: 'h' }];
 }
 
 export type CalendarViewState = {

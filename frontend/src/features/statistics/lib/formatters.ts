@@ -1,9 +1,22 @@
 import { translation } from '../../../shared/i18n';
 import { formatPlainDateRange } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import {
+    joinUnitValueParts,
+    type UnitValuePart,
+} from '../../../shared/lib/intl/unit-value';
+
+type UnitKey = 'units.w' | 'units.d' | 'units.h' | 'units.m';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
     return value !== null && value !== undefined && Number.isFinite(value);
+}
+
+function withUnit(value: number, unitKey: UnitKey): UnitValuePart {
+    return {
+        amount: formatNumber(value),
+        unit: translation.get(unitKey),
+    };
 }
 
 export class DateFormatter {
@@ -20,9 +33,11 @@ export class DateFormatter {
 }
 
 export class DataFormatter {
-    static formatReadTime(seconds: number | null | undefined): string {
+    static formatReadTimeParts(
+        seconds: number | null | undefined,
+    ): UnitValuePart[] {
         if (!isFiniteNumber(seconds)) {
-            return '--';
+            return [{ amount: '--' }];
         }
 
         const normalizedSeconds = Math.max(0, Math.floor(seconds));
@@ -30,15 +45,21 @@ export class DataFormatter {
         const minutes = Math.floor((normalizedSeconds % 3600) / 60);
 
         if (hours > 0) {
-            return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+            return [withUnit(hours, 'units.h'), withUnit(minutes, 'units.m')];
         }
 
-        return `${formatNumber(minutes)}${translation.get('units.m')}`;
+        return [withUnit(minutes, 'units.m')];
     }
 
-    static formatReadTimeWithDays(seconds: number | null | undefined): string {
+    static formatReadTime(seconds: number | null | undefined): string {
+        return joinUnitValueParts(DataFormatter.formatReadTimeParts(seconds));
+    }
+
+    static formatReadTimeWithDaysParts(
+        seconds: number | null | undefined,
+    ): UnitValuePart[] {
         if (!isFiniteNumber(seconds)) {
-            return '--';
+            return [{ amount: '--' }];
         }
 
         const normalizedSeconds = Math.max(0, Math.floor(seconds));
@@ -49,23 +70,29 @@ export class DataFormatter {
         const minutes = totalMinutes % 60;
 
         if (days > 0) {
-            return `${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+            return [
+                withUnit(days, 'units.d'),
+                withUnit(hours, 'units.h'),
+                withUnit(minutes, 'units.m'),
+            ];
         }
 
         if (hours > 0) {
-            return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+            return [withUnit(hours, 'units.h'), withUnit(minutes, 'units.m')];
         }
 
-        return `${formatNumber(minutes)}${translation.get('units.m')}`;
+        return [withUnit(minutes, 'units.m')];
     }
 
-    static formatMinutes(minutes: number | null | undefined): string {
+    static formatMinutesParts(
+        minutes: number | null | undefined,
+    ): UnitValuePart[] {
         if (!isFiniteNumber(minutes)) {
-            return '--';
+            return [{ amount: '--' }];
         }
 
         const normalizedMinutes = Math.max(0, Math.floor(minutes));
-        return `${formatNumber(normalizedMinutes)}${translation.get('units.m')}`;
+        return [withUnit(normalizedMinutes, 'units.m')];
     }
 
     static formatCount(value: number | null | undefined): string {

@@ -9,6 +9,7 @@ import {
     formatPlainDateRange,
 } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import { type UnitValuePart } from '../../../shared/lib/intl/unit-value';
 import {
     patchRouteState,
     readRouteState,
@@ -103,9 +104,18 @@ export function defaultSectionState(): SectionVisibilityState {
     };
 }
 
-export function formatReadTimeWithWeeks(seconds: number): string {
+type UnitKey = 'units.w' | 'units.d' | 'units.h' | 'units.m';
+
+function formatUnitPart(value: number, unit: UnitKey): UnitValuePart {
+    return {
+        amount: formatNumber(value),
+        unit: translation.get(unit),
+    };
+}
+
+export function formatReadTimeWithWeeksParts(seconds: number): UnitValuePart[] {
     if (!Number.isFinite(seconds)) {
-        return '--';
+        return [{ amount: '--' }];
     }
 
     const normalizedSeconds = Math.max(0, Math.floor(seconds));
@@ -117,30 +127,47 @@ export function formatReadTimeWithWeeks(seconds: number): string {
     const minutes = Math.floor((normalizedSeconds % 3600) / 60);
 
     if (weeks > 0) {
-        return `${formatNumber(weeks)}${translation.get('units.w')} ${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+        return [
+            formatUnitPart(weeks, 'units.w'),
+            formatUnitPart(days, 'units.d'),
+            formatUnitPart(hours, 'units.h'),
+            formatUnitPart(minutes, 'units.m'),
+        ];
     }
     if (days > 0) {
-        return `${formatNumber(days)}${translation.get('units.d')} ${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+        return [
+            formatUnitPart(days, 'units.d'),
+            formatUnitPart(hours, 'units.h'),
+            formatUnitPart(minutes, 'units.m'),
+        ];
     }
     if (hours > 0) {
-        return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(minutes)}${translation.get('units.m')}`;
+        return [
+            formatUnitPart(hours, 'units.h'),
+            formatUnitPart(minutes, 'units.m'),
+        ];
     }
-    return `${formatNumber(minutes)}${translation.get('units.m')}`;
+    return [formatUnitPart(minutes, 'units.m')];
 }
 
-export function formatSessionDuration(seconds: number | null): string {
+export function formatSessionDurationParts(
+    seconds: number | null,
+): UnitValuePart[] {
     if (seconds === null || !Number.isFinite(seconds)) {
-        return '--';
+        return [{ amount: '--' }];
     }
 
     const minutes = Math.max(0, Math.floor(seconds / 60));
     if (minutes >= 60) {
         const hours = Math.floor(minutes / 60);
         const remaining = minutes % 60;
-        return `${formatNumber(hours)}${translation.get('units.h')} ${formatNumber(remaining)}${translation.get('units.m')}`;
+        return [
+            formatUnitPart(hours, 'units.h'),
+            formatUnitPart(remaining, 'units.m'),
+        ];
     }
 
-    return `${formatNumber(minutes)}${translation.get('units.m')}`;
+    return [formatUnitPart(minutes, 'units.m')];
 }
 
 function formatSingleStreakDate(dateStr: string): string {

@@ -5,11 +5,21 @@ import {
     formatPlainDateRange,
 } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import {
+    joinUnitValueParts,
+    type UnitValuePart,
+} from '../../../shared/lib/intl/unit-value';
 import type { RecapItemResponse } from '../api/recap-data';
 
 export function formatRecapDuration(totalSeconds: number): string {
+    return joinUnitValueParts(formatRecapDurationParts(totalSeconds));
+}
+
+export function formatRecapDurationParts(
+    totalSeconds: number,
+): UnitValuePart[] {
     if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
-        return `0${translation.get('units.m')}`;
+        return [{ amount: '0', unit: translation.get('units.m') }];
     }
 
     const normalized = Math.floor(totalSeconds);
@@ -18,18 +28,27 @@ export function formatRecapDuration(totalSeconds: number): string {
     const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
     const minutes = totalMinutes % 60;
 
-    const parts: string[] = [];
+    const parts: UnitValuePart[] = [];
     if (days > 0) {
-        parts.push(`${formatNumber(days)}${translation.get('units.d')}`);
+        parts.push({
+            amount: formatNumber(days),
+            unit: translation.get('units.d'),
+        });
     }
     if (hours > 0) {
-        parts.push(`${formatNumber(hours)}${translation.get('units.h')}`);
+        parts.push({
+            amount: formatNumber(hours),
+            unit: translation.get('units.h'),
+        });
     }
     if (minutes > 0 || parts.length === 0) {
-        parts.push(`${formatNumber(minutes)}${translation.get('units.m')}`);
+        parts.push({
+            amount: formatNumber(minutes),
+            unit: translation.get('units.m'),
+        });
     }
 
-    return parts.join(' ');
+    return parts;
 }
 
 export function formatRecapHoursAndMinutes(

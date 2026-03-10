@@ -5,8 +5,9 @@ import type { ScopeValue } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import type { CalendarMonthlyStats } from '../api/calendar-data';
-import { formatDuration } from '../model/calendar-model';
+import { formatDurationParts } from '../model/calendar-model';
 
 type CalendarMonthlyStatsSectionProps = {
     stats: CalendarMonthlyStats;
@@ -42,14 +43,27 @@ export function CalendarMonthlyStatsSection({
                 icon={LuClock3}
                 iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
                 iconClassName="text-purple-600 dark:text-white"
-                value={formatDuration(stats.time_read)}
+                value={
+                    <MetricCardUnitValue
+                        value={formatDurationParts(stats.time_read)}
+                    />
+                }
                 label={translation.get('total-read-time')}
             />
             <MetricCard
                 icon={LuCalendarDays}
                 iconContainerClassName="bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-orange-600"
                 iconClassName="text-orange-600 dark:text-white"
-                value={`${stats.days_read_pct}%`}
+                value={
+                    <MetricCardUnitValue
+                        value={[
+                            {
+                                amount: formatNumber(stats.days_read_pct),
+                                unit: '%',
+                            },
+                        ]}
+                    />
+                }
                 label={translation.get('active-days', stats.days_read_pct)}
             />
         </section>

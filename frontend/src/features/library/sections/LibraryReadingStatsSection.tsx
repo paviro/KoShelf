@@ -4,6 +4,7 @@ import { LuCalendarDays, LuClock3, LuInfo, LuZap } from 'react-icons/lu';
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
+import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type {
     LibraryCompletions,
@@ -15,6 +16,7 @@ import {
     calculateCalendarLengthDays,
     formatCompletionDateRange,
     formatDurationFromSeconds,
+    formatDurationFromSecondsParts,
     formatIsoDate,
     formatReadingSpeed,
 } from '../lib/library-detail-formatters';
@@ -49,9 +51,13 @@ export function LibraryReadingStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
-                    value={formatDurationFromSeconds(
-                        itemStats?.total_read_time,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatDurationFromSecondsParts(
+                                itemStats?.total_read_time,
+                            )}
+                        />
+                    }
                     label={translation.get('total-read-time')}
                 />
 
@@ -70,9 +76,13 @@ export function LibraryReadingStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
-                    value={formatDurationFromSeconds(
-                        sessionStats.average_session_duration,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatDurationFromSecondsParts(
+                                sessionStats.average_session_duration,
+                            )}
+                        />
+                    }
                     label={translation.get('session.average')}
                 />
 
@@ -80,9 +90,13 @@ export function LibraryReadingStatsSection({
                     icon={LuClock3}
                     iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
-                    value={formatDurationFromSeconds(
-                        sessionStats.longest_session_duration,
-                    )}
+                    value={
+                        <MetricCardUnitValue
+                            value={formatDurationFromSecondsParts(
+                                sessionStats.longest_session_duration,
+                            )}
+                        />
+                    }
                     label={translation.get('session.longest')}
                 />
 
