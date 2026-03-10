@@ -238,14 +238,9 @@ impl LibraryItem {
 
     /// Stable page total for display-only usage.
     ///
-    /// Valid when KOReader page labels are enabled and `pagemap_doc_pages` is present.
+    /// Valid when `pagemap_doc_pages` is present.
     pub fn stable_display_page_total(&self) -> Option<u32> {
         let metadata = self.koreader_metadata.as_ref()?;
-
-        if metadata.pagemap_use_page_labels != Some(true) {
-            return None;
-        }
-
         metadata.pagemap_doc_pages.filter(|pages| *pages > 0)
     }
 
@@ -466,10 +461,12 @@ mod tests {
 
     #[test]
     fn falls_back_to_rendered_doc_pages_when_stable_display_is_unavailable() {
-        let item = test_item(Some(metadata_for_pages(false, true)));
+        let mut metadata = metadata_for_pages(true, true);
+        metadata.pagemap_doc_pages = None;
+        let item = test_item(Some(metadata));
 
         assert_eq!(item.stable_display_page_total(), None);
-        assert_eq!(item.synthetic_scaling_page_total(), Some(300));
+        assert_eq!(item.synthetic_scaling_page_total(), None);
         assert_eq!(item.doc_pages(), Some(200));
     }
 }
