@@ -1,5 +1,6 @@
 //! Snapshot update notifier used by runtime server mode.
 
+use super::revisions::{DomainRevisionState, DomainRevisionTracker, RevisionDomain};
 use serde::Serialize;
 use std::sync::{
     Arc,
@@ -16,6 +17,7 @@ pub struct SnapshotUpdate {
 #[derive(Debug)]
 struct SnapshotUpdateNotifierInner {
     next_revision: AtomicU64,
+    revision_tracker: DomainRevisionTracker,
     tx: watch::Sender<SnapshotUpdate>,
 }
 
@@ -26,7 +28,7 @@ pub struct SnapshotUpdateNotifier {
 }
 
 impl SnapshotUpdateNotifier {
-    pub fn new(initial_generated_at: impl Into<String>) -> Self {
+    pub fn new(revision_epoch: impl Into<String>, initial_generated_at: impl Into<String>) -> Self {
         let initial_update = SnapshotUpdate {
             revision: 0,
             generated_at: initial_generated_at.into(),
@@ -36,6 +38,7 @@ impl SnapshotUpdateNotifier {
         Self {
             inner: Arc::new(SnapshotUpdateNotifierInner {
                 next_revision: AtomicU64::new(1),
+                revision_tracker: DomainRevisionTracker::new(revision_epoch),
                 tx,
             }),
         }
@@ -46,6 +49,27 @@ impl SnapshotUpdateNotifier {
     }
 
     pub fn publish(&self, generated_at: impl Into<String>) -> SnapshotUpdate {
+        self.publish_for_domains(
+            generated_at,
+            [
+                RevisionDomain::Library,
+                RevisionDomain::Metadata,
+                RevisionDomain::Stats,
+                RevisionDomain::Assets,
+            ],
+        )
+    }
+
+    pub fn publish_for_domains<I>(
+        &self,
+        generated_at: impl Into<String>,
+        domains: I,
+    ) -> SnapshotUpdate
+    where
+        I: IntoIterator<Item = RevisionDomain>,
+    {
+        self.inner.revision_tracker.bump_domains(domains);
+
         let update = SnapshotUpdate {
             revision: self.inner.next_revision.fetch_add(1, Ordering::Relaxed),
             generated_at: generated_at.into(),
@@ -54,5 +78,56 @@ impl SnapshotUpdateNotifier {
         // Ignore send failures when no subscribers are connected.
         let _ = self.inner.tx.send(update.clone());
         update
+    }
+
+    pub fn domain_revisions(&self) -> DomainRevisionState {
+        self.inner.revision_tracker.snapshot_state()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SnapshotUpdateNotifier;
+    use crate::runtime::{DomainRevision, RevisionDomain};
+
+    #[test]
+    fn publish_tracks_monotonic_legacy_revision_and_domain_revisions() {
+        let notifier =
+            SnapshotUpdateNotifier::new("serve_2026-03-11T11:00:00Z", "2026-03-11T11:00:00Z");
+
+        assert_eq!(
+            notifier.domain_revisions().revision,
+            DomainRevision::default()
+        );
+
+        let first = notifier.publish_for_domains(
+            "2026-03-11T11:01:00Z",
+            [RevisionDomain::Library, RevisionDomain::Stats],
+        );
+        assert_eq!(first.revision, 1);
+
+        let second =
+            notifier.publish_for_domains("2026-03-11T11:02:00Z", [RevisionDomain::Metadata]);
+        assert_eq!(second.revision, 2);
+
+        let revisions = notifier.domain_revisions();
+        assert_eq!(revisions.revision_epoch, "serve_2026-03-11T11:00:00Z");
+        assert_eq!(revisions.revision.library, 1);
+        assert_eq!(revisions.revision.metadata, 1);
+        assert_eq!(revisions.revision.stats, 1);
+        assert_eq!(revisions.revision.assets, 0);
+    }
+
+    #[test]
+    fn publish_defaults_to_bumping_all_domains() {
+        let notifier = SnapshotUpdateNotifier::new("serve_epoch", "2026-03-11T11:00:00Z");
+
+        notifier.publish("2026-03-11T11:05:00Z");
+        let revisions = notifier.domain_revisions();
+
+        assert_eq!(revisions.revision.library, 1);
+        assert_eq!(revisions.revision.metadata, 1);
+        assert_eq!(revisions.revision.stats, 1);
+        assert_eq!(revisions.revision.assets, 1);
     }
 }

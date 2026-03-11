@@ -134,9 +134,10 @@ pub async fn run(cli: Cli) -> Result<()> {
                 .generated_at()
                 .map(str::to_owned)
                 .unwrap_or_else(|| config.time_config.now_rfc3339());
+            let revision_epoch = format!("serve_{}", initial_generated_at);
             let snapshot_store = Arc::new(SnapshotStore::new());
             snapshot_store.replace(initial_snapshot);
-            let update_notifier = SnapshotUpdateNotifier::new(initial_generated_at);
+            let update_notifier = SnapshotUpdateNotifier::new(revision_epoch, initial_generated_at);
 
             // Start file watcher with snapshot updates.
             let file_watcher = FileWatcher::new(
