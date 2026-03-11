@@ -1,0 +1,1 @@
+//! Asset-cache infrastructure adapters.

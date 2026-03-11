@@ -3,11 +3,10 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chrono::{Duration as ChronoDuration, NaiveDate};
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::contracts::common::{ApiMeta, ContentTypeFilter, MonthKey, WeekKey, YearKey};
+use crate::contracts::common::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
 use crate::runtime::ContractSnapshot;
 use crate::server::ServerState;
@@ -74,56 +73,10 @@ pub(crate) fn runtime_snapshot(state: &ServerState) -> ApiResult<Arc<ContractSna
         .ok_or_else(ApiResponseError::internal_server_error)
 }
 
-pub(crate) fn fallback_meta(snapshot: &ContractSnapshot) -> ApiMeta {
-    snapshot
-        .site
-        .as_ref()
-        .map(|site| site.meta.clone())
-        .or_else(|| snapshot.items.as_ref().map(|items| items.meta.clone()))
-        .or_else(|| {
-            snapshot
-                .activity_weeks
-                .values()
-                .next()
-                .map(|weeks| weeks.meta.clone())
-        })
-        .or_else(|| {
-            snapshot
-                .activity_months
-                .values()
-                .next()
-                .map(|months| months.meta.clone())
-        })
-        .or_else(|| {
-            snapshot
-                .completion_years
-                .values()
-                .next()
-                .map(|years| years.meta.clone())
-        })
-        .unwrap_or(ApiMeta {
-            version: "unknown".to_string(),
-            generated_at: "".to_string(),
-        })
-}
-
 pub(crate) fn parse_validated_year(year: &YearKey) -> ApiResult<i32> {
     year.as_str()
         .parse::<i32>()
         .map_err(|_| ApiResponseError::internal_server_error())
-}
-
-pub(crate) fn resolve_week_bounds(week_key: &str) -> (String, String) {
-    let start = NaiveDate::parse_from_str(week_key, "%Y-%m-%d")
-        .ok()
-        .unwrap_or_else(|| {
-            NaiveDate::from_ymd_opt(1970, 1, 1).expect("constant date should be valid")
-        });
-    let end = start + ChronoDuration::days(6);
-    (
-        start.format("%Y-%m-%d").to_string(),
-        end.format("%Y-%m-%d").to_string(),
-    )
 }
 
 #[cfg(test)]

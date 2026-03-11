@@ -7,9 +7,10 @@ use axum::{
 
 use crate::contracts::common::ApiMeta;
 use crate::contracts::site::{SiteCapabilities, SiteResponse};
+use crate::domain::meta::fallback_meta;
 use crate::server::ServerState;
 
-use super::shared::{fallback_meta, runtime_snapshot};
+use super::shared::runtime_snapshot;
 
 fn empty_site_response(meta: ApiMeta) -> SiteResponse {
     SiteResponse {
