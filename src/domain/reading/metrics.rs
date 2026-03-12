@@ -1,188 +1,213 @@
-use chrono::{Duration as ChronoDuration, NaiveDate};
+//! Metrics endpoint computation for `/api/reading/metrics`.
 
-use crate::contracts::common::{ApiMeta, ContentTypeFilter};
-use crate::contracts::statistics::{
-    ActivityHeatmapConfig, ActivityOverview, ActivityStreaks, ActivityWeekResponse,
-    ActivityWeeksResponse, ActivityYearDailyResponse, ActivityYearSummaryResponse, YearlySummary,
-};
-use crate::domain::meta::fallback_meta;
-use crate::models::{StreakInfo, WeeklyStats};
-use crate::runtime::ContractSnapshot;
+use std::collections::{BTreeMap, HashMap};
 
-pub fn activity_weeks(
-    snapshot: &ContractSnapshot,
-    content_type: ContentTypeFilter,
-) -> ActivityWeeksResponse {
-    snapshot
-        .activity_weeks
-        .get(content_type.as_str())
-        .cloned()
-        .unwrap_or_else(|| empty_activity_weeks_response(fallback_meta(snapshot), content_type))
-}
+use chrono::{Datelike, NaiveDate};
 
-pub fn activity_week(
-    snapshot: &ContractSnapshot,
-    content_type: ContentTypeFilter,
-    week_key: &str,
-) -> ActivityWeekResponse {
-    let meta = snapshot
-        .activity_weeks
-        .get(content_type.as_str())
-        .map(|weeks| weeks.meta.clone())
-        .unwrap_or_else(|| fallback_meta(snapshot));
+use crate::contracts::reading::{MetricPoint, ReadingMetricsData};
+use crate::domain::reading::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
+use crate::domain::reading::shared;
+use crate::models::PageStat;
+use crate::runtime::ReadingData;
+use crate::time_config::TimeConfig;
 
-    snapshot
-        .activity_weeks_by_key
-        .get(content_type.as_str())
-        .and_then(|weeks| weeks.get(week_key))
-        .cloned()
-        .unwrap_or_else(|| empty_activity_week_response(meta, content_type, week_key))
-}
+/// Default time gap that separates two reading events into different sessions (seconds).
+const SESSION_GAP_SECONDS: i64 = 300;
 
-pub fn activity_year_daily(
-    snapshot: &ContractSnapshot,
-    content_type: ContentTypeFilter,
-    year_key: &str,
-    year_value: i32,
-) -> ActivityYearDailyResponse {
-    let meta = snapshot
-        .activity_weeks
-        .get(content_type.as_str())
-        .map(|weeks| weeks.meta.clone())
-        .unwrap_or_else(|| fallback_meta(snapshot));
+/// Compute the metrics response from reading data and a validated query.
+pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> ReadingMetricsData {
+    let time_config = shared::resolve_time_config(&reading_data.time_config, query.tz);
+    let stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
+    let (page_stats, resolved_from, resolved_to) = shared::filter_and_resolve_range(
+        &stats.page_stats,
+        query.range.as_ref().map(|r| (r.from, r.to)),
+        &time_config,
+    );
 
-    snapshot
-        .activity_year_daily
-        .get(content_type.as_str())
-        .and_then(|years| years.get(year_key))
-        .cloned()
-        .unwrap_or_else(|| empty_activity_year_daily_response(meta, content_type, year_value))
-}
+    let all_keys = all_bucket_keys(resolved_from, resolved_to, query.group_by);
 
-pub fn activity_year_summary(
-    snapshot: &ContractSnapshot,
-    content_type: ContentTypeFilter,
-    year_key: &str,
-    year_value: i32,
-) -> ActivityYearSummaryResponse {
-    let meta = snapshot
-        .activity_weeks
-        .get(content_type.as_str())
-        .map(|weeks| weeks.meta.clone())
-        .unwrap_or_else(|| fallback_meta(snapshot));
+    let points = match query.metric {
+        ReadingMetric::ReadingTimeSec => {
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for stat in &page_stats {
+                let date = time_config.date_for_timestamp(stat.start_time);
+                let key = bucket_key(date, query.group_by);
+                *buckets.entry(key).or_insert(0) += stat.duration;
+            }
+            fill_points(&all_keys, &buckets)
+        }
+        ReadingMetric::PagesRead => {
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for stat in &page_stats {
+                let date = time_config.date_for_timestamp(stat.start_time);
+                let key = bucket_key(date, query.group_by);
+                *buckets.entry(key).or_insert(0) += 1;
+            }
+            fill_points(&all_keys, &buckets)
+        }
+        ReadingMetric::Sessions => {
+            let sessions = sessions_with_dates(&page_stats, &time_config);
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for (date, _) in &sessions {
+                let key = bucket_key(*date, query.group_by);
+                *buckets.entry(key).or_insert(0) += 1;
+            }
+            fill_points(&all_keys, &buckets)
+        }
+        ReadingMetric::Completions => {
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for book in &stats.books {
+                let Some(ref completions) = book.completions else {
+                    continue;
+                };
+                for entry in &completions.entries {
+                    if let Ok(end_date) = NaiveDate::parse_from_str(&entry.end_date, "%Y-%m-%d")
+                        && end_date >= resolved_from
+                        && end_date <= resolved_to
+                    {
+                        let key = bucket_key(end_date, query.group_by);
+                        *buckets.entry(key).or_insert(0) += 1;
+                    }
+                }
+            }
+            fill_points(&all_keys, &buckets)
+        }
+        ReadingMetric::AverageSessionDurationSec => {
+            let sessions = sessions_with_dates(&page_stats, &time_config);
+            let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
+            for (date, duration) in &sessions {
+                let key = bucket_key(*date, query.group_by);
+                bucket_sessions.entry(key).or_default().push(*duration);
+            }
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for (key, durations) in &bucket_sessions {
+                let total: i64 = durations.iter().sum();
+                buckets.insert(key.clone(), total / durations.len() as i64);
+            }
+            fill_points(&all_keys, &buckets)
+        }
+        ReadingMetric::LongestSessionDurationSec => {
+            let sessions = sessions_with_dates(&page_stats, &time_config);
+            let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
+            for (date, duration) in &sessions {
+                let key = bucket_key(*date, query.group_by);
+                bucket_sessions.entry(key).or_default().push(*duration);
+            }
+            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
+            for (key, durations) in &bucket_sessions {
+                buckets.insert(key.clone(), durations.iter().copied().max().unwrap_or(0));
+            }
+            fill_points(&all_keys, &buckets)
+        }
+    };
 
-    snapshot
-        .activity_year_summary
-        .get(content_type.as_str())
-        .and_then(|years| years.get(year_key))
-        .cloned()
-        .unwrap_or_else(|| empty_activity_year_summary_response(meta, content_type, year_value))
-}
-
-fn empty_activity_overview() -> ActivityOverview {
-    ActivityOverview {
-        total_read_time: 0,
-        total_page_reads: 0,
-        longest_read_time_in_day: 0,
-        most_pages_in_day: 0,
-        average_session_duration: None,
-        longest_session_duration: None,
-        total_completions: 0,
-        items_completed: 0,
-        most_completions: 0,
+    ReadingMetricsData {
+        metric: query.metric.as_str().to_string(),
+        group_by: query.group_by.as_str().to_string(),
+        scope: query.scope.as_str().to_string(),
+        points,
     }
 }
 
-fn empty_activity_streaks() -> ActivityStreaks {
-    ActivityStreaks {
-        longest: StreakInfo::new(0, None, None),
-        current: StreakInfo::new(0, None, None),
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+/// Map a date to its bucket key string for the given grouping.
+fn bucket_key(date: NaiveDate, group_by: MetricsGroupBy) -> String {
+    match group_by {
+        MetricsGroupBy::Day => shared::bucket_key_day(date),
+        MetricsGroupBy::Week => shared::bucket_key_week(date),
+        MetricsGroupBy::Month => shared::bucket_key_month(date),
     }
 }
 
-fn empty_activity_weeks_response(
-    meta: ApiMeta,
-    content_type: ContentTypeFilter,
-) -> ActivityWeeksResponse {
-    ActivityWeeksResponse {
-        meta,
-        content_type,
-        available_years: vec![],
-        available_weeks: vec![],
-        overview: empty_activity_overview(),
-        streaks: empty_activity_streaks(),
-        heatmap_config: ActivityHeatmapConfig {
-            max_scale_seconds: None,
-        },
+/// Generate all contiguous bucket keys covering `[from, to]`.
+fn all_bucket_keys(from: NaiveDate, to: NaiveDate, group_by: MetricsGroupBy) -> Vec<String> {
+    let mut keys = Vec::new();
+    match group_by {
+        MetricsGroupBy::Day => {
+            let mut date = from;
+            while date <= to {
+                keys.push(shared::bucket_key_day(date));
+                date += chrono::Duration::days(1);
+            }
+        }
+        MetricsGroupBy::Week => {
+            let mut monday = shared::week_monday(from);
+            let end_monday = shared::week_monday(to);
+            while monday <= end_monday {
+                keys.push(monday.format("%Y-%m-%d").to_string());
+                monday += chrono::Duration::days(7);
+            }
+        }
+        MetricsGroupBy::Month => {
+            let mut year = from.year();
+            let mut month = from.month();
+            loop {
+                keys.push(format!("{year:04}-{month:02}"));
+                if year == to.year() && month == to.month() {
+                    break;
+                }
+                if month == 12 {
+                    year += 1;
+                    month = 1;
+                } else {
+                    month += 1;
+                }
+            }
+        }
     }
+    keys
 }
 
-fn empty_activity_week_response(
-    meta: ApiMeta,
-    content_type: ContentTypeFilter,
-    week_key: &str,
-) -> ActivityWeekResponse {
-    let (start_date, end_date) = resolve_week_bounds(week_key);
-
-    ActivityWeekResponse {
-        meta,
-        content_type,
-        week_key: week_key.to_string(),
-        stats: WeeklyStats {
-            start_date,
-            end_date,
-            read_time: 0,
-            pages_read: 0,
-            longest_session_duration: None,
-            average_session_duration: None,
-        },
-        daily_activity: vec![],
-    }
+/// Produce a filled point series: every key in `all_keys` gets a value
+/// (from `buckets` if present, otherwise 0).
+fn fill_points(all_keys: &[String], buckets: &BTreeMap<String, i64>) -> Vec<MetricPoint> {
+    all_keys
+        .iter()
+        .map(|key| MetricPoint {
+            key: key.clone(),
+            value: buckets.get(key).copied().unwrap_or(0),
+        })
+        .collect()
 }
 
-fn empty_activity_year_daily_response(
-    meta: ApiMeta,
-    content_type: ContentTypeFilter,
-    year: i32,
-) -> ActivityYearDailyResponse {
-    ActivityYearDailyResponse {
-        meta,
-        content_type,
-        year,
-        daily_activity: vec![],
-        config: Some(ActivityHeatmapConfig {
-            max_scale_seconds: None,
-        }),
+/// Compute reading sessions with their logical start dates.
+///
+/// Groups page stats by book, identifies sessions using a 5-minute gap threshold,
+/// and returns `(session_start_date, session_duration)` pairs.
+fn sessions_with_dates(page_stats: &[PageStat], time_config: &TimeConfig) -> Vec<(NaiveDate, i64)> {
+    let mut by_book: HashMap<i64, Vec<PageStat>> = HashMap::new();
+    for stat in page_stats.iter().filter(|s| s.duration > 0) {
+        by_book.entry(stat.id_book).or_default().push(stat.clone());
     }
-}
 
-fn empty_activity_year_summary_response(
-    meta: ApiMeta,
-    content_type: ContentTypeFilter,
-    year: i32,
-) -> ActivityYearSummaryResponse {
-    ActivityYearSummaryResponse {
-        meta,
-        content_type,
-        year,
-        summary: YearlySummary { completed_count: 0 },
-        monthly_aggregates: vec![],
-        config: Some(ActivityHeatmapConfig {
-            max_scale_seconds: None,
-        }),
+    let mut result = Vec::new();
+    for book_stats in by_book.values() {
+        let mut sorted = book_stats.clone();
+        sorted.sort_by_key(|s| s.start_time);
+
+        let mut session_start = sorted[0].start_time;
+        let mut session_duration = sorted[0].duration;
+        let mut last_end = sorted[0].start_time + sorted[0].duration;
+
+        for stat in &sorted[1..] {
+            if stat.start_time - last_end <= SESSION_GAP_SECONDS {
+                session_duration += stat.duration;
+            } else {
+                result.push((
+                    time_config.date_for_timestamp(session_start),
+                    session_duration,
+                ));
+                session_start = stat.start_time;
+                session_duration = stat.duration;
+            }
+            last_end = stat.start_time + stat.duration;
+        }
+        result.push((
+            time_config.date_for_timestamp(session_start),
+            session_duration,
+        ));
     }
-}
 
-fn resolve_week_bounds(week_key: &str) -> (String, String) {
-    let start = NaiveDate::parse_from_str(week_key, "%Y-%m-%d")
-        .ok()
-        .unwrap_or_else(|| {
-            NaiveDate::from_ymd_opt(1970, 1, 1).expect("constant date should be valid")
-        });
-    let end = start + ChronoDuration::days(6);
-
-    (
-        start.format("%Y-%m-%d").to_string(),
-        end.format("%Y-%m-%d").to_string(),
-    )
+    result
 }

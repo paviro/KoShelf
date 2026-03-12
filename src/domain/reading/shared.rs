@@ -1,6 +1,6 @@
 //! Reusable helpers shared across reading endpoint implementations.
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 
 use crate::contracts::common::ContentTypeFilter;
 use crate::models::{ContentType, PageStat, StatisticsData};
@@ -102,4 +102,26 @@ pub fn count_completions_in_range(
     }
 
     (total, items_with_completion)
+}
+
+// ── Bucket key helpers ──────────────────────────────────────────────────────
+
+/// Return the Monday of the ISO week containing `date`.
+pub fn week_monday(date: NaiveDate) -> NaiveDate {
+    date - chrono::Duration::days(date.weekday().num_days_from_monday() as i64)
+}
+
+/// Bucket key for day grouping: `YYYY-MM-DD`.
+pub fn bucket_key_day(date: NaiveDate) -> String {
+    date.format("%Y-%m-%d").to_string()
+}
+
+/// Bucket key for week grouping: `YYYY-MM-DD` (Monday of that week).
+pub fn bucket_key_week(date: NaiveDate) -> String {
+    week_monday(date).format("%Y-%m-%d").to_string()
+}
+
+/// Bucket key for month grouping: `YYYY-MM`.
+pub fn bucket_key_month(date: NaiveDate) -> String {
+    format!("{:04}-{:02}", date.year(), date.month())
 }

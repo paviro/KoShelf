@@ -1,13 +1,13 @@
 use crate::contracts::calendar::{ActivityMonthResponse, ActivityMonthsResponse};
 use crate::contracts::common::ContentTypeFilter;
-use crate::contracts::reading::ReadingSummaryData;
+use crate::contracts::reading::{ReadingMetricsData, ReadingSummaryData};
 use crate::contracts::recap::{CompletionYearResponse, CompletionYearsResponse};
 use crate::contracts::statistics::{
     ActivityWeekResponse, ActivityWeeksResponse, ActivityYearDailyResponse,
     ActivityYearSummaryResponse,
 };
-use crate::domain::reading::queries::ReadingSummaryQuery;
-use crate::domain::reading::{calendar, completions, metrics, summary};
+use crate::domain::reading::queries::{ReadingMetricsQuery, ReadingSummaryQuery};
+use crate::domain::reading::{activity, calendar, completions, metrics, summary};
 use crate::runtime::{ContractSnapshot, ReadingData};
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -20,7 +20,7 @@ impl ReadingService {
         snapshot: &ContractSnapshot,
         content_type: ContentTypeFilter,
     ) -> ActivityWeeksResponse {
-        metrics::activity_weeks(snapshot, content_type)
+        activity::activity_weeks(snapshot, content_type)
     }
 
     pub fn activity_week(
@@ -28,7 +28,7 @@ impl ReadingService {
         content_type: ContentTypeFilter,
         week_key: &str,
     ) -> ActivityWeekResponse {
-        metrics::activity_week(snapshot, content_type, week_key)
+        activity::activity_week(snapshot, content_type, week_key)
     }
 
     pub fn activity_year_daily(
@@ -37,7 +37,7 @@ impl ReadingService {
         year_key: &str,
         year_value: i32,
     ) -> ActivityYearDailyResponse {
-        metrics::activity_year_daily(snapshot, content_type, year_key, year_value)
+        activity::activity_year_daily(snapshot, content_type, year_key, year_value)
     }
 
     pub fn activity_year_summary(
@@ -46,7 +46,7 @@ impl ReadingService {
         year_key: &str,
         year_value: i32,
     ) -> ActivityYearSummaryResponse {
-        metrics::activity_year_summary(snapshot, content_type, year_key, year_value)
+        activity::activity_year_summary(snapshot, content_type, year_key, year_value)
     }
 
     pub fn activity_months(
@@ -84,5 +84,9 @@ impl ReadingService {
 
     pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> ReadingSummaryData {
         summary::summary(reading_data, query)
+    }
+
+    pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> ReadingMetricsData {
+        metrics::metrics(reading_data, query)
     }
 }

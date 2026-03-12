@@ -78,6 +78,7 @@ impl WebServer {
             .route("/api/completions/years", get(api::completion_years))
             .route("/api/completions/years/{year}", get(api::completion_year))
             .route("/api/reading/summary", get(api::reading_summary))
+            .route("/api/reading/metrics", get(api::reading_metrics))
             .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))
