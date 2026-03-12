@@ -2,6 +2,7 @@ mod activity;
 mod completions;
 mod events;
 mod library;
+mod reading;
 mod shared;
 mod site;
 
@@ -12,4 +13,5 @@ pub use activity::{
 pub use completions::{completion_year, completion_years};
 pub use events::events_stream;
 pub use library::{item_detail, items};
+pub use reading::reading_summary;
 pub use site::site;

@@ -4,7 +4,9 @@ use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::library::scan_library;
 use crate::models::LibraryItemFormat;
-use crate::runtime::{RuntimeObservability, SharedSnapshotStore, SnapshotUpdateNotifier};
+use crate::runtime::{
+    RuntimeObservability, SharedReadingDataStore, SharedSnapshotStore, SnapshotUpdateNotifier,
+};
 use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
@@ -20,6 +22,7 @@ use tokio::time::sleep;
 pub struct FileWatcher {
     config: SiteConfig,
     snapshot_store: Option<SharedSnapshotStore>,
+    reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<SnapshotUpdateNotifier>,
     library_repo: Option<LibraryRepository>,
     observability: RuntimeObservability,
@@ -56,6 +59,7 @@ impl FileWatcher {
     pub fn new(
         config: SiteConfig,
         snapshot_store: Option<SharedSnapshotStore>,
+        reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<SnapshotUpdateNotifier>,
         library_repo: Option<LibraryRepository>,
         observability: RuntimeObservability,
@@ -63,6 +67,7 @@ impl FileWatcher {
         Self {
             config,
             snapshot_store,
+            reading_data_store,
             update_notifier,
             library_repo,
             observability,
@@ -132,6 +137,7 @@ impl FileWatcher {
         // Clone the config for the rebuild task
         let config_clone = self.config.clone();
         let snapshot_store_clone = self.snapshot_store.clone();
+        let reading_data_store_clone = self.reading_data_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
         let library_repo_clone = self.library_repo.clone();
         let observability_clone = self.observability.clone();
@@ -166,14 +172,16 @@ impl FileWatcher {
                     let snapshot_builder = SnapshotBuilder::new(config_clone.clone());
 
                     match snapshot_builder.refresh_snapshot().await {
-                        Ok(snapshot) => {
-                            let generated_at = snapshot
+                        Ok(result) => {
+                            let generated_at = result
+                                .snapshot
                                 .generated_at()
                                 .map(str::to_owned)
                                 .unwrap_or_else(|| config_clone.time_config.now_rfc3339());
 
                             if !config_clone.is_internal_server
-                                && let Err(error) = snapshot
+                                && let Err(error) = result
+                                    .snapshot
                                     .write_to_data_dir(&config_clone.output_dir.join("data"))
                             {
                                 warn!("Failed to write static contract data: {}", error);
@@ -181,7 +189,13 @@ impl FileWatcher {
                             }
 
                             if let Some(ref snapshot_store) = snapshot_store_clone {
-                                snapshot_store.replace(snapshot);
+                                snapshot_store.replace(result.snapshot);
+                            }
+
+                            if let Some(ref reading_data_store) = reading_data_store_clone
+                                && let Some(rd) = result.reading_data
+                            {
+                                reading_data_store.replace(rd);
                             }
 
                             if let Some(ref update_notifier) = update_notifier_clone {

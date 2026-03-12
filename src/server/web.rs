@@ -1,7 +1,7 @@
 use super::ServerState;
 use super::api;
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
+use crate::runtime::{SharedReadingDataStore, SharedSnapshotStore, SnapshotUpdateNotifier};
 use anyhow::Result;
 use axum::{
     Router,
@@ -24,6 +24,7 @@ pub struct WebServer {
     media_cache_dir: PathBuf,
     port: u16,
     snapshot_store: SharedSnapshotStore,
+    reading_data_store: SharedReadingDataStore,
     update_notifier: SnapshotUpdateNotifier,
     library_repo: LibraryRepository,
 }
@@ -33,6 +34,7 @@ impl WebServer {
         media_cache_dir: PathBuf,
         port: u16,
         snapshot_store: SharedSnapshotStore,
+        reading_data_store: SharedReadingDataStore,
         update_notifier: SnapshotUpdateNotifier,
         library_repo: LibraryRepository,
     ) -> Self {
@@ -40,6 +42,7 @@ impl WebServer {
             media_cache_dir,
             port,
             snapshot_store,
+            reading_data_store,
             update_notifier,
             library_repo,
         }
@@ -48,6 +51,7 @@ impl WebServer {
     pub async fn run(self) -> Result<()> {
         let state = ServerState {
             snapshot_store: self.snapshot_store.clone(),
+            reading_data_store: self.reading_data_store.clone(),
             update_notifier: self.update_notifier.clone(),
             library_repo: self.library_repo,
         };
@@ -73,6 +77,7 @@ impl WebServer {
             .route("/api/activity/months/{month_key}", get(api::activity_month))
             .route("/api/completions/years", get(api::completion_years))
             .route("/api/completions/years/{year}", get(api::completion_year))
+            .route("/api/reading/summary", get(api::reading_summary))
             .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))

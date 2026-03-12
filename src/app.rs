@@ -8,7 +8,9 @@ use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::library::{FileWatcher, MetadataLocation, scan_library};
-use crate::runtime::{RuntimeObservability, SnapshotStore, SnapshotUpdateNotifier};
+use crate::runtime::{
+    ReadingDataStore, RuntimeObservability, SnapshotStore, SnapshotUpdateNotifier,
+};
 use crate::server::WebServer;
 use crate::snapshot_builder::SnapshotBuilder;
 use crate::time_config::TimeConfig;
@@ -162,12 +164,15 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // Build initial in-memory library data.
     let startup_library_build_started_at = Instant::now();
-    let initial_snapshot = snapshot_builder.refresh_snapshot().await?;
+    let initial_result = snapshot_builder.refresh_snapshot().await?;
     observability.record_startup_library_build_duration(startup_library_build_started_at.elapsed());
     info!(
         "Initial library build completed in {} ms",
         observability.snapshot().startup_library_build_duration_ms
     );
+
+    let initial_snapshot = initial_result.snapshot;
+    let initial_reading_data = initial_result.reading_data;
 
     // ── Library build pipeline: populate library.sqlite ────────────────
     //
@@ -238,8 +243,14 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher =
-                FileWatcher::new(config, None, None, library_repo, observability.clone());
+            let file_watcher = FileWatcher::new(
+                config,
+                None,
+                None,
+                None,
+                library_repo,
+                observability.clone(),
+            );
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -256,6 +267,12 @@ pub async fn run(cli: Cli) -> Result<()> {
             let revision_epoch = format!("serve_{}", initial_generated_at);
             let snapshot_store = Arc::new(SnapshotStore::new());
             snapshot_store.replace(initial_snapshot);
+
+            let reading_data_store = Arc::new(ReadingDataStore::new());
+            if let Some(rd) = initial_reading_data {
+                reading_data_store.replace(rd);
+            }
+
             let update_notifier = SnapshotUpdateNotifier::with_observability(
                 revision_epoch,
                 initial_generated_at,
@@ -266,6 +283,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             let file_watcher = FileWatcher::new(
                 config,
                 Some(snapshot_store.clone()),
+                Some(reading_data_store.clone()),
                 Some(update_notifier.clone()),
                 Some(library_repo.clone()),
                 observability,
@@ -276,6 +294,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 plan.output_dir,
                 cli.port,
                 snapshot_store,
+                reading_data_store,
                 update_notifier,
                 library_repo,
             );

@@ -21,12 +21,19 @@ use crate::koreader::{StatisticsCalculator, StatisticsParser};
 use crate::library::scan_library;
 use crate::models::merge_precedence::normalize_partial_md5;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
-use crate::runtime::ContractSnapshot;
+use crate::runtime::{ContractSnapshot, ReadingData};
 use anyhow::Result;
 use log::info;
 use scaling::PageScaling;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+
+/// Output of a snapshot refresh: the pre-computed snapshot plus optional
+/// processed reading data for on-demand query computation.
+pub struct SnapshotResult {
+    pub snapshot: ContractSnapshot,
+    pub reading_data: Option<ReadingData>,
+}
 
 #[derive(Debug)]
 struct SnapshotInputs {
@@ -150,7 +157,7 @@ impl SnapshotBuilder {
         })
     }
 
-    pub async fn refresh_snapshot(&self) -> Result<ContractSnapshot> {
+    pub async fn refresh_snapshot(&self) -> Result<SnapshotResult> {
         if self.is_internal_server {
             info!(
                 "Refreshing runtime data snapshot and serving media cache from: {:?}",
@@ -212,12 +219,22 @@ impl SnapshotBuilder {
             .await?;
         }
 
+        // Preserve processed stats data for on-demand reading endpoint computation.
+        let reading_data = ctx.stats_data.map(|sd| ReadingData {
+            stats_data: sd,
+            time_config: self.time_config.clone(),
+            heatmap_scale_max: self.heatmap_scale_max,
+        });
+
         if self.is_internal_server {
             info!("Runtime data snapshot refresh completed.");
         } else {
             info!("Static shell/assets and /data export completed.");
         }
 
-        Ok(snapshot)
+        Ok(SnapshotResult {
+            snapshot,
+            reading_data,
+        })
     }
 }
