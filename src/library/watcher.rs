@@ -1,5 +1,8 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
+use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
+use crate::infra::sqlite::library_repo::LibraryRepository;
+use crate::library::scan_library;
 use crate::models::LibraryItemFormat;
 use crate::runtime::{RuntimeObservability, SharedSnapshotStore, SnapshotUpdateNotifier};
 use crate::snapshot_builder::SnapshotBuilder;
@@ -18,6 +21,7 @@ pub struct FileWatcher {
     config: SiteConfig,
     snapshot_store: Option<SharedSnapshotStore>,
     update_notifier: Option<SnapshotUpdateNotifier>,
+    library_repo: Option<LibraryRepository>,
     observability: RuntimeObservability,
 }
 
@@ -53,12 +57,14 @@ impl FileWatcher {
         config: SiteConfig,
         snapshot_store: Option<SharedSnapshotStore>,
         update_notifier: Option<SnapshotUpdateNotifier>,
+        library_repo: Option<LibraryRepository>,
         observability: RuntimeObservability,
     ) -> Self {
         Self {
             config,
             snapshot_store,
             update_notifier,
+            library_repo,
             observability,
         }
     }
@@ -127,6 +133,7 @@ impl FileWatcher {
         let config_clone = self.config.clone();
         let snapshot_store_clone = self.snapshot_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
+        let library_repo_clone = self.library_repo.clone();
         let observability_clone = self.observability.clone();
         let pending_rebuilds_clone = pending_rebuilds.clone();
 
@@ -188,6 +195,51 @@ impl FileWatcher {
                             info!("Delayed snapshot refresh completed successfully");
                         }
                         Err(e) => warn!("Failed to refresh snapshot: {}", e),
+                    }
+
+                    // Run incremental library DB update if a repository is available.
+                    if let Some(ref repo) = library_repo_clone {
+                        let db_start = Instant::now();
+                        let scanned = if !config_clone.library_paths.is_empty() {
+                            match scan_library(
+                                &config_clone.library_paths,
+                                &config_clone.metadata_location,
+                            )
+                            .await
+                            {
+                                Ok((items, _md5s)) => items,
+                                Err(e) => {
+                                    warn!("Watcher library scan failed: {}", e);
+                                    continue;
+                                }
+                            }
+                        } else {
+                            Vec::new()
+                        };
+
+                        let pipeline = LibraryBuildPipeline::new(
+                            repo,
+                            config_clone.include_unread,
+                            config_clone.use_stable_page_metadata,
+                            &config_clone.time_config,
+                        );
+
+                        match pipeline
+                            .build(LibraryBuildMode::Incremental, scanned)
+                            .await
+                        {
+                            Ok(result) => {
+                                info!(
+                                    "Watcher library DB update completed in {} ms: {} scanned, {} upserted, {} removed, {} collisions",
+                                    db_start.elapsed().as_millis(),
+                                    result.scanned_files,
+                                    result.upserted_items,
+                                    result.removed_items,
+                                    result.collision_count,
+                                );
+                            }
+                            Err(e) => warn!("Watcher library DB update failed: {}", e),
+                        }
                     }
 
                     observability_clone.record_watcher_update_latency(queued_at.elapsed());

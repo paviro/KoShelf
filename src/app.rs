@@ -238,7 +238,8 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher = FileWatcher::new(config, None, None, observability.clone());
+            let file_watcher =
+                FileWatcher::new(config, None, None, library_repo, observability.clone());
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -266,6 +267,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 config,
                 Some(snapshot_store.clone()),
                 Some(update_notifier.clone()),
+                Some(library_repo.clone()),
                 observability,
             );
 
