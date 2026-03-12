@@ -11,6 +11,31 @@ pub struct ApiMeta {
     pub generated_at: String,
 }
 
+// ── New-contract response envelope ────────────────────────────────────────
+
+/// Generic response envelope for new-contract endpoints.
+///
+/// Wraps a `data` payload with response metadata. Phase 4 will extend
+/// `ResponseMeta` with `revision_epoch`, `revision`, and `request_id`.
+#[derive(Debug, Clone, Serialize)]
+pub struct ApiResponse<T: Serialize> {
+    pub data: T,
+    pub meta: ResponseMeta,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ResponseMeta {
+    pub generated_at: String,
+}
+
+impl ResponseMeta {
+    pub fn now() -> Self {
+        Self {
+            generated_at: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ContentTypeFilter {
