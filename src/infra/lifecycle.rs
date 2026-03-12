@@ -34,9 +34,9 @@ pub struct RuntimeDataPolicy {
     pub source: RuntimeDataPolicySource,
     /// User-provided persistent data directory (only set for persistent policies).
     pub data_dir: Option<PathBuf>,
-    /// Resolved directory for runtime data files (library DB, stats DB copy,
-    /// cover cache). Always set once `set_resolved_data_dir` is called — either
-    /// the user-provided persistent path or the ephemeral temp directory.
+    /// Resolved directory for runtime data files (currently: library DB).
+    /// Always set once `set_resolved_data_dir` is called — either the
+    /// user-provided persistent path or the ephemeral temp directory.
     resolved_data_dir: Option<PathBuf>,
 }
 
