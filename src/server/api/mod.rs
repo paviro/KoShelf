@@ -13,5 +13,8 @@ pub use activity::{
 pub use completions::{completion_year, completion_years};
 pub use events::events_stream;
 pub use library::{item_detail, items};
-pub use reading::{reading_available_periods, reading_calendar, reading_metrics, reading_summary};
+pub use reading::{
+    reading_available_periods, reading_calendar, reading_completions, reading_metrics,
+    reading_summary,
+};
 pub use site::site;

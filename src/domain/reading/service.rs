@@ -1,7 +1,8 @@
 use crate::contracts::calendar::{ActivityMonthResponse, ActivityMonthsResponse};
 use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::reading::{
-    ReadingAvailablePeriodsData, ReadingCalendarData, ReadingMetricsData, ReadingSummaryData,
+    ReadingAvailablePeriodsData, ReadingCalendarData, ReadingCompletionsData, ReadingMetricsData,
+    ReadingSummaryData,
 };
 use crate::contracts::recap::{CompletionYearResponse, CompletionYearsResponse};
 use crate::contracts::statistics::{
@@ -9,7 +10,8 @@ use crate::contracts::statistics::{
     ActivityYearSummaryResponse,
 };
 use crate::domain::reading::queries::{
-    ReadingAvailablePeriodsQuery, ReadingCalendarQuery, ReadingMetricsQuery, ReadingSummaryQuery,
+    ReadingAvailablePeriodsQuery, ReadingCalendarQuery, ReadingCompletionsQuery,
+    ReadingMetricsQuery, ReadingSummaryQuery,
 };
 use crate::domain::reading::{
     activity, available_periods, calendar, completions, metrics, summary,
@@ -108,5 +110,12 @@ impl ReadingService {
         query: ReadingCalendarQuery,
     ) -> ReadingCalendarData {
         calendar::reading_calendar(reading_data, query)
+    }
+
+    pub fn completions(
+        reading_data: &ReadingData,
+        query: ReadingCompletionsQuery,
+    ) -> ReadingCompletionsData {
+        completions::reading_completions(reading_data, query)
     }
 }

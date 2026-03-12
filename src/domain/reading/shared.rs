@@ -3,6 +3,7 @@
 use chrono::{Datelike, NaiveDate};
 
 use crate::contracts::common::ContentTypeFilter;
+use crate::contracts::library::LibraryContentType;
 use crate::models::{ContentType, PageStat, StatisticsData};
 use crate::time_config::TimeConfig;
 
@@ -129,4 +130,27 @@ pub fn bucket_key_month(date: NaiveDate) -> String {
 /// Bucket key for year grouping: `YYYY`.
 pub fn bucket_key_year(date: NaiveDate) -> String {
     format!("{:04}", date.year())
+}
+
+// ── Content helpers ─────────────────────────────────────────────────────────
+
+/// Parse a comma/semicolon-separated author string into trimmed author names.
+pub fn parse_authors(authors_str: &str) -> Vec<String> {
+    if authors_str.is_empty() {
+        Vec::new()
+    } else {
+        authors_str
+            .split(&[',', ';'])
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    }
+}
+
+/// Map an optional internal `ContentType` to the API `LibraryContentType`.
+pub fn to_library_content_type(ct: Option<ContentType>) -> LibraryContentType {
+    match ct {
+        Some(ContentType::Comic) => LibraryContentType::Comic,
+        _ => LibraryContentType::Book,
+    }
 }

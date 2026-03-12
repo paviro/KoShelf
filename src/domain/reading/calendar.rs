@@ -6,7 +6,6 @@ use crate::contracts::calendar::{
     ActivityMonthResponse, ActivityMonthsResponse, CalendarMonthlyStats,
 };
 use crate::contracts::common::{ApiMeta, ContentTypeFilter};
-use crate::contracts::library::LibraryContentType;
 use crate::contracts::reading::{
     CalendarItemRef, CalendarScopeStats, CalendarStatsByScope, ReadingCalendarData,
     ReadingCalendarEvent,
@@ -235,8 +234,8 @@ fn build_events_and_items(
                 item_ref_key.clone(),
                 CalendarItemRef {
                     title: stat_book.title.clone(),
-                    authors: parse_authors(&stat_book.authors),
-                    content_type: to_library_content_type(stat_book.content_type),
+                    authors: shared::parse_authors(&stat_book.authors),
+                    content_type: shared::to_library_content_type(stat_book.content_type),
                     item_id: None,
                     item_cover: None,
                 },
@@ -342,25 +341,6 @@ fn make_event(
         end: end_field,
         reading_time_sec,
         pages_read,
-    }
-}
-
-fn parse_authors(authors_str: &str) -> Vec<String> {
-    if authors_str.is_empty() {
-        Vec::new()
-    } else {
-        authors_str
-            .split(&[',', ';'])
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
-    }
-}
-
-fn to_library_content_type(ct: Option<ContentType>) -> LibraryContentType {
-    match ct {
-        Some(ContentType::Comic) => LibraryContentType::Comic,
-        _ => LibraryContentType::Book,
     }
 }
 

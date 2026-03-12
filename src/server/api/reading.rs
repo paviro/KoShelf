@@ -10,9 +10,10 @@ use crate::domain::reading::ReadingService;
 use crate::server::ServerState;
 
 use super::shared::{
-    ApiResponseError, ReadingAvailablePeriodsParams, ReadingCalendarParams, ReadingMetricsParams,
-    ReadingSummaryParams, parse_reading_available_periods_query, parse_reading_calendar_query,
-    parse_reading_metrics_query, parse_reading_summary_query,
+    ApiResponseError, ReadingAvailablePeriodsParams, ReadingCalendarParams,
+    ReadingCompletionsParams, ReadingMetricsParams, ReadingSummaryParams,
+    parse_reading_available_periods_query, parse_reading_calendar_query,
+    parse_reading_completions_query, parse_reading_metrics_query, parse_reading_summary_query,
 };
 
 pub async fn reading_summary(
@@ -108,6 +109,32 @@ pub async fn reading_calendar(
     };
 
     let data = ReadingService::calendar(&reading_data, query);
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse {
+            data,
+            meta: ResponseMeta::now(),
+        }),
+    )
+        .into_response()
+}
+
+pub async fn reading_completions(
+    State(state): State<ServerState>,
+    Query(params): Query<ReadingCompletionsParams>,
+) -> Response {
+    let query = match parse_reading_completions_query(&params) {
+        Ok(q) => q,
+        Err(error) => return error.into_response(),
+    };
+
+    let reading_data = match state.reading_data_store.get() {
+        Some(rd) => rd,
+        None => return ApiResponseError::internal_server_error().into_response(),
+    };
+
+    let data = ReadingService::completions(&reading_data, query);
 
     (
         StatusCode::OK,

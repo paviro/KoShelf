@@ -74,7 +74,6 @@ pub struct ReadingCalendarParams {
     pub tz: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ReadingCompletionsParams {
     pub scope: Option<String>,
@@ -264,7 +263,6 @@ fn require_param<'a>(value: Option<&'a str>, name: &str) -> ApiResult<&'a str> {
     })
 }
 
-#[allow(dead_code)]
 fn reject_pagination(limit: Option<&str>, cursor: Option<&str>) -> ApiResult<()> {
     if limit.is_some() || cursor.is_some() {
         return Err(ApiResponseError::bad_request_with_message(
@@ -347,7 +345,6 @@ pub(crate) fn parse_reading_calendar_query(
     })
 }
 
-#[allow(dead_code)]
 pub(crate) fn parse_reading_completions_query(
     params: &ReadingCompletionsParams,
 ) -> ApiResult<rq::ReadingCompletionsQuery> {
