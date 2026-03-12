@@ -1,9 +1,13 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
+use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
-use crate::library::{FileWatcher, MetadataLocation};
+use crate::infra::sqlite::library_db::open_library_pool;
+use crate::infra::sqlite::library_repo::LibraryRepository;
+use crate::infra::sqlite::migrations::run_library_migrations;
+use crate::library::{FileWatcher, MetadataLocation, scan_library};
 use crate::runtime::{RuntimeObservability, SnapshotStore, SnapshotUpdateNotifier};
 use crate::server::WebServer;
 use crate::snapshot_builder::SnapshotBuilder;
@@ -164,6 +168,62 @@ pub async fn run(cli: Cli) -> Result<()> {
         "Initial library build completed in {} ms",
         observability.snapshot().startup_library_build_duration_ms
     );
+
+    // ── Library build pipeline: populate library.sqlite ────────────────
+    //
+    // This runs alongside the legacy snapshot path during the transition.
+    // Once API handlers switch to DB-backed reads (Phase 2b), the snapshot
+    // path for library data will be removed.
+    if let Some(db_path) = config.runtime_data_policy.library_db_path() {
+        let db_build_start = Instant::now();
+        let pool = open_library_pool(&db_path)
+            .await
+            .context("Failed to open library DB for build pipeline")?;
+        run_library_migrations(&pool)
+            .await
+            .context("Failed to run library DB migrations")?;
+
+        let repo = LibraryRepository::new(pool);
+
+        // Determine build mode: persistent DB with existing items → incremental.
+        let build_mode = if config.runtime_data_policy.is_persistent() {
+            let count = repo.count_items().await.unwrap_or(0);
+            if count > 0 {
+                LibraryBuildMode::Incremental
+            } else {
+                LibraryBuildMode::Full
+            }
+        } else {
+            LibraryBuildMode::Full
+        };
+
+        // Scan library (separate from snapshot builder scan during transition).
+        let scanned_items = if !config.library_paths.is_empty() {
+            let (items, _library_md5s) =
+                scan_library(&config.library_paths, &config.metadata_location).await?;
+            items
+        } else {
+            Vec::new()
+        };
+
+        let pipeline = LibraryBuildPipeline::new(
+            &repo,
+            config.include_unread,
+            config.use_stable_page_metadata,
+            &config.time_config,
+        );
+
+        let result = pipeline.build(build_mode, scanned_items).await?;
+        info!(
+            "Library DB build ({:?}) completed in {} ms: {} scanned, {} upserted, {} removed, {} collisions",
+            build_mode,
+            db_build_start.elapsed().as_millis(),
+            result.scanned_files,
+            result.upserted_items,
+            result.removed_items,
+            result.collision_count,
+        );
+    }
 
     if !is_internal_server {
         initial_snapshot.write_to_data_dir(&plan.output_dir.join("data"))?;
