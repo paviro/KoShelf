@@ -8,6 +8,7 @@ use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::library::{FileWatcher, MetadataLocation, scan_library};
+use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::{DomainUpdateNotifier, ReadingDataStore, RuntimeObservability, SnapshotStore};
 use crate::server::WebServer;
 use crate::snapshot_builder::SnapshotBuilder;
@@ -233,7 +234,23 @@ pub async fn run(cli: Cli) -> Result<()> {
     };
 
     if !is_internal_server {
+        // Legacy snapshot export (covers, assets, shell files).
         initial_snapshot.write_to_data_dir(&plan.output_dir.join("data"))?;
+
+        // New-contract data file export via domain services.
+        if let Some(ref repo) = library_repo {
+            let export_config = ExportConfig {
+                site_title: cli.title.clone(),
+                language: cli.language.clone(),
+            };
+            export_data_files(
+                &plan.output_dir.join("data"),
+                repo,
+                initial_reading_data.as_ref(),
+                &export_config,
+            )
+            .await?;
+        }
     }
 
     match plan.mode {
