@@ -1,0 +1,103 @@
+CREATE TABLE IF NOT EXISTS library_items (
+    id TEXT PRIMARY KEY,
+    file_path TEXT NOT NULL UNIQUE,
+    format TEXT NOT NULL CHECK (format IN ('epub', 'fb2', 'mobi', 'cbz', 'cbr')),
+    content_type TEXT NOT NULL CHECK (content_type IN ('book', 'comic')),
+    title TEXT NOT NULL,
+    title_sort TEXT NOT NULL,
+    primary_author_sort TEXT NOT NULL DEFAULT '',
+    authors_json TEXT NOT NULL DEFAULT '[]',
+    series_name TEXT,
+    series_index TEXT,
+    description TEXT,
+    language TEXT,
+    publisher TEXT,
+    subjects_json TEXT NOT NULL DEFAULT '[]',
+    identifiers_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL CHECK (status IN ('reading', 'complete', 'abandoned', 'unknown')),
+    progress_percentage REAL,
+    rating INTEGER CHECK (rating IS NULL OR (rating >= 0 AND rating <= 5)),
+    review_note TEXT,
+    pages INTEGER CHECK (pages IS NULL OR pages >= 0),
+    cover_url TEXT NOT NULL,
+    search_base_path TEXT NOT NULL,
+    annotation_count INTEGER NOT NULL DEFAULT 0 CHECK (annotation_count >= 0),
+    bookmark_count INTEGER NOT NULL DEFAULT 0 CHECK (bookmark_count >= 0),
+    highlight_count INTEGER NOT NULL DEFAULT 0 CHECK (highlight_count >= 0),
+    partial_md5_checksum TEXT,
+    last_open_at TEXT,
+    total_reading_time_sec INTEGER CHECK (total_reading_time_sec IS NULL OR total_reading_time_sec >= 0),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS library_annotations (
+    item_id TEXT NOT NULL,
+    annotation_kind TEXT NOT NULL CHECK (annotation_kind IN ('highlight', 'bookmark')),
+    ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+    chapter TEXT,
+    datetime TEXT,
+    pageno INTEGER CHECK (pageno IS NULL OR pageno >= 0),
+    text TEXT,
+    note TEXT,
+    PRIMARY KEY (item_id, annotation_kind, ordinal),
+    FOREIGN KEY (item_id) REFERENCES library_items(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_item_fingerprints (
+    item_id TEXT PRIMARY KEY,
+    book_path TEXT NOT NULL,
+    book_size_bytes INTEGER NOT NULL CHECK (book_size_bytes >= 0),
+    book_modified_unix_ms INTEGER NOT NULL CHECK (book_modified_unix_ms >= 0),
+    metadata_path TEXT,
+    metadata_size_bytes INTEGER CHECK (metadata_size_bytes IS NULL OR metadata_size_bytes >= 0),
+    metadata_modified_unix_ms INTEGER CHECK (metadata_modified_unix_ms IS NULL OR metadata_modified_unix_ms >= 0),
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (item_id) REFERENCES library_items(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_collision_diagnostics (
+    canonical_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    winner_item_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    detected_at TEXT NOT NULL,
+    PRIMARY KEY (canonical_id, file_path),
+    FOREIGN KEY (winner_item_id) REFERENCES library_items(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_title
+    ON library_items (content_type, title_sort, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_author
+    ON library_items (content_type, primary_author_sort, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_status
+    ON library_items (content_type, status, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_progress
+    ON library_items (content_type, progress_percentage, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_rating
+    ON library_items (content_type, rating, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_annotations
+    ON library_items (content_type, annotation_count, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_scope_last_open_at
+    ON library_items (content_type, last_open_at, id);
+
+CREATE INDEX IF NOT EXISTS idx_library_items_partial_md5_checksum
+    ON library_items (partial_md5_checksum);
+
+CREATE INDEX IF NOT EXISTS idx_library_annotations_item_kind
+    ON library_annotations (item_id, annotation_kind);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_item_fingerprints_book_path
+    ON library_item_fingerprints (book_path);
+
+CREATE INDEX IF NOT EXISTS idx_library_item_fingerprints_metadata_path
+    ON library_item_fingerprints (metadata_path);
+
+CREATE INDEX IF NOT EXISTS idx_library_collision_diagnostics_winner_item_id
+    ON library_collision_diagnostics (winner_item_id);

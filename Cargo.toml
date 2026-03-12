@@ -66,7 +66,7 @@ tower-http = { version = "0.6", features = [
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-rusqlite = { version = "0.38", features = ["bundled"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate"] }
 chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"

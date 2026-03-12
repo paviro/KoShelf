@@ -32,21 +32,46 @@ impl RuntimeDataPolicySource {
 pub struct RuntimeDataPolicy {
     pub lifecycle: RuntimeDataLifecycle,
     pub source: RuntimeDataPolicySource,
+    /// User-provided persistent data directory (only set for persistent policies).
     pub data_dir: Option<PathBuf>,
+    /// Resolved directory for runtime data files (library DB, stats DB copy,
+    /// cover cache). Always set once `set_resolved_data_dir` is called — either
+    /// the user-provided persistent path or the ephemeral temp directory.
+    resolved_data_dir: Option<PathBuf>,
 }
 
 impl RuntimeDataPolicy {
+    /// The user-provided persistent data directory, if any.
     pub fn persistent_data_dir(&self) -> Option<&Path> {
-        self.data_dir.as_deref()
+        if self.is_persistent() {
+            self.data_dir.as_deref()
+        } else {
+            None
+        }
     }
 
     pub fn is_persistent(&self) -> bool {
         matches!(self.lifecycle, RuntimeDataLifecycle::Persistent)
     }
 
+    /// Set the resolved runtime data directory.
+    ///
+    /// For persistent policies this should equal `data_dir`; for ephemeral
+    /// policies it points to the shared temp directory.
+    pub fn set_resolved_data_dir(&mut self, path: PathBuf) {
+        self.resolved_data_dir = Some(path);
+    }
+
+    /// The resolved directory where runtime data files reside.
+    pub fn resolved_data_dir(&self) -> Option<&Path> {
+        self.resolved_data_dir.as_deref()
+    }
+
+    /// Path to the library SQLite cache inside the resolved data directory.
     pub fn library_db_path(&self) -> Option<PathBuf> {
-        self.persistent_data_dir()
-            .map(|data_dir| data_dir.join(LIBRARY_DB_FILENAME))
+        self.resolved_data_dir
+            .as_deref()
+            .map(|dir| dir.join(LIBRARY_DB_FILENAME))
     }
 }
 
@@ -65,6 +90,7 @@ fn persistent_policy(path: PathBuf, source: RuntimeDataPolicySource) -> RuntimeD
     RuntimeDataPolicy {
         lifecycle: RuntimeDataLifecycle::Persistent,
         source,
+        resolved_data_dir: Some(path.clone()),
         data_dir: Some(path),
     }
 }
@@ -74,6 +100,7 @@ fn ephemeral_policy() -> RuntimeDataPolicy {
         lifecycle: RuntimeDataLifecycle::Ephemeral,
         source: RuntimeDataPolicySource::AutoEphemeral,
         data_dir: None,
+        resolved_data_dir: None,
     }
 }
 
@@ -100,6 +127,10 @@ mod tests {
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Persistent);
         assert_eq!(policy.source, RuntimeDataPolicySource::CliDataDir);
         assert_eq!(policy.data_dir, Some(PathBuf::from("/cli/data")));
+        assert_eq!(
+            policy.persistent_data_dir(),
+            Some(std::path::Path::new("/cli/data"))
+        );
     }
 
     #[test]
@@ -111,6 +142,7 @@ mod tests {
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Ephemeral);
         assert_eq!(policy.source, RuntimeDataPolicySource::AutoEphemeral);
         assert_eq!(policy.data_dir, None);
+        assert_eq!(policy.persistent_data_dir(), None);
     }
 
     #[test]
@@ -125,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn library_db_path_is_derived_from_data_dir() {
+    fn library_db_path_is_derived_from_resolved_data_dir() {
         let cli = options(Some("/runtime/data"));
 
         let policy = resolve_runtime_data_policy(&cli);
@@ -136,5 +168,24 @@ mod tests {
                 "/runtime/data/{LIBRARY_DB_FILENAME}"
             )))
         );
+    }
+
+    #[test]
+    fn ephemeral_policy_resolves_library_db_after_setting_data_dir() {
+        let cli = options(None);
+        let mut policy = resolve_runtime_data_policy(&cli);
+
+        assert!(policy.library_db_path().is_none());
+
+        policy.set_resolved_data_dir(PathBuf::from("/tmp/koshelf-abc"));
+
+        assert_eq!(
+            policy.library_db_path(),
+            Some(PathBuf::from(format!(
+                "/tmp/koshelf-abc/{LIBRARY_DB_FILENAME}"
+            )))
+        );
+        // persistent_data_dir still returns None for ephemeral policies
+        assert_eq!(policy.persistent_data_dir(), None);
     }
 }

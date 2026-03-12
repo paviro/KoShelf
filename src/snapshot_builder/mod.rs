@@ -97,7 +97,7 @@ impl SnapshotBuilder {
         // Load statistics if path is provided
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
-                let mut data = StatisticsParser::parse(stats_path)?;
+                let mut data = StatisticsParser::parse(stats_path).await?;
 
                 // Filter statistics if minimums are set
                 if self.min_pages_per_day.is_some() || self.min_time_per_day.is_some() {

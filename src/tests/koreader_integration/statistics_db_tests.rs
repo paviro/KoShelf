@@ -2,7 +2,8 @@ use super::lua_mocks::compose_lua_mocks;
 use super::*;
 use crate::koreader::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
-use rusqlite::{Connection, params};
+use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::{Executor, Row, SqlitePool};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -34,43 +35,52 @@ impl ColumnDescriptor {
 
 struct TestDatabase {
     _temp_dir: TempDir,
-    conn: Connection,
+    pool: SqlitePool,
     path: PathBuf,
 }
 
 impl TestDatabase {
-    fn new(statements: &[String]) -> Self {
+    async fn new(statements: &[String]) -> Self {
         let temp_dir =
             TempDir::new().expect("Failed to create temporary directory for statistics DB");
         let path = temp_dir.path().join("statistics.sqlite3");
-        let conn = Connection::open(&path).expect("Failed to open temporary statistics DB");
+
+        let url = format!("sqlite:{}?mode=rwc", path.display());
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .expect("Failed to open temporary statistics DB");
+
         for stmt in statements {
-            conn.execute_batch(stmt).unwrap_or_else(|err| {
+            pool.execute(stmt.as_str()).await.unwrap_or_else(|err| {
                 panic!(
                     "Failed to execute KoReader schema statement:\n{}\nError: {}",
                     stmt, err
                 )
             });
         }
-        conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;")
+
+        pool.execute("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;")
+            .await
             .expect("Failed to normalize SQLite journal mode for test database");
 
         Self {
             _temp_dir: temp_dir,
-            conn,
+            pool,
             path,
         }
     }
 }
 
-#[test]
-fn test_statistics_schema_matches_koreader() {
+#[tokio::test]
+async fn test_statistics_schema_matches_koreader() {
     let koreader_dir = get_koreader_dir();
     let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
     let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
-    let db = TestDatabase::new(&artifacts.statements);
+    let db = TestDatabase::new(&artifacts.statements).await;
 
-    let data_columns = fetch_table_info(&db.conn, "page_stat_data");
+    let data_columns = fetch_table_info(&db.pool, "page_stat_data").await;
     assert_eq!(
         data_columns,
         vec![
@@ -83,7 +93,7 @@ fn test_statistics_schema_matches_koreader() {
         "KoReader page_stat_data schema changed. Update parser expectations."
     );
 
-    let view_columns = fetch_table_info(&db.conn, "page_stat");
+    let view_columns = fetch_table_info(&db.pool, "page_stat").await;
     let view_column_names: Vec<&str> = view_columns.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(
         view_column_names,
@@ -91,14 +101,12 @@ fn test_statistics_schema_matches_koreader() {
         "page_stat view columns changed unexpectedly"
     );
 
-    let view_sql: String = db
-        .conn
-        .query_row(
-            "SELECT sql FROM sqlite_master WHERE type='view' AND name='page_stat'",
-            [],
-            |row| row.get(0),
-        )
-        .expect("Unable to read page_stat view SQL");
+    let view_sql: String =
+        sqlx::query_scalar("SELECT sql FROM sqlite_master WHERE type='view' AND name='page_stat'")
+            .fetch_one(&db.pool)
+            .await
+            .expect("Unable to read page_stat view SQL");
+
     let lowered = view_sql.to_lowercase();
     for snippet in [
         "create view",
@@ -116,22 +124,25 @@ fn test_statistics_schema_matches_koreader() {
     }
 }
 
-#[test]
-fn test_statistics_totals_query_matches_parser() {
+#[tokio::test]
+async fn test_statistics_totals_query_matches_parser() {
     let koreader_dir = get_koreader_dir();
     let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
     let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
-    let db = TestDatabase::new(&artifacts.statements);
-    seed_sample_statistics(&db.conn);
+    let db = TestDatabase::new(&artifacts.statements).await;
+    seed_sample_statistics(&db.pool).await;
 
     let query = format_percent_d(&artifacts.totals_query, &[1]);
-    let (expected_pages, expected_duration): (i64, i64) = db
-        .conn
-        .query_row(&query, [], |row| Ok((row.get(0)?, row.get(1)?)))
+    let row = sqlx::query(&query)
+        .fetch_one(&db.pool)
+        .await
         .expect("KoReader totals query failed");
+    let expected_pages: i64 = row.get(0);
+    let expected_duration: i64 = row.get(1);
 
-    let stats_data =
-        StatisticsParser::parse(&db.path).expect("Rust parser failed to read statistics DB");
+    let stats_data = StatisticsParser::parse(&db.path)
+        .await
+        .expect("Rust parser failed to read statistics DB");
     let mut unique_pages = HashSet::new();
     let mut total_duration = 0;
     for stat in stats_data.page_stats.iter().filter(|ps| ps.id_book == 1) {
@@ -150,44 +161,52 @@ fn test_statistics_totals_query_matches_parser() {
     );
 }
 
-fn fetch_table_info(conn: &Connection, table: &str) -> Vec<ColumnDescriptor> {
+async fn fetch_table_info(pool: &SqlitePool, table: &str) -> Vec<ColumnDescriptor> {
     let pragma = format!("PRAGMA table_info({})", table);
-    let mut stmt = conn
-        .prepare(&pragma)
-        .expect("Failed to prepare pragma query");
-    let iter = stmt
-        .query_map([], |row| {
-            Ok(ColumnDescriptor {
-                name: row.get(1)?,
-                data_type: row.get(2)?,
-                notnull: row.get::<_, i64>(3)? != 0,
-                default_value: row.get(4)?,
-            })
-        })
+    let rows = sqlx::query(&pragma)
+        .fetch_all(pool)
+        .await
         .expect("Failed to inspect schema");
 
-    iter.filter_map(Result::ok).collect()
+    rows.iter()
+        .map(|row| ColumnDescriptor {
+            name: row.get(1),
+            data_type: row.get(2),
+            notnull: row.get::<i32, _>(3) != 0,
+            default_value: row.get(4),
+        })
+        .collect()
 }
 
-fn seed_sample_statistics(conn: &Connection) {
-    conn.execute(
+async fn seed_sample_statistics(pool: &SqlitePool) {
+    sqlx::query(
         "INSERT INTO book (id, title, authors, notes, last_open, highlights, pages, series, language, md5, total_read_time, total_read_pages)
-         VALUES (?1, ?2, ?3, NULL, NULL, NULL, ?4, NULL, ?5, ?6, NULL, NULL);",
-        params![1, "Test Book", "Test Author", 300_i64, "en", "test-md5"],
+         VALUES (?1, ?2, ?3, NULL, NULL, NULL, ?4, NULL, ?5, ?6, NULL, NULL)",
     )
+    .bind(1_i64)
+    .bind("Test Book")
+    .bind("Test Author")
+    .bind(300_i64)
+    .bind("en")
+    .bind("test-md5")
+    .execute(pool)
+    .await
     .expect("Failed to seed book row");
 
-    let inserts = [
-        (1_i64, 1_i64, 1_000_i64, 90_i64, 100_i64),
-        (1_i64, 25_i64, 2_000_i64, 60_i64, 120_i64),
-    ];
+    let inserts: [(i64, i64, i64, i64, i64); 2] = [(1, 1, 1_000, 90, 100), (1, 25, 2_000, 60, 120)];
 
     for (id_book, page, start_time, duration, total_pages) in inserts {
-        conn.execute(
+        sqlx::query(
             "INSERT INTO page_stat_data (id_book, page, start_time, duration, total_pages)
-             VALUES (?1, ?2, ?3, ?4, ?5);",
-            params![id_book, page, start_time, duration, total_pages],
+             VALUES (?1, ?2, ?3, ?4, ?5)",
         )
+        .bind(id_book)
+        .bind(page)
+        .bind(start_time)
+        .bind(duration)
+        .bind(total_pages)
+        .execute(pool)
+        .await
         .expect("Failed to seed page_stat_data row");
     }
 }

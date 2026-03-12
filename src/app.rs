@@ -1,6 +1,6 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
-use crate::infra::sqlite::{
+use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
 use crate::library::{FileWatcher, MetadataLocation};
@@ -104,7 +104,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Build time configuration from CLI
     let time_config = TimeConfig::from_cli(&cli.timezone, &cli.day_start_time)?;
 
-    let runtime_data_policy = resolve_runtime_data_policy_for_run(&cli);
+    let mut runtime_data_policy = resolve_runtime_data_policy_for_run(&cli);
     match runtime_data_policy.persistent_data_dir() {
         Some(path) => info!(
             "Runtime data policy: persistent ({:?}, source={})",
@@ -117,12 +117,18 @@ pub async fn run(cli: Cli) -> Result<()> {
         ),
     }
 
+    // Determine output directory + run mode
+    let plan = plan_output(&cli, &runtime_data_policy)?;
+
+    // In ephemeral mode the temp directory doubles as the runtime data
+    // directory (library DB, statistics DB copy, cover cache).
+    if !runtime_data_policy.is_persistent() {
+        runtime_data_policy.set_resolved_data_dir(plan.output_dir.clone());
+    }
+
     if let Some(db_path) = runtime_data_policy.library_db_path() {
         info!("Runtime library DB path: {:?}", db_path);
     }
-
-    // Determine output directory + run mode
-    let plan = plan_output(&cli, &runtime_data_policy)?;
 
     // Determine if we're running with internal web server (enables runtime update events)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);

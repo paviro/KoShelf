@@ -1,9 +1,11 @@
 use crate::models::{PageStat, StatBook, StatisticsData};
 use anyhow::{Context, Result};
 use log::{debug, info, warn};
-use rusqlite::{Connection, OpenFlags};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{Row, SqlitePool};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 use tempfile::TempDir;
 
 /// Parser for KoReader statistics database
@@ -11,7 +13,7 @@ pub struct StatisticsParser;
 
 impl StatisticsParser {
     /// Parse the statistics database from the given path
-    pub fn parse<P: AsRef<Path>>(path: P) -> Result<StatisticsData> {
+    pub async fn parse<P: AsRef<Path>>(path: P) -> Result<StatisticsData> {
         info!("Opening statistics database: {:?}", path.as_ref());
 
         // Create a temporary directory for the database copy
@@ -32,7 +34,14 @@ impl StatisticsParser {
         })?;
 
         // Open the temporary database copy with read-only access
-        let conn = Connection::open_with_flags(&temp_db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        let url = format!("sqlite:{}?mode=ro", temp_db_path.display());
+        let options = SqliteConnectOptions::from_str(&url)
+            .with_context(|| format!("Failed to parse statistics DB URL for {:?}", temp_db_path))?;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
             .with_context(|| {
                 format!(
                     "Failed to open temporary statistics database: {:?}",
@@ -41,10 +50,12 @@ impl StatisticsParser {
             })?;
 
         // Parse books
-        let books = Self::parse_books(&conn)?;
+        let books = Self::parse_books(&pool).await?;
 
         // Parse page stats
-        let page_stats = Self::parse_page_stats(&conn)?;
+        let page_stats = Self::parse_page_stats(&pool).await?;
+
+        pool.close().await;
 
         // Create MD5 lookup map
         let mut stats_by_md5 = std::collections::HashMap::new();
@@ -68,29 +79,17 @@ impl StatisticsParser {
     }
 
     /// Parse book entries from the database
-    fn parse_books(conn: &Connection) -> Result<Vec<StatBook>> {
-        let mut stmt = conn.prepare("SELECT id, title, authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages FROM book")?;
-
-        let book_iter = stmt.query_map([], |row| {
-            Ok(StatBook {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                authors: row.get(2)?,
-                notes: row.get(3)?,
-                last_open: row.get(4)?,
-                highlights: row.get(5)?,
-                pages: row.get(6)?,
-                md5: row.get(7)?,
-                content_type: None,
-                total_read_time: row.get(8)?,
-                total_read_pages: row.get(9)?,
-                completions: None, // Will be populated later by completion detection
-            })
-        })?;
+    async fn parse_books(pool: &SqlitePool) -> Result<Vec<StatBook>> {
+        let rows = sqlx::query(
+            "SELECT id, title, authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages FROM book",
+        )
+        .fetch_all(pool)
+        .await
+        .context("Failed to query book entries")?;
 
         let mut books = Vec::new();
-        for book in book_iter {
-            match book {
+        for row in rows {
+            match Self::row_to_stat_book(&row) {
                 Ok(book) => books.push(book),
                 Err(e) => warn!("Failed to parse book entry: {}", e),
             }
@@ -99,31 +98,53 @@ impl StatisticsParser {
         Ok(books)
     }
 
+    fn row_to_stat_book(row: &sqlx::sqlite::SqliteRow) -> Result<StatBook> {
+        Ok(StatBook {
+            id: row.try_get("id").context("id")?,
+            title: row.try_get("title").context("title")?,
+            authors: row.try_get("authors").context("authors")?,
+            notes: row.try_get("notes").context("notes")?,
+            last_open: row.try_get("last_open").context("last_open")?,
+            highlights: row.try_get("highlights").context("highlights")?,
+            pages: row.try_get("pages").context("pages")?,
+            md5: row.try_get("md5").context("md5")?,
+            content_type: None,
+            total_read_time: row.try_get("total_read_time").context("total_read_time")?,
+            total_read_pages: row
+                .try_get("total_read_pages")
+                .context("total_read_pages")?,
+            completions: None, // Will be populated later by completion detection
+        })
+    }
+
     /// Parse page stat entries from the database
-    fn parse_page_stats(conn: &Connection) -> Result<Vec<PageStat>> {
+    async fn parse_page_stats(pool: &SqlitePool) -> Result<Vec<PageStat>> {
         // Query the rescaled view so that page numbers are already expressed in the current
         // pagination of each document. The `page_stat` view has the same four columns we
         // actually use (id_book, page, start_time, duration). See KOReader's Lua code for
         // the precise definition.
-        let mut stmt = conn.prepare("SELECT id_book, page, start_time, duration FROM page_stat")?;
-
-        let stat_iter = stmt.query_map([], |row| {
-            Ok(PageStat {
-                id_book: row.get(0)?,
-                page: row.get(1)?,
-                start_time: row.get(2)?,
-                duration: row.get(3)?,
-            })
-        })?;
+        let rows = sqlx::query("SELECT id_book, page, start_time, duration FROM page_stat")
+            .fetch_all(pool)
+            .await
+            .context("Failed to query page stat entries")?;
 
         let mut page_stats = Vec::new();
-        for stat in stat_iter {
-            match stat {
+        for row in rows {
+            match Self::row_to_page_stat(&row) {
                 Ok(stat) => page_stats.push(stat),
                 Err(e) => warn!("Failed to parse page stat entry: {}", e),
             }
         }
 
         Ok(page_stats)
+    }
+
+    fn row_to_page_stat(row: &sqlx::sqlite::SqliteRow) -> Result<PageStat> {
+        Ok(PageStat {
+            id_book: row.try_get("id_book").context("id_book")?,
+            page: row.try_get("page").context("page")?,
+            start_time: row.try_get("start_time").context("start_time")?,
+            duration: row.try_get("duration").context("duration")?,
+        })
     }
 }
