@@ -8,9 +8,7 @@ use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::library::{FileWatcher, MetadataLocation, scan_library};
-use crate::runtime::{
-    ReadingDataStore, RuntimeObservability, SnapshotStore, SnapshotUpdateNotifier,
-};
+use crate::runtime::{DomainUpdateNotifier, ReadingDataStore, RuntimeObservability, SnapshotStore};
 use crate::server::WebServer;
 use crate::snapshot_builder::SnapshotBuilder;
 use crate::time_config::TimeConfig;
@@ -273,7 +271,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 reading_data_store.replace(rd);
             }
 
-            let update_notifier = SnapshotUpdateNotifier::with_observability(
+            let update_notifier = DomainUpdateNotifier::with_observability(
                 revision_epoch,
                 initial_generated_at,
                 observability.clone(),

@@ -5,16 +5,16 @@ use axum::{
 use futures::stream;
 use std::{convert::Infallible, time::Duration};
 
-use crate::runtime::SnapshotUpdate;
+use crate::runtime::DomainUpdate;
 use crate::server::ServerState;
 
-fn snapshot_update_event(update: &SnapshotUpdate) -> Event {
+fn data_changed_event(update: &DomainUpdate) -> Event {
     let payload = match serde_json::to_string(update) {
         Ok(payload) => payload,
         Err(_) => "{}".to_string(),
     };
 
-    Event::default().event("snapshot_updated").data(payload)
+    Event::default().event("data_changed").data(payload)
 }
 
 pub async fn events_stream(
@@ -26,13 +26,13 @@ pub async fn events_stream(
         |(mut receiver, include_current)| async move {
             if include_current {
                 let current = receiver.borrow().clone();
-                return Some((Ok(snapshot_update_event(&current)), (receiver, false)));
+                return Some((Ok(data_changed_event(&current)), (receiver, false)));
             }
 
             match receiver.changed().await {
                 Ok(()) => {
                     let update = receiver.borrow().clone();
-                    Some((Ok(snapshot_update_event(&update)), (receiver, false)))
+                    Some((Ok(data_changed_event(&update)), (receiver, false)))
                 }
                 Err(_) => None,
             }

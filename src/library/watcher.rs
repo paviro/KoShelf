@@ -5,12 +5,14 @@ use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::library::scan_library;
 use crate::models::LibraryItemFormat;
 use crate::runtime::{
-    RuntimeObservability, SharedReadingDataStore, SharedSnapshotStore, SnapshotUpdateNotifier,
+    DomainUpdateNotifier, RevisionDomain, RuntimeObservability, SharedReadingDataStore,
+    SharedSnapshotStore,
 };
 use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashSet;
 use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
@@ -23,7 +25,7 @@ pub struct FileWatcher {
     config: SiteConfig,
     snapshot_store: Option<SharedSnapshotStore>,
     reading_data_store: Option<SharedReadingDataStore>,
-    update_notifier: Option<SnapshotUpdateNotifier>,
+    update_notifier: Option<DomainUpdateNotifier>,
     library_repo: Option<LibraryRepository>,
     observability: RuntimeObservability,
 }
@@ -60,7 +62,7 @@ impl FileWatcher {
         config: SiteConfig,
         snapshot_store: Option<SharedSnapshotStore>,
         reading_data_store: Option<SharedReadingDataStore>,
-        update_notifier: Option<SnapshotUpdateNotifier>,
+        update_notifier: Option<DomainUpdateNotifier>,
         library_repo: Option<LibraryRepository>,
         observability: RuntimeObservability,
     ) -> Self {
@@ -76,7 +78,7 @@ impl FileWatcher {
 
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
-        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<()>();
+        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<Vec<RevisionDomain>>();
         let pending_rebuilds = Arc::new(AtomicU64::new(0));
         self.observability.set_watcher_queue_depth(0);
 
@@ -151,19 +153,24 @@ impl FileWatcher {
             rt.block_on(async move {
                 let rebuild_delay = Duration::from_secs(10); // Wait 10 seconds after last event
 
-                while (rebuild_rx.recv().await).is_some() {
+                while let Some(initial_domains) = rebuild_rx.recv().await {
                     let current_depth = decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
                     observability_clone.set_watcher_queue_depth(current_depth);
                     let queued_at = Instant::now();
+
+                    // Accumulate affected domains across the debounce window.
+                    let mut affected_domains: HashSet<RevisionDomain> =
+                        initial_domains.into_iter().collect();
 
                     // Wait for the delay period to debounce multiple events
                     sleep(rebuild_delay).await;
 
                     // Drain any additional events that came in during the delay
-                    while rebuild_rx.try_recv().is_ok() {
+                    while let Ok(domains) = rebuild_rx.try_recv() {
                         let current_depth =
                             decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
                         observability_clone.set_watcher_queue_depth(current_depth);
+                        affected_domains.extend(domains);
                     }
 
                     info!("Starting delayed snapshot refresh after quiet period");
@@ -199,10 +206,13 @@ impl FileWatcher {
                             }
 
                             if let Some(ref update_notifier) = update_notifier_clone {
-                                let update = update_notifier.publish(generated_at);
+                                let update = update_notifier.publish_for_domains(
+                                    generated_at,
+                                    affected_domains.iter().copied(),
+                                );
                                 info!(
-                                    "Published snapshot update event revision {}",
-                                    update.revision
+                                    "Published data_changed event for domains {:?}, revision {:?}",
+                                    update.domains, update.revision,
                                 );
                             }
 
@@ -263,12 +273,11 @@ impl FileWatcher {
 
         // Main file event processing loop
         while let Some(event) = file_rx.recv().await {
-            if self.should_process_event(&event) {
-                // Log what triggered the rebuild
+            let domains = self.classify_event_domains(&event);
+            if !domains.is_empty() {
                 self.log_file_event(&event);
 
-                // Just queue a rebuild - no need to track individual file changes anymore
-                if rebuild_tx.send(()).is_ok() {
+                if rebuild_tx.send(domains).is_ok() {
                     let queued_depth = pending_rebuilds
                         .fetch_add(1, Ordering::Relaxed)
                         .saturating_add(1);
@@ -281,65 +290,111 @@ impl FileWatcher {
         Ok(())
     }
 
-    fn should_process_event(&self, event: &Event) -> bool {
-        match &event.kind {
-            // Only process actual file changes, not access events
-            EventKind::Create(_) | EventKind::Remove(_) => self.event_affects_relevant_files(event),
+    /// Classify a file-system event into the revision domains it affects.
+    ///
+    /// Returns an empty vec for events that should be ignored.
+    fn classify_event_domains(&self, event: &Event) -> Vec<RevisionDomain> {
+        let dominated_domains = match &event.kind {
+            EventKind::Create(_) | EventKind::Remove(_) => {
+                self.classify_paths_to_domains(&event.paths)
+            }
             EventKind::Modify(modify_kind) => {
-                // Only process content modifications, not metadata or access
                 use notify::event::ModifyKind;
                 match modify_kind {
-                    ModifyKind::Data(_) => self.event_affects_relevant_files(event),
-                    ModifyKind::Name(_) => true, // Renames are important
+                    ModifyKind::Data(_) => self.classify_paths_to_domains(&event.paths),
+                    ModifyKind::Name(_) => {
+                        // Renames can affect library identity, metadata, and covers.
+                        if self.paths_contain_relevant_files(&event.paths) {
+                            vec![
+                                RevisionDomain::Library,
+                                RevisionDomain::Metadata,
+                                RevisionDomain::Assets,
+                            ]
+                        } else {
+                            vec![]
+                        }
+                    }
                     ModifyKind::Any => {
-                        // For Any modifications, we need to be more careful
-                        // Log these for debugging but still process them
                         debug!("Processing Modify(Any) event: {:?}", event);
-                        self.event_affects_relevant_files(event)
+                        self.classify_paths_to_domains(&event.paths)
                     }
                     _ => {
                         debug!("Ignoring modify event: {:?}", modify_kind);
-                        false
+                        vec![]
                     }
                 }
             }
             _ => {
                 debug!("Ignoring event kind: {:?}", event.kind);
-                false
+                vec![]
             }
-        }
+        };
+
+        // Deduplicate while preserving deterministic order.
+        let mut seen = HashSet::new();
+        dominated_domains
+            .into_iter()
+            .filter(|d| seen.insert(*d))
+            .collect()
     }
 
-    fn event_affects_relevant_files(&self, event: &Event) -> bool {
-        event.paths.iter().any(|path| {
+    fn classify_paths_to_domains(&self, paths: &[std::path::PathBuf]) -> Vec<RevisionDomain> {
+        let mut domains = Vec::new();
+        for path in paths {
             let filename = path.file_name().and_then(|s| s.to_str());
 
-            // Check for library items using LibraryItemFormat (handles .epub, .fb2, .fb2.zip, .cbz, .cbr)
+            // Library items → Library + Assets (cover may change).
+            if LibraryItemFormat::from_path(path).is_some() {
+                domains.push(RevisionDomain::Library);
+                domains.push(RevisionDomain::Assets);
+            }
+
+            // Metadata sidecar files → Metadata.
+            if let Some(filename) = filename
+                && LibraryItemFormat::is_metadata_file(filename)
+            {
+                domains.push(RevisionDomain::Metadata);
+            }
+
+            // KoReader .sdr directories → Metadata.
+            if let Some(filename) = filename
+                && filename.ends_with(".sdr")
+            {
+                domains.push(RevisionDomain::Metadata);
+            }
+
+            // Statistics database → Stats.
+            if let Some(ref stats_path) = self.statistics_db_path
+                && path == stats_path
+            {
+                domains.push(RevisionDomain::Stats);
+            }
+        }
+        domains
+    }
+
+    fn paths_contain_relevant_files(&self, paths: &[std::path::PathBuf]) -> bool {
+        paths.iter().any(|path| {
+            let filename = path.file_name().and_then(|s| s.to_str());
+
             if LibraryItemFormat::from_path(path).is_some() {
                 return true;
             }
-
-            // Check for metadata files
             if let Some(filename) = filename
                 && LibraryItemFormat::is_metadata_file(filename)
             {
                 return true;
             }
-
-            // Check for .sdr directories (KoReader metadata folders)
             if let Some(filename) = filename
                 && filename.ends_with(".sdr")
             {
                 return true;
             }
-
-            // Check for statistics database files
             if let Some(ref stats_path) = self.statistics_db_path
                 && path == stats_path
             {
                 return true;
             }
-
             false
         })
     }

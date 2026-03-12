@@ -15,4 +15,4 @@ pub use reading_data::{ReadingData, ReadingDataStore, SharedReadingDataStore};
 pub use revisions::{DomainRevision, DomainRevisionState, DomainRevisionTracker, RevisionDomain};
 pub use snapshot::ContractSnapshot;
 pub use store::{SharedSnapshotStore, SnapshotStore};
-pub use updates::{SnapshotUpdate, SnapshotUpdateNotifier};
+pub use updates::{DomainUpdate, DomainUpdateNotifier};
