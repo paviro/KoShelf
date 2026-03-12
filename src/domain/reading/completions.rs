@@ -195,10 +195,10 @@ fn collect_completion_items(
             let Ok(end_date) = NaiveDate::parse_from_str(&entry.end_date, "%Y-%m-%d") else {
                 continue;
             };
-            if let Some((from, to)) = range {
-                if end_date < *from || end_date > *to {
-                    continue;
-                }
+            if let Some((from, to)) = range
+                && (end_date < *from || end_date > *to)
+            {
+                continue;
             }
 
             items.push(CompletionItem {
