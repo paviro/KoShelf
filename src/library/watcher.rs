@@ -4,9 +4,10 @@ use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::library::scan_library;
 use crate::models::LibraryItemFormat;
+use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::{
-    DomainUpdateNotifier, RevisionDomain, RuntimeObservability, SharedReadingDataStore,
-    SharedSnapshotStore,
+    DomainUpdateNotifier, ReadingData, RevisionDomain, RuntimeObservability,
+    SharedReadingDataStore, SharedSnapshotStore,
 };
 use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
@@ -178,6 +179,9 @@ impl FileWatcher {
                     // Create a fresh snapshot builder and recompute all payloads.
                     let snapshot_builder = SnapshotBuilder::new(config_clone.clone());
 
+                    // Keep reading data available for data-file export in watch mode.
+                    let mut watcher_reading_data: Option<ReadingData> = None;
+
                     match snapshot_builder.refresh_snapshot().await {
                         Ok(result) => {
                             let generated_at = result
@@ -199,10 +203,12 @@ impl FileWatcher {
                                 snapshot_store.replace(result.snapshot);
                             }
 
-                            if let Some(ref reading_data_store) = reading_data_store_clone
-                                && let Some(rd) = result.reading_data
-                            {
-                                reading_data_store.replace(rd);
+                            if let Some(ref reading_data_store) = reading_data_store_clone {
+                                if let Some(rd) = result.reading_data {
+                                    reading_data_store.replace(rd);
+                                }
+                            } else {
+                                watcher_reading_data = result.reading_data;
                             }
 
                             if let Some(ref update_notifier) = update_notifier_clone {
@@ -263,6 +269,26 @@ impl FileWatcher {
                                 );
                             }
                             Err(e) => warn!("Watcher library DB update failed: {}", e),
+                        }
+                    }
+
+                    // Re-export data files after library DB update (watch mode only).
+                    if !config_clone.is_internal_server
+                        && let Some(ref repo) = library_repo_clone
+                    {
+                        let export_config = ExportConfig {
+                            site_title: config_clone.site_title.clone(),
+                            language: config_clone.language.clone(),
+                        };
+                        if let Err(e) = export_data_files(
+                            &config_clone.output_dir.join("data"),
+                            repo,
+                            watcher_reading_data.as_ref(),
+                            &export_config,
+                        )
+                        .await
+                        {
+                            warn!("Failed to re-export data files: {}", e);
                         }
                     }
 
