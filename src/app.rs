@@ -1,5 +1,8 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
+use crate::infra::sqlite::{
+    RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
+};
 use crate::library::{FileWatcher, MetadataLocation};
 use crate::runtime::{SnapshotStore, SnapshotUpdateNotifier};
 use crate::server::WebServer;
@@ -23,7 +26,7 @@ struct OutputPlan {
     mode: RunMode,
 }
 
-fn plan_output(cli: &Cli) -> Result<OutputPlan> {
+fn plan_output(cli: &Cli, runtime_data_policy: &RuntimeDataPolicy) -> Result<OutputPlan> {
     match (&cli.output, cli.watch) {
         (Some(dir), false) => Ok(OutputPlan {
             output_dir: dir.clone(),
@@ -35,15 +38,23 @@ fn plan_output(cli: &Cli) -> Result<OutputPlan> {
             _temp_dir: None,
             mode: RunMode::WatchStatic,
         }),
-        (None, _) => {
-            // For server mode, use a temp media-cache directory cleaned up on exit.
-            let tmp = tempfile::tempdir().context("Failed to create temporary output directory")?;
-            Ok(OutputPlan {
-                output_dir: tmp.path().to_path_buf(),
-                _temp_dir: Some(tmp),
+        (None, _) => match runtime_data_policy.persistent_data_dir() {
+            Some(data_dir) => Ok(OutputPlan {
+                output_dir: data_dir.to_path_buf(),
+                _temp_dir: None,
                 mode: RunMode::Serve,
-            })
-        }
+            }),
+            None => {
+                // In ephemeral server mode, use a temp runtime-data directory cleaned up on exit.
+                let tmp =
+                    tempfile::tempdir().context("Failed to create temporary output directory")?;
+                Ok(OutputPlan {
+                    output_dir: tmp.path().to_path_buf(),
+                    _temp_dir: Some(tmp),
+                    mode: RunMode::Serve,
+                })
+            }
+        },
     }
 }
 
@@ -55,6 +66,14 @@ fn metadata_location(cli: &Cli) -> MetadataLocation {
     } else {
         MetadataLocation::InBookFolder
     }
+}
+
+fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
+    let cli_overrides = RuntimeDataPathOptions {
+        data_dir: cli.data_dir.clone(),
+    };
+
+    resolve_runtime_data_policy(&cli_overrides)
 }
 
 /// Run KoShelf with the provided CLI args.
@@ -84,8 +103,25 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Build time configuration from CLI
     let time_config = TimeConfig::from_cli(&cli.timezone, &cli.day_start_time)?;
 
+    let runtime_data_policy = resolve_runtime_data_policy_for_run(&cli);
+    match runtime_data_policy.persistent_data_dir() {
+        Some(path) => info!(
+            "Runtime data policy: persistent ({:?}, source={})",
+            path,
+            runtime_data_policy.source.as_str()
+        ),
+        None => info!(
+            "Runtime data policy: ephemeral temp dir (source={})",
+            runtime_data_policy.source.as_str()
+        ),
+    }
+
+    if let Some(db_path) = runtime_data_policy.library_db_path() {
+        info!("Runtime library DB path: {:?}", db_path);
+    }
+
     // Determine output directory + run mode
-    let plan = plan_output(&cli)?;
+    let plan = plan_output(&cli, &runtime_data_policy)?;
 
     // Determine if we're running with internal web server (enables runtime update events)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
@@ -106,6 +142,7 @@ pub async fn run(cli: Cli) -> Result<()> {
         is_internal_server,
         language: cli.language.clone(),
         use_stable_page_metadata: !cli.ignore_stable_page_metadata,
+        runtime_data_policy,
     };
 
     // Create snapshot builder - it handles library scanning and stats loading internally.

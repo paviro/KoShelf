@@ -89,6 +89,11 @@ pub struct Cli {
     /// By default, stable page metadata is used when available.
     #[arg(long, default_value = "false", display_order = 19)]
     pub ignore_stable_page_metadata: bool,
+
+    /// Persistent runtime data directory for cache files (for example library.sqlite).
+    /// Used for runtime library DB and media cache persistence in serve mode.
+    #[arg(long, display_order = 20)]
+    pub data_dir: Option<PathBuf>,
 }
 
 /// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds.
@@ -203,6 +208,14 @@ impl Cli {
             && !stats_path.exists()
         {
             anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
+        }
+
+        // Validate data directory if it already exists
+        if let Some(ref data_dir) = self.data_dir
+            && data_dir.exists()
+            && !data_dir.is_dir()
+        {
+            anyhow::bail!("Data directory path is not a directory: {:?}", data_dir);
         }
 
         // Validate heatmap scale max
