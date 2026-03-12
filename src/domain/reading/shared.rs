@@ -1,0 +1,105 @@
+//! Reusable helpers shared across reading endpoint implementations.
+
+use chrono::NaiveDate;
+
+use crate::contracts::common::ContentTypeFilter;
+use crate::models::{ContentType, PageStat, StatisticsData};
+use crate::time_config::TimeConfig;
+
+/// Build a `TimeConfig` with an optional per-request timezone override.
+pub fn resolve_time_config(base: &TimeConfig, tz_override: Option<chrono_tz::Tz>) -> TimeConfig {
+    match tz_override {
+        Some(tz) => TimeConfig::new(Some(tz), base.day_start_minutes),
+        None => base.clone(),
+    }
+}
+
+/// Filter `StatisticsData` by the requested content-type scope.
+pub fn filter_stats_by_scope(
+    stats_data: &StatisticsData,
+    scope: ContentTypeFilter,
+) -> StatisticsData {
+    match scope {
+        ContentTypeFilter::All => stats_data.clone(),
+        ContentTypeFilter::Books => stats_data.filtered_by_content_type(ContentType::Book),
+        ContentTypeFilter::Comics => stats_data.filtered_by_content_type(ContentType::Comic),
+    }
+}
+
+/// Filter page stats by date range and determine the resolved from/to dates.
+/// Returns (filtered_stats, resolved_from, resolved_to).
+pub fn filter_and_resolve_range(
+    page_stats: &[PageStat],
+    range: Option<(NaiveDate, NaiveDate)>,
+    time_config: &TimeConfig,
+) -> (Vec<PageStat>, NaiveDate, NaiveDate) {
+    let valid_stats: Vec<PageStat> = page_stats
+        .iter()
+        .filter(|s| s.duration > 0)
+        .cloned()
+        .collect();
+
+    match range {
+        Some((from, to)) => {
+            let filtered: Vec<PageStat> = valid_stats
+                .into_iter()
+                .filter(|s| {
+                    let date = time_config.date_for_timestamp(s.start_time);
+                    date >= from && date <= to
+                })
+                .collect();
+            (filtered, from, to)
+        }
+        None => {
+            // Default to full available range.
+            let today = time_config.today_date();
+            if valid_stats.is_empty() {
+                return (valid_stats, today, today);
+            }
+            let mut min_date = today;
+            let mut max_date = today;
+            for s in &valid_stats {
+                let date = time_config.date_for_timestamp(s.start_time);
+                if date < min_date {
+                    min_date = date;
+                }
+                if date > max_date {
+                    max_date = date;
+                }
+            }
+            (valid_stats, min_date, max_date)
+        }
+    }
+}
+
+/// Count completions whose end_date falls within [from, to].
+/// Returns (total_completion_count, distinct_items_completed).
+pub fn count_completions_in_range(
+    stats: &StatisticsData,
+    from: &NaiveDate,
+    to: &NaiveDate,
+) -> (i64, i64) {
+    let mut total = 0i64;
+    let mut items_with_completion = 0i64;
+
+    for book in &stats.books {
+        let Some(ref completions) = book.completions else {
+            continue;
+        };
+        let mut book_has_completion_in_range = false;
+        for entry in &completions.entries {
+            if let Ok(end_date) = NaiveDate::parse_from_str(&entry.end_date, "%Y-%m-%d")
+                && end_date >= *from
+                && end_date <= *to
+            {
+                total += 1;
+                book_has_completion_in_range = true;
+            }
+        }
+        if book_has_completion_in_range {
+            items_with_completion += 1;
+        }
+    }
+
+    (total, items_with_completion)
+}

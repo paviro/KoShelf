@@ -5,5 +5,7 @@ pub mod completions;
 pub mod metrics;
 pub mod queries;
 pub mod service;
+pub mod shared;
+pub mod summary;
 
 pub use service::ReadingService;
