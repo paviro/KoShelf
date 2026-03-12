@@ -83,6 +83,7 @@ impl WebServer {
                 "/api/reading/available-periods",
                 get(api::reading_available_periods),
             )
+            .route("/api/reading/calendar", get(api::reading_calendar))
             .route("/api/events/stream", get(api::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))

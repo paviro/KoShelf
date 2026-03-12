@@ -67,7 +67,6 @@ pub struct ReadingAvailablePeriodsParams {
     pub tz: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ReadingCalendarParams {
     pub month: Option<String>,
@@ -329,7 +328,6 @@ pub(crate) fn parse_reading_available_periods_query(
     })
 }
 
-#[allow(dead_code)]
 pub(crate) fn parse_reading_calendar_query(
     params: &ReadingCalendarParams,
 ) -> ApiResult<rq::ReadingCalendarQuery> {
