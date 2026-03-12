@@ -2,6 +2,7 @@ pub mod calendar;
 pub mod completions;
 pub mod koreader_metadata;
 pub mod library_item;
+pub(crate) mod merge_precedence;
 pub mod recap;
 pub mod statistics;
 

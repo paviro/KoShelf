@@ -1,5 +1,6 @@
 //! Snapshot update notifier used by runtime server mode.
 
+use super::observability::RuntimeObservability;
 use super::revisions::{DomainRevisionState, DomainRevisionTracker, RevisionDomain};
 use serde::Serialize;
 use std::sync::{
@@ -18,6 +19,7 @@ pub struct SnapshotUpdate {
 struct SnapshotUpdateNotifierInner {
     next_revision: AtomicU64,
     revision_tracker: DomainRevisionTracker,
+    observability: RuntimeObservability,
     tx: watch::Sender<SnapshotUpdate>,
 }
 
@@ -29,6 +31,18 @@ pub struct SnapshotUpdateNotifier {
 
 impl SnapshotUpdateNotifier {
     pub fn new(revision_epoch: impl Into<String>, initial_generated_at: impl Into<String>) -> Self {
+        Self::with_observability(
+            revision_epoch,
+            initial_generated_at,
+            RuntimeObservability::default(),
+        )
+    }
+
+    pub fn with_observability(
+        revision_epoch: impl Into<String>,
+        initial_generated_at: impl Into<String>,
+        observability: RuntimeObservability,
+    ) -> Self {
         let initial_update = SnapshotUpdate {
             revision: 0,
             generated_at: initial_generated_at.into(),
@@ -39,6 +53,7 @@ impl SnapshotUpdateNotifier {
             inner: Arc::new(SnapshotUpdateNotifierInner {
                 next_revision: AtomicU64::new(1),
                 revision_tracker: DomainRevisionTracker::new(revision_epoch),
+                observability,
                 tx,
             }),
         }
@@ -68,7 +83,13 @@ impl SnapshotUpdateNotifier {
     where
         I: IntoIterator<Item = RevisionDomain>,
     {
-        self.inner.revision_tracker.bump_domains(domains);
+        let domains: Vec<_> = domains.into_iter().collect();
+        self.inner
+            .revision_tracker
+            .bump_domains(domains.iter().copied());
+        for domain in domains {
+            self.inner.observability.record_invalidation_event(domain);
+        }
 
         let update = SnapshotUpdate {
             revision: self.inner.next_revision.fetch_add(1, Ordering::Relaxed),
@@ -82,6 +103,10 @@ impl SnapshotUpdateNotifier {
 
     pub fn domain_revisions(&self) -> DomainRevisionState {
         self.inner.revision_tracker.snapshot_state()
+    }
+
+    pub fn observability(&self) -> RuntimeObservability {
+        self.inner.observability.clone()
     }
 }
 
@@ -116,6 +141,12 @@ mod tests {
         assert_eq!(revisions.revision.metadata, 1);
         assert_eq!(revisions.revision.stats, 1);
         assert_eq!(revisions.revision.assets, 0);
+
+        let telemetry = notifier.observability().snapshot();
+        assert_eq!(telemetry.invalidation_events.library, 1);
+        assert_eq!(telemetry.invalidation_events.metadata, 1);
+        assert_eq!(telemetry.invalidation_events.stats, 1);
+        assert_eq!(telemetry.invalidation_events.assets, 0);
     }
 
     #[test]
@@ -129,5 +160,11 @@ mod tests {
         assert_eq!(revisions.revision.metadata, 1);
         assert_eq!(revisions.revision.stats, 1);
         assert_eq!(revisions.revision.assets, 1);
+
+        let telemetry = notifier.observability().snapshot();
+        assert_eq!(telemetry.invalidation_events.library, 1);
+        assert_eq!(telemetry.invalidation_events.metadata, 1);
+        assert_eq!(telemetry.invalidation_events.stats, 1);
+        assert_eq!(telemetry.invalidation_events.assets, 1);
     }
 }

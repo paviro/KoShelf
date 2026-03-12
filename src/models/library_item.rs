@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use super::koreader_metadata::KoReaderMetadata;
+use super::merge_precedence::{resolve_language, resolve_page_total};
 
 /// Content type classification (broad category)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -218,22 +219,12 @@ impl LibraryItem {
     }
 
     pub fn doc_pages_with_stable_metadata(&self, use_stable_page_metadata: bool) -> Option<u32> {
-        // Prefer stable page labels when available, then KOReader rendered pages,
-        // then format-extracted pages.
-        let stable_page_total = if use_stable_page_metadata {
-            self.stable_display_page_total()
-        } else {
-            None
-        };
-
-        stable_page_total
-            .or_else(|| {
-                self.koreader_metadata
-                    .as_ref()
-                    .and_then(|m| m.doc_pages)
-                    .filter(|pages| *pages > 0)
-            })
-            .or(self.book_info.pages)
+        resolve_page_total(
+            use_stable_page_metadata,
+            self.stable_display_page_total(),
+            self.koreader_metadata.as_ref().and_then(|m| m.doc_pages),
+            self.book_info.pages,
+        )
     }
 
     /// Stable page total for display-only usage.
@@ -266,11 +257,12 @@ impl LibraryItem {
 
     /// Get language, preferring EPUB metadata over KoReader metadata
     pub fn language(&self) -> Option<&String> {
-        self.book_info.language.as_ref().or_else(|| {
+        resolve_language(
+            self.book_info.language.as_ref(),
             self.koreader_metadata
                 .as_ref()
-                .and_then(|m| m.text_lang.as_ref())
-        })
+                .and_then(|m| m.text_lang.as_ref()),
+        )
     }
 
     /// Get publisher from EPUB metadata
@@ -441,6 +433,27 @@ mod tests {
         assert_eq!(item.stable_display_page_total(), None);
         assert_eq!(item.synthetic_scaling_page_total(), None);
         assert_eq!(item.doc_pages(), Some(200));
+    }
+
+    #[test]
+    fn language_prefers_parser_language_over_koreader_text_lang() {
+        let mut metadata = fixtures::koreader_metadata_for_pages("md5", true, false, 300);
+        metadata.text_lang = Some("en-US".to_string());
+
+        let mut item = fixtures::library_item("id-1", Some(metadata));
+        item.book_info.language = Some("de-DE".to_string());
+
+        assert_eq!(item.language().map(String::as_str), Some("de-DE"));
+    }
+
+    #[test]
+    fn language_falls_back_to_koreader_text_lang_when_parser_language_is_missing() {
+        let mut metadata = fixtures::koreader_metadata_for_pages("md5", true, false, 300);
+        metadata.text_lang = Some("en-US".to_string());
+
+        let item = fixtures::library_item("id-1", Some(metadata));
+
+        assert_eq!(item.language().map(String::as_str), Some("en-US"));
     }
 }
 

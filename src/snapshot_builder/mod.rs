@@ -17,8 +17,9 @@ mod statistics;
 mod utils;
 
 use crate::config::SiteConfig;
-use crate::koreader::{StatisticsCalculator, StatisticsParser, calculate_partial_md5};
+use crate::koreader::{StatisticsCalculator, StatisticsParser};
 use crate::library::scan_library;
+use crate::models::merge_precedence::normalize_partial_md5;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::runtime::ContractSnapshot;
 use anyhow::Result;
@@ -128,20 +129,13 @@ impl SnapshotBuilder {
         if let Some(ref mut sd) = stats_data {
             let mut md5_to_content_type: HashMap<String, ContentType> = HashMap::new();
             for item in &all_items {
-                // Prefer MD5 from KoReader metadata, but fall back to calculating partial MD5 from file.
-                let md5 = item
-                    .koreader_metadata
-                    .as_ref()
-                    .and_then(|m| m.partial_md5_checksum.as_ref())
-                    .cloned()
-                    .or_else(|| calculate_partial_md5(&item.file_path).ok());
-
-                if let Some(md5) = md5 {
-                    md5_to_content_type.insert(md5.to_lowercase(), item.content_type());
+                if let Some(canonical_md5) = normalize_partial_md5(&item.id) {
+                    md5_to_content_type.insert(canonical_md5, item.content_type());
                 } else {
                     log::debug!(
-                        "Could not determine MD5 for {:?}; stats content_type tagging may be incomplete",
-                        item.file_path
+                        "Item {:?} has non-canonical id '{}'; stats content_type tagging may be incomplete",
+                        item.file_path,
+                        item.id
                     );
                 }
             }

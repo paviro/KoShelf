@@ -1,12 +1,16 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::models::LibraryItemFormat;
-use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
+use crate::runtime::{RuntimeObservability, SharedSnapshotStore, SnapshotUpdateNotifier};
 use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::time::Duration;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
@@ -14,6 +18,7 @@ pub struct FileWatcher {
     config: SiteConfig,
     snapshot_store: Option<SharedSnapshotStore>,
     update_notifier: Option<SnapshotUpdateNotifier>,
+    observability: RuntimeObservability,
 }
 
 impl std::ops::Deref for FileWatcher {
@@ -23,22 +28,46 @@ impl std::ops::Deref for FileWatcher {
     }
 }
 
+fn decrement_pending_rebuilds(counter: &AtomicU64) -> u64 {
+    let mut current = counter.load(Ordering::Relaxed);
+
+    loop {
+        if current == 0 {
+            return 0;
+        }
+
+        match counter.compare_exchange_weak(
+            current,
+            current - 1,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => return current - 1,
+            Err(observed) => current = observed,
+        }
+    }
+}
+
 impl FileWatcher {
     pub fn new(
         config: SiteConfig,
         snapshot_store: Option<SharedSnapshotStore>,
         update_notifier: Option<SnapshotUpdateNotifier>,
+        observability: RuntimeObservability,
     ) -> Self {
         Self {
             config,
             snapshot_store,
             update_notifier,
+            observability,
         }
     }
 
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
         let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<()>();
+        let pending_rebuilds = Arc::new(AtomicU64::new(0));
+        self.observability.set_watcher_queue_depth(0);
 
         // Set up file watcher
         let mut watcher = RecommendedWatcher::new(
@@ -98,6 +127,8 @@ impl FileWatcher {
         let config_clone = self.config.clone();
         let snapshot_store_clone = self.snapshot_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
+        let observability_clone = self.observability.clone();
+        let pending_rebuilds_clone = pending_rebuilds.clone();
 
         // Spawn delayed rebuild task.
         // NOTE: Snapshot building uses non-Send types (e.g. mlua::Lua, Rc-based translations),
@@ -108,11 +139,19 @@ impl FileWatcher {
                 let rebuild_delay = Duration::from_secs(10); // Wait 10 seconds after last event
 
                 while (rebuild_rx.recv().await).is_some() {
+                    let current_depth = decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
+                    observability_clone.set_watcher_queue_depth(current_depth);
+                    let queued_at = Instant::now();
+
                     // Wait for the delay period to debounce multiple events
                     sleep(rebuild_delay).await;
 
                     // Drain any additional events that came in during the delay
-                    while rebuild_rx.try_recv().is_ok() {}
+                    while rebuild_rx.try_recv().is_ok() {
+                        let current_depth =
+                            decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
+                        observability_clone.set_watcher_queue_depth(current_depth);
+                    }
 
                     info!("Starting delayed snapshot refresh after quiet period");
 
@@ -150,6 +189,8 @@ impl FileWatcher {
                         }
                         Err(e) => warn!("Failed to refresh snapshot: {}", e),
                     }
+
+                    observability_clone.record_watcher_update_latency(queued_at.elapsed());
                 }
             })
         });
@@ -161,7 +202,12 @@ impl FileWatcher {
                 self.log_file_event(&event);
 
                 // Just queue a rebuild - no need to track individual file changes anymore
-                let _ = rebuild_tx.send(());
+                if rebuild_tx.send(()).is_ok() {
+                    let queued_depth = pending_rebuilds
+                        .fetch_add(1, Ordering::Relaxed)
+                        .saturating_add(1);
+                    self.observability.set_watcher_queue_depth(queued_depth);
+                }
             }
         }
 
