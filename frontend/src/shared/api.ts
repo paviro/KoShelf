@@ -196,7 +196,10 @@ export const api = {
 
         async get<T>(id: string): Promise<T> {
             return request<T>(
-                route(`/api/items/${id}`, `/data/items/by_id/${id}.json`),
+                route(
+                    `/api/items/${id}?include=all`,
+                    `/data/items/by_id/${id}.json`,
+                ),
             );
         },
     },

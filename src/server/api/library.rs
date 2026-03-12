@@ -9,7 +9,8 @@ use crate::domain::library::{LibraryDetailQuery, LibraryListQuery, LibraryServic
 use crate::server::ServerState;
 
 use super::shared::{
-    ApiResponseError, ScopeQuery, parse_item_sort, parse_scope, parse_sort_order, request_meta,
+    ApiResponseError, DetailQuery, ScopeQuery, parse_include, parse_item_sort, parse_scope,
+    parse_sort_order, request_meta,
 };
 
 pub async fn items(State(state): State<ServerState>, Query(query): Query<ScopeQuery>) -> Response {
@@ -34,8 +35,17 @@ pub async fn items(State(state): State<ServerState>, Query(query): Query<ScopeQu
     }
 }
 
-pub async fn item_detail(State(state): State<ServerState>, Path(id): Path<String>) -> Response {
-    let query = LibraryDetailQuery::new(id);
+pub async fn item_detail(
+    State(state): State<ServerState>,
+    Path(id): Path<String>,
+    Query(detail_query): Query<DetailQuery>,
+) -> Response {
+    let includes = match parse_include(detail_query.include.as_deref()) {
+        Ok(inc) => inc,
+        Err(e) => return e.into_response(),
+    };
+
+    let query = LibraryDetailQuery::new(id, includes);
 
     match LibraryService::detail(&state.library_repo, &query, request_meta()).await {
         Ok(Some(payload)) => (StatusCode::OK, Json(payload)).into_response(),

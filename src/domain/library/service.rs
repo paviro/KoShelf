@@ -3,13 +3,13 @@
 use anyhow::Result;
 
 use crate::contracts::common::{ApiMeta, ContentTypeFilter};
-use crate::contracts::library::{
-    LibraryDetailResponse, LibraryDetailStatistics, LibraryListResponse,
-};
+use crate::contracts::library::{LibraryDetailResponse, LibraryListResponse};
 use crate::domain::library::projections::{
     annotation_row_to_contract, row_to_detail_item, row_to_list_item,
 };
-use crate::domain::library::queries::{ItemSort, LibraryDetailQuery, LibraryListQuery, SortOrder};
+use crate::domain::library::queries::{
+    IncludeToken, ItemSort, LibraryDetailQuery, LibraryListQuery, SortOrder,
+};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::library_repo::queries::{LibraryListFilter, LibrarySort, SortDirection};
 
@@ -41,29 +41,65 @@ impl LibraryService {
         };
 
         let item = row_to_detail_item(&row);
+        let includes = &query.includes;
 
-        let annotation_rows = repo.get_annotations(&query.id, None).await?;
-        let highlights = annotation_rows
-            .iter()
-            .filter(|a| a.annotation_kind == "highlight")
-            .map(annotation_row_to_contract)
-            .collect();
-        let bookmarks = annotation_rows
-            .iter()
-            .filter(|a| a.annotation_kind == "bookmark")
-            .map(annotation_row_to_contract)
-            .collect();
+        // Fetch annotations only when highlights or bookmarks are requested.
+        let (highlights, bookmarks) =
+            if includes.has(IncludeToken::Highlights) || includes.has(IncludeToken::Bookmarks) {
+                let annotation_rows = repo.get_annotations(&query.id, None).await?;
+
+                let hl = if includes.has(IncludeToken::Highlights) {
+                    Some(
+                        annotation_rows
+                            .iter()
+                            .filter(|a| a.annotation_kind == "highlight")
+                            .map(annotation_row_to_contract)
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
+
+                let bm = if includes.has(IncludeToken::Bookmarks) {
+                    Some(
+                        annotation_rows
+                            .iter()
+                            .filter(|a| a.annotation_kind == "bookmark")
+                            .map(annotation_row_to_contract)
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
+
+                (hl, bm)
+            } else {
+                (None, None)
+            };
+
+        // Statistics and completions: accepted by include parser but data
+        // remains None until stats DB query service is wired up.
+        let statistics = if includes.has(IncludeToken::Statistics) {
+            // TODO: source from stats DB on demand via partial_md5_checksum linkage
+            None
+        } else {
+            None
+        };
+
+        let completions = if includes.has(IncludeToken::Completions) {
+            // TODO: source from stats DB completion detector via partial_md5_checksum linkage
+            None
+        } else {
+            None
+        };
 
         Ok(Some(LibraryDetailResponse {
             meta,
             item,
             highlights,
             bookmarks,
-            statistics: LibraryDetailStatistics {
-                item_stats: None,
-                session_stats: None,
-                completions: None,
-            },
+            statistics,
+            completions,
         }))
     }
 }

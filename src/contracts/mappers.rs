@@ -127,7 +127,7 @@ fn map_library_completion_entry(
     LibraryCompletionEntry {
         start_date: completion.start_date.clone(),
         end_date: completion.end_date.clone(),
-        reading_time: completion.reading_time,
+        reading_time_sec: completion.reading_time,
         session_count: completion.session_count,
         pages_read: completion.pages_read,
     }
@@ -158,7 +158,7 @@ fn map_library_item_stats(
             .map(|timestamp| time_config.format_timestamp_rfc3339(timestamp)),
         highlights: item_stats.highlights,
         pages: item_stats.pages,
-        total_read_time: item_stats.total_read_time,
+        total_reading_time_sec: item_stats.total_read_time,
     }
 }
 
@@ -167,8 +167,8 @@ fn map_library_session_stats(
 ) -> LibrarySessionStats {
     LibrarySessionStats {
         session_count: session_stats.session_count,
-        average_session_duration: session_stats.average_session_duration,
-        longest_session_duration: session_stats.longest_session_duration,
+        average_session_duration_sec: session_stats.average_session_duration,
+        longest_session_duration_sec: session_stats.longest_session_duration,
         last_read_date: session_stats.last_read_date.clone(),
         reading_speed: session_stats.reading_speed,
     }
@@ -183,22 +183,33 @@ pub fn map_library_detail_response(
     use_stable_page_metadata: bool,
     time_config: &TimeConfig,
 ) -> LibraryDetailResponse {
-    let highlights = item
+    let highlights: Vec<_> = item
         .annotations()
         .iter()
         .filter(|annotation| annotation.is_highlight())
         .map(|annotation| map_library_annotation(annotation, time_config))
-        .collect::<Vec<_>>();
-    let bookmarks = item
+        .collect();
+    let bookmarks: Vec<_> = item
         .annotations()
         .iter()
         .filter(|annotation| annotation.is_bookmark())
         .map(|annotation| map_library_annotation(annotation, time_config))
-        .collect::<Vec<_>>();
+        .collect();
     let completions = item_stats
         .as_ref()
         .and_then(|stats| stats.completions.as_ref())
         .map(map_library_completions);
+
+    let statistics = if item_stats.is_some() || session_stats.is_some() {
+        Some(LibraryDetailStatistics {
+            item_stats: item_stats
+                .as_ref()
+                .map(|stats| map_library_item_stats(stats, time_config)),
+            session_stats: session_stats.as_ref().map(map_library_session_stats),
+        })
+    } else {
+        None
+    };
 
     LibraryDetailResponse {
         meta,
@@ -225,15 +236,10 @@ pub fn map_library_detail_response(
                 .map(map_library_identifier)
                 .collect(),
         },
-        highlights,
-        bookmarks,
-        statistics: LibraryDetailStatistics {
-            item_stats: item_stats
-                .as_ref()
-                .map(|stats| map_library_item_stats(stats, time_config)),
-            session_stats: session_stats.as_ref().map(map_library_session_stats),
-            completions,
-        },
+        highlights: Some(highlights),
+        bookmarks: Some(bookmarks),
+        statistics,
+        completions,
     }
 }
 

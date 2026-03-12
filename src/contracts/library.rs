@@ -106,7 +106,7 @@ pub struct LibraryAnnotation {
 pub struct LibraryCompletionEntry {
     pub start_date: String,
     pub end_date: String,
-    pub reading_time: i64,
+    pub reading_time_sec: i64,
     pub session_count: i64,
     pub pages_read: i64,
 }
@@ -130,16 +130,16 @@ pub struct LibraryItemStats {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pages: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_read_time: Option<i64>,
+    pub total_reading_time_sec: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibrarySessionStats {
     pub session_count: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_session_duration: Option<i64>,
+    pub average_session_duration_sec: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub longest_session_duration: Option<i64>,
+    pub longest_session_duration_sec: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_read_date: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -152,15 +152,18 @@ pub struct LibraryDetailStatistics {
     pub item_stats: Option<LibraryItemStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_stats: Option<LibrarySessionStats>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub completions: Option<LibraryCompletions>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryDetailResponse {
     pub meta: ApiMeta,
     pub item: LibraryDetailItem,
-    pub highlights: Vec<LibraryAnnotation>,
-    pub bookmarks: Vec<LibraryAnnotation>,
-    pub statistics: LibraryDetailStatistics,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub highlights: Option<Vec<LibraryAnnotation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bookmarks: Option<Vec<LibraryAnnotation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub statistics: Option<LibraryDetailStatistics>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completions: Option<LibraryCompletions>,
 }

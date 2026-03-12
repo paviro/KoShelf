@@ -76,7 +76,7 @@ export interface LibraryAnnotation {
 export interface LibraryCompletionEntry {
     start_date: string;
     end_date: string;
-    reading_time: number;
+    reading_time_sec: number;
     session_count: number;
     pages_read: number;
 }
@@ -92,13 +92,13 @@ export interface LibraryItemStats {
     last_open_at?: string | null;
     highlights?: number | null;
     pages?: number | null;
-    total_read_time?: number | null;
+    total_reading_time_sec?: number | null;
 }
 
 export interface LibrarySessionStats {
     session_count: number;
-    average_session_duration?: number | null;
-    longest_session_duration?: number | null;
+    average_session_duration_sec?: number | null;
+    longest_session_duration_sec?: number | null;
     last_read_date?: string | null;
     reading_speed?: number | null;
 }
@@ -106,13 +106,13 @@ export interface LibrarySessionStats {
 export interface LibraryDetailStatistics {
     item_stats?: LibraryItemStats | null;
     session_stats?: LibrarySessionStats | null;
-    completions?: LibraryCompletions | null;
 }
 
 export interface LibraryDetailResponse {
     meta: ApiMeta;
     item: LibraryDetailItem;
-    highlights: LibraryAnnotation[];
-    bookmarks: LibraryAnnotation[];
-    statistics: LibraryDetailStatistics;
+    highlights?: LibraryAnnotation[] | null;
+    bookmarks?: LibraryAnnotation[] | null;
+    statistics?: LibraryDetailStatistics | null;
+    completions?: LibraryCompletions | null;
 }

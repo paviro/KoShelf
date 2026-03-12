@@ -8,5 +8,5 @@ pub mod queries;
 pub mod service;
 
 pub use build::{LibraryBuildMode, LibraryBuildPipeline, LibraryBuildResult};
-pub use queries::{LibraryDetailQuery, LibraryListQuery};
+pub use queries::{IncludeSet, LibraryDetailQuery, LibraryListQuery};
 pub use service::LibraryService;

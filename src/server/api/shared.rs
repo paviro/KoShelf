@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::contracts::common::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
-use crate::domain::library::queries::{ItemSort, SortOrder};
+use crate::domain::library::queries::{IncludeSet, ItemSort, SortOrder};
 use crate::runtime::ContractSnapshot;
 use crate::server::ServerState;
 
@@ -26,6 +26,11 @@ pub struct ScopeQuery {
     pub scope: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DetailQuery {
+    pub include: Option<String>,
 }
 
 // ── Error plumbing ─────────────────────────────────────────────────────────
@@ -124,6 +129,11 @@ pub(crate) fn parse_sort_order(value: Option<&str>) -> ApiResult<Option<SortOrde
             )
         }),
     }
+}
+
+pub(crate) fn parse_include(value: Option<&str>) -> ApiResult<IncludeSet> {
+    IncludeSet::parse(value)
+        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))
 }
 
 pub(crate) fn validate_week_key(value: &str) -> ApiResult<WeekKey> {

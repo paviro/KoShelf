@@ -54,7 +54,7 @@ export function LibraryReadingStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                itemStats?.total_read_time,
+                                itemStats?.total_reading_time_sec,
                             )}
                         />
                     }
@@ -79,7 +79,7 @@ export function LibraryReadingStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                sessionStats.average_session_duration,
+                                sessionStats.average_session_duration_sec,
                             )}
                         />
                     }
@@ -93,7 +93,7 @@ export function LibraryReadingStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                sessionStats.longest_session_duration,
+                                sessionStats.longest_session_duration_sec,
                             )}
                         />
                     }
@@ -129,13 +129,13 @@ export function LibraryReadingStatsSection({
                             const averageSessionDuration =
                                 entry.session_count > 0
                                     ? Math.floor(
-                                          entry.reading_time /
+                                          entry.reading_time_sec /
                                               entry.session_count,
                                       )
                                     : null;
                             const averageSpeed = calculateAverageReadingSpeed(
                                 entry.pages_read,
-                                entry.reading_time,
+                                entry.reading_time_sec,
                             );
                             const calendarLength = calculateCalendarLengthDays(
                                 entry.start_date,
@@ -170,7 +170,7 @@ export function LibraryReadingStatsSection({
                                                         aria-hidden="true"
                                                     />
                                                     {formatDurationFromSeconds(
-                                                        entry.reading_time,
+                                                        entry.reading_time_sec,
                                                     )}
                                                 </span>
 

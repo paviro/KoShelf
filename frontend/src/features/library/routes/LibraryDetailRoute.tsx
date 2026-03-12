@@ -59,9 +59,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     });
     const detail = detailTransition.displayData;
     const item = detail?.item;
-    const itemStats = detail?.statistics.item_stats ?? null;
-    const sessionStats = detail?.statistics.session_stats ?? null;
-    const completions = detail?.statistics.completions ?? null;
+    const itemStats = detail?.statistics?.item_stats ?? null;
+    const sessionStats = detail?.statistics?.session_stats ?? null;
+    const completions = detail?.completions ?? null;
 
     const highlightAnnotations = detail?.highlights ?? [];
     const bookmarkAnnotations = detail?.bookmarks ?? [];
