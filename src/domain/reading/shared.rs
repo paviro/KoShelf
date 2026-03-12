@@ -125,3 +125,8 @@ pub fn bucket_key_week(date: NaiveDate) -> String {
 pub fn bucket_key_month(date: NaiveDate) -> String {
     format!("{:04}-{:02}", date.year(), date.month())
 }
+
+/// Bucket key for year grouping: `YYYY`.
+pub fn bucket_key_year(date: NaiveDate) -> String {
+    format!("{:04}", date.year())
+}

@@ -10,7 +10,8 @@ use crate::domain::reading::ReadingService;
 use crate::server::ServerState;
 
 use super::shared::{
-    ApiResponseError, ReadingMetricsParams, ReadingSummaryParams, parse_reading_metrics_query,
+    ApiResponseError, ReadingAvailablePeriodsParams, ReadingMetricsParams, ReadingSummaryParams,
+    parse_reading_available_periods_query, parse_reading_metrics_query,
     parse_reading_summary_query,
 };
 
@@ -55,6 +56,32 @@ pub async fn reading_metrics(
     };
 
     let data = ReadingService::metrics(&reading_data, query);
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse {
+            data,
+            meta: ResponseMeta::now(),
+        }),
+    )
+        .into_response()
+}
+
+pub async fn reading_available_periods(
+    State(state): State<ServerState>,
+    Query(params): Query<ReadingAvailablePeriodsParams>,
+) -> Response {
+    let query = match parse_reading_available_periods_query(&params) {
+        Ok(q) => q,
+        Err(error) => return error.into_response(),
+    };
+
+    let reading_data = match state.reading_data_store.get() {
+        Some(rd) => rd,
+        None => return ApiResponseError::internal_server_error().into_response(),
+    };
+
+    let data = ReadingService::available_periods(&reading_data, query);
 
     (
         StatusCode::OK,

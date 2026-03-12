@@ -1,6 +1,7 @@
 //! Reading-domain boundaries for statistics, calendar, and completions data.
 
 pub mod activity;
+pub mod available_periods;
 pub mod calendar;
 pub mod completions;
 pub mod metrics;
