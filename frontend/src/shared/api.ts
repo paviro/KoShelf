@@ -166,13 +166,16 @@ function filterItemsPayload(payload: unknown, scope: ScopeValue): unknown {
     };
 }
 
+function withScope(path: string, scope: ScopeValue): string {
+    const separator = path.includes('?') ? '&' : '?';
+    return `${path}${separator}scope=${scope}`;
+}
+
 async function requestItemsList<T>(scope: ScopeValue | undefined): Promise<T> {
     const selectedScope = normalizeScope(scope);
 
     if (isServeMode()) {
-        return (await fetchJson(
-            withContentType('/api/items', selectedScope),
-        )) as T;
+        return (await fetchJson(withScope('/api/items', selectedScope))) as T;
     }
 
     const payload = await fetchJson('/data/items/index.json');

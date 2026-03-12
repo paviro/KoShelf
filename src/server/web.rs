@@ -1,5 +1,6 @@
 use super::ServerState;
 use super::api;
+use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
 use anyhow::Result;
 use axum::{
@@ -24,6 +25,7 @@ pub struct WebServer {
     port: u16,
     snapshot_store: SharedSnapshotStore,
     update_notifier: SnapshotUpdateNotifier,
+    library_repo: LibraryRepository,
 }
 
 impl WebServer {
@@ -32,12 +34,14 @@ impl WebServer {
         port: u16,
         snapshot_store: SharedSnapshotStore,
         update_notifier: SnapshotUpdateNotifier,
+        library_repo: LibraryRepository,
     ) -> Self {
         Self {
             media_cache_dir,
             port,
             snapshot_store,
             update_notifier,
+            library_repo,
         }
     }
 
@@ -45,6 +49,7 @@ impl WebServer {
         let state = ServerState {
             snapshot_store: self.snapshot_store.clone(),
             update_notifier: self.update_notifier.clone(),
+            library_repo: self.library_repo,
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
         let recap_cache_dir = self.media_cache_dir.join("recap");

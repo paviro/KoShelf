@@ -1,5 +1,6 @@
 //! Web server module.
 
+use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::runtime::{SharedSnapshotStore, SnapshotUpdateNotifier};
 
 pub mod api;
@@ -11,4 +12,5 @@ pub use web::WebServer;
 pub struct ServerState {
     pub snapshot_store: SharedSnapshotStore,
     pub update_notifier: SnapshotUpdateNotifier,
+    pub library_repo: LibraryRepository,
 }

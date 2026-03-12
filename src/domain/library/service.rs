@@ -1,105 +1,98 @@
+//! Library domain service — list/detail queries backed by `library.sqlite`.
+
+use anyhow::Result;
+
 use crate::contracts::common::{ApiMeta, ContentTypeFilter};
 use crate::contracts::library::{
-    LibraryContentType, LibraryDetailItem, LibraryDetailResponse, LibraryDetailStatistics,
-    LibraryListResponse, LibraryStatus,
+    LibraryDetailResponse, LibraryDetailStatistics, LibraryListResponse,
 };
-use crate::domain::library::{LibraryDetailQuery, LibraryListQuery};
-use crate::domain::meta::fallback_meta;
-use crate::runtime::ContractSnapshot;
+use crate::domain::library::projections::{
+    annotation_row_to_contract, row_to_detail_item, row_to_list_item,
+};
+use crate::domain::library::queries::{ItemSort, LibraryDetailQuery, LibraryListQuery, SortOrder};
+use crate::infra::sqlite::library_repo::LibraryRepository;
+use crate::infra::sqlite::library_repo::queries::{LibraryListFilter, LibrarySort, SortDirection};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LibraryService;
 
 impl LibraryService {
-    pub fn list(snapshot: &ContractSnapshot, query: LibraryListQuery) -> LibraryListResponse {
-        let base_payload = snapshot
-            .items
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| Self::empty_library_list_response(fallback_meta(snapshot)));
+    pub async fn list(
+        repo: &LibraryRepository,
+        query: LibraryListQuery,
+        meta: ApiMeta,
+    ) -> Result<LibraryListResponse> {
+        let filter = to_list_filter(query);
+        let rows = repo.list_items(&filter).await?;
+        let items = rows.iter().map(row_to_list_item).collect();
 
-        Self::filter_library_items(&base_payload, query.scope)
+        Ok(LibraryListResponse { meta, items })
     }
 
-    pub fn detail(
-        snapshot: &ContractSnapshot,
+    pub async fn detail(
+        repo: &LibraryRepository,
         query: &LibraryDetailQuery,
-    ) -> LibraryDetailResponse {
-        snapshot
-            .item_details
-            .get(&query.id)
-            .cloned()
-            .unwrap_or_else(|| {
-                Self::empty_library_detail_response(fallback_meta(snapshot), query.id.clone())
-            })
-    }
+        meta: ApiMeta,
+    ) -> Result<Option<LibraryDetailResponse>> {
+        let row = repo.get_item(&query.id).await?;
 
-    fn empty_library_list_response(meta: ApiMeta) -> LibraryListResponse {
-        LibraryListResponse {
-            meta,
-            items: vec![],
-        }
-    }
+        let Some(row) = row else {
+            return Ok(None);
+        };
 
-    fn empty_library_detail_response(meta: ApiMeta, id: String) -> LibraryDetailResponse {
-        LibraryDetailResponse {
+        let item = row_to_detail_item(&row);
+
+        let annotation_rows = repo.get_annotations(&query.id, None).await?;
+        let highlights = annotation_rows
+            .iter()
+            .filter(|a| a.annotation_kind == "highlight")
+            .map(annotation_row_to_contract)
+            .collect();
+        let bookmarks = annotation_rows
+            .iter()
+            .filter(|a| a.annotation_kind == "bookmark")
+            .map(annotation_row_to_contract)
+            .collect();
+
+        Ok(Some(LibraryDetailResponse {
             meta,
-            item: LibraryDetailItem {
-                id,
-                title: String::new(),
-                authors: vec![],
-                series: None,
-                status: LibraryStatus::Unknown,
-                progress_percentage: None,
-                rating: None,
-                cover_url: String::new(),
-                content_type: LibraryContentType::Book,
-                language: None,
-                publisher: None,
-                description: None,
-                review_note: None,
-                pages: None,
-                search_base_path: String::new(),
-                subjects: vec![],
-                identifiers: vec![],
-            },
-            highlights: vec![],
-            bookmarks: vec![],
+            item,
+            highlights,
+            bookmarks,
             statistics: LibraryDetailStatistics {
                 item_stats: None,
                 session_stats: None,
                 completions: None,
             },
-        }
+        }))
     }
+}
 
-    fn filter_library_items(
-        response: &LibraryListResponse,
-        content_type: ContentTypeFilter,
-    ) -> LibraryListResponse {
-        if content_type == ContentTypeFilter::All {
-            return response.clone();
-        }
+fn to_list_filter(query: LibraryListQuery) -> LibraryListFilter {
+    let content_type = match query.scope {
+        ContentTypeFilter::All => None,
+        ContentTypeFilter::Books => Some("book".to_string()),
+        ContentTypeFilter::Comics => Some("comic".to_string()),
+    };
 
-        LibraryListResponse {
-            meta: response.meta.clone(),
-            items: response
-                .items
-                .iter()
-                .filter(|item| Self::item_matches_content_type(content_type, item.content_type))
-                .cloned()
-                .collect(),
-        }
-    }
+    let sort = match query.sort {
+        ItemSort::Title => LibrarySort::Title,
+        ItemSort::Author => LibrarySort::Author,
+        ItemSort::Status => LibrarySort::Status,
+        ItemSort::Progress => LibrarySort::Progress,
+        ItemSort::Rating => LibrarySort::Rating,
+        ItemSort::Annotations => LibrarySort::Annotations,
+        ItemSort::LastOpenAt => LibrarySort::LastOpenAt,
+    };
 
-    fn item_matches_content_type(
-        content_type: ContentTypeFilter,
-        item_content_type: LibraryContentType,
-    ) -> bool {
-        match content_type {
-            ContentTypeFilter::All => true,
-            ContentTypeFilter::Books => item_content_type == LibraryContentType::Book,
-            ContentTypeFilter::Comics => item_content_type == LibraryContentType::Comic,
-        }
+    let sort_direction = query.order.map(|o| match o {
+        SortOrder::Asc => SortDirection::Asc,
+        SortOrder::Desc => SortDirection::Desc,
+    });
+
+    LibraryListFilter {
+        content_type,
+        sort,
+        sort_direction,
     }
 }

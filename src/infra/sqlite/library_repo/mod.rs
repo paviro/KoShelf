@@ -12,6 +12,7 @@ pub mod rows;
 
 use sqlx::SqlitePool;
 
+#[derive(Clone)]
 pub struct LibraryRepository {
     pool: SqlitePool,
 }

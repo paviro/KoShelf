@@ -171,10 +171,10 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── Library build pipeline: populate library.sqlite ────────────────
     //
-    // This runs alongside the legacy snapshot path during the transition.
-    // Once API handlers switch to DB-backed reads (Phase 2b), the snapshot
-    // path for library data will be removed.
-    if let Some(db_path) = config.runtime_data_policy.library_db_path() {
+    // The repository is kept alive so serve-mode handlers can query it.
+    // The legacy snapshot path remains during the transition for
+    // activity/completion endpoints that haven't migrated yet.
+    let library_repo = if let Some(db_path) = config.runtime_data_policy.library_db_path() {
         let db_build_start = Instant::now();
         let pool = open_library_pool(&db_path)
             .await
@@ -223,7 +223,11 @@ pub async fn run(cli: Cli) -> Result<()> {
             result.removed_items,
             result.collision_count,
         );
-    }
+
+        Some(repo)
+    } else {
+        None
+    };
 
     if !is_internal_server {
         initial_snapshot.write_to_data_dir(&plan.output_dir.join("data"))?;
@@ -242,6 +246,8 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
 
         RunMode::Serve => {
+            let library_repo = library_repo.context("Library DB is required for serve mode")?;
+
             let initial_generated_at = initial_snapshot
                 .generated_at()
                 .map(str::to_owned)
@@ -264,8 +270,13 @@ pub async fn run(cli: Cli) -> Result<()> {
             );
 
             // Start web server (runtime media cache is served from `plan.output_dir`).
-            let web_server =
-                WebServer::new(plan.output_dir, cli.port, snapshot_store, update_notifier);
+            let web_server = WebServer::new(
+                plan.output_dir,
+                cli.port,
+                snapshot_store,
+                update_notifier,
+                library_repo,
+            );
 
             // Run both file watcher and web server concurrently
             tokio::select! {
