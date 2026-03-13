@@ -1,16 +1,13 @@
 //! Media asset management: directory creation, cover generation/cleanup,
 //! and static frontend synchronisation.
 
-use crate::models::LibraryItem;
 use anyhow::{Context, Result};
-use futures::future;
 use include_dir::{Dir, File, include_dir};
-use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{Instant, SystemTime};
+use std::time::SystemTime;
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 
@@ -106,86 +103,6 @@ pub fn cover_needs_generation(source_path: &Path, cover_path: &Path) -> bool {
         (Ok(_), Err(_)) => true,
         _ => true,
     }
-}
-
-/// Generate WebP cover images for all library items that have cover data.
-///
-/// Covers are only regenerated when the source file is newer than the cached
-/// cover, or when the cover file does not exist yet.
-pub async fn generate_covers(items: &[LibraryItem], covers_dir: &Path) -> Result<()> {
-    let mut tasks = Vec::new();
-    let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
-
-    for book in items {
-        if let Some(ref cover_data) = book.book_info.cover_data {
-            let cover_path = covers_dir.join(format!("{}.webp", book.id));
-            let file_path = book.file_path.clone();
-            let cover_data = cover_data.clone();
-
-            if cover_needs_generation(&file_path, &cover_path) {
-                let tx = progress_tx.clone();
-                let task = tokio::task::spawn_blocking(move || -> Result<()> {
-                    encode_cover_to_disk(&cover_data, &cover_path)?;
-                    let _ = tx.send(());
-                    Ok(())
-                });
-
-                tasks.push(task);
-            }
-        }
-    }
-
-    let total_covers = tasks.len();
-
-    if total_covers > 0 {
-        let start = Instant::now();
-        let pb = ProgressBar::new(total_covers as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
-                .unwrap()
-                .progress_chars("━╸─"),
-        );
-        pb.set_message("Extracting and converting covers:");
-
-        drop(progress_tx);
-
-        let pb_clone = pb.clone();
-        let progress_task = tokio::task::spawn_blocking(move || {
-            while progress_rx.recv().is_ok() {
-                pb_clone.inc(1);
-            }
-        });
-
-        let results = future::join_all(tasks).await;
-        let _ = progress_task.await;
-        pb.finish_and_clear();
-
-        for (i, result) in results.into_iter().enumerate() {
-            match result {
-                Ok(Ok(())) => {}
-                Ok(Err(e)) => return Err(e.context(format!("Failed to generate cover {}", i))),
-                Err(e) => {
-                    return Err(anyhow::Error::new(e).context(format!("Task {} panicked", i)));
-                }
-            }
-        }
-
-        let elapsed = start.elapsed();
-        info!(
-            "Extracted and converted {} covers in {:.1}s",
-            total_covers,
-            elapsed.as_secs_f64()
-        );
-    }
-
-    Ok(())
-}
-
-/// Remove cover files for items that no longer exist in the library.
-pub fn cleanup_stale_covers(items: &[LibraryItem], covers_dir: &Path) -> Result<()> {
-    let current_ids: HashSet<String> = items.iter().map(|b| b.id.clone()).collect();
-    cleanup_stale_covers_by_ids(&current_ids, covers_dir)
 }
 
 /// Remove cover files whose IDs are not in the given set.
