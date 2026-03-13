@@ -179,13 +179,12 @@ impl LibraryRepository {
         &self,
         metadata_path: &str,
     ) -> Result<Option<String>> {
-        let row = sqlx::query(
-            "SELECT book_path FROM library_item_fingerprints WHERE metadata_path = ?1",
-        )
-        .bind(metadata_path)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to find book path by metadata path")?;
+        let row =
+            sqlx::query("SELECT book_path FROM library_item_fingerprints WHERE metadata_path = ?1")
+                .bind(metadata_path)
+                .fetch_optional(&self.pool)
+                .await
+                .context("Failed to find book path by metadata path")?;
 
         Ok(row.map(|r| r.get("book_path")))
     }

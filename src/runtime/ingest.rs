@@ -30,10 +30,14 @@ pub struct IngestResult {
 impl IngestResult {
     /// Package the processed statistics into a `ReadingData` suitable for domain services.
     pub fn reading_data(&self, config: &SiteConfig) -> Option<ReadingData> {
-        self.stats_data.as_ref().map(|sd| ReadingData {
-            stats_data: sd.clone(),
-            time_config: config.time_config.clone(),
-            heatmap_scale_max: config.heatmap_scale_max,
+        self.stats_data.as_ref().map(|sd| {
+            let covers_by_md5 = build_covers_by_md5(self.filtered_items.iter().map(|i| &i.id));
+            ReadingData {
+                stats_data: sd.clone(),
+                time_config: config.time_config.clone(),
+                heatmap_scale_max: config.heatmap_scale_max,
+                covers_by_md5,
+            }
         })
     }
 
@@ -120,4 +124,10 @@ pub async fn ingest(config: &SiteConfig) -> Result<IngestResult> {
         library_md5s,
         stats_data,
     })
+}
+
+/// Build an md5 → cover URL map from item IDs.
+pub fn build_covers_by_md5<'a>(ids: impl Iterator<Item = &'a String>) -> HashMap<String, String> {
+    ids.map(|id| (id.clone(), format!("/assets/covers/{}.webp", id)))
+        .collect()
 }

@@ -26,7 +26,13 @@ pub fn reading_calendar(
 
     // Events are filtered by the requested scope.
     let scoped_stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
-    let (events, items) = build_events_and_items(&scoped_stats, &time_config, month_from, month_to);
+    let (events, items) = build_events_and_items(
+        &scoped_stats,
+        &time_config,
+        month_from,
+        month_to,
+        &reading_data.covers_by_md5,
+    );
 
     ReadingCalendarData {
         month: query.month,
@@ -128,6 +134,7 @@ fn build_events_and_items(
     time_config: &TimeConfig,
     month_from: NaiveDate,
     month_to: NaiveDate,
+    covers_by_md5: &std::collections::HashMap<String, String>,
 ) -> (Vec<ReadingCalendarEvent>, BTreeMap<String, CalendarItemRef>) {
     // Build book ID -> StatBook lookup.
     let book_by_id: HashMap<i64, &crate::models::StatBook> =
@@ -164,8 +171,8 @@ fn build_events_and_items(
                     title: stat_book.title.clone(),
                     authors: shared::parse_authors(&stat_book.authors),
                     content_type: shared::to_library_content_type(stat_book.content_type),
-                    item_id: None,
-                    item_cover: None,
+                    item_id: Some(stat_book.md5.clone()),
+                    item_cover: covers_by_md5.get(&stat_book.md5).cloned(),
                 },
             );
         }
@@ -341,6 +348,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -364,6 +372,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -390,6 +399,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -416,6 +426,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -442,6 +453,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -475,6 +487,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),

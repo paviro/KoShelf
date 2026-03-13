@@ -27,7 +27,8 @@ pub fn reading_completions(
     let (range, resolved_year) = resolve_completions_range(&query.selector);
 
     // Collect completion items, sorted by end_date descending.
-    let mut all_items = collect_completion_items(&stats, range.as_ref());
+    let mut all_items =
+        collect_completion_items(&stats, range.as_ref(), &reading_data.covers_by_md5);
     all_items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
     let total_items = all_items.len();
@@ -97,6 +98,7 @@ fn resolve_completions_range(
 fn collect_completion_items(
     stats: &StatisticsData,
     range: Option<&(NaiveDate, NaiveDate)>,
+    covers_by_md5: &std::collections::HashMap<String, String>,
 ) -> Vec<CompletionItem> {
     let mut items = Vec::new();
 
@@ -129,8 +131,8 @@ fn collect_completion_items(
                 rating: None,
                 review_note: None,
                 series: None,
-                item_id: None,
-                item_cover: None,
+                item_id: Some(book.md5.clone()),
+                item_cover: covers_by_md5.get(&book.md5).cloned(),
                 content_type: Some(shared::to_library_content_type(book.content_type)),
             });
         }
@@ -340,6 +342,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -368,6 +371,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -401,6 +405,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -430,6 +435,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -460,6 +466,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -496,6 +503,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -520,6 +528,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -540,6 +549,7 @@ mod tests {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
+            covers_by_md5: std::collections::HashMap::new(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,

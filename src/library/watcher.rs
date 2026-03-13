@@ -8,6 +8,7 @@ use crate::koreader::{StatisticsCalculator, StatisticsParser};
 use crate::library::scan_specific_files;
 use crate::models::{BookStatus, LibraryItemFormat, ReadingData};
 use crate::runtime::export::{ExportConfig, export_data_files};
+use crate::runtime::ingest::build_covers_by_md5;
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::{
     DomainUpdateNotifier, RevisionDomain, RuntimeObservability, SharedReadingDataStore,
@@ -208,29 +209,27 @@ impl FileWatcher {
                                 if path.exists() {
                                     parse_paths.insert(path.clone());
                                 } else {
-                                    delete_book_paths
-                                        .push(path.to_string_lossy().to_string());
+                                    delete_book_paths.push(path.to_string_lossy().to_string());
                                 }
-                            } else if let Some(filename) =
-                                path.file_name().and_then(|s| s.to_str())
+                            } else if let Some(filename) = path.file_name().and_then(|s| s.to_str())
                             {
                                 if LibraryItemFormat::is_metadata_file(filename) {
-                                    if let Some(book_path) =
-                                        derive_book_path_from_metadata_path(
-                                            path,
-                                            &config_clone.metadata_location,
-                                            repo,
-                                        )
-                                        .await
-                                        && book_path.exists() {
-                                            parse_paths.insert(book_path);
-                                        }
+                                    if let Some(book_path) = derive_book_path_from_metadata_path(
+                                        path,
+                                        &config_clone.metadata_location,
+                                        repo,
+                                    )
+                                    .await
+                                        && book_path.exists()
+                                    {
+                                        parse_paths.insert(book_path);
+                                    }
                                 } else if filename.ends_with(".sdr")
-                                    && let Some(book_path) =
-                                        derive_book_path_from_sdr_path(path)
-                                        && book_path.exists() {
-                                            parse_paths.insert(book_path);
-                                        }
+                                    && let Some(book_path) = derive_book_path_from_sdr_path(path)
+                                    && book_path.exists()
+                                {
+                                    parse_paths.insert(book_path);
+                                }
                             }
                             // Stats DB path: handled by domain check below.
                         }
@@ -255,10 +254,7 @@ impl FileWatcher {
                                     }
                                 }
                                 Ok(None) => {
-                                    debug!(
-                                        "No DB fingerprint for removed path: {}",
-                                        book_path_str
-                                    );
+                                    debug!("No DB fingerprint for removed path: {}", book_path_str);
                                 }
                                 Err(e) => {
                                     warn!(
@@ -271,11 +267,8 @@ impl FileWatcher {
 
                         // ── 3. Parse changed/new files ───────────────────
                         let parse_list: Vec<PathBuf> = parse_paths.into_iter().collect();
-                        let scanned = scan_specific_files(
-                            &parse_list,
-                            &config_clone.metadata_location,
-                        )
-                        .await;
+                        let scanned =
+                            scan_specific_files(&parse_list, &config_clone.metadata_location).await;
 
                         // ── 4. Filter + upsert ──────────────────────────
                         let mut upserted_items = Vec::new();
@@ -297,10 +290,7 @@ impl FileWatcher {
                             )
                             .await
                             {
-                                warn!(
-                                    "Failed to upsert item {:?}: {}",
-                                    si.item.file_path, e
-                                );
+                                warn!("Failed to upsert item {:?}: {}", si.item.file_path, e);
                             } else {
                                 upserted_items.push(si.item.clone());
                             }
@@ -314,73 +304,92 @@ impl FileWatcher {
 
                         // ── 5. Generate covers for changed items ─────────
                         if !upserted_items.is_empty()
-                            && let Err(e) = media::generate_covers(
-                                &upserted_items,
-                                &media_dirs.covers_dir,
-                            )
-                            .await
-                            {
-                                warn!("Failed to generate covers: {}", e);
-                            }
+                            && let Err(e) =
+                                media::generate_covers(&upserted_items, &media_dirs.covers_dir)
+                                    .await
+                        {
+                            warn!("Failed to generate covers: {}", e);
+                        }
 
-                        // ── 6. Stats reload if affected ──────────────────
+                        // ── 6. Load all item IDs (used for stats filtering + covers map) ──
+                        let all_item_ids: Option<Vec<String>> = match repo.load_all_item_ids().await
+                        {
+                            Ok(ids) => Some(ids),
+                            Err(e) => {
+                                warn!("Failed to load item IDs: {}", e);
+                                None
+                            }
+                        };
+
+                        // ── 7. Stats reload if affected ──────────────────
                         let mut reading_data: Option<ReadingData> = None;
 
                         if affected_domains.contains(&RevisionDomain::Stats)
                             && let Some(ref stats_path) = config_clone.statistics_db_path
-                                && stats_path.exists()
-                            {
-                                match StatisticsParser::parse(stats_path).await {
-                                    Ok(mut data) => {
-                                        if config_clone.min_pages_per_day.is_some()
-                                            || config_clone.min_time_per_day.is_some()
-                                        {
-                                            StatisticsCalculator::filter_stats(
-                                                &mut data,
-                                                &config_clone.time_config,
-                                                config_clone.min_pages_per_day,
-                                                config_clone.min_time_per_day,
-                                            );
-                                        }
-
-                                        if !config_clone.include_all_stats {
-                                            match repo.load_all_item_ids().await {
-                                                Ok(ids) => {
-                                                    let md5s: HashSet<String> =
-                                                        ids.into_iter().collect();
-                                                    StatisticsCalculator::filter_to_library(
-                                                        &mut data, &md5s,
-                                                    );
-                                                }
-                                                Err(e) => warn!(
-                                                    "Failed to load item IDs for stats filter: {}",
-                                                    e
-                                                ),
-                                            }
-                                        }
-
-                                        StatisticsCalculator::populate_completions(
+                            && stats_path.exists()
+                        {
+                            match StatisticsParser::parse(stats_path).await {
+                                Ok(mut data) => {
+                                    if config_clone.min_pages_per_day.is_some()
+                                        || config_clone.min_time_per_day.is_some()
+                                    {
+                                        StatisticsCalculator::filter_stats(
                                             &mut data,
                                             &config_clone.time_config,
+                                            config_clone.min_pages_per_day,
+                                            config_clone.min_time_per_day,
                                         );
-
-                                        let rd = ReadingData {
-                                            stats_data: data,
-                                            time_config: config_clone.time_config.clone(),
-                                            heatmap_scale_max: config_clone.heatmap_scale_max,
-                                        };
-
-                                        if let Some(ref store) = reading_data_store_clone {
-                                            store.replace(rd.clone());
-                                        }
-
-                                        reading_data = Some(rd);
                                     }
-                                    Err(e) => warn!("Failed to reload statistics: {}", e),
-                                }
-                            }
 
-                        // ── 7. Refresh SiteStore from DB ─────────────────
+                                    if !config_clone.include_all_stats
+                                        && let Some(ref ids) = all_item_ids
+                                    {
+                                        let md5s: HashSet<String> = ids.iter().cloned().collect();
+                                        StatisticsCalculator::filter_to_library(&mut data, &md5s);
+                                    }
+
+                                    StatisticsCalculator::populate_completions(
+                                        &mut data,
+                                        &config_clone.time_config,
+                                    );
+
+                                    let covers_by_md5 = all_item_ids
+                                        .as_ref()
+                                        .map(|ids| build_covers_by_md5(ids.iter()))
+                                        .unwrap_or_default();
+
+                                    let rd = ReadingData {
+                                        stats_data: data,
+                                        time_config: config_clone.time_config.clone(),
+                                        heatmap_scale_max: config_clone.heatmap_scale_max,
+                                        covers_by_md5,
+                                    };
+
+                                    if let Some(ref store) = reading_data_store_clone {
+                                        store.replace(rd.clone());
+                                    }
+
+                                    reading_data = Some(rd);
+                                }
+                                Err(e) => warn!("Failed to reload statistics: {}", e),
+                            }
+                        }
+
+                        // ── 7b. Refresh covers in existing ReadingData if library changed ──
+                        if reading_data.is_none()
+                            && (affected_domains.contains(&RevisionDomain::Library)
+                                || affected_domains.contains(&RevisionDomain::Assets))
+                            && let Some(ref store) = reading_data_store_clone
+                            && let Some(mut rd) = store.get().map(|rd| rd.as_ref().clone())
+                        {
+                            rd.covers_by_md5 = all_item_ids
+                                .as_ref()
+                                .map(|ids| build_covers_by_md5(ids.iter()))
+                                .unwrap_or_default();
+                            store.replace(rd);
+                        }
+
+                        // ── 8. Refresh SiteStore from DB ─────────────────
                         let generated_at = config_clone.time_config.now_rfc3339();
 
                         match repo.query_content_type_flags().await {
@@ -412,7 +421,7 @@ impl FileWatcher {
                             Err(e) => warn!("Failed to query content type flags: {}", e),
                         }
 
-                        // ── 8. SSE broadcast ─────────────────────────────
+                        // ── 9. SSE broadcast ─────────────────────────────
                         if let Some(ref update_notifier) = update_notifier_clone {
                             let update = update_notifier.publish_for_domains(
                                 generated_at.clone(),
@@ -424,12 +433,10 @@ impl FileWatcher {
                             );
                         }
 
-                        // ── 9. Static data re-export ─────────────────────
+                        // ── 10. Static data re-export ────────────────────
                         if !config_clone.is_internal_server {
                             // Resolve reading_data for export: freshly loaded or from store.
-                            let store_rd = reading_data_store_clone
-                                .as_ref()
-                                .and_then(|s| s.get());
+                            let store_rd = reading_data_store_clone.as_ref().and_then(|s| s.get());
                             let rd_ref = reading_data.as_ref().or(store_rd.as_deref());
 
                             let export_config = ExportConfig {
@@ -533,10 +540,8 @@ impl FileWatcher {
                     }
 
                     if let Some(ref update_notifier) = update_notifier_clone {
-                        let update = update_notifier.publish_for_domains(
-                            generated_at,
-                            affected_domains.iter().copied(),
-                        );
+                        let update = update_notifier
+                            .publish_for_domains(generated_at, affected_domains.iter().copied());
                         info!(
                             "Published data_changed event for domains {:?}, revision {:?}",
                             update.domains, update.revision,
@@ -737,10 +742,7 @@ async fn derive_book_path_from_metadata_path(
             match repo.find_book_path_by_metadata_path(&meta_str).await {
                 Ok(Some(book_path)) => Some(PathBuf::from(book_path)),
                 Ok(None) => {
-                    debug!(
-                        "No DB fingerprint for metadata path: {}",
-                        meta_str
-                    );
+                    debug!("No DB fingerprint for metadata path: {}", meta_str);
                     None
                 }
                 Err(e) => {
