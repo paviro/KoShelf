@@ -158,6 +158,7 @@ fn bucket_key(date: NaiveDate, group_by: MetricsGroupBy) -> String {
         MetricsGroupBy::Day => shared::bucket_key_day(date),
         MetricsGroupBy::Week => shared::bucket_key_week(date),
         MetricsGroupBy::Month => shared::bucket_key_month(date),
+        MetricsGroupBy::Year => shared::bucket_key_year(date),
     }
 }
 
@@ -194,6 +195,11 @@ fn all_bucket_keys(from: NaiveDate, to: NaiveDate, group_by: MetricsGroupBy) -> 
                 } else {
                     month += 1;
                 }
+            }
+        }
+        MetricsGroupBy::Year => {
+            for year in from.year()..=to.year() {
+                keys.push(format!("{year:04}"));
             }
         }
     }

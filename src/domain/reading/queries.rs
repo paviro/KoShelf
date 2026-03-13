@@ -118,6 +118,7 @@ pub enum MetricsGroupBy {
     Day,
     Week,
     Month,
+    Year,
 }
 
 impl MetricsGroupBy {
@@ -126,9 +127,10 @@ impl MetricsGroupBy {
             "day" => Ok(Self::Day),
             "week" => Ok(Self::Week),
             "month" => Ok(Self::Month),
+            "year" => Ok(Self::Year),
             _ => Err((
                 ApiErrorCode::InvalidQuery,
-                format!("'group_by' must be one of: day, week, month; got '{value}'"),
+                format!("'group_by' must be one of: day, week, month, year; got '{value}'"),
             )),
         }
     }
@@ -138,6 +140,7 @@ impl MetricsGroupBy {
             Self::Day => "day",
             Self::Week => "week",
             Self::Month => "month",
+            Self::Year => "year",
         }
     }
 }
@@ -516,8 +519,8 @@ mod tests {
     }
 
     #[test]
-    fn metrics_group_by_rejects_year() {
-        assert!(MetricsGroupBy::parse("year").is_err());
+    fn metrics_group_by_accepts_year() {
+        assert_eq!(MetricsGroupBy::parse("year").unwrap(), MetricsGroupBy::Year);
     }
 
     // ── PeriodSource ──────────────────────────────────────────────────
