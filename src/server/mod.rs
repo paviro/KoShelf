@@ -1,7 +1,7 @@
 //! Web server module.
 
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{DomainUpdateNotifier, SharedReadingDataStore, SharedSiteStore};
+use crate::runtime::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 
 pub mod api;
 pub mod web;
@@ -12,6 +12,6 @@ pub use web::WebServer;
 pub struct ServerState {
     pub site_store: SharedSiteStore,
     pub reading_data_store: SharedReadingDataStore,
-    pub update_notifier: DomainUpdateNotifier,
+    pub update_notifier: UpdateNotifier,
     pub library_repo: LibraryRepository,
 }

@@ -1,7 +1,7 @@
 use super::ServerState;
 use super::api;
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{DomainUpdateNotifier, SharedReadingDataStore, SharedSiteStore};
+use crate::runtime::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use anyhow::Result;
 use axum::{
     Router,
@@ -25,7 +25,7 @@ pub struct WebServer {
     port: u16,
     site_store: SharedSiteStore,
     reading_data_store: SharedReadingDataStore,
-    update_notifier: DomainUpdateNotifier,
+    update_notifier: UpdateNotifier,
     library_repo: LibraryRepository,
 }
 
@@ -35,7 +35,7 @@ impl WebServer {
         port: u16,
         site_store: SharedSiteStore,
         reading_data_store: SharedReadingDataStore,
-        update_notifier: DomainUpdateNotifier,
+        update_notifier: UpdateNotifier,
         library_repo: LibraryRepository,
     ) -> Self {
         Self {

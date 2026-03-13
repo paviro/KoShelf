@@ -12,7 +12,7 @@ use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::library::MetadataLocation;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::media::{self, resolve_media_dirs};
-use crate::runtime::{DomainUpdateNotifier, ReadingDataStore, RuntimeObservability, SiteStore};
+use crate::runtime::{ReadingDataStore, RuntimeObservability, SiteStore, UpdateNotifier};
 use crate::server::WebServer;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
@@ -349,7 +349,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 reading_data_store.replace(rd);
             }
 
-            let update_notifier = DomainUpdateNotifier::with_observability(
+            let update_notifier = UpdateNotifier::with_observability(
                 revision_epoch,
                 initial_generated_at,
                 observability.clone(),

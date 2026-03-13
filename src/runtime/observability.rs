@@ -1,6 +1,5 @@
-//! Runtime observability counters for rewamp migration phases.
+//! Runtime observability counters.
 
-use super::RevisionDomain;
 use serde::Serialize;
 use std::sync::{
     Arc,
@@ -40,14 +39,6 @@ pub struct RuntimeLatencySnapshot {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
-pub struct RuntimeInvalidationCounters {
-    pub library: u64,
-    pub metadata: u64,
-    pub stats: u64,
-    pub assets: u64,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct RuntimeDbRebuildCounters {
     pub corruption: u64,
     pub schema_mismatch: u64,
@@ -64,7 +55,7 @@ pub struct RuntimeObservabilitySnapshot {
     pub sqlite_list_query_latency: RuntimeLatencySnapshot,
     pub sqlite_detail_query_latency: RuntimeLatencySnapshot,
     pub db_rebuilds: RuntimeDbRebuildCounters,
-    pub invalidation_events: RuntimeInvalidationCounters,
+    pub invalidation_events: u64,
 }
 
 #[derive(Debug, Default)]
@@ -86,10 +77,7 @@ struct RuntimeObservabilityInner {
     db_rebuilds_corruption: AtomicU64,
     db_rebuilds_schema_mismatch: AtomicU64,
     db_rebuilds_parser_revision: AtomicU64,
-    invalidation_library: AtomicU64,
-    invalidation_metadata: AtomicU64,
-    invalidation_stats: AtomicU64,
-    invalidation_assets: AtomicU64,
+    invalidation_events: AtomicU64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -183,29 +171,10 @@ impl RuntimeObservability {
         }
     }
 
-    pub fn record_invalidation_event(&self, domain: RevisionDomain) {
-        match domain {
-            RevisionDomain::Library => {
-                self.inner
-                    .invalidation_library
-                    .fetch_add(1, Ordering::Relaxed);
-            }
-            RevisionDomain::Metadata => {
-                self.inner
-                    .invalidation_metadata
-                    .fetch_add(1, Ordering::Relaxed);
-            }
-            RevisionDomain::Stats => {
-                self.inner
-                    .invalidation_stats
-                    .fetch_add(1, Ordering::Relaxed);
-            }
-            RevisionDomain::Assets => {
-                self.inner
-                    .invalidation_assets
-                    .fetch_add(1, Ordering::Relaxed);
-            }
-        }
+    pub fn record_invalidation_event(&self) {
+        self.inner
+            .invalidation_events
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn snapshot(&self) -> RuntimeObservabilitySnapshot {
@@ -270,12 +239,7 @@ impl RuntimeObservability {
                     .db_rebuilds_parser_revision
                     .load(Ordering::Relaxed),
             },
-            invalidation_events: RuntimeInvalidationCounters {
-                library: self.inner.invalidation_library.load(Ordering::Relaxed),
-                metadata: self.inner.invalidation_metadata.load(Ordering::Relaxed),
-                stats: self.inner.invalidation_stats.load(Ordering::Relaxed),
-                assets: self.inner.invalidation_assets.load(Ordering::Relaxed),
-            },
+            invalidation_events: self.inner.invalidation_events.load(Ordering::Relaxed),
         }
     }
 }
@@ -299,7 +263,6 @@ mod tests {
     use super::{
         LibraryDbRebuildReason, RuntimeObservability, RuntimeReconcileCounters, SqliteRouteClass,
     };
-    use crate::runtime::RevisionDomain;
     use std::time::Duration;
 
     #[test]
@@ -363,10 +326,8 @@ mod tests {
         observability.record_db_rebuild(LibraryDbRebuildReason::SchemaMismatch);
         observability.record_db_rebuild(LibraryDbRebuildReason::Corruption);
 
-        observability.record_invalidation_event(RevisionDomain::Library);
-        observability.record_invalidation_event(RevisionDomain::Metadata);
-        observability.record_invalidation_event(RevisionDomain::Stats);
-        observability.record_invalidation_event(RevisionDomain::Stats);
+        observability.record_invalidation_event();
+        observability.record_invalidation_event();
 
         let snapshot = observability.snapshot();
         assert_eq!(snapshot.sqlite_list_query_latency.samples, 2);
@@ -376,9 +337,6 @@ mod tests {
         assert_eq!(snapshot.db_rebuilds.corruption, 2);
         assert_eq!(snapshot.db_rebuilds.schema_mismatch, 1);
         assert_eq!(snapshot.db_rebuilds.parser_revision, 0);
-        assert_eq!(snapshot.invalidation_events.library, 1);
-        assert_eq!(snapshot.invalidation_events.metadata, 1);
-        assert_eq!(snapshot.invalidation_events.stats, 2);
-        assert_eq!(snapshot.invalidation_events.assets, 0);
+        assert_eq!(snapshot.invalidation_events, 2);
     }
 }

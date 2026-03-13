@@ -6,7 +6,6 @@ pub mod media;
 pub mod observability;
 pub mod reading_data;
 pub mod recap;
-pub mod revisions;
 pub mod store;
 pub mod updates;
 
@@ -18,6 +17,5 @@ pub use observability::{
     RuntimeReconcileCounters, SqliteRouteClass,
 };
 pub use reading_data::{ReadingDataStore, SharedReadingDataStore};
-pub use revisions::{DomainRevision, DomainRevisionState, DomainRevisionTracker, RevisionDomain};
 pub use store::{SharedSiteStore, SiteStore};
-pub use updates::{DomainUpdate, DomainUpdateNotifier};
+pub use updates::{Update, UpdateNotifier};

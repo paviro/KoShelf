@@ -5,10 +5,10 @@ use axum::{
 use futures::stream;
 use std::{convert::Infallible, time::Duration};
 
-use crate::runtime::DomainUpdate;
+use crate::runtime::Update;
 use crate::server::ServerState;
 
-fn data_changed_event(update: &DomainUpdate) -> Event {
+fn data_changed_event(update: &Update) -> Event {
     let payload = match serde_json::to_string(update) {
         Ok(payload) => payload,
         Err(_) => "{}".to_string(),

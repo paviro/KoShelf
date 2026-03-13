@@ -5,13 +5,7 @@ import { api, isServeMode } from './api';
 
 interface DataChangedPayload {
     revision_epoch: string;
-    revision: {
-        library: number;
-        metadata: number;
-        stats: number;
-        assets: number;
-    };
-    domains: string[];
+    revision: number;
     generated_at: string;
 }
 
@@ -44,6 +38,9 @@ function parseDataChangedPayload(raw: string): DataChangedPayload | null {
 
     const payload = parsed as Record<string, unknown>;
     if (typeof payload.revision_epoch !== 'string') {
+        return null;
+    }
+    if (typeof payload.revision !== 'number') {
         return null;
     }
     if (typeof payload.generated_at !== 'string') {
@@ -81,7 +78,7 @@ function invalidateRuntimeQueries(queryClient: QueryClient): void {
 
 export function RuntimeUpdatesBridge() {
     const queryClient = useQueryClient();
-    const lastRevisionEpochRef = useRef<string | null>(null);
+    const lastRevisionRef = useRef<number | null>(null);
     const lastGeneratedAtRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -103,13 +100,13 @@ export function RuntimeUpdatesBridge() {
             }
 
             if (
-                lastRevisionEpochRef.current !== null &&
-                payload.revision_epoch === lastRevisionEpochRef.current
+                lastRevisionRef.current !== null &&
+                payload.revision <= lastRevisionRef.current
             ) {
                 return;
             }
 
-            lastRevisionEpochRef.current = payload.revision_epoch;
+            lastRevisionRef.current = payload.revision;
             invalidateRuntimeQueries(queryClient);
         };
 

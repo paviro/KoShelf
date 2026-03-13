@@ -11,8 +11,7 @@ use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::build_covers_by_md5;
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::{
-    DomainUpdateNotifier, RevisionDomain, RuntimeObservability, SharedReadingDataStore,
-    SharedSiteStore,
+    RuntimeObservability, SharedReadingDataStore, SharedSiteStore, UpdateNotifier,
 };
 use anyhow::Result;
 use log::{debug, info, warn};
@@ -27,9 +26,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
-/// Payload sent through the rebuild channel: affected domains + raw file paths.
+/// Payload sent through the rebuild channel: raw file paths that triggered the rebuild.
 struct WatcherRebuildEvent {
-    domains: Vec<RevisionDomain>,
     paths: Vec<PathBuf>,
 }
 
@@ -37,7 +35,7 @@ pub struct FileWatcher {
     config: SiteConfig,
     site_store: Option<SharedSiteStore>,
     reading_data_store: Option<SharedReadingDataStore>,
-    update_notifier: Option<DomainUpdateNotifier>,
+    update_notifier: Option<UpdateNotifier>,
     library_repo: Option<LibraryRepository>,
     observability: RuntimeObservability,
 }
@@ -74,7 +72,7 @@ impl FileWatcher {
         config: SiteConfig,
         site_store: Option<SharedSiteStore>,
         reading_data_store: Option<SharedReadingDataStore>,
-        update_notifier: Option<DomainUpdateNotifier>,
+        update_notifier: Option<UpdateNotifier>,
         library_repo: Option<LibraryRepository>,
         observability: RuntimeObservability,
     ) -> Self {
@@ -168,9 +166,7 @@ impl FileWatcher {
                     observability_clone.set_watcher_queue_depth(current_depth);
                     let queued_at = Instant::now();
 
-                    // Accumulate affected domains + paths across the debounce window.
-                    let mut affected_domains: HashSet<RevisionDomain> =
-                        initial_event.domains.into_iter().collect();
+                    // Accumulate paths across the debounce window.
                     let mut accumulated_paths: HashSet<PathBuf> =
                         initial_event.paths.into_iter().collect();
 
@@ -181,9 +177,17 @@ impl FileWatcher {
                         let current_depth =
                             decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
                         observability_clone.set_watcher_queue_depth(current_depth);
-                        affected_domains.extend(event.domains);
                         accumulated_paths.extend(event.paths);
                     }
+
+                    // Derive what changed from the accumulated paths.
+                    let stats_changed = config_clone
+                        .statistics_db_path
+                        .as_ref()
+                        .is_some_and(|sp| accumulated_paths.contains(sp));
+                    let library_changed = accumulated_paths
+                        .iter()
+                        .any(|p| LibraryItemFormat::from_path(p).is_some());
 
                     // ── Targeted rebuild (when library DB is available) ──
                     if let Some(ref repo) = library_repo_clone {
@@ -324,7 +328,7 @@ impl FileWatcher {
                         // ── 7. Stats reload if affected ──────────────────
                         let mut reading_data: Option<ReadingData> = None;
 
-                        if affected_domains.contains(&RevisionDomain::Stats)
+                        if stats_changed
                             && let Some(ref stats_path) = config_clone.statistics_db_path
                             && stats_path.exists()
                         {
@@ -377,8 +381,7 @@ impl FileWatcher {
 
                         // ── 7b. Refresh covers in existing ReadingData if library changed ──
                         if reading_data.is_none()
-                            && (affected_domains.contains(&RevisionDomain::Library)
-                                || affected_domains.contains(&RevisionDomain::Assets))
+                            && library_changed
                             && let Some(ref store) = reading_data_store_clone
                             && let Some(mut rd) = store.get().map(|rd| rd.as_ref().clone())
                         {
@@ -423,14 +426,8 @@ impl FileWatcher {
 
                         // ── 9. SSE broadcast ─────────────────────────────
                         if let Some(ref update_notifier) = update_notifier_clone {
-                            let update = update_notifier.publish_for_domains(
-                                generated_at.clone(),
-                                affected_domains.iter().copied(),
-                            );
-                            info!(
-                                "Published data_changed event for domains {:?}, revision {:?}",
-                                update.domains, update.revision,
-                            );
+                            let update = update_notifier.publish(generated_at.clone());
+                            info!("Published data_changed event, revision {}", update.revision,);
                         }
 
                         // ── 10. Static data re-export ────────────────────
@@ -540,12 +537,8 @@ impl FileWatcher {
                     }
 
                     if let Some(ref update_notifier) = update_notifier_clone {
-                        let update = update_notifier
-                            .publish_for_domains(generated_at, affected_domains.iter().copied());
-                        info!(
-                            "Published data_changed event for domains {:?}, revision {:?}",
-                            update.domains, update.revision,
-                        );
+                        let update = update_notifier.publish(generated_at);
+                        info!("Published data_changed event, revision {}", update.revision,);
                     }
 
                     info!("Full rebuild completed successfully");
@@ -556,14 +549,10 @@ impl FileWatcher {
 
         // Main file event processing loop
         while let Some(event) = file_rx.recv().await {
-            let domains = self.classify_event_domains(&event);
-            if !domains.is_empty() {
+            if self.is_relevant_event(&event) {
                 self.log_file_event(&event);
 
-                let rebuild_event = WatcherRebuildEvent {
-                    domains,
-                    paths: event.paths,
-                };
+                let rebuild_event = WatcherRebuildEvent { paths: event.paths };
 
                 if rebuild_tx.send(rebuild_event).is_ok() {
                     let queued_depth = pending_rebuilds
@@ -578,82 +567,29 @@ impl FileWatcher {
         Ok(())
     }
 
-    /// Classify a file-system event into the revision domains it affects.
-    ///
-    /// Returns an empty vec for events that should be ignored.
-    fn classify_event_domains(&self, event: &Event) -> Vec<RevisionDomain> {
-        let dominated_domains = match &event.kind {
+    /// Check whether a file-system event contains changes we care about.
+    fn is_relevant_event(&self, event: &Event) -> bool {
+        match &event.kind {
             EventKind::Create(_) | EventKind::Remove(_) => {
-                self.classify_paths_to_domains(&event.paths)
+                self.paths_contain_relevant_files(&event.paths)
             }
             EventKind::Modify(modify_kind) => {
                 use notify::event::ModifyKind;
                 match modify_kind {
-                    ModifyKind::Data(_) => self.classify_paths_to_domains(&event.paths),
-                    ModifyKind::Name(_) => {
-                        if self.paths_contain_relevant_files(&event.paths) {
-                            vec![
-                                RevisionDomain::Library,
-                                RevisionDomain::Metadata,
-                                RevisionDomain::Assets,
-                            ]
-                        } else {
-                            vec![]
-                        }
-                    }
-                    ModifyKind::Any => {
-                        debug!("Processing Modify(Any) event: {:?}", event);
-                        self.classify_paths_to_domains(&event.paths)
+                    ModifyKind::Data(_) | ModifyKind::Name(_) | ModifyKind::Any => {
+                        self.paths_contain_relevant_files(&event.paths)
                     }
                     _ => {
                         debug!("Ignoring modify event: {:?}", modify_kind);
-                        vec![]
+                        false
                     }
                 }
             }
             _ => {
                 debug!("Ignoring event kind: {:?}", event.kind);
-                vec![]
-            }
-        };
-
-        // Deduplicate while preserving deterministic order.
-        let mut seen = HashSet::new();
-        dominated_domains
-            .into_iter()
-            .filter(|d| seen.insert(*d))
-            .collect()
-    }
-
-    fn classify_paths_to_domains(&self, paths: &[std::path::PathBuf]) -> Vec<RevisionDomain> {
-        let mut domains = Vec::new();
-        for path in paths {
-            let filename = path.file_name().and_then(|s| s.to_str());
-
-            if LibraryItemFormat::from_path(path).is_some() {
-                domains.push(RevisionDomain::Library);
-                domains.push(RevisionDomain::Assets);
-            }
-
-            if let Some(filename) = filename
-                && LibraryItemFormat::is_metadata_file(filename)
-            {
-                domains.push(RevisionDomain::Metadata);
-            }
-
-            if let Some(filename) = filename
-                && filename.ends_with(".sdr")
-            {
-                domains.push(RevisionDomain::Metadata);
-            }
-
-            if let Some(ref stats_path) = self.statistics_db_path
-                && path == stats_path
-            {
-                domains.push(RevisionDomain::Stats);
+                false
             }
         }
-        domains
     }
 
     fn paths_contain_relevant_files(&self, paths: &[std::path::PathBuf]) -> bool {
