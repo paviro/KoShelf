@@ -8,5 +8,5 @@ pub mod sqlite;
 pub mod stores;
 pub mod watcher;
 
-pub use scanner::{MetadataLocation, ScannedItem, scan_library, scan_specific_files};
+pub use scanner::MetadataLocation;
 pub use watcher::FileWatcher;

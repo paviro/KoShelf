@@ -143,13 +143,10 @@ impl FileWatcher {
                         )
                         .await
                     } else {
-                        crate::runtime::rebuild::full_rebuild(
-                            &config_clone,
-                            site_store_clone.as_ref(),
-                            reading_data_store_clone.as_ref(),
-                            update_notifier_clone.as_ref(),
-                        )
-                        .await
+                        warn!(
+                            "No library repository available for rebuild — this should not happen"
+                        );
+                        continue;
                     };
 
                     if let Err(e) = result {

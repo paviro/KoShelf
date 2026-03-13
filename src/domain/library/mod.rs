@@ -1,11 +1,10 @@
-//! Library-domain boundaries for list/detail queries and build/update orchestration.
+//! Library-domain boundaries for list/detail queries and item persistence.
 
 pub mod build;
-pub mod collision;
 pub mod item_mapping;
 pub mod queries;
 pub mod service;
 
-pub use build::{LibraryBuildMode, LibraryBuildPipeline, LibraryBuildResult, upsert_single_item};
+pub use build::upsert_single_item;
 pub use queries::{IncludeSet, LibraryDetailQuery, LibraryListQuery};
 pub use service::{detail, list};

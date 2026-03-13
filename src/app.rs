@@ -1,7 +1,6 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
 use crate::contracts::site::{SiteCapabilities, SiteData};
-use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
@@ -11,13 +10,14 @@ use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::infra::stores::{ReadingDataStore, SiteStore, UpdateNotifier};
 use crate::runtime::export::{ExportConfig, export_data_files};
+use crate::runtime::ingest::{load_reading_data, update_library};
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::server::WebServer;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;
+use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Instant;
 use tempfile::TempDir;
 
 enum RunMode {
@@ -170,47 +170,55 @@ pub async fn run(cli: Cli) -> Result<()> {
         runtime_data_policy,
     };
 
-    // ── Media directories: create before ingest so covers can be written during scan
+    // ── 1. Create DB (always) ──────────────────────────────────────────
+    let db_path = config
+        .runtime_data_policy
+        .library_db_path()
+        .context("Failed to resolve library DB path")?;
+    let pool = open_library_pool(&db_path)
+        .await
+        .context("Failed to open library DB")?;
+    run_library_migrations(&pool)
+        .await
+        .context("Failed to run library DB migrations")?;
+    let repo = LibraryRepository::new(pool);
+
+    // ── 2. Create media directories ────────────────────────────────────
     let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
     media::create_media_directories(&media_dirs)?;
 
-    // ── Shared ingest: scan library + load statistics (single pass) ──────
-    // Covers are generated inline during scanning with bounded concurrency.
-    let startup_started_at = Instant::now();
+    // ── 3. Update library ─────────────────────────────────────────────
+    if !config.library_paths.is_empty() {
+        update_library(&config, &repo, &media_dirs.covers_dir).await?;
 
-    let ingest_result = crate::runtime::ingest(&config, Some(&media_dirs.covers_dir)).await?;
-    let reading_data = ingest_result.reading_data(&config);
-    let has_reading_data = ingest_result.has_reading_data();
+        // Cleanup stale covers
+        match repo.load_all_item_ids().await {
+            Ok(ids) => {
+                let id_set: HashSet<String> = ids.into_iter().collect();
+                media::cleanup_stale_covers_by_ids(&id_set, &media_dirs.covers_dir)?;
+            }
+            Err(e) => log::warn!("Failed to load item IDs for cover cleanup: {}", e),
+        }
+    }
 
-    info!(
-        "Library scan completed in {} ms ({} scanned, {} after filtering)",
-        startup_started_at.elapsed().as_millis(),
-        ingest_result.raw_items.len(),
-        ingest_result.filtered_items.len(),
-    );
+    // ── 4. Load statistics ─────────────────────────────────────────────
+    let reading_data = load_reading_data(&config, &repo).await?;
+    let has_reading_data = reading_data
+        .as_ref()
+        .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
 
-    // Destructure so raw_items can be consumed by the library DB pipeline
-    // while filtered_items and stats_data remain available.
-    let crate::runtime::IngestResult {
-        raw_items,
-        filtered_items,
-        stats_data,
-        ..
-    } = ingest_result;
-
-    // ── Media assets: cleanup stale covers, recap images, static frontend
-    let filtered_ids: std::collections::HashSet<String> =
-        filtered_items.iter().map(|i| i.id.clone()).collect();
-    media::cleanup_stale_covers_by_ids(&filtered_ids, &media_dirs.covers_dir)?;
-
+    // ── 5. Sync static frontend ────────────────────────────────────────
     if !is_internal_server {
         media::sync_static_frontend(&config.output_dir, has_reading_data)?;
     }
 
-    if let Some(ref sd) = stats_data {
+    // ── 6. Generate recap images ───────────────────────────────────────
+    if let Some(ref rd) = reading_data {
+        // Recap share images only use aggregate stats (yearly summaries),
+        // not individual item data, so an empty items slice is fine.
         crate::runtime::recap::generate_recap_share_images(
-            sd,
-            &filtered_items,
+            &rd.stats_data,
+            &[],
             config.use_stable_page_metadata,
             &media_dirs.recap_dir,
             config.statistics_db_path.as_deref(),
@@ -219,95 +227,35 @@ pub async fn run(cli: Cli) -> Result<()> {
         .await?;
     }
 
-    // ── Library DB pipeline: populate library.sqlite ─────────────────────
-    let library_repo = if let Some(db_path) = config.runtime_data_policy.library_db_path() {
-        let db_build_start = Instant::now();
-        let pool = open_library_pool(&db_path)
-            .await
-            .context("Failed to open library DB for build pipeline")?;
-        run_library_migrations(&pool)
-            .await
-            .context("Failed to run library DB migrations")?;
-
-        let repo = LibraryRepository::new(pool);
-
-        let build_mode = if config.runtime_data_policy.is_persistent() {
-            let count = repo.count_items().await.unwrap_or(0);
-            if count > 0 {
-                LibraryBuildMode::Incremental
-            } else {
-                LibraryBuildMode::Full
-            }
-        } else {
-            LibraryBuildMode::Full
-        };
-
-        let pipeline = LibraryBuildPipeline::new(
-            &repo,
-            config.include_unread,
-            config.use_stable_page_metadata,
-            &config.time_config,
-        );
-
-        let result = pipeline.build(build_mode, raw_items).await?;
-        info!(
-            "Library DB build ({:?}) completed in {} ms: {} scanned, {} upserted, {} removed, {} collisions",
-            build_mode,
-            db_build_start.elapsed().as_millis(),
-            result.scanned_files,
-            result.upserted_items,
-            result.removed_items,
-            result.collision_count,
-        );
-
-        Some(repo)
-    } else {
-        None
+    // ── 7. Build site metadata from DB ─────────────────────────────────
+    let generated_at = config.time_config.now_rfc3339();
+    let (has_books, has_comics) = repo.query_content_type_flags().await?;
+    let site_data = SiteData {
+        title: config.site_title.clone(),
+        language: config.language.clone(),
+        capabilities: SiteCapabilities {
+            has_books,
+            has_comics,
+            has_reading_data,
+        },
     };
 
-    // ── Static data file export ─────────────────────────────────────────
-    if !is_internal_server && let Some(ref repo) = library_repo {
+    // ── 8. Static data file export ─────────────────────────────────────
+    if !is_internal_server {
         let export_config = ExportConfig {
             site_title: cli.title.clone(),
             language: cli.language.clone(),
         };
         export_data_files(
             &plan.output_dir.join("data"),
-            repo,
+            &repo,
             reading_data.as_ref(),
             &export_config,
         )
         .await?;
     }
 
-    // ── Build site metadata ─────────────────────────────────────────────
-    let generated_at = config.time_config.now_rfc3339();
-    let site_data = if let Some(ref repo) = library_repo {
-        let (has_books, has_comics) = repo.query_content_type_flags().await?;
-        SiteData {
-            title: config.site_title.clone(),
-            language: config.language.clone(),
-            capabilities: SiteCapabilities {
-                has_books,
-                has_comics,
-                has_reading_data,
-            },
-        }
-    } else {
-        SiteData::from_items(
-            &filtered_items,
-            has_reading_data,
-            &config.site_title,
-            &config.language,
-        )
-    };
-
-    // These were only needed for startup — drop before entering the long-lived
-    // serve/watch loop to release all remaining item and stats memory.
-    // (reading_data is kept alive — it gets moved into the store in Serve mode.)
-    drop(filtered_items);
-    drop(stats_data);
-
+    // ── 9. Enter run mode ──────────────────────────────────────────────
     match plan.mode {
         RunMode::StaticExport => {
             info!("Static export completed.");
@@ -317,7 +265,7 @@ pub async fn run(cli: Cli) -> Result<()> {
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
             let file_watcher =
-                crate::infra::watcher::FileWatcher::new(config, None, None, None, library_repo);
+                crate::infra::watcher::FileWatcher::new(config, None, None, None, Some(repo));
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -325,8 +273,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
 
         RunMode::Serve => {
-            let library_repo = library_repo.context("Library DB is required for serve mode")?;
-
             let revision_epoch = format!("serve_{}", &generated_at);
             let initial_generated_at = generated_at;
 
@@ -346,7 +292,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 Some(site_store.clone()),
                 Some(reading_data_store.clone()),
                 Some(update_notifier.clone()),
-                Some(library_repo.clone()),
+                Some(repo.clone()),
             );
 
             // Start web server (runtime media cache is served from `plan.output_dir`).
@@ -356,7 +302,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 site_store,
                 reading_data_store,
                 update_notifier,
-                library_repo,
+                repo,
             );
 
             // Run both file watcher and web server concurrently

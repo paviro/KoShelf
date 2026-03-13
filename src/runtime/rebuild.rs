@@ -5,16 +5,12 @@
 
 use crate::config::SiteConfig;
 use crate::contracts::site::{SiteCapabilities, SiteData};
-use crate::domain::library::upsert_single_item;
-use crate::domain::reading::StatisticsCalculator;
-use crate::infra::scanner::{MetadataLocation, scan_specific_files};
+use crate::infra::scanner::{MetadataLocation, collect_paths};
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::ReadingData;
 use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
-use crate::koreader::StatisticsParser;
-use crate::models::{BookStatus, LibraryItemFormat};
+use crate::models::LibraryItemFormat;
 use crate::runtime::export::{ExportConfig, export_data_files};
-use crate::runtime::ingest::build_covers_by_md5;
+use crate::runtime::ingest::{build_covers_by_md5, ingest_paths, load_reading_data};
 use crate::runtime::media::{self, resolve_media_dirs};
 use anyhow::Result;
 use log::{debug, info, warn};
@@ -110,135 +106,49 @@ pub async fn targeted_rebuild(
         }
     }
 
-    // ── 3. Parse changed/new files ───────────────────────────────────
+    // ── 3. Ingest changed/new paths ──────────────────────────────────
     let parse_list: Vec<PathBuf> = parse_paths.into_iter().collect();
-    let scanned = scan_specific_files(&parse_list, &config.metadata_location).await;
+    let ingest_stats = ingest_paths(&parse_list, config, repo, &media_dirs.covers_dir).await?;
 
-    // ── 4. Filter + upsert ──────────────────────────────────────────
-    let mut upserted_items = Vec::new();
-    for si in &scanned {
-        if si.item.koreader_metadata.is_none()
-            && !(config.include_unread && si.item.status() == BookStatus::Unknown)
-        {
-            continue;
-        }
-
-        if let Err(e) = upsert_single_item(
-            repo,
-            &si.item,
-            si.metadata_path.as_deref(),
-            config.use_stable_page_metadata,
-            &config.time_config,
-        )
-        .await
-        {
-            warn!("Failed to upsert item {:?}: {}", si.item.file_path, e);
-        } else {
-            upserted_items.push(si.item.clone());
-        }
-    }
-
-    info!(
-        "Targeted rebuild: {} upserted, {} deleted",
-        upserted_items.len(),
-        deleted_count
-    );
-
-    // ── 5. Generate covers for changed items ─────────────────────────
-    if !upserted_items.is_empty()
-        && let Err(e) = media::generate_covers(&upserted_items, &media_dirs.covers_dir).await
-    {
-        warn!("Failed to generate covers: {}", e);
-    }
-
-    // Cover data has been written to disk — free the raw image bytes.
-    drop(scanned);
-    for item in &mut upserted_items {
-        item.book_info.cover_data = None;
-    }
-
-    // ── 6. Load all item IDs (used for stats filtering + covers map) ──
-    let all_item_ids: Option<Vec<String>> = match repo.load_all_item_ids().await {
-        Ok(ids) => Some(ids),
-        Err(e) => {
-            warn!("Failed to load item IDs: {}", e);
-            None
-        }
-    };
-
-    // ── 7. Stats reload if affected ──────────────────────────────────
-    let mut reading_data: Option<ReadingData> = None;
+    // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
 
-    if stats_changed
-        && let Some(ref stats_path) = config.statistics_db_path
-        && stats_path.exists()
-    {
-        match StatisticsParser::parse(stats_path).await {
-            Ok(mut data) => {
-                if config.min_pages_per_day.is_some() || config.min_time_per_day.is_some() {
-                    StatisticsCalculator::filter_stats(
-                        &mut data,
-                        &config.time_config,
-                        config.min_pages_per_day,
-                        config.min_time_per_day,
-                    );
-                }
-
-                if !config.include_all_stats
-                    && let Some(ref ids) = all_item_ids
-                {
-                    let md5s: HashSet<String> = ids.iter().cloned().collect();
-                    StatisticsCalculator::filter_to_library(&mut data, &md5s);
-                }
-
-                StatisticsCalculator::populate_completions(&mut data, &config.time_config);
-
-                let covers_by_md5 = all_item_ids
-                    .as_ref()
-                    .map(|ids| build_covers_by_md5(ids.iter()))
-                    .unwrap_or_default();
-
-                let rd = ReadingData {
-                    stats_data: data,
-                    time_config: config.time_config.clone(),
-                    heatmap_scale_max: config.heatmap_scale_max,
-                    covers_by_md5,
-                };
-
+    if stats_changed {
+        match load_reading_data(config, repo).await {
+            Ok(Some(rd)) => {
                 if let Some(store) = reading_data_store {
-                    store.replace(rd.clone());
+                    store.replace(rd);
                 }
-
-                reading_data = Some(rd);
                 stats_reloaded = true;
             }
+            Ok(None) => {}
             Err(e) => warn!("Failed to reload statistics: {}", e),
         }
     }
 
-    // ── 7b. Refresh covers in existing ReadingData if library changed ──
-    if reading_data.is_none()
+    // ── 4b. Refresh covers in existing ReadingData if library changed ──
+    if !stats_reloaded
         && library_changed
         && let Some(store) = reading_data_store
         && let Some(mut rd) = store.get().map(|rd| rd.as_ref().clone())
     {
-        rd.covers_by_md5 = all_item_ids
-            .as_ref()
-            .map(|ids| build_covers_by_md5(ids.iter()))
-            .unwrap_or_default();
-        store.replace(rd);
+        match repo.load_all_item_ids().await {
+            Ok(ids) => {
+                rd.covers_by_md5 = build_covers_by_md5(ids.iter());
+                store.replace(rd);
+            }
+            Err(e) => warn!("Failed to refresh covers: {}", e),
+        }
     }
 
-    // ── 8. Refresh SiteStore from DB ─────────────────────────────────
+    // ── 5. Refresh SiteStore from DB ─────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
 
     match repo.query_content_type_flags().await {
         Ok((has_books, has_comics)) => {
-            let has_reading_data = reading_data.is_some()
-                || reading_data_store
-                    .and_then(|s| s.get())
-                    .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
+            let has_reading_data = reading_data_store
+                .and_then(|s| s.get())
+                .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
 
             let site_data = SiteData {
                 title: config.site_title.clone(),
@@ -257,7 +167,7 @@ pub async fn targeted_rebuild(
         Err(e) => warn!("Failed to query content type flags: {}", e),
     }
 
-    // ── 9. SSE broadcast ─────────────────────────────────────────────
+    // ── 6. SSE broadcast ─────────────────────────────────────────────
     let published_revision = if let Some(notifier) = update_notifier {
         let update = notifier.publish(generated_at.clone());
         info!("Published data_changed event, revision {}", update.revision);
@@ -266,10 +176,10 @@ pub async fn targeted_rebuild(
         None
     };
 
-    // ── 10. Static data re-export ────────────────────────────────────
+    // ── 7. Static data re-export ────────────────────────────────────
     if !config.is_internal_server {
         let store_rd = reading_data_store.and_then(|s| s.get());
-        let rd_ref = reading_data.as_ref().or(store_rd.as_deref());
+        let rd_ref = store_rd.as_deref();
 
         let export_config = ExportConfig {
             site_title: config.site_title.clone(),
@@ -290,21 +200,24 @@ pub async fn targeted_rebuild(
     info!("Targeted rebuild completed successfully");
 
     Ok(RebuildResult {
-        upserted: upserted_items.len() as u64,
+        upserted: ingest_stats.upserted,
         deleted: deleted_count,
         stats_reloaded,
         published_revision,
     })
 }
 
-/// Full rebuild: re-ingest everything (fallback when no library DB is available).
+/// Full rebuild: re-ingest everything from scratch.
+///
+/// Clears the DB, re-scans, and re-ingests all paths.
 pub async fn full_rebuild(
     config: &SiteConfig,
+    repo: &LibraryRepository,
     site_store: Option<&SharedSiteStore>,
     reading_data_store: Option<&SharedReadingDataStore>,
     update_notifier: Option<&UpdateNotifier>,
 ) -> Result<RebuildResult> {
-    info!("Starting full rebuild (no library DB available)");
+    info!("Starting full rebuild");
 
     let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
 
@@ -312,43 +225,62 @@ pub async fn full_rebuild(
         warn!("Failed to create media directories: {}", e);
     }
 
-    // Covers are generated inline during scanning.
-    let ingest_result = crate::runtime::ingest(config, Some(&media_dirs.covers_dir)).await?;
-    let reading_data = ingest_result.reading_data(config);
+    // Clear DB and re-ingest
+    repo.clear_all().await?;
+
+    let paths = collect_paths(&config.library_paths);
+    let ingest_stats = ingest_paths(&paths, config, repo, &media_dirs.covers_dir).await?;
+
+    // Cleanup stale covers
+    match repo.load_all_item_ids().await {
+        Ok(ids) => {
+            let id_set: HashSet<String> = ids.into_iter().collect();
+            if let Err(e) = media::cleanup_stale_covers_by_ids(&id_set, &media_dirs.covers_dir) {
+                warn!("Failed to cleanup stale covers: {}", e);
+            }
+        }
+        Err(e) => warn!("Failed to load item IDs for cover cleanup: {}", e),
+    }
 
     if !config.is_internal_server
         && let Err(e) =
-            media::sync_static_frontend(&config.output_dir, ingest_result.has_reading_data())
+            media::sync_static_frontend(&config.output_dir, config.statistics_db_path.is_some())
     {
         warn!("Failed to sync static frontend: {}", e);
     }
 
-    let filtered_ids: HashSet<String> = ingest_result
-        .filtered_items
-        .iter()
-        .map(|i| i.id.clone())
-        .collect();
-    if let Err(e) = media::cleanup_stale_covers_by_ids(&filtered_ids, &media_dirs.covers_dir) {
-        warn!("Failed to cleanup stale covers: {}", e);
-    }
-
-    let generated_at = config.time_config.now_rfc3339();
-
-    let site_data = SiteData::from_items(
-        &ingest_result.filtered_items,
-        ingest_result.has_reading_data(),
-        &config.site_title,
-        &config.language,
-    );
-
-    if let Some(store) = site_store {
-        store.replace(site_data);
-    }
+    // Load stats
+    let reading_data = load_reading_data(config, repo).await?;
 
     if let Some(store) = reading_data_store
         && let Some(ref rd) = reading_data
     {
         store.replace(rd.clone());
+    }
+
+    let generated_at = config.time_config.now_rfc3339();
+
+    // Build site metadata from DB
+    let (has_books, has_comics) = repo
+        .query_content_type_flags()
+        .await
+        .unwrap_or((false, false));
+    let has_reading_data = reading_data
+        .as_ref()
+        .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
+
+    let site_data = SiteData {
+        title: config.site_title.clone(),
+        language: config.language.clone(),
+        capabilities: SiteCapabilities {
+            has_books,
+            has_comics,
+            has_reading_data,
+        },
+    };
+
+    if let Some(store) = site_store {
+        store.replace(site_data);
     }
 
     let published_revision = if let Some(notifier) = update_notifier {
@@ -359,10 +291,28 @@ pub async fn full_rebuild(
         None
     };
 
+    // Static data re-export
+    if !config.is_internal_server {
+        let export_config = ExportConfig {
+            site_title: config.site_title.clone(),
+            language: config.language.clone(),
+        };
+        if let Err(e) = export_data_files(
+            &config.output_dir.join("data"),
+            repo,
+            reading_data.as_ref(),
+            &export_config,
+        )
+        .await
+        {
+            warn!("Failed to re-export data files: {}", e);
+        }
+    }
+
     info!("Full rebuild completed successfully");
 
     Ok(RebuildResult {
-        upserted: ingest_result.filtered_items.len() as u64,
+        upserted: ingest_stats.upserted,
         deleted: 0,
         stats_reloaded: reading_data.is_some(),
         published_revision,

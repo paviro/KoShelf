@@ -157,6 +157,46 @@ impl LibraryRepository {
             .context("Failed to count items")?;
         Ok(row.0)
     }
+
+    /// Find the file_path for an item by its canonical ID.
+    ///
+    /// Used by ingest for duplicate detection (same MD5, different path).
+    pub async fn find_book_path_by_id(&self, item_id: &str) -> Result<Option<String>> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT file_path FROM library_items WHERE id = ?1")
+                .bind(item_id)
+                .fetch_optional(&self.pool)
+                .await
+                .context("Failed to find book path by id")?;
+
+        Ok(row.map(|r| r.0))
+    }
+
+    /// Load a mapping of item ID → content type for all items.
+    ///
+    /// Used by statistics loading to tag stats entries by content type
+    /// without needing in-memory items.
+    pub async fn load_content_types_by_id(
+        &self,
+    ) -> Result<std::collections::HashMap<String, crate::models::ContentType>> {
+        let rows: Vec<(String, String)> =
+            sqlx::query_as("SELECT id, content_type FROM library_items")
+                .fetch_all(&self.pool)
+                .await
+                .context("Failed to load content types")?;
+
+        Ok(rows
+            .into_iter()
+            .filter_map(|(id, ct)| {
+                let content_type = match ct.as_str() {
+                    "book" => crate::models::ContentType::Book,
+                    "comic" => crate::models::ContentType::Comic,
+                    _ => return None,
+                };
+                Some((id, content_type))
+            })
+            .collect())
+    }
 }
 
 #[cfg(test)]

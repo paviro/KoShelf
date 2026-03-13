@@ -6,5 +6,5 @@ pub mod media;
 pub mod rebuild;
 pub mod recap;
 
-pub use ingest::{IngestResult, ingest};
+pub use ingest::{IngestStats, ingest_paths};
 pub use media::MediaDirs;
