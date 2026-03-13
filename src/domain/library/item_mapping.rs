@@ -158,18 +158,6 @@ pub fn capture_fingerprint_row(
     })
 }
 
-/// Derive the InBookFolder metadata path for an item: `{book_stem}.sdr/{metadata_filename}`.
-///
-/// Returns `None` when the item has no KOReader metadata or the path cannot be
-/// constructed.  Only valid for the default `InBookFolder` metadata location.
-pub fn derive_in_book_folder_metadata_path(item: &LibraryItem) -> Option<std::path::PathBuf> {
-    item.koreader_metadata.as_ref()?;
-    let parent = item.file_path.parent()?;
-    let stem = item.file_path.file_stem()?.to_str()?;
-    let sdr_dir = parent.join(format!("{}.sdr", stem));
-    Some(sdr_dir.join(item.format.metadata_filename()))
-}
-
 fn format_str(format: LibraryItemFormat) -> &'static str {
     match format {
         LibraryItemFormat::Epub => "epub",

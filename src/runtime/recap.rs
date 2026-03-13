@@ -22,7 +22,7 @@ use std::time::{Instant, SystemTime};
 /// Scaling factors for converting rendered page numbers to synthetic stable-page
 /// equivalents used by KOReader.
 #[derive(Debug, Clone)]
-pub struct PageScaling {
+struct PageScaling {
     enabled: bool,
     factor_by_md5: HashMap<String, f64>,
 }
@@ -108,7 +108,7 @@ impl PageScaling {
         }
     }
 
-    pub fn scale_pages_with_factor(pages: i64, factor: f64) -> i64 {
+    fn scale_pages_with_factor(pages: i64, factor: f64) -> i64 {
         if pages <= 0 || !factor.is_finite() || factor <= 0.0 {
             return 0;
         }
