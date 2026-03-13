@@ -7,6 +7,7 @@ pub mod metrics;
 pub mod queries;
 pub mod shared;
 pub mod summary;
+pub mod types;
 
 pub use available_periods::available_periods;
 pub use calendar::reading_calendar as calendar;

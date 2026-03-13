@@ -1,16 +1,17 @@
-pub mod calendar;
-pub mod completions;
 pub mod koreader_metadata;
 pub mod library_item;
-pub(crate) mod merge_precedence;
-pub mod reading_data;
-pub mod recap;
-pub mod statistics;
 
-pub use calendar::*;
-pub use completions::*;
 pub use koreader_metadata::*;
 pub use library_item::*;
-pub use reading_data::ReadingData;
-pub use recap::*;
-pub use statistics::*;
+
+// Re-exported from canonical home in `koreader::merge_precedence`.
+pub(crate) use crate::koreader::merge_precedence;
+
+// Re-exported from their canonical home in `koreader::types`.
+pub use crate::koreader::types::*;
+
+// Re-exported from their canonical home in `domain::reading::types`.
+pub use crate::domain::reading::types::*;
+
+// Re-exported from canonical home in `runtime::reading_data`.
+pub use crate::runtime::reading_data::ReadingData;

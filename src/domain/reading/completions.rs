@@ -287,8 +287,7 @@ mod tests {
     use super::*;
     use crate::contracts::common::ContentTypeFilter;
     use crate::domain::reading::queries::{CompletionsIncludeSet, DateRange};
-    use crate::models::completions::{BookCompletions, ReadCompletion};
-    use crate::models::{StatBook, StatisticsData};
+    use crate::koreader::types::{BookCompletions, ReadCompletion, StatBook, StatisticsData};
 
     fn make_stats_data(books: Vec<StatBook>, page_stats: Vec<PageStat>) -> StatisticsData {
         let stats_by_md5 = books.iter().map(|b| (b.md5.clone(), b.clone())).collect();

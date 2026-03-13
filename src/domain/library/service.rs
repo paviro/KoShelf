@@ -120,9 +120,7 @@ fn map_detail_statistics(
     }
 }
 
-fn map_completions(
-    completions: &crate::models::completions::BookCompletions,
-) -> LibraryCompletions {
+fn map_completions(completions: &crate::koreader::types::BookCompletions) -> LibraryCompletions {
     LibraryCompletions {
         entries: completions
             .entries

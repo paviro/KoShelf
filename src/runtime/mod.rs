@@ -9,9 +9,8 @@ pub mod recap;
 pub mod store;
 pub mod updates;
 
-pub use crate::models::ReadingData;
 pub use ingest::{IngestResult, ingest};
 pub use media::MediaDirs;
-pub use reading_data::{ReadingDataStore, SharedReadingDataStore};
+pub use reading_data::{ReadingData, ReadingDataStore, SharedReadingDataStore};
 pub use store::{SharedSiteStore, SiteStore};
 pub use updates::{Update, UpdateNotifier};

@@ -2,13 +2,22 @@
 //!
 //! Reading endpoints compute responses on demand from this data,
 //! applying scope, date-range, and timezone filters at request time.
-//!
-//! The [`ReadingData`] struct itself lives in `models` so that both
-//! `domain/library` and `domain/reading` can depend on it without
-//! reaching into `runtime`.
 
-use crate::models::ReadingData;
+use crate::models::StatisticsData;
+use crate::time_config::TimeConfig;
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+
+/// Bundle of statistics data and time configuration used by reading
+/// and library domain services for on-demand query computation.
+#[derive(Debug, Clone)]
+pub struct ReadingData {
+    pub stats_data: StatisticsData,
+    pub time_config: TimeConfig,
+    pub heatmap_scale_max: Option<u32>,
+    /// MD5 → cover URL for library items (e.g. `/assets/covers/{md5}.webp`).
+    pub covers_by_md5: HashMap<String, String>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct ReadingDataStore {
