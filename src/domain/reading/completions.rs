@@ -11,8 +11,8 @@ use crate::domain::reading::queries::{
     CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery,
 };
 use crate::domain::reading::shared;
-use crate::models::{PageStat, StatisticsData};
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
+use crate::koreader::types::{PageStat, StatisticsData};
 use crate::time_config::TimeConfig;
 
 /// Compute the completions response from reading data and a validated query.

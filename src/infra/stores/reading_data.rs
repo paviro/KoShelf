@@ -3,7 +3,7 @@
 //! Reading endpoints compute responses on demand from this data,
 //! applying scope, date-range, and timezone filters at request time.
 
-use crate::models::StatisticsData;
+use crate::koreader::types::StatisticsData;
 use crate::time_config::TimeConfig;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

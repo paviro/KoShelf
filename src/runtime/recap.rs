@@ -4,10 +4,9 @@
 //! The reading domain service handles completion data on demand — this module
 //! only generates the visual share assets.
 
-use crate::models::{
-    DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem, StatisticsData,
-    YearlySummary,
-};
+use crate::domain::reading::types::{MonthRecap, RecapItem, YearlySummary};
+use crate::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
+use crate::models::LibraryItem;
 use crate::time_config::TimeConfig;
 use anyhow::Result;
 use chrono::Datelike;
@@ -520,7 +519,7 @@ pub async fn generate_recap_share_images(
     let md5_to_book = build_md5_to_item(items);
 
     let reading_stats_all =
-        crate::koreader::StatisticsCalculator::calculate_stats(stats_data, time_config);
+        crate::domain::reading::StatisticsCalculator::calculate_stats(stats_data, time_config);
 
     let (year_month_items, years) =
         group_completions_by_year_month(stats_data, &md5_to_book, &page_scaling);
@@ -613,7 +612,8 @@ pub async fn generate_recap_share_images(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{ContentType, StreakInfo};
+    use crate::koreader::types::StreakInfo;
+    use crate::models::ContentType;
 
     // ── PageScaling tests ───────────────────────────────────────────────
 

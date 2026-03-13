@@ -4,7 +4,10 @@ use std::collections::{HashMap, HashSet};
 
 use super::completion_calc::{CompletionConfig, ReadCompletionDetector};
 use super::session_calc as session;
-use crate::models::*;
+use crate::koreader::types::{
+    BookSessionStats, DailyStats, PageStat, ReadingStats, StatBook, StatisticsData, StreakInfo,
+    WeeklyStats,
+};
 use crate::time_config::TimeConfig;
 
 /// Trait for calculating book session statistics

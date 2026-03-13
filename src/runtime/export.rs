@@ -26,7 +26,7 @@ use crate::domain::reading::queries::{
     ReadingMetric, ReadingMetricsQuery, ReadingSummaryQuery,
 };
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
 
 // ── Export-specific serialization types ──────────────────────────────────
 

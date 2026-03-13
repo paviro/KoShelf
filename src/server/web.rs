@@ -1,7 +1,7 @@
 use super::ServerState;
 use super::api;
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
+use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use anyhow::Result;
 use axum::{
     Router,

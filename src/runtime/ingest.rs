@@ -6,11 +6,13 @@
 //! `scan_library()` independently.
 
 use crate::config::SiteConfig;
+use crate::domain::reading::StatisticsCalculator;
 use crate::infra::scanner::scan_library;
-use crate::koreader::{StatisticsCalculator, StatisticsParser};
-use crate::models::merge_precedence::normalize_partial_md5;
-use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
+use crate::koreader::StatisticsParser;
+use crate::koreader::merge_precedence::normalize_partial_md5;
+use crate::koreader::types::StatisticsData;
+use crate::models::{BookStatus, ContentType, LibraryItem};
 use anyhow::Result;
 use log::info;
 use std::collections::{HashMap, HashSet};

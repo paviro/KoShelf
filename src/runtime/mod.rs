@@ -8,9 +8,3 @@ pub mod recap;
 
 pub use ingest::{IngestResult, ingest};
 pub use media::MediaDirs;
-
-// Re-exported from canonical home in `infra::stores`.
-pub use crate::infra::stores::{
-    ReadingData, ReadingDataStore, SharedReadingDataStore, SharedSiteStore, SiteStore, Update,
-    UpdateNotifier,
-};

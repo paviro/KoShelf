@@ -1,4 +1,4 @@
-use crate::models::{PageStat, StatBook, StatisticsData};
+use crate::koreader::types::{PageStat, StatBook, StatisticsData};
 use anyhow::{Context, Result};
 use log::{debug, info, warn};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};

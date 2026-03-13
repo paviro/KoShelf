@@ -1,5 +1,9 @@
+use crate::domain::reading::types::{
+    CalendarEvent, CalendarItem, CalendarMonthData, CalendarMonths, MonthlyStats,
+};
 use crate::koreader::calculate_partial_md5;
-use crate::models::*;
+use crate::koreader::types::{PageStat, StatisticsData};
+use crate::models::{ContentType, LibraryItem};
 use crate::time_config::TimeConfig;
 use chrono::Datelike;
 /// Provides utilities for generating calendar-related data (events, monthly payloads, stats).

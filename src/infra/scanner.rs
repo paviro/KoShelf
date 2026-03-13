@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Instant;
 
+use crate::koreader::merge_precedence::{normalize_partial_md5, resolve_canonical_partial_md5};
 use crate::koreader::{LuaParser, calculate_partial_md5};
-use crate::models::merge_precedence::{normalize_partial_md5, resolve_canonical_partial_md5};
 use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
 

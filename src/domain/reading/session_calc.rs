@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::models::PageStat;
+use crate::koreader::types::PageStat;
 
 /// Default time gap that separates two reading events into different sessions (in seconds)
 const DEFAULT_SESSION_GAP_SECONDS: i64 = 300; // 5 minutes

@@ -7,8 +7,8 @@ use chrono::NaiveDate;
 use crate::contracts::reading::{PeriodEntry, ReadingAvailablePeriodsData};
 use crate::domain::reading::queries::{PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery};
 use crate::domain::reading::shared;
-use crate::models::StatisticsData;
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
+use crate::koreader::types::StatisticsData;
 use crate::time_config::TimeConfig;
 
 /// Compute the available-periods response from reading data and a validated query.

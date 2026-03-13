@@ -8,8 +8,9 @@ use crate::contracts::reading::{
 };
 use crate::domain::reading::queries::ReadingCalendarQuery;
 use crate::domain::reading::shared;
-use crate::models::{ContentType, PageStat, StatisticsData};
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
+use crate::koreader::types::{PageStat, StatisticsData};
+use crate::models::ContentType;
 use crate::time_config::TimeConfig;
 
 /// Compute the calendar response for a specific month from reading data.
@@ -137,7 +138,7 @@ fn build_events_and_items(
     covers_by_md5: &std::collections::HashMap<String, String>,
 ) -> (Vec<ReadingCalendarEvent>, BTreeMap<String, CalendarItemRef>) {
     // Build book ID -> StatBook lookup.
-    let book_by_id: HashMap<i64, &crate::models::StatBook> =
+    let book_by_id: HashMap<i64, &crate::koreader::types::StatBook> =
         stats_data.books.iter().map(|b| (b.id, b)).collect();
 
     // Group page stats by book, filter to month range.
@@ -283,7 +284,7 @@ fn make_event(
 mod tests {
     use super::*;
     use crate::contracts::common::ContentTypeFilter;
-    use crate::models::{PageStat, StatBook, StatisticsData};
+    use crate::koreader::types::{PageStat, StatBook, StatisticsData};
 
     fn make_stats_data(books: Vec<StatBook>, page_stats: Vec<PageStat>) -> StatisticsData {
         let stats_by_md5 = books.iter().map(|b| (b.md5.clone(), b.clone())).collect();

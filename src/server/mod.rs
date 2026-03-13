@@ -1,7 +1,7 @@
 //! Web server module.
 
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
+use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 
 pub mod api;
 pub mod web;

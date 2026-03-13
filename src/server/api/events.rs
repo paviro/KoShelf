@@ -5,7 +5,7 @@ use axum::{
 use futures::stream;
 use std::{convert::Infallible, time::Duration};
 
-use crate::runtime::Update;
+use crate::infra::stores::Update;
 use crate::server::ServerState;
 
 fn data_changed_event(update: &Update) -> Event {

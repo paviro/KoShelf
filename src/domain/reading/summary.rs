@@ -10,7 +10,7 @@ use crate::contracts::reading::{
 };
 use crate::domain::reading::queries::ReadingSummaryQuery;
 use crate::domain::reading::shared;
-use crate::runtime::ReadingData;
+use crate::infra::stores::ReadingData;
 use crate::time_config::TimeConfig;
 
 /// Compute the full summary response from reading data and a validated query.

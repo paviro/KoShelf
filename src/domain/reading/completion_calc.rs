@@ -36,7 +36,7 @@ use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use super::session_calc as session;
-use crate::models::*;
+use crate::koreader::types::{BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData};
 use crate::time_config::TimeConfig;
 
 /// Configuration for read completion detection

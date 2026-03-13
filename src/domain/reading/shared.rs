@@ -4,7 +4,8 @@ use chrono::{Datelike, NaiveDate};
 
 use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::library::LibraryContentType;
-use crate::models::{ContentType, PageStat, StatisticsData};
+use crate::koreader::types::{PageStat, StatisticsData};
+use crate::models::ContentType;
 use crate::time_config::TimeConfig;
 
 /// Build a `TimeConfig` with an optional per-request timezone override.
