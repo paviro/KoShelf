@@ -126,18 +126,30 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Determine output directory + run mode
     let plan = plan_output(&cli, &runtime_data_policy)?;
 
-    // In ephemeral mode the temp directory doubles as the runtime data
-    // directory (library DB, statistics DB copy, cover cache).
-    if !runtime_data_policy.is_persistent() {
-        runtime_data_policy.set_resolved_data_dir(plan.output_dir.clone());
-    }
+    // Determine if we're running with internal web server (enables runtime update events)
+    let is_internal_server = matches!(plan.mode, RunMode::Serve);
+
+    // In ephemeral mode, determine where runtime data (library DB) lives.
+    let _runtime_temp_dir = if !runtime_data_policy.is_persistent() {
+        if is_internal_server {
+            // Serve mode: output_dir is already a temp dir, reuse it.
+            runtime_data_policy.set_resolved_data_dir(plan.output_dir.clone());
+            None
+        } else {
+            // Static export: use a separate temp dir so library.sqlite
+            // doesn't land in the user's output directory.
+            let tmp =
+                tempfile::tempdir().context("Failed to create temporary runtime data directory")?;
+            runtime_data_policy.set_resolved_data_dir(tmp.path().to_path_buf());
+            Some(tmp)
+        }
+    } else {
+        None
+    };
 
     if let Some(db_path) = runtime_data_policy.library_db_path() {
         info!("Runtime library DB path: {:?}", db_path);
     }
-
-    // Determine if we're running with internal web server (enables runtime update events)
-    let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
     // Create site config - bundles all configuration options.
     let config = SiteConfig {
