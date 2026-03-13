@@ -31,11 +31,7 @@ export interface RecapYearResponse {
 export async function loadRecapIndex(
     scope: RecapScope,
 ): Promise<RecapIndexResponse> {
-    const data = await api.reading.availablePeriods(
-        'completions',
-        'year',
-        scope,
-    );
+    const data = await api.getAvailablePeriods('completions', 'year', scope);
 
     return {
         available_years: data.periods
@@ -49,7 +45,7 @@ export async function loadRecapYear(
     scope: RecapScope,
     year: number,
 ): Promise<RecapYearResponse> {
-    const data = await api.reading.completions(scope, {
+    const data = await api.getReadingCompletions(scope, {
         year,
         groupBy: 'month',
         include: 'summary,share_assets',

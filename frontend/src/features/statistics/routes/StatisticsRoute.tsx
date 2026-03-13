@@ -30,7 +30,6 @@ import {
 import { api } from '../../../shared/api';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
-import type { SiteResponse } from '../../../shared/contracts';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 
@@ -52,7 +51,7 @@ export function StatisticsRoute() {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const statsIndexQuery = useStatisticsIndexQuery(scope);

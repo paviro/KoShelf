@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
-import { isServeMode } from './api';
+import { api, isServeMode } from './api';
 
 interface DataChangedPayload {
     revision_epoch: string;
@@ -158,6 +158,7 @@ export function RuntimeUpdatesBridge() {
                     previousGeneratedAt &&
                     previousGeneratedAt !== generatedAt
                 ) {
+                    api.clearCache();
                     invalidateRuntimeQueries(queryClient);
                 }
             } catch {

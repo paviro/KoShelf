@@ -8,7 +8,6 @@ import {
     listRouteIdForCollection,
 } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-return-state';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
@@ -46,7 +45,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const detailQuery = useLibraryDetailQuery(collection, id);

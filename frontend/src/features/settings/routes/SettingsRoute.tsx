@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuChevronDown } from 'react-icons/lu';
 
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -129,7 +128,7 @@ function SettingsSelect({
 export function SettingsRoute() {
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
     const languageOptionsQuery = useQuery({
         queryKey: ['settings', 'language-options'],

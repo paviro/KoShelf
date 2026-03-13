@@ -14,7 +14,7 @@ import type { LibraryCollection } from '../model/library-model';
 async function fetchLibraryList(
     collection: LibraryCollection,
 ): Promise<LibraryListResponse> {
-    return api.items.list<LibraryListResponse>(
+    return api.getItems<LibraryListResponse>(
         collection === 'comics' ? 'comics' : 'books',
     );
 }
@@ -41,7 +41,7 @@ async function fetchLibraryDetail(
     collection: LibraryCollection,
     id: string,
 ): Promise<LibraryDetailResponse> {
-    const detail = await api.items.get<LibraryDetailResponse>(id);
+    const detail = await api.getItem<LibraryDetailResponse>(id);
     if (collection === 'comics' && detail.item.content_type !== 'comic') {
         throw new Error(`Item ${id} is not a comic`);
     }

@@ -64,9 +64,9 @@ export async function loadStatisticsIndex(
     scope: StatisticsScope,
 ): Promise<StatisticsIndexResponse> {
     const [summary, weekPeriods, yearPeriods] = await Promise.all([
-        api.reading.summary(scope),
-        api.reading.availablePeriods('reading_data', 'week', scope),
-        api.reading.availablePeriods('reading_data', 'year', scope),
+        api.getReadingSummary(scope),
+        api.getAvailablePeriods('reading_data', 'week', scope),
+        api.getAvailablePeriods('reading_data', 'year', scope),
     ]);
 
     return {
@@ -89,15 +89,15 @@ export async function loadStatisticsWeek(
     endDate: string,
 ): Promise<StatisticsWeekResponse> {
     const [summary, readingTime, pagesRead] = await Promise.all([
-        api.reading.summary(scope, startDate, endDate),
-        api.reading.metrics(
+        api.getReadingSummary(scope, startDate, endDate),
+        api.getReadingMetrics(
             scope,
             'reading_time_sec',
             'day',
             startDate,
             endDate,
         ),
-        api.reading.metrics(scope, 'pages_read', 'day', startDate, endDate),
+        api.getReadingMetrics(scope, 'pages_read', 'day', startDate, endDate),
     ]);
 
     return {
@@ -125,9 +125,9 @@ export async function loadStatisticsYear(
     const to = `${year}-12-31`;
 
     const [summary, readingTime, pagesRead] = await Promise.all([
-        api.reading.summary(scope, from, to),
-        api.reading.metrics(scope, 'reading_time_sec', 'day', from, to),
-        api.reading.metrics(scope, 'pages_read', 'day', from, to),
+        api.getReadingSummary(scope, from, to),
+        api.getReadingMetrics(scope, 'reading_time_sec', 'day', from, to),
+        api.getReadingMetrics(scope, 'pages_read', 'day', from, to),
     ]);
 
     return {

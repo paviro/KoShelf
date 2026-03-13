@@ -30,11 +30,7 @@ export interface CalendarMonthsResponse {
 }
 
 export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
-    const data = await api.reading.availablePeriods(
-        'reading_data',
-        'month',
-        'all',
-    );
+    const data = await api.getAvailablePeriods('reading_data', 'month', 'all');
     return {
         months: data.periods.map((p) => p.key),
     };
@@ -43,7 +39,7 @@ export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
 export async function loadCalendarMonth(
     monthKey: string,
 ): Promise<CalendarMonthResponse> {
-    const data = await api.reading.calendar(monthKey, 'all');
+    const data = await api.getReadingCalendar(monthKey, 'all');
 
     return {
         events: data.events,

@@ -3,7 +3,7 @@ import { LuArrowLeft } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
-import { itemDetailDownloadHref } from '../../../shared/api';
+import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import type { LibraryCollection } from '../model/library-model';
@@ -28,7 +28,7 @@ export function LibraryDetailHeader({
 
     useClickOutside(dropdownRef, () => setShareOpen(false), shareOpen);
 
-    const jsonHref = itemDetailDownloadHref(itemId);
+    const jsonHref = api.getItemDownloadHref(itemId);
     const jsonDownloadName = `${collection}-${itemId}.json`;
 
     const header = useMemo(

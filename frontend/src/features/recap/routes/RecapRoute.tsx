@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { useRecapCoverTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
@@ -43,7 +42,7 @@ export function RecapRoute() {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const recapIndexQuery = useRecapIndexQuery(scope);
