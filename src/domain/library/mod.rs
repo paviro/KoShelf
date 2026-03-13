@@ -7,6 +7,6 @@ pub mod projections;
 pub mod queries;
 pub mod service;
 
-pub use build::{LibraryBuildMode, LibraryBuildPipeline, LibraryBuildResult};
+pub use build::{LibraryBuildMode, LibraryBuildPipeline, LibraryBuildResult, upsert_single_item};
 pub use queries::{IncludeSet, LibraryDetailQuery, LibraryListQuery};
 pub use service::LibraryService;

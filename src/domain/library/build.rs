@@ -13,6 +13,8 @@ use log::{info, warn};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
+use std::path::Path;
+
 use super::collision::detect_collisions;
 use super::item_mapping::{
     capture_fingerprint_row, derive_in_book_folder_metadata_path, map_annotations_to_rows,
@@ -25,6 +27,39 @@ use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::library_repo::rows::FingerprintRow;
 use crate::models::{BookStatus, LibraryItem};
 use crate::time_config::TimeConfig;
+
+// ── Standalone upsert ────────────────────────────────────────────────────
+
+/// Upsert a single library item (row + annotations + fingerprint).
+///
+/// `metadata_path` is the resolved KOReader metadata file path, or `None`
+/// for items without metadata.  Used by the watcher's targeted rebuild.
+pub async fn upsert_single_item(
+    repo: &LibraryRepository,
+    item: &LibraryItem,
+    metadata_path: Option<&Path>,
+    use_stable_page_metadata: bool,
+    time_config: &TimeConfig,
+) -> Result<()> {
+    let row = map_item_to_row(item, use_stable_page_metadata, time_config);
+
+    repo.upsert_item(&row)
+        .await
+        .context("Failed to upsert library item")?;
+
+    let annotation_rows = map_annotations_to_rows(&item.id, item, time_config);
+    repo.replace_annotations(&item.id, &annotation_rows)
+        .await
+        .context("Failed to replace annotations")?;
+
+    if let Some(fp_row) = capture_fingerprint_row(item, metadata_path, time_config) {
+        repo.upsert_fingerprint(&fp_row)
+            .await
+            .context("Failed to upsert fingerprint")?;
+    }
+
+    Ok(())
+}
 
 // ── Data types ──────────────────────────────────────────────────────────
 
@@ -245,30 +280,15 @@ impl<'a> LibraryBuildPipeline<'a> {
 
     /// Upsert a single item: item row, annotations, and fingerprint.
     async fn upsert_item(&self, item: &LibraryItem) -> Result<()> {
-        let row = map_item_to_row(item, self.use_stable_page_metadata, self.time_config);
-
-        self.repo
-            .upsert_item(&row)
-            .await
-            .context("Failed to upsert library item")?;
-
-        let annotation_rows = map_annotations_to_rows(&item.id, item, self.time_config);
-        self.repo
-            .replace_annotations(&item.id, &annotation_rows)
-            .await
-            .context("Failed to replace annotations")?;
-
         let metadata_path = derive_in_book_folder_metadata_path(item);
-        if let Some(fp_row) =
-            capture_fingerprint_row(item, metadata_path.as_deref(), self.time_config)
-        {
-            self.repo
-                .upsert_fingerprint(&fp_row)
-                .await
-                .context("Failed to upsert fingerprint")?;
-        }
-
-        Ok(())
+        upsert_single_item(
+            self.repo,
+            item,
+            metadata_path.as_deref(),
+            self.use_stable_page_metadata,
+            self.time_config,
+        )
+        .await
     }
 
     /// Filter items based on the `include_unread` setting.

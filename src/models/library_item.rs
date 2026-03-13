@@ -81,6 +81,29 @@ impl LibraryItemFormat {
         )
     }
 
+    /// Derive format from a KOReader metadata filename (e.g. "metadata.epub.lua" → Epub)
+    pub fn from_metadata_filename(filename: &str) -> Option<Self> {
+        match filename {
+            "metadata.epub.lua" => Some(Self::Epub),
+            "metadata.fb2.lua" => Some(Self::Fb2),
+            "metadata.mobi.lua" => Some(Self::Mobi),
+            "metadata.cbz.lua" => Some(Self::Cbz),
+            "metadata.cbr.lua" => Some(Self::Cbr),
+            _ => None,
+        }
+    }
+
+    /// Get the file extension string for this format
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Epub => "epub",
+            Self::Fb2 => "fb2",
+            Self::Mobi => "mobi",
+            Self::Cbz => "cbz",
+            Self::Cbr => "cbr",
+        }
+    }
+
     /// Get the content type for this format
     pub fn content_type(&self) -> ContentType {
         match self {

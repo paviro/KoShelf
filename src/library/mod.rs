@@ -3,5 +3,5 @@
 pub mod scanner;
 pub mod watcher;
 
-pub use scanner::{MetadataLocation, scan_library};
+pub use scanner::{MetadataLocation, ScannedItem, scan_library, scan_specific_files};
 pub use watcher::FileWatcher;

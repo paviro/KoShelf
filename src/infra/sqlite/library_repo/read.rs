@@ -130,6 +130,75 @@ impl LibraryRepository {
         Ok(row.is_some())
     }
 
+    /// Query whether the library contains books and/or comics.
+    pub async fn query_content_type_flags(&self) -> Result<(bool, bool)> {
+        let row = sqlx::query(
+            "SELECT
+                COALESCE(MAX(content_type = 'book'), 0) AS has_books,
+                COALESCE(MAX(content_type = 'comic'), 0) AS has_comics
+             FROM library_items",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to query content type flags")?;
+        let has_books: bool = row.get::<i32, _>("has_books") != 0;
+        let has_comics: bool = row.get::<i32, _>("has_comics") != 0;
+        Ok((has_books, has_comics))
+    }
+
+    /// Find the fingerprint row for a given book file path.
+    pub async fn find_fingerprint_by_book_path(
+        &self,
+        book_path: &str,
+    ) -> Result<Option<FingerprintRow>> {
+        let row = sqlx::query(
+            "SELECT item_id, book_path, book_size_bytes, book_modified_unix_ms,
+                    metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at
+             FROM library_item_fingerprints
+             WHERE book_path = ?1",
+        )
+        .bind(book_path)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find fingerprint by book path")?;
+
+        Ok(row.map(|r| FingerprintRow {
+            item_id: r.get("item_id"),
+            book_path: r.get("book_path"),
+            book_size_bytes: r.get("book_size_bytes"),
+            book_modified_unix_ms: r.get("book_modified_unix_ms"),
+            metadata_path: r.get("metadata_path"),
+            metadata_size_bytes: r.get("metadata_size_bytes"),
+            metadata_modified_unix_ms: r.get("metadata_modified_unix_ms"),
+            updated_at: r.get("updated_at"),
+        }))
+    }
+
+    /// Find the book_path whose metadata_path matches the given path.
+    pub async fn find_book_path_by_metadata_path(
+        &self,
+        metadata_path: &str,
+    ) -> Result<Option<String>> {
+        let row = sqlx::query(
+            "SELECT book_path FROM library_item_fingerprints WHERE metadata_path = ?1",
+        )
+        .bind(metadata_path)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find book path by metadata path")?;
+
+        Ok(row.map(|r| r.get("book_path")))
+    }
+
+    /// Load all item IDs (canonical MD5s, used as library_md5s for stats filtering).
+    pub async fn load_all_item_ids(&self) -> Result<Vec<String>> {
+        let rows = sqlx::query("SELECT id FROM library_items")
+            .fetch_all(&self.pool)
+            .await
+            .context("Failed to load all item IDs")?;
+        Ok(rows.into_iter().map(|r| r.get("id")).collect())
+    }
+
     pub async fn count_items(&self) -> Result<i64> {
         let row = sqlx::query("SELECT COUNT(*) as cnt FROM library_items")
             .fetch_one(&self.pool)

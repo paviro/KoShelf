@@ -350,6 +350,80 @@ impl LibraryScanner {
     }
 }
 
+/// A single item produced by targeted scanning.
+pub struct ScannedItem {
+    pub item: LibraryItem,
+    pub metadata_path: Option<PathBuf>,
+}
+
+/// Parse only the given book file paths (no directory walk).
+///
+/// Returns a `ScannedItem` per successfully parsed file, with the resolved
+/// metadata path so the caller can store correct fingerprints.
+pub async fn scan_specific_files(
+    file_paths: &[PathBuf],
+    metadata_location: &MetadataLocation,
+) -> Vec<ScannedItem> {
+    let scanner = match LibraryScanner::new(metadata_location) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!("Failed to create scanner for targeted scan: {}", e);
+            return Vec::new();
+        }
+    };
+
+    let mut results = Vec::new();
+
+    for path in file_paths {
+        let format = match LibraryItemFormat::from_path(path) {
+            Some(f) => f,
+            None => {
+                warn!("Unsupported file format for targeted scan: {:?}", path);
+                continue;
+            }
+        };
+
+        let book_info = match scanner.parse_book_info(format, path).await {
+            Ok(info) => info,
+            Err(e) => {
+                warn!("Failed to parse {:?} {:?}: {}", format, path, e);
+                continue;
+            }
+        };
+
+        let metadata_path = scanner.locate_metadata_path(path, format);
+        let koreader_metadata = scanner.parse_koreader_metadata(metadata_path.clone()).await;
+
+        let item_id = match scanner.canonical_item_id(path, koreader_metadata.as_ref()) {
+            Ok(id) => id,
+            Err(e) => {
+                warn!("Failed to derive item ID for {:?}: {}", path, e);
+                continue;
+            }
+        };
+
+        let item = LibraryItem {
+            id: item_id,
+            book_info,
+            koreader_metadata,
+            file_path: path.to_path_buf(),
+            format,
+        };
+
+        results.push(ScannedItem {
+            item,
+            metadata_path,
+        });
+    }
+
+    info!(
+        "Targeted scan: parsed {} of {} files",
+        results.len(),
+        file_paths.len()
+    );
+    results
+}
+
 pub async fn scan_library(
     library_paths: &[PathBuf],
     metadata_location: &MetadataLocation,
