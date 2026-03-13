@@ -1,4 +1,4 @@
-use crate::koreader::statistics::StatisticsCalculator;
+use crate::domain::reading::StatisticsCalculator;
 use crate::models::ContentType;
 use crate::tests::fixtures;
 use crate::time_config::TimeConfig;

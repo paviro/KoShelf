@@ -1,4 +1,4 @@
-use super::partial_md5::calculate_partial_md5;
+use crate::koreader::calculate_partial_md5;
 use crate::models::*;
 use crate::time_config::TimeConfig;
 use chrono::Datelike;

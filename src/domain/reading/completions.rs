@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::NaiveDate;
 
+use super::session_calc as session;
 use crate::contracts::reading::{
     CompletionGroup, CompletionItem, CompletionsShareAssets, CompletionsSummary,
     ReadingCompletionsData,
@@ -10,7 +11,6 @@ use crate::domain::reading::queries::{
     CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery,
 };
 use crate::domain::reading::shared;
-use crate::koreader::session;
 use crate::models::{PageStat, StatisticsData};
 use crate::runtime::ReadingData;
 use crate::time_config::TimeConfig;

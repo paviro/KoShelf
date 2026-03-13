@@ -35,7 +35,7 @@
 use log::debug;
 use std::collections::{HashMap, HashSet};
 
-use super::session;
+use super::session_calc as session;
 use crate::models::*;
 use crate::time_config::TimeConfig;
 

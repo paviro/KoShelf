@@ -2,8 +2,8 @@ use chrono::{Datelike, Duration, NaiveDate};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 
-use super::completion::{CompletionConfig, ReadCompletionDetector};
-use super::session;
+use super::completion_calc::{CompletionConfig, ReadCompletionDetector};
+use super::session_calc as session;
 use crate::models::*;
 use crate::time_config::TimeConfig;
 

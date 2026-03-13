@@ -4,12 +4,12 @@ use std::collections::HashMap;
 
 use chrono::NaiveDate;
 
+use super::session_calc as session;
 use crate::contracts::reading::{
     HeatmapConfig, ReadingOverview, ReadingStreaks, ReadingSummaryData, ResolvedRange, StreakData,
 };
 use crate::domain::reading::queries::ReadingSummaryQuery;
 use crate::domain::reading::shared;
-use crate::koreader::session;
 use crate::runtime::ReadingData;
 use crate::time_config::TimeConfig;
 
