@@ -46,8 +46,16 @@ pub async fn item_detail(
     };
 
     let query = LibraryDetailQuery::new(id, includes);
+    let reading_data = state.reading_data_store.get();
 
-    match LibraryService::detail(&state.library_repo, &query, request_meta()).await {
+    match LibraryService::detail(
+        &state.library_repo,
+        &query,
+        request_meta(),
+        reading_data.as_deref(),
+    )
+    .await
+    {
         Ok(Some(payload)) => (StatusCode::OK, Json(payload)).into_response(),
         Ok(None) => ApiResponseError::not_found().into_response(),
         Err(_) => ApiResponseError::internal_server_error().into_response(),

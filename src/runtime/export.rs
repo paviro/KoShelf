@@ -159,7 +159,7 @@ pub async fn export_data_files(
     write_json(&data_dir.join("items").join("index.json"), items)?;
 
     // items/{id}.json — per-item with all includes expanded
-    export_item_details(data_dir, library_repo, items).await?;
+    export_item_details(data_dir, library_repo, reading_data, items).await?;
 
     info!(
         "Exported {} library items ({} detail files)",
@@ -187,6 +187,7 @@ pub async fn export_data_files(
 async fn export_item_details(
     data_dir: &Path,
     library_repo: &LibraryRepository,
+    reading_data: Option<&ReadingData>,
     items: &[crate::contracts::library::LibraryListItem],
 ) -> Result<()> {
     let items_dir = data_dir.join("items");
@@ -195,7 +196,9 @@ async fn export_item_details(
 
     for item in items {
         let query = LibraryDetailQuery::new(&item.id, IncludeSet::all());
-        if let Some(detail) = LibraryService::detail(library_repo, &query, export_meta()).await? {
+        if let Some(detail) =
+            LibraryService::detail(library_repo, &query, export_meta(), reading_data).await?
+        {
             write_json(&items_dir.join(format!("{}.json", item.id)), &detail)?;
             exported_ids.insert(item.id.clone());
         }

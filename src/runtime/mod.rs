@@ -8,11 +8,12 @@ pub mod snapshot;
 pub mod store;
 pub mod updates;
 
+pub use crate::models::ReadingData;
 pub use observability::{
     LibraryDbRebuildReason, RuntimeObservability, RuntimeObservabilitySnapshot,
     RuntimeReconcileCounters, SqliteRouteClass,
 };
-pub use reading_data::{ReadingData, ReadingDataStore, SharedReadingDataStore};
+pub use reading_data::{ReadingDataStore, SharedReadingDataStore};
 pub use revisions::{DomainRevision, DomainRevisionState, DomainRevisionTracker, RevisionDomain};
 pub use snapshot::ContractSnapshot;
 pub use store::{SharedSnapshotStore, SnapshotStore};

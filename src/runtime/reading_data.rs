@@ -2,18 +2,13 @@
 //!
 //! Reading endpoints compute responses on demand from this data,
 //! applying scope, date-range, and timezone filters at request time.
+//!
+//! The [`ReadingData`] struct itself lives in `models` so that both
+//! `domain/library` and `domain/reading` can depend on it without
+//! reaching into `runtime`.
 
-use crate::models::StatisticsData;
-use crate::time_config::TimeConfig;
+use crate::models::ReadingData;
 use std::sync::{Arc, RwLock};
-
-/// Processed reading data available for on-demand query computation.
-#[derive(Debug)]
-pub struct ReadingData {
-    pub stats_data: StatisticsData,
-    pub time_config: TimeConfig,
-    pub heatmap_scale_max: Option<u32>,
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct ReadingDataStore {

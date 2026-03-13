@@ -5,13 +5,16 @@ use anyhow::Result;
 use crate::contracts::common::{ApiMeta, ContentTypeFilter};
 use crate::contracts::library::{LibraryDetailResponse, LibraryListResponse};
 use crate::domain::library::projections::{
-    annotation_row_to_contract, row_to_detail_item, row_to_list_item,
+    annotation_row_to_contract, book_completions_to_contract, row_to_detail_item, row_to_list_item,
+    stat_book_to_detail_statistics,
 };
 use crate::domain::library::queries::{
     IncludeToken, ItemSort, LibraryDetailQuery, LibraryListQuery, SortOrder,
 };
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::library_repo::queries::{LibraryListFilter, LibrarySort, SortDirection};
+use crate::koreader::BookStatistics;
+use crate::models::ReadingData;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LibraryService;
@@ -33,6 +36,7 @@ impl LibraryService {
         repo: &LibraryRepository,
         query: &LibraryDetailQuery,
         meta: ApiMeta,
+        reading_data: Option<&ReadingData>,
     ) -> Result<Option<LibraryDetailResponse>> {
         let row = repo.get_item(&query.id).await?;
 
@@ -77,18 +81,37 @@ impl LibraryService {
                 (None, None)
             };
 
-        // Statistics and completions: accepted by include parser but data
-        // remains None until stats DB query service is wired up.
+        // Resolve per-item statistics and completions via partial_md5_checksum
+        // linkage into the in-memory reading data.
+        let stat_book =
+            if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
+                reading_data
+                    .zip(row.partial_md5_checksum.as_deref())
+                    .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
+            } else {
+                None
+            };
+
         let statistics = if includes.has(IncludeToken::Statistics) {
-            // TODO: source from stats DB on demand via partial_md5_checksum linkage
-            None
+            stat_book.as_ref().and_then(|sb| {
+                let rd = reading_data?;
+                let session_stats =
+                    sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
+                Some(stat_book_to_detail_statistics(
+                    sb,
+                    &session_stats,
+                    &rd.time_config,
+                ))
+            })
         } else {
             None
         };
 
         let completions = if includes.has(IncludeToken::Completions) {
-            // TODO: source from stats DB completion detector via partial_md5_checksum linkage
-            None
+            stat_book
+                .as_ref()
+                .and_then(|sb| sb.completions.as_ref())
+                .map(book_completions_to_contract)
         } else {
             None
         };
@@ -102,6 +125,18 @@ impl LibraryService {
             completions,
         }))
     }
+}
+
+/// Case-insensitive lookup into `stats_by_md5`.
+fn lookup_stat_book<'a>(
+    stats_data: &'a crate::models::StatisticsData,
+    md5: &str,
+) -> Option<&'a crate::models::StatBook> {
+    stats_data
+        .stats_by_md5
+        .get(md5)
+        .or_else(|| stats_data.stats_by_md5.get(&md5.to_lowercase()))
+        .or_else(|| stats_data.stats_by_md5.get(&md5.to_uppercase()))
 }
 
 fn to_list_filter(query: LibraryListQuery) -> LibraryListFilter {

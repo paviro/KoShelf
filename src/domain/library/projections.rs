@@ -4,11 +4,13 @@
 //! `LibraryItem` → rows for the write path).
 
 use crate::contracts::library::{
-    LibraryAnnotation, LibraryContentType, LibraryDetailItem, LibraryIdentifier, LibraryListItem,
-    LibrarySeries, LibraryStatus,
+    LibraryAnnotation, LibraryCompletionEntry, LibraryCompletions, LibraryContentType,
+    LibraryDetailItem, LibraryDetailStatistics, LibraryIdentifier, LibraryItemStats,
+    LibraryListItem, LibrarySeries, LibrarySessionStats, LibraryStatus,
 };
 use crate::infra::sqlite::library_repo::rows::{AnnotationRow, LibraryItemRow};
-use crate::models::Identifier;
+use crate::models::{BookSessionStats, Identifier, StatBook};
+use crate::time_config::TimeConfig;
 
 pub fn row_to_list_item(row: &LibraryItemRow) -> LibraryListItem {
     LibraryListItem {
@@ -99,6 +101,53 @@ fn parse_identifiers(json: &str) -> Vec<LibraryIdentifier> {
             }
         })
         .collect()
+}
+
+// ── Statistics projections (StatBook/BookSessionStats → contract types) ──
+
+pub fn stat_book_to_detail_statistics(
+    stat_book: &StatBook,
+    session_stats: &BookSessionStats,
+    time_config: &TimeConfig,
+) -> LibraryDetailStatistics {
+    LibraryDetailStatistics {
+        item_stats: Some(LibraryItemStats {
+            notes: stat_book.notes,
+            last_open_at: stat_book
+                .last_open
+                .map(|ts| time_config.format_timestamp_rfc3339(ts)),
+            highlights: stat_book.highlights,
+            pages: stat_book.pages,
+            total_reading_time_sec: stat_book.total_read_time,
+        }),
+        session_stats: Some(LibrarySessionStats {
+            session_count: session_stats.session_count,
+            average_session_duration_sec: session_stats.average_session_duration,
+            longest_session_duration_sec: session_stats.longest_session_duration,
+            last_read_date: session_stats.last_read_date.clone(),
+            reading_speed: session_stats.reading_speed,
+        }),
+    }
+}
+
+pub fn book_completions_to_contract(
+    completions: &crate::models::completions::BookCompletions,
+) -> LibraryCompletions {
+    LibraryCompletions {
+        entries: completions
+            .entries
+            .iter()
+            .map(|c| LibraryCompletionEntry {
+                start_date: c.start_date.clone(),
+                end_date: c.end_date.clone(),
+                reading_time_sec: c.reading_time,
+                session_count: c.session_count,
+                pages_read: c.pages_read,
+            })
+            .collect(),
+        total_completions: completions.total_completions,
+        last_completion_date: completions.last_completion_date.clone(),
+    }
 }
 
 #[cfg(test)]
