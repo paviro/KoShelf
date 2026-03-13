@@ -52,16 +52,16 @@ export function HeatmapSection({
         let maxActivity = 0;
 
         yearData?.daily_activity.forEach((entry) => {
-            if (entry.read_time > maxActivity) {
-                maxActivity = entry.read_time;
+            if (entry.reading_time_sec > maxActivity) {
+                maxActivity = entry.reading_time_sec;
             }
             map.set(entry.date, {
                 pages: entry.pages_read,
-                read: entry.read_time,
+                read: entry.reading_time_sec,
             });
         });
 
-        const configuredMax = yearData?.config.max_scale_seconds;
+        const configuredMax = yearData?.heatmap_config.max_scale_sec;
         if (configuredMax !== null && configuredMax !== undefined) {
             maxActivity = configuredMax;
         }

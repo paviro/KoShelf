@@ -1,4 +1,4 @@
-import type { StatisticsIndexResponse } from '../api/statistics-data';
+import type { ReadingOverview } from '../api/statistics-data';
 import { LuClock3, LuFileText, LuSun } from 'react-icons/lu';
 
 import { DataFormatter } from '../lib/formatters';
@@ -15,7 +15,7 @@ import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSecti
 type OverallStatsSectionProps = {
     visible: boolean;
     onToggle: (sectionName: SectionName) => void;
-    overview: StatisticsIndexResponse['overview'];
+    overview: ReadingOverview;
 };
 
 export function OverallStatsSection({
@@ -39,7 +39,7 @@ export function OverallStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatReadTimeWithWeeksParts(
-                                overview.total_read_time,
+                                overview.reading_time_sec,
                             )}
                         />
                     }
@@ -50,7 +50,7 @@ export function OverallStatsSection({
                     icon={LuFileText}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
-                    value={DataFormatter.formatCount(overview.total_page_reads)}
+                    value={DataFormatter.formatCount(overview.pages_read)}
                     label={translation.get('total-pages-read')}
                 />
 
@@ -71,7 +71,7 @@ export function OverallStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={DataFormatter.formatReadTimeParts(
-                                overview.longest_read_time_in_day,
+                                overview.longest_reading_time_in_day_sec,
                             )}
                         />
                     }
@@ -85,7 +85,7 @@ export function OverallStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatSessionDurationParts(
-                                overview.longest_session_duration,
+                                overview.longest_session_duration_sec,
                             )}
                         />
                     }
@@ -99,7 +99,7 @@ export function OverallStatsSection({
                     value={
                         <MetricCardUnitValue
                             value={formatSessionDurationParts(
-                                overview.average_session_duration,
+                                overview.average_session_duration_sec,
                             )}
                         />
                     }

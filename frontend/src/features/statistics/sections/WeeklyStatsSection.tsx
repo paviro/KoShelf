@@ -40,7 +40,7 @@ function buildWeekdayBarItems(
     startDate: string,
 ): DistributionBarItem[] {
     const days = WEEKDAY_TRANSLATION_KEYS.map((key) => ({
-        read_time: 0,
+        reading_time_sec: 0,
         pages_read: 0,
         label: translation.get(key),
     }));
@@ -49,8 +49,8 @@ function buildWeekdayBarItems(
         const start = parsePlainDate(startDate);
         if (!start) {
             return days.map((day) => ({
-                readTime: day.read_time,
-                tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+                readTime: day.reading_time_sec,
+                tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.reading_time_sec)}, ${translation.get('pages', day.pages_read)}`,
                 label: day.label,
             }));
         }
@@ -64,15 +64,15 @@ function buildWeekdayBarItems(
                 (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
             );
             if (diffDays >= 0 && diffDays < 7) {
-                days[diffDays].read_time += entry.read_time;
+                days[diffDays].reading_time_sec += entry.reading_time_sec;
                 days[diffDays].pages_read += entry.pages_read;
             }
         }
     }
 
     return days.map((day) => ({
-        readTime: day.read_time,
-        tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+        readTime: day.reading_time_sec,
+        tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.reading_time_sec)}, ${translation.get('pages', day.pages_read)}`,
         label: day.label,
     }));
 }
@@ -130,7 +130,8 @@ export function WeeklyStatsSection({
         weeklyStats.end_date,
     );
     const averagePagesPerDay = weeklyStats.pages_read / averageDayCount;
-    const averageReadTimePerDay = weeklyStats.read_time / averageDayCount;
+    const averageReadTimePerDay =
+        weeklyStats.reading_time_sec / averageDayCount;
 
     return (
         <CollapsibleSection
@@ -168,7 +169,7 @@ export function WeeklyStatsSection({
                         value={
                             <MetricCardUnitValue
                                 value={DataFormatter.formatReadTimeParts(
-                                    weeklyStats.read_time,
+                                    weeklyStats.reading_time_sec,
                                 )}
                             />
                         }
@@ -218,7 +219,7 @@ export function WeeklyStatsSection({
                         value={
                             <MetricCardUnitValue
                                 value={formatSessionDurationParts(
-                                    weeklyStats.longest_session_duration,
+                                    weeklyStats.longest_session_duration_sec,
                                 )}
                             />
                         }
@@ -233,7 +234,7 @@ export function WeeklyStatsSection({
                         value={
                             <MetricCardUnitValue
                                 value={formatSessionDurationParts(
-                                    weeklyStats.average_session_duration,
+                                    weeklyStats.average_session_duration_sec,
                                 )}
                             />
                         }

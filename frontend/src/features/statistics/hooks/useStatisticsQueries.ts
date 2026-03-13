@@ -8,6 +8,7 @@ import {
     loadStatisticsIndex,
     loadStatisticsWeek,
     loadStatisticsYear,
+    type StatisticsIndexWeek,
     type StatisticsScope,
 } from '../api/statistics-data';
 
@@ -53,12 +54,18 @@ export function useStatisticsIndexQuery(scope: StatisticsScope) {
 
 export function useStatisticsWeekQuery(
     scope: StatisticsScope,
-    weekKey: string | null,
+    week: StatisticsIndexWeek | null,
 ) {
     return useQuery({
-        queryKey: statisticsWeekQueryKey(scope, weekKey),
-        queryFn: () => loadStatisticsWeek(scope, weekKey ?? ''),
-        enabled: Boolean(weekKey),
+        queryKey: statisticsWeekQueryKey(scope, week?.week_key ?? null),
+        queryFn: () =>
+            loadStatisticsWeek(
+                scope,
+                week!.week_key,
+                week!.start_date,
+                week!.end_date,
+            ),
+        enabled: week !== null,
         placeholderData: keepPreviousData,
     });
 }

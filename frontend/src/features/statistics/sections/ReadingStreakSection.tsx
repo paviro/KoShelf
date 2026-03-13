@@ -1,6 +1,6 @@
 import type {
-    StatisticsIndexResponse,
     StatisticsYearResponse,
+    ReadingStreaks,
 } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 import {
@@ -20,8 +20,8 @@ type ReadingStreakSectionProps = {
     yearData: StatisticsYearResponse | undefined;
     loading: boolean;
     animationSeed: string;
-    currentStreak: StatisticsIndexResponse['streaks']['current'];
-    longestStreak: StatisticsIndexResponse['streaks']['longest'];
+    currentStreak: ReadingStreaks['current'];
+    longestStreak: ReadingStreaks['longest'];
 };
 
 export function ReadingStreakSection({

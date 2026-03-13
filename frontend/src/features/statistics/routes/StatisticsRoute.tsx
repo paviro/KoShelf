@@ -38,10 +38,10 @@ const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     week_key: '',
     start_date: '',
     end_date: '',
-    read_time: 0,
+    reading_time_sec: 0,
     pages_read: 0,
-    longest_session_duration: null,
-    average_session_duration: null,
+    longest_session_duration_sec: null,
+    average_session_duration_sec: null,
     daily_activity: [],
 };
 
@@ -90,16 +90,17 @@ export function StatisticsRoute() {
         () => initialViewState.selectedYearlyYear,
     );
 
-    const effectiveSelectedWeekKey = useMemo(() => {
-        if (
-            selectedWeekKey &&
-            availableWeeks.some((week) => week.week_key === selectedWeekKey)
-        ) {
-            return selectedWeekKey;
+    const effectiveSelectedWeek = useMemo(() => {
+        if (selectedWeekKey) {
+            const found = availableWeeks.find(
+                (week) => week.week_key === selectedWeekKey,
+            );
+            if (found) return found;
         }
 
-        return availableWeeks[0]?.week_key ?? null;
+        return availableWeeks[0] ?? null;
     }, [availableWeeks, selectedWeekKey]);
+    const effectiveSelectedWeekKey = effectiveSelectedWeek?.week_key ?? null;
     const effectiveSelectedHeatmapYear = useMemo(() => {
         if (
             selectedHeatmapYear !== null &&
@@ -156,7 +157,7 @@ export function StatisticsRoute() {
         statsIndexTransition.hasFreshData,
     ]);
 
-    const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeekKey);
+    const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeek);
     const weekTransition = useQueryTransitionState({
         data: weekQuery.data,
         enabled: Boolean(effectiveSelectedWeekKey),
@@ -209,7 +210,7 @@ export function StatisticsRoute() {
         () =>
             summarizeYearlyStats(
                 yearlyMonthlyStats,
-                effectiveDisplayedYearlyData?.summary.completed_count ?? 0,
+                effectiveDisplayedYearlyData?.completions ?? 0,
             ),
         [yearlyMonthlyStats, effectiveDisplayedYearlyData],
     );

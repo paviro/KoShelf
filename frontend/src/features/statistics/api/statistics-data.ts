@@ -1,29 +1,29 @@
 import { api, type ScopeValue } from '../../../shared/api';
+import type {
+    HeatmapConfig,
+    MetricPoint,
+    ReadingOverview,
+    ReadingStreaks,
+} from '../../../shared/contracts';
 
 export type StatisticsScope = ScopeValue;
 
+export type { ReadingOverview, ReadingStreaks, HeatmapConfig };
+
 export interface DailyActivityEntry {
     date: string;
-    read_time: number;
+    reading_time_sec: number;
     pages_read: number;
-}
-
-export interface ActivityConfig {
-    max_scale_seconds: number | null;
-}
-
-export interface YearlyActivitySummary {
-    completed_count: number;
 }
 
 export interface StatisticsWeekResponse {
     week_key: string;
     start_date: string;
     end_date: string;
-    read_time: number;
+    reading_time_sec: number;
     pages_read: number;
-    longest_session_duration: number | null;
-    average_session_duration: number | null;
+    longest_session_duration_sec: number | null;
+    average_session_duration_sec: number | null;
     daily_activity: DailyActivityEntry[];
 }
 
@@ -36,84 +36,107 @@ export interface StatisticsIndexWeek {
 export interface StatisticsIndexResponse {
     available_years: number[];
     available_weeks: StatisticsIndexWeek[];
-    overview: {
-        total_read_time: number;
-        total_page_reads: number;
-        longest_read_time_in_day: number;
-        most_pages_in_day: number;
-        average_session_duration: number | null;
-        longest_session_duration: number | null;
-        total_completions: number;
-        items_completed: number;
-        most_completions: number;
-    };
-    streaks: {
-        longest: {
-            days: number;
-            start_date: string | null;
-            end_date: string | null;
-        };
-        current: {
-            days: number;
-            start_date: string | null;
-            end_date: string | null;
-        };
-    };
-    heatmap_config: ActivityConfig;
+    overview: ReadingOverview;
+    streaks: ReadingStreaks;
+    heatmap_config: HeatmapConfig;
 }
 
 export interface StatisticsYearResponse {
     year: number;
-    summary: YearlyActivitySummary;
+    completions: number;
     daily_activity: DailyActivityEntry[];
-    monthly_aggregates: Array<{
-        month_key: string;
-        read_time: number;
-        pages_read: number;
-        active_days: number;
-    }>;
-    config: ActivityConfig;
+    heatmap_config: HeatmapConfig;
+}
+
+function mergeDailyActivity(
+    readingTimePoints: MetricPoint[],
+    pagesReadPoints: MetricPoint[],
+): DailyActivityEntry[] {
+    const pagesMap = new Map(pagesReadPoints.map((p) => [p.key, p.value]));
+    return readingTimePoints.map((p) => ({
+        date: p.key,
+        reading_time_sec: p.value,
+        pages_read: pagesMap.get(p.key) ?? 0,
+    }));
 }
 
 export async function loadStatisticsIndex(
     scope: StatisticsScope,
 ): Promise<StatisticsIndexResponse> {
-    return api.activity.weeks.get<StatisticsIndexResponse>(scope);
+    const [summary, weekPeriods, yearPeriods] = await Promise.all([
+        api.reading.summary(scope),
+        api.reading.availablePeriods('reading_data', 'week', scope),
+        api.reading.availablePeriods('reading_data', 'year', scope),
+    ]);
+
+    return {
+        available_years: yearPeriods.periods.map((p) => Number(p.key)),
+        available_weeks: weekPeriods.periods.map((p) => ({
+            week_key: p.key,
+            start_date: p.start_date,
+            end_date: p.end_date,
+        })),
+        overview: summary.overview,
+        streaks: summary.streaks,
+        heatmap_config: summary.heatmap_config,
+    };
 }
 
 export async function loadStatisticsWeek(
     scope: StatisticsScope,
     weekKey: string,
+    startDate: string,
+    endDate: string,
 ): Promise<StatisticsWeekResponse> {
-    return api.activity.weeks.byKey<StatisticsWeekResponse>(weekKey, scope);
+    const [summary, readingTime, pagesRead] = await Promise.all([
+        api.reading.summary(scope, startDate, endDate),
+        api.reading.metrics(
+            scope,
+            'reading_time_sec',
+            'day',
+            startDate,
+            endDate,
+        ),
+        api.reading.metrics(scope, 'pages_read', 'day', startDate, endDate),
+    ]);
+
+    return {
+        week_key: weekKey,
+        start_date: startDate,
+        end_date: endDate,
+        reading_time_sec: summary.overview.reading_time_sec,
+        pages_read: summary.overview.pages_read,
+        longest_session_duration_sec:
+            summary.overview.longest_session_duration_sec ?? null,
+        average_session_duration_sec:
+            summary.overview.average_session_duration_sec ?? null,
+        daily_activity: mergeDailyActivity(
+            readingTime.points,
+            pagesRead.points,
+        ),
+    };
 }
 
 export async function loadStatisticsYear(
     scope: StatisticsScope,
     year: number,
 ): Promise<StatisticsYearResponse> {
-    const [dailyPayload, summaryPayload] = await Promise.all([
-        api.activity.years.daily.get<{
-            year: number;
-            daily_activity: DailyActivityEntry[];
-            config?: ActivityConfig;
-        }>(year, scope),
-        api.activity.years.summary.get<{
-            year: number;
-            summary: YearlyActivitySummary;
-            monthly_aggregates: StatisticsYearResponse['monthly_aggregates'];
-            config?: ActivityConfig;
-        }>(year, scope),
+    const from = `${year}-01-01`;
+    const to = `${year}-12-31`;
+
+    const [summary, readingTime, pagesRead] = await Promise.all([
+        api.reading.summary(scope, from, to),
+        api.reading.metrics(scope, 'reading_time_sec', 'day', from, to),
+        api.reading.metrics(scope, 'pages_read', 'day', from, to),
     ]);
 
     return {
-        year: summaryPayload.year,
-        summary: summaryPayload.summary,
-        daily_activity: dailyPayload.daily_activity,
-        monthly_aggregates: summaryPayload.monthly_aggregates,
-        config: dailyPayload.config ??
-            summaryPayload.config ?? {
-                max_scale_seconds: null,
-            },
+        year,
+        completions: summary.overview.completions,
+        daily_activity: mergeDailyActivity(
+            readingTime.points,
+            pagesRead.points,
+        ),
+        heatmap_config: summary.heatmap_config,
     };
 }
