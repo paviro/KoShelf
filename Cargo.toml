@@ -82,6 +82,8 @@ fluent-bundle = "0.16"
 intl-memoizer = "0.5"
 
 [target.'cfg(not(windows))'.dependencies]
+# Memory allocator
+tikv-jemallocator = "0.6"
 # CBR/RAR archive extraction (not supported on Windows)
 unrar = "0.5"
 
