@@ -13,5 +13,5 @@ pub use crate::koreader::types::*;
 // Re-exported from their canonical home in `domain::reading::types`.
 pub use crate::domain::reading::types::*;
 
-// Re-exported from canonical home in `runtime::reading_data`.
-pub use crate::runtime::reading_data::ReadingData;
+// Re-exported from canonical home in `infra::stores::reading_data`.
+pub use crate::infra::stores::reading_data::ReadingData;

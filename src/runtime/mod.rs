@@ -1,16 +1,16 @@
-//! Runtime data storage, ingest pipeline, and media asset management.
+//! Runtime orchestration: ingest pipeline, rebuild, export, and media assets.
 
 pub mod export;
 pub mod ingest;
 pub mod media;
-pub mod reading_data;
 pub mod rebuild;
 pub mod recap;
-pub mod store;
-pub mod updates;
 
 pub use ingest::{IngestResult, ingest};
 pub use media::MediaDirs;
-pub use reading_data::{ReadingData, ReadingDataStore, SharedReadingDataStore};
-pub use store::{SharedSiteStore, SiteStore};
-pub use updates::{Update, UpdateNotifier};
+
+// Re-exported from canonical home in `infra::stores`.
+pub use crate::infra::stores::{
+    ReadingData, ReadingDataStore, SharedReadingDataStore, SharedSiteStore, SiteStore, Update,
+    UpdateNotifier,
+};
