@@ -325,7 +325,7 @@ pub async fn full_rebuild(
 ///
 /// For `InBookFolder`: `/library/Title.sdr/metadata.epub.lua` → `/library/Title.epub`
 /// For `DocSettings`/`HashDocSettings`: look up by metadata_path in DB fingerprints.
-pub(crate) async fn derive_book_path_from_metadata_path(
+async fn derive_book_path_from_metadata_path(
     metadata_path: &Path,
     metadata_location: &MetadataLocation,
     repo: &LibraryRepository,
@@ -364,7 +364,7 @@ pub(crate) async fn derive_book_path_from_metadata_path(
 ///
 /// Tries all supported formats to find a matching book file in the parent directory.
 /// `/library/Title.sdr` → `/library/Title.epub` (if it exists)
-pub(crate) fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
+fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
     let sdr_name = sdr_path.file_name()?.to_str()?;
     let book_stem = sdr_name.strip_suffix(".sdr")?;
     let parent = sdr_path.parent()?;
