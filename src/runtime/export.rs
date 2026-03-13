@@ -13,7 +13,7 @@ use anyhow::{Context, Result};
 use log::info;
 use serde::Serialize;
 
-use crate::contracts::common::{ApiMeta, ContentTypeFilter};
+use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::library::LibraryContentType;
 use crate::contracts::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
 use crate::domain::library::LibraryService;
@@ -126,9 +126,8 @@ pub async fn export_data_files(
     fs::create_dir_all(data_dir)?;
 
     // ── Library domain ──────────────────────────────────────────────────
-    let items_response =
-        LibraryService::list(library_repo, LibraryListQuery::default(), export_meta()).await?;
-    let items = &items_response.items;
+    let items_data = LibraryService::list(library_repo, LibraryListQuery::default()).await?;
+    let items = &items_data.items;
 
     let has_books = items
         .iter()
@@ -196,9 +195,7 @@ async fn export_item_details(
 
     for item in items {
         let query = LibraryDetailQuery::new(&item.id, IncludeSet::all());
-        if let Some(detail) =
-            LibraryService::detail(library_repo, &query, export_meta(), reading_data).await?
-        {
+        if let Some(detail) = LibraryService::detail(library_repo, &query, reading_data).await? {
             write_json(&items_dir.join(format!("{}.json", item.id)), &detail)?;
             exported_ids.insert(item.id.clone());
         }
@@ -331,12 +328,14 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
                 reading_data,
                 ReadingMetricsQuery {
                     scope,
-                    metric,
+                    metrics: vec![metric],
                     group_by: MetricsGroupBy::Day,
                     range: None,
                     tz: None,
                 },
             );
+
+            let metric_name = metric.as_str();
 
             for point in &result.points {
                 let month_key = point.key[..7].to_string();
@@ -357,11 +356,12 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
                     _ => unreachable!(),
                 };
 
+                let value = point.values.get(metric_name).copied().unwrap_or(0);
                 match metric {
-                    ReadingMetric::ReadingTimeSec => day_metrics.reading_time_sec = point.value,
-                    ReadingMetric::PagesRead => day_metrics.pages_read = point.value,
-                    ReadingMetric::Sessions => day_metrics.sessions = point.value,
-                    ReadingMetric::Completions => day_metrics.completions = point.value,
+                    ReadingMetric::ReadingTimeSec => day_metrics.reading_time_sec = value,
+                    ReadingMetric::PagesRead => day_metrics.pages_read = value,
+                    ReadingMetric::Sessions => day_metrics.sessions = value,
+                    ReadingMetric::Completions => day_metrics.completions = value,
                     _ => {}
                 }
             }
@@ -483,13 +483,6 @@ fn export_reading_completions(data_dir: &Path, reading_data: &ReadingData) -> Re
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────
-
-fn export_meta() -> ApiMeta {
-    ApiMeta {
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        generated_at: chrono::Utc::now().to_rfc3339(),
-    }
-}
 
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     if let Some(parent) = path.parent() {

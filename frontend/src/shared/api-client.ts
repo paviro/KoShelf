@@ -1,10 +1,12 @@
 import type {
+    LibraryDetailData,
+    LibraryListData,
     ReadingAvailablePeriodsData,
     ReadingCalendarData,
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
-    SiteResponse,
+    SiteData,
 } from './contracts';
 
 export type ScopeValue = 'all' | 'books' | 'comics';
@@ -18,9 +20,9 @@ export interface CompletionsParams {
 }
 
 export interface ApiClient {
-    getSite(): Promise<SiteResponse>;
-    getItems<T = unknown>(scope?: ScopeValue): Promise<T>;
-    getItem<T = unknown>(id: string): Promise<T>;
+    getSite(): Promise<SiteData>;
+    getItems(scope?: ScopeValue): Promise<LibraryListData>;
+    getItem(id: string): Promise<LibraryDetailData>;
     getReadingSummary(
         scope: ScopeValue,
         from?: string,

@@ -4,10 +4,10 @@ mod reading;
 mod shared;
 mod site;
 
-pub use events::events_stream;
-pub use library::{item_detail, items};
-pub use reading::{
+pub(crate) use events::events_stream;
+pub(crate) use library::{item_detail, items};
+pub(crate) use reading::{
     reading_available_periods, reading_calendar, reading_completions, reading_metrics,
     reading_summary,
 };
-pub use site::site;
+pub(crate) use site::site;

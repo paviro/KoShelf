@@ -1,6 +1,11 @@
+use std::ops::Deref;
+use std::sync::Arc;
+
 use axum::{
     Json,
+    extract::FromRequestParts,
     http::StatusCode,
+    http::request::Parts,
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
@@ -10,8 +15,10 @@ use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
 use crate::domain::library::queries::{IncludeSet, ItemSort, SortOrder};
 use crate::domain::reading::queries::{
     self as rq, CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange,
-    MetricsGroupBy, PeriodGroupBy, PeriodSource, ReadingMetric, ReadingScope,
+    MetricsGroupBy, PeriodGroupBy, PeriodSource, ReadingScope,
 };
+use crate::runtime::ReadingData;
+use crate::server::ServerState;
 
 // ── Query params ────────────────────────────────────────────────────────────
 
@@ -73,8 +80,6 @@ pub struct ReadingCompletionsParams {
     pub group_by: Option<String>,
     pub include: Option<String>,
     pub tz: Option<String>,
-    pub limit: Option<String>,
-    pub cursor: Option<String>,
 }
 
 // ── Error plumbing ─────────────────────────────────────────────────────────
@@ -112,6 +117,12 @@ impl ApiResponseError {
     }
 }
 
+impl From<(ApiErrorCode, String)> for ApiResponseError {
+    fn from((code, msg): (ApiErrorCode, String)) -> Self {
+        Self::bad_request_with_message(code, msg)
+    }
+}
+
 impl IntoResponse for ApiResponseError {
     fn into_response(self) -> Response {
         let body = match self.message {
@@ -123,6 +134,32 @@ impl IntoResponse for ApiResponseError {
 }
 
 pub(crate) type ApiResult<T> = Result<T, ApiResponseError>;
+
+// ── ReadingData extractor ─────────────────────────────────────────────────
+
+pub(crate) struct ReadingDataGuard(pub(crate) Arc<ReadingData>);
+
+impl Deref for ReadingDataGuard {
+    type Target = ReadingData;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromRequestParts<ServerState> for ReadingDataGuard {
+    type Rejection = ApiResponseError;
+
+    async fn from_request_parts(
+        _parts: &mut Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        state
+            .reading_data_store
+            .get()
+            .map(ReadingDataGuard)
+            .ok_or_else(ApiResponseError::internal_server_error)
+    }
+}
 
 // ── Parsing helpers ────────────────────────────────────────────────────────
 
@@ -164,15 +201,7 @@ pub(crate) fn parse_sort_order(value: Option<&str>) -> ApiResult<Option<SortOrde
 }
 
 pub(crate) fn parse_include(value: Option<&str>) -> ApiResult<IncludeSet> {
-    IncludeSet::parse(value)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))
-}
-
-pub(crate) fn request_meta() -> crate::contracts::common::ApiMeta {
-    crate::contracts::common::ApiMeta {
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        generated_at: chrono::Utc::now().to_rfc3339(),
-    }
+    Ok(IncludeSet::parse(value)?)
 }
 
 // ── Reading endpoint parsing ──────────────────────────────────────────────
@@ -184,9 +213,7 @@ pub(crate) fn parse_optional_date_range(
 ) -> ApiResult<Option<DateRange>> {
     match (from, to) {
         (None, None) => Ok(None),
-        (Some(f), Some(t)) => DateRange::from_str(f, t)
-            .map(Some)
-            .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg)),
+        (Some(f), Some(t)) => Ok(Some(DateRange::from_str(f, t)?)),
         (Some(_), None) => Err(ApiResponseError::bad_request_with_message(
             ApiErrorCode::InvalidQuery,
             "'from' and 'to' must be provided together",
@@ -199,8 +226,7 @@ pub(crate) fn parse_optional_date_range(
 }
 
 fn parse_reading_tz(value: Option<&str>) -> ApiResult<Option<chrono_tz::Tz>> {
-    rq::parse_timezone(value)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))
+    Ok(rq::parse_timezone(value)?)
 }
 
 fn parse_reading_scope(value: Option<&str>) -> ApiResult<ReadingScope> {
@@ -214,16 +240,6 @@ fn require_param<'a>(value: Option<&'a str>, name: &str) -> ApiResult<&'a str> {
             format!("'{name}' is required"),
         )
     })
-}
-
-fn reject_pagination(limit: Option<&str>, cursor: Option<&str>) -> ApiResult<()> {
-    if limit.is_some() || cursor.is_some() {
-        return Err(ApiResponseError::bad_request_with_message(
-            ApiErrorCode::InvalidQuery,
-            "'limit' and 'cursor' are not supported",
-        ));
-    }
-    Ok(())
 }
 
 pub(crate) fn parse_reading_summary_query(
@@ -240,16 +256,14 @@ pub(crate) fn parse_reading_metrics_query(
 ) -> ApiResult<rq::ReadingMetricsQuery> {
     let scope = parse_reading_scope(params.scope.as_deref())?;
     let metric_str = require_param(params.metric.as_deref(), "metric")?;
-    let metric = ReadingMetric::parse(metric_str)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+    let metrics = rq::parse_metrics(metric_str)?;
     let group_by_str = require_param(params.group_by.as_deref(), "group_by")?;
-    let group_by = MetricsGroupBy::parse(group_by_str)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+    let group_by = MetricsGroupBy::parse(group_by_str)?;
     let range = parse_optional_date_range(params.from.as_deref(), params.to.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
     Ok(rq::ReadingMetricsQuery {
         scope,
-        metric,
+        metrics,
         group_by,
         range,
         tz,
@@ -261,13 +275,10 @@ pub(crate) fn parse_reading_available_periods_query(
 ) -> ApiResult<rq::ReadingAvailablePeriodsQuery> {
     let scope = parse_reading_scope(params.scope.as_deref())?;
     let source_str = require_param(params.source.as_deref(), "source")?;
-    let source = PeriodSource::parse(source_str)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+    let source = PeriodSource::parse(source_str)?;
     let group_by_str = require_param(params.group_by.as_deref(), "group_by")?;
-    let group_by = PeriodGroupBy::parse(group_by_str)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
-    rq::validate_period_source_group(source, group_by)
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+    let group_by = PeriodGroupBy::parse(group_by_str)?;
+    rq::validate_period_source_group(source, group_by)?;
     let range = parse_optional_date_range(params.from.as_deref(), params.to.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
     Ok(rq::ReadingAvailablePeriodsQuery {
@@ -301,8 +312,6 @@ pub(crate) fn parse_reading_calendar_query(
 pub(crate) fn parse_reading_completions_query(
     params: &ReadingCompletionsParams,
 ) -> ApiResult<rq::ReadingCompletionsQuery> {
-    reject_pagination(params.limit.as_deref(), params.cursor.as_deref())?;
-
     let scope = parse_reading_scope(params.scope.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
 
@@ -328,8 +337,7 @@ pub(crate) fn parse_reading_completions_query(
             CompletionsSelector::Year(year_value)
         }
         (None, Some(f), Some(t)) => {
-            let range = DateRange::from_str(f, t)
-                .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+            let range = DateRange::from_str(f, t)?;
             CompletionsSelector::Range(range)
         }
         (None, None, None) => CompletionsSelector::Default,
@@ -341,10 +349,8 @@ pub(crate) fn parse_reading_completions_query(
         }
     };
 
-    let group_by = CompletionsGroupBy::parse(params.group_by.as_deref())
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
-    let includes = CompletionsIncludeSet::parse(params.include.as_deref())
-        .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))?;
+    let group_by = CompletionsGroupBy::parse(params.group_by.as_deref())?;
+    let includes = CompletionsIncludeSet::parse(params.include.as_deref())?;
 
     Ok(rq::ReadingCompletionsQuery {
         scope,
@@ -527,7 +533,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_reading_metrics_valid() {
+    fn parse_reading_metrics_valid_single() {
         let params = ReadingMetricsParams {
             scope: Some("books".to_string()),
             metric: Some("reading_time_sec".to_string()),
@@ -537,8 +543,25 @@ mod tests {
             tz: None,
         };
         let query = parse_reading_metrics_query(&params).unwrap();
-        assert_eq!(query.metric, ReadingMetric::ReadingTimeSec);
+        assert_eq!(query.metrics.len(), 1);
+        assert_eq!(query.metrics[0], rq::ReadingMetric::ReadingTimeSec);
         assert_eq!(query.group_by, MetricsGroupBy::Day);
+    }
+
+    #[test]
+    fn parse_reading_metrics_valid_multiple() {
+        let params = ReadingMetricsParams {
+            scope: None,
+            metric: Some("reading_time_sec,pages_read".to_string()),
+            group_by: Some("day".to_string()),
+            from: None,
+            to: None,
+            tz: None,
+        };
+        let query = parse_reading_metrics_query(&params).unwrap();
+        assert_eq!(query.metrics.len(), 2);
+        assert_eq!(query.metrics[0], rq::ReadingMetric::ReadingTimeSec);
+        assert_eq!(query.metrics[1], rq::ReadingMetric::PagesRead);
     }
 
     // ── Available-periods query parsing ───────────────────────────────
@@ -620,8 +643,6 @@ mod tests {
             group_by: None,
             include: None,
             tz: None,
-            limit: None,
-            cursor: None,
         };
         let query = parse_reading_completions_query(&params).unwrap();
         assert_eq!(query.selector, CompletionsSelector::Default);
@@ -638,8 +659,6 @@ mod tests {
             group_by: None,
             include: Some("summary,share_assets".to_string()),
             tz: None,
-            limit: None,
-            cursor: None,
         };
         let query = parse_reading_completions_query(&params).unwrap();
         assert_eq!(query.selector, CompletionsSelector::Year(2025));
@@ -657,8 +676,6 @@ mod tests {
             group_by: Some("none".to_string()),
             include: None,
             tz: None,
-            limit: None,
-            cursor: None,
         };
         let query = parse_reading_completions_query(&params).unwrap();
         assert!(matches!(query.selector, CompletionsSelector::Range(_)));
@@ -675,24 +692,6 @@ mod tests {
             group_by: None,
             include: None,
             tz: None,
-            limit: None,
-            cursor: None,
-        };
-        assert!(parse_reading_completions_query(&params).is_err());
-    }
-
-    #[test]
-    fn parse_reading_completions_rejects_limit_cursor() {
-        let params = ReadingCompletionsParams {
-            scope: None,
-            year: None,
-            from: None,
-            to: None,
-            group_by: None,
-            include: None,
-            tz: None,
-            limit: Some("10".to_string()),
-            cursor: None,
         };
         assert!(parse_reading_completions_query(&params).is_err());
     }

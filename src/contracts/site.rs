@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use super::common::ApiMeta;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SiteCapabilities {
     pub has_books: bool,
@@ -10,8 +8,7 @@ pub struct SiteCapabilities {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SiteResponse {
-    pub meta: ApiMeta,
+pub struct SiteData {
     pub title: String,
     pub language: String,
     pub capabilities: SiteCapabilities,

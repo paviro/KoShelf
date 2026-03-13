@@ -1,7 +1,7 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import type { LibraryDetailResponse } from '../api/library-data';
+import type { LibraryDetailData } from '../api/library-data';
 import {
     formatSeriesDisplay,
     sanitizeRichTextHtml,
@@ -424,7 +424,7 @@ class HoverPreviewManager {
     }
 
     private previewDataFromDetail(
-        detail: LibraryDetailResponse,
+        detail: LibraryDetailData,
         fallback: PreviewCardData,
     ): PreviewCardData {
         return {

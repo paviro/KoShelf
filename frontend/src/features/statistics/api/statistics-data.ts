@@ -49,14 +49,12 @@ export interface StatisticsYearResponse {
 }
 
 function mergeDailyActivity(
-    readingTimePoints: MetricPoint[],
-    pagesReadPoints: MetricPoint[],
+    points: MetricPoint[],
 ): DailyActivityEntry[] {
-    const pagesMap = new Map(pagesReadPoints.map((p) => [p.key, p.value]));
-    return readingTimePoints.map((p) => ({
+    return points.map((p) => ({
         date: p.key,
-        reading_time_sec: p.value,
-        pages_read: pagesMap.get(p.key) ?? 0,
+        reading_time_sec: (p.reading_time_sec as number) ?? 0,
+        pages_read: (p.pages_read as number) ?? 0,
     }));
 }
 
@@ -88,16 +86,15 @@ export async function loadStatisticsWeek(
     startDate: string,
     endDate: string,
 ): Promise<StatisticsWeekResponse> {
-    const [summary, readingTime, pagesRead] = await Promise.all([
+    const [summary, metrics] = await Promise.all([
         api.getReadingSummary(scope, startDate, endDate),
         api.getReadingMetrics(
             scope,
-            'reading_time_sec',
+            'reading_time_sec,pages_read',
             'day',
             startDate,
             endDate,
         ),
-        api.getReadingMetrics(scope, 'pages_read', 'day', startDate, endDate),
     ]);
 
     return {
@@ -110,10 +107,7 @@ export async function loadStatisticsWeek(
             summary.overview.longest_session_duration_sec ?? null,
         average_session_duration_sec:
             summary.overview.average_session_duration_sec ?? null,
-        daily_activity: mergeDailyActivity(
-            readingTime.points,
-            pagesRead.points,
-        ),
+        daily_activity: mergeDailyActivity(metrics.points),
     };
 }
 
@@ -124,19 +118,21 @@ export async function loadStatisticsYear(
     const from = `${year}-01-01`;
     const to = `${year}-12-31`;
 
-    const [summary, readingTime, pagesRead] = await Promise.all([
+    const [summary, metrics] = await Promise.all([
         api.getReadingSummary(scope, from, to),
-        api.getReadingMetrics(scope, 'reading_time_sec', 'day', from, to),
-        api.getReadingMetrics(scope, 'pages_read', 'day', from, to),
+        api.getReadingMetrics(
+            scope,
+            'reading_time_sec,pages_read',
+            'day',
+            from,
+            to,
+        ),
     ]);
 
     return {
         year,
         completions: summary.overview.completions,
-        daily_activity: mergeDailyActivity(
-            readingTime.points,
-            pagesRead.points,
-        ),
+        daily_activity: mergeDailyActivity(metrics.points),
         heatmap_config: summary.heatmap_config,
     };
 }

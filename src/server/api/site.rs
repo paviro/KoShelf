@@ -5,16 +5,12 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::contracts::common::ApiMeta;
-use crate::contracts::site::{SiteCapabilities, SiteResponse};
+use crate::contracts::common::ApiResponse;
+use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::server::ServerState;
 
-fn empty_site_response() -> SiteResponse {
-    SiteResponse {
-        meta: ApiMeta {
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            generated_at: String::new(),
-        },
+fn empty_site_data() -> SiteData {
+    SiteData {
         title: String::new(),
         language: "en_US".to_string(),
         capabilities: SiteCapabilities {
@@ -25,12 +21,12 @@ fn empty_site_response() -> SiteResponse {
     }
 }
 
-pub async fn site(State(state): State<ServerState>) -> Response {
-    let payload = state
+pub(crate) async fn site(State(state): State<ServerState>) -> Response {
+    let data = state
         .site_store
         .get()
         .map(|arc| (*arc).clone())
-        .unwrap_or_else(empty_site_response);
+        .unwrap_or_else(empty_site_data);
 
-    (StatusCode::OK, Json(payload)).into_response()
+    (StatusCode::OK, Json(ApiResponse::new(data))).into_response()
 }

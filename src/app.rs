@@ -1,7 +1,6 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
-use crate::contracts::common::ApiMeta;
-use crate::contracts::site::{SiteCapabilities, SiteResponse};
+use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
@@ -84,19 +83,14 @@ fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
     resolve_runtime_data_policy(&cli_overrides)
 }
 
-/// Build a `SiteResponse` from the current library items and reading data availability.
-fn build_site_response(
+/// Build a `SiteData` from the current library items and reading data availability.
+fn build_site_data(
     items: &[crate::models::LibraryItem],
     has_reading_data: bool,
     site_title: &str,
     language: &str,
-    time_config: &TimeConfig,
-) -> SiteResponse {
-    SiteResponse {
-        meta: ApiMeta {
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            generated_at: time_config.now_rfc3339(),
-        },
+) -> SiteData {
+    SiteData {
         title: site_title.to_string(),
         language: language.to_string(),
         capabilities: SiteCapabilities {
@@ -305,12 +299,12 @@ pub async fn run(cli: Cli) -> Result<()> {
     }
 
     // ── Build site metadata ─────────────────────────────────────────────
-    let site_response = build_site_response(
+    let generated_at = config.time_config.now_rfc3339();
+    let site_data = build_site_data(
         &filtered_items,
         has_reading_data,
         &config.site_title,
         &config.language,
-        &config.time_config,
     );
 
     match plan.mode {
@@ -338,11 +332,11 @@ pub async fn run(cli: Cli) -> Result<()> {
         RunMode::Serve => {
             let library_repo = library_repo.context("Library DB is required for serve mode")?;
 
-            let revision_epoch = format!("serve_{}", site_response.meta.generated_at.as_str());
-            let initial_generated_at = site_response.meta.generated_at.clone();
+            let revision_epoch = format!("serve_{}", &generated_at);
+            let initial_generated_at = generated_at;
 
             let site_store = Arc::new(SiteStore::new());
-            site_store.replace(site_response);
+            site_store.replace(site_data);
 
             let reading_data_store = Arc::new(ReadingDataStore::new());
             if let Some(rd) = reading_data {

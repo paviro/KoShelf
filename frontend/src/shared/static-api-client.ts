@@ -8,12 +8,15 @@ import type {
     ExportReadingPeriods,
     ExportReadingSummary,
     ExportSite,
+    LibraryDetailData,
+    LibraryListData,
+    LibraryListItem,
     ReadingAvailablePeriodsData,
     ReadingCalendarData,
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
-    SiteResponse,
+    SiteData,
 } from './contracts';
 
 function pickScope<T>(
@@ -25,37 +28,13 @@ function pickScope<T>(
 
 // ── Items helpers ───────────────────────────────────────────────────────
 
-type ItemPayload = { items: Array<{ content_type?: string }> };
-
-function filterItemsPayload(payload: unknown, scope: ScopeValue): unknown {
-    if (scope === 'all') {
-        return payload;
-    }
-
+function filterItemsByScope(
+    items: LibraryListItem[],
+    scope: ScopeValue,
+): LibraryListItem[] {
+    if (scope === 'all') return items;
     const expected = scope === 'books' ? 'book' : 'comic';
-
-    // Static export writes items/index.json as a raw array.
-    if (Array.isArray(payload)) {
-        return {
-            items: (payload as Array<{ content_type?: string }>).filter(
-                (item) => item.content_type === expected,
-            ),
-        };
-    }
-
-    if (!payload || typeof payload !== 'object') {
-        return payload;
-    }
-
-    const typed = payload as ItemPayload;
-    if (!Array.isArray(typed.items)) {
-        return payload;
-    }
-
-    return {
-        ...(payload as Record<string, unknown>),
-        items: typed.items.filter((item) => item.content_type === expected),
-    };
+    return items.filter((item) => item.content_type === expected);
 }
 
 // ── Completions scope filter ────────────────────────────────────────────
@@ -119,29 +98,32 @@ export class StaticApiClient implements ApiClient {
         return data as T;
     }
 
-    async getSite(): Promise<SiteResponse> {
+    async getSite(): Promise<SiteData> {
         const exported = (await fetchJson('/data/site.json')) as ExportSite;
         return {
-            meta: { version: exported.version, generated_at: '' },
             title: exported.name,
             language: exported.default_language,
             capabilities: exported.capabilities,
+            version: exported.version,
         };
     }
 
-    async getItems<T = unknown>(scope?: ScopeValue): Promise<T> {
+    async getItems(scope?: ScopeValue): Promise<LibraryListData> {
         const selectedScope = normalizeScope(scope);
         const payload = await fetchJson('/data/items/index.json');
 
-        if (Array.isArray(payload)) {
-            return filterItemsPayload(payload, selectedScope) as T;
-        }
+        // Static export writes items/index.json as a raw array.
+        const items = Array.isArray(payload)
+            ? (payload as LibraryListItem[])
+            : (payload as LibraryListData).items ?? [];
 
-        return filterItemsPayload(payload, selectedScope) as T;
+        return { items: filterItemsByScope(items, selectedScope) };
     }
 
-    async getItem<T = unknown>(id: string): Promise<T> {
-        return (await fetchJson(`/data/items/${id}.json`)) as T;
+    async getItem(id: string): Promise<LibraryDetailData> {
+        return (await fetchJson(
+            `/data/items/${id}.json`,
+        )) as LibraryDetailData;
     }
 
     async getReadingSummary(scope: ScopeValue): Promise<ReadingSummaryData> {
@@ -215,6 +197,9 @@ export class StaticApiClient implements ApiClient {
         from?: string,
         to?: string,
     ): Promise<ReadingMetricsData> {
+        // Parse comma-separated metrics.
+        const metricNames = metric.split(',').map((m) => m.trim()).filter(Boolean);
+
         // Determine which month files to load from the periods index.
         const periods = await this.fetchCached<ExportReadingPeriods>(
             '/data/reading/periods.json',
@@ -230,7 +215,7 @@ export class StaticApiClient implements ApiClient {
         });
 
         // Load month files and extract metric+scope data.
-        const allPoints: Array<{ key: string; value: number }> = [];
+        const allPoints: Array<{ key: string; values: Record<string, number> }> = [];
 
         for (const mk of relevantMonths) {
             let monthData: ExportMonthMetrics;
@@ -248,36 +233,45 @@ export class StaticApiClient implements ApiClient {
 
                 const scopeMetrics: ExportDayMetricsByScope[keyof ExportDayMetricsByScope] =
                     byScope[scope];
-                const value =
-                    scopeMetrics[metric as keyof typeof scopeMetrics] ?? 0;
-                allPoints.push({ key: dayKey, value });
+                const values: Record<string, number> = {};
+                for (const m of metricNames) {
+                    values[m] = (scopeMetrics[m as keyof typeof scopeMetrics] as number) ?? 0;
+                }
+                allPoints.push({ key: dayKey, values });
             }
         }
 
         // Return day-level points directly.
         if (groupBy === 'day') {
             return {
-                metric,
+                metrics: metricNames,
                 group_by: groupBy,
                 scope,
-                points: allPoints,
+                points: allPoints.map((p) => ({ key: p.key, ...p.values })),
             };
         }
 
         // Aggregate into week or month buckets.
-        const grouped = new Map<string, number>();
+        const grouped = new Map<string, Record<string, number>>();
         for (const point of allPoints) {
             const groupKey =
                 groupBy === 'month'
                     ? point.key.substring(0, 7)
                     : mondayOfWeek(point.key);
-            grouped.set(groupKey, (grouped.get(groupKey) ?? 0) + point.value);
+            const existing = grouped.get(groupKey);
+            if (existing) {
+                for (const m of metricNames) {
+                    existing[m] = (existing[m] ?? 0) + (point.values[m] ?? 0);
+                }
+            } else {
+                grouped.set(groupKey, { ...point.values });
+            }
         }
 
         const points = Array.from(grouped.entries())
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, value]) => ({ key, value }));
+            .map(([key, values]) => ({ key, ...values }));
 
-        return { metric, group_by: groupBy, scope, points };
+        return { metrics: metricNames, group_by: groupBy, scope, points };
     }
 }

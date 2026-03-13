@@ -6,7 +6,7 @@ import { HashRouter } from 'react-router-dom';
 import './styles/app.css';
 import { App } from './App';
 import { api } from './shared/api';
-import type { SiteResponse } from './shared/contracts';
+import type { SiteData } from './shared/contracts';
 import { translation } from './shared/i18n';
 import { RuntimeUpdatesBridge } from './shared/runtime-updates';
 import { initThemePreference } from './shared/theme';
@@ -39,7 +39,7 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap(): Promise<void> {
-    let initialSite: SiteResponse | null = null;
+    let initialSite: SiteData | null = null;
     try {
         initialSite = await api.getSite();
         queryClient.setQueryData(['site'], initialSite);

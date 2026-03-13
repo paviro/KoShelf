@@ -2,10 +2,9 @@
 
 use anyhow::Result;
 
-use crate::contracts::common::ApiMeta;
 use crate::contracts::library::{
-    LibraryCompletionEntry, LibraryCompletions, LibraryDetailResponse, LibraryDetailStatistics,
-    LibraryItemStats, LibraryListResponse, LibrarySessionStats,
+    LibraryCompletionEntry, LibraryCompletions, LibraryDetailData, LibraryDetailStatistics,
+    LibraryItemStats, LibraryListData, LibrarySessionStats,
 };
 use crate::domain::library::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::infra::sqlite::library_repo::LibraryRepository;
@@ -20,18 +19,16 @@ impl LibraryService {
     pub async fn list(
         repo: &LibraryRepository,
         query: LibraryListQuery,
-        meta: ApiMeta,
-    ) -> Result<LibraryListResponse> {
+    ) -> Result<LibraryListData> {
         let items = repo.list_items(&query).await?;
-        Ok(LibraryListResponse { meta, items })
+        Ok(LibraryListData { items })
     }
 
     pub async fn detail(
         repo: &LibraryRepository,
         query: &LibraryDetailQuery,
-        meta: ApiMeta,
         reading_data: Option<&ReadingData>,
-    ) -> Result<Option<LibraryDetailResponse>> {
+    ) -> Result<Option<LibraryDetailData>> {
         let Some(item) = repo.get_item(&query.id).await? else {
             return Ok(None);
         };
@@ -82,8 +79,7 @@ impl LibraryService {
             None
         };
 
-        Ok(Some(LibraryDetailResponse {
-            meta,
+        Ok(Some(LibraryDetailData {
             item,
             highlights,
             bookmarks,

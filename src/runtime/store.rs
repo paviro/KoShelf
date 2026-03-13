@@ -1,11 +1,11 @@
 //! Shared in-memory site metadata store.
 
-use crate::contracts::site::SiteResponse;
+use crate::contracts::site::SiteData;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Default)]
 pub struct SiteStore {
-    inner: Arc<RwLock<Option<Arc<SiteResponse>>>>,
+    inner: Arc<RwLock<Option<Arc<SiteData>>>>,
 }
 
 impl SiteStore {
@@ -13,7 +13,7 @@ impl SiteStore {
         Self::default()
     }
 
-    pub fn replace(&self, site: SiteResponse) {
+    pub fn replace(&self, site: SiteData) {
         let mut guard = self
             .inner
             .write()
@@ -21,7 +21,7 @@ impl SiteStore {
         *guard = Some(Arc::new(site));
     }
 
-    pub fn get(&self) -> Option<Arc<SiteResponse>> {
+    pub fn get(&self) -> Option<Arc<SiteData>> {
         let guard = self
             .inner
             .read()

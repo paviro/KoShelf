@@ -69,7 +69,7 @@ pub fn parse_timezone(value: Option<&str>) -> Result<Option<Tz>, (ApiErrorCode, 
 
 // ── Reading metric ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ReadingMetric {
     ReadingTimeSec,
     PagesRead,
@@ -349,10 +349,33 @@ pub struct ReadingSummaryQuery {
 #[derive(Debug, Clone)]
 pub struct ReadingMetricsQuery {
     pub scope: ReadingScope,
-    pub metric: ReadingMetric,
+    pub metrics: Vec<ReadingMetric>,
     pub group_by: MetricsGroupBy,
     pub range: Option<DateRange>,
     pub tz: Option<Tz>,
+}
+
+/// Parse a comma-separated metric string into a `Vec<ReadingMetric>`.
+pub fn parse_metrics(value: &str) -> Result<Vec<ReadingMetric>, (ApiErrorCode, String)> {
+    let mut result = Vec::new();
+    let mut seen = HashSet::new();
+    for raw in value.split(',') {
+        let token = raw.trim();
+        if token.is_empty() {
+            continue;
+        }
+        let metric = ReadingMetric::parse(token)?;
+        if seen.insert(metric) {
+            result.push(metric);
+        }
+    }
+    if result.is_empty() {
+        return Err((
+            ApiErrorCode::InvalidQuery,
+            "'metric' must contain at least one valid metric".to_string(),
+        ));
+    }
+    Ok(result)
 }
 
 #[derive(Debug, Clone)]

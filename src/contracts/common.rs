@@ -5,32 +5,36 @@ use std::str::FromStr;
 
 use super::error::ApiErrorCode;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiMeta {
-    pub version: String,
-    pub generated_at: String,
-}
+// ── Response envelope ─────────────────────────────────────────────────────
 
-// ── New-contract response envelope ────────────────────────────────────────
-
-/// Generic response envelope for new-contract endpoints.
+/// Generic response envelope for all API endpoints.
 ///
-/// Wraps a `data` payload with response metadata. Phase 4 will extend
-/// `ResponseMeta` with `revision_epoch`, `revision`, and `request_id`.
+/// Wraps a `data` payload with response metadata.
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiResponse<T: Serialize> {
     pub data: T,
     pub meta: ResponseMeta,
 }
 
+impl<T: Serialize> ApiResponse<T> {
+    pub fn new(data: T) -> Self {
+        Self {
+            data,
+            meta: ResponseMeta::now(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ResponseMeta {
+    pub version: String,
     pub generated_at: String,
 }
 
 impl ResponseMeta {
     pub fn now() -> Self {
         Self {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             generated_at: chrono::Utc::now().to_rfc3339(),
         }
     }

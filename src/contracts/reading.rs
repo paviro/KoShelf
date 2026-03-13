@@ -62,7 +62,7 @@ pub struct HeatmapConfig {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ReadingMetricsData {
-    pub metric: String,
+    pub metrics: Vec<String>,
     pub group_by: String,
     pub scope: String,
     pub points: Vec<MetricPoint>,
@@ -71,7 +71,8 @@ pub struct ReadingMetricsData {
 #[derive(Debug, Clone, Serialize)]
 pub struct MetricPoint {
     pub key: String,
-    pub value: i64,
+    #[serde(flatten)]
+    pub values: BTreeMap<String, i64>,
 }
 
 // ── GET /api/reading/available-periods ────────────────────────────────────

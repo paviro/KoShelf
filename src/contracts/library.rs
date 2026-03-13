@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
-use super::common::ApiMeta;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
@@ -112,14 +110,12 @@ pub struct LibraryAnnotation {
 // ── Response wrappers ─────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryListResponse {
-    pub meta: ApiMeta,
+pub struct LibraryListData {
     pub items: Vec<LibraryListItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryDetailResponse {
-    pub meta: ApiMeta,
+pub struct LibraryDetailData {
     pub item: LibraryDetailItem,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub highlights: Option<Vec<LibraryAnnotation>>,

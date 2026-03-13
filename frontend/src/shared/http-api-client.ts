@@ -3,12 +3,14 @@ import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
     ApiResponse,
+    LibraryDetailData,
+    LibraryListData,
     ReadingAvailablePeriodsData,
     ReadingCalendarData,
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
-    SiteResponse,
+    SiteData,
 } from './contracts';
 
 function appendParams(
@@ -26,19 +28,28 @@ function appendParams(
 }
 
 export class HttpApiClient implements ApiClient {
-    async getSite(): Promise<SiteResponse> {
-        return (await fetchJson('/api/site')) as SiteResponse;
+    async getSite(): Promise<SiteData> {
+        const response = (await fetchJson('/api/site')) as ApiResponse<SiteData>;
+        return {
+            ...response.data,
+            version: response.meta.version,
+            generated_at: response.meta.generated_at,
+        };
     }
 
-    async getItems<T = unknown>(scope?: ScopeValue): Promise<T> {
+    async getItems(scope?: ScopeValue): Promise<LibraryListData> {
         const selectedScope = normalizeScope(scope);
-        return (await fetchJson(
+        const response = (await fetchJson(
             appendParams('/api/items', { scope: selectedScope }),
-        )) as T;
+        )) as ApiResponse<LibraryListData>;
+        return response.data;
     }
 
-    async getItem<T = unknown>(id: string): Promise<T> {
-        return (await fetchJson(`/api/items/${id}?include=all`)) as T;
+    async getItem(id: string): Promise<LibraryDetailData> {
+        const response = (await fetchJson(
+            `/api/items/${id}?include=all`,
+        )) as ApiResponse<LibraryDetailData>;
+        return response.data;
     }
 
     async getReadingSummary(

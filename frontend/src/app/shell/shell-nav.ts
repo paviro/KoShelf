@@ -6,7 +6,7 @@ import {
 } from 'react-icons/hi2';
 import { LuCalendarDays, LuHistory, LuSettings } from 'react-icons/lu';
 
-import type { SiteResponse } from '../../shared/contracts';
+import type { SiteData } from '../../shared/contracts';
 import { translation } from '../../shared/i18n';
 import {
     matchRoute,
@@ -33,7 +33,7 @@ const ICONS = {
 
 export const BRAND_ICON = ICONS.books;
 
-export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
+export function buildNavItems(site: SiteData | undefined): NavItem[] {
     if (!site) return [];
 
     const items: NavItem[] = [];

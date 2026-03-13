@@ -26,83 +26,124 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
 
     let all_keys = all_bucket_keys(resolved_from, resolved_to, query.group_by);
 
-    let points = match query.metric {
-        ReadingMetric::ReadingTimeSec => {
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for stat in &page_stats {
-                let date = time_config.date_for_timestamp(stat.start_time);
-                let key = bucket_key(date, query.group_by);
-                *buckets.entry(key).or_insert(0) += stat.duration;
-            }
-            fill_points(&all_keys, &buckets)
-        }
-        ReadingMetric::PagesRead => {
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for stat in &page_stats {
-                let date = time_config.date_for_timestamp(stat.start_time);
-                let key = bucket_key(date, query.group_by);
-                *buckets.entry(key).or_insert(0) += 1;
-            }
-            fill_points(&all_keys, &buckets)
-        }
-        ReadingMetric::Sessions => {
-            let sessions = sessions_with_dates(&page_stats, &time_config);
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for (date, _) in &sessions {
-                let key = bucket_key(*date, query.group_by);
-                *buckets.entry(key).or_insert(0) += 1;
-            }
-            fill_points(&all_keys, &buckets)
-        }
-        ReadingMetric::Completions => {
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for book in &stats.books {
-                let Some(ref completions) = book.completions else {
-                    continue;
-                };
-                for entry in &completions.entries {
-                    if let Ok(end_date) = NaiveDate::parse_from_str(&entry.end_date, "%Y-%m-%d")
-                        && end_date >= resolved_from
-                        && end_date <= resolved_to
-                    {
-                        let key = bucket_key(end_date, query.group_by);
-                        *buckets.entry(key).or_insert(0) += 1;
-                    }
-                }
-            }
-            fill_points(&all_keys, &buckets)
-        }
-        ReadingMetric::AverageSessionDurationSec => {
-            let sessions = sessions_with_dates(&page_stats, &time_config);
-            let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
-            for (date, duration) in &sessions {
-                let key = bucket_key(*date, query.group_by);
-                bucket_sessions.entry(key).or_default().push(*duration);
-            }
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for (key, durations) in &bucket_sessions {
-                let total: i64 = durations.iter().sum();
-                buckets.insert(key.clone(), total / durations.len() as i64);
-            }
-            fill_points(&all_keys, &buckets)
-        }
-        ReadingMetric::LongestSessionDurationSec => {
-            let sessions = sessions_with_dates(&page_stats, &time_config);
-            let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
-            for (date, duration) in &sessions {
-                let key = bucket_key(*date, query.group_by);
-                bucket_sessions.entry(key).or_default().push(*duration);
-            }
-            let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
-            for (key, durations) in &bucket_sessions {
-                buckets.insert(key.clone(), durations.iter().copied().max().unwrap_or(0));
-            }
-            fill_points(&all_keys, &buckets)
-        }
+    // Lazily compute sessions only if needed.
+    let needs_sessions = query.metrics.iter().any(|m| {
+        matches!(
+            m,
+            ReadingMetric::Sessions
+                | ReadingMetric::AverageSessionDurationSec
+                | ReadingMetric::LongestSessionDurationSec
+        )
+    });
+    let sessions = if needs_sessions {
+        sessions_with_dates(&page_stats, &time_config)
+    } else {
+        Vec::new()
     };
 
+    // Build a per-metric bucket map.
+    let mut metric_buckets: Vec<(&str, BTreeMap<String, i64>)> = Vec::new();
+
+    for &metric in &query.metrics {
+        let buckets = match metric {
+            ReadingMetric::ReadingTimeSec => {
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for stat in &page_stats {
+                    let date = time_config.date_for_timestamp(stat.start_time);
+                    let key = bucket_key(date, query.group_by);
+                    *b.entry(key).or_insert(0) += stat.duration;
+                }
+                b
+            }
+            ReadingMetric::PagesRead => {
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for stat in &page_stats {
+                    let date = time_config.date_for_timestamp(stat.start_time);
+                    let key = bucket_key(date, query.group_by);
+                    *b.entry(key).or_insert(0) += 1;
+                }
+                b
+            }
+            ReadingMetric::Sessions => {
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for (date, _) in &sessions {
+                    let key = bucket_key(*date, query.group_by);
+                    *b.entry(key).or_insert(0) += 1;
+                }
+                b
+            }
+            ReadingMetric::Completions => {
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for book in &stats.books {
+                    let Some(ref completions) = book.completions else {
+                        continue;
+                    };
+                    for entry in &completions.entries {
+                        if let Ok(end_date) = NaiveDate::parse_from_str(&entry.end_date, "%Y-%m-%d")
+                            && end_date >= resolved_from
+                            && end_date <= resolved_to
+                        {
+                            let key = bucket_key(end_date, query.group_by);
+                            *b.entry(key).or_insert(0) += 1;
+                        }
+                    }
+                }
+                b
+            }
+            ReadingMetric::AverageSessionDurationSec => {
+                let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
+                for (date, duration) in &sessions {
+                    let key = bucket_key(*date, query.group_by);
+                    bucket_sessions.entry(key).or_default().push(*duration);
+                }
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for (key, durations) in &bucket_sessions {
+                    let total: i64 = durations.iter().sum();
+                    b.insert(key.clone(), total / durations.len() as i64);
+                }
+                b
+            }
+            ReadingMetric::LongestSessionDurationSec => {
+                let mut bucket_sessions: BTreeMap<String, Vec<i64>> = BTreeMap::new();
+                for (date, duration) in &sessions {
+                    let key = bucket_key(*date, query.group_by);
+                    bucket_sessions.entry(key).or_default().push(*duration);
+                }
+                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                for (key, durations) in &bucket_sessions {
+                    b.insert(key.clone(), durations.iter().copied().max().unwrap_or(0));
+                }
+                b
+            }
+        };
+
+        metric_buckets.push((metric.as_str(), buckets));
+    }
+
+    // Merge all metric buckets into flattened MetricPoints.
+    let points = all_keys
+        .iter()
+        .map(|key| {
+            let mut values = BTreeMap::new();
+            for (metric_name, buckets) in &metric_buckets {
+                values.insert(
+                    (*metric_name).to_string(),
+                    buckets.get(key).copied().unwrap_or(0),
+                );
+            }
+            MetricPoint {
+                key: key.clone(),
+                values,
+            }
+        })
+        .collect();
+
     ReadingMetricsData {
-        metric: query.metric.as_str().to_string(),
+        metrics: query
+            .metrics
+            .iter()
+            .map(|m| m.as_str().to_string())
+            .collect(),
         group_by: query.group_by.as_str().to_string(),
         scope: query.scope.as_str().to_string(),
         points,
@@ -157,18 +198,6 @@ fn all_bucket_keys(from: NaiveDate, to: NaiveDate, group_by: MetricsGroupBy) -> 
         }
     }
     keys
-}
-
-/// Produce a filled point series: every key in `all_keys` gets a value
-/// (from `buckets` if present, otherwise 0).
-fn fill_points(all_keys: &[String], buckets: &BTreeMap<String, i64>) -> Vec<MetricPoint> {
-    all_keys
-        .iter()
-        .map(|key| MetricPoint {
-            key: key.clone(),
-            value: buckets.get(key).copied().unwrap_or(0),
-        })
-        .collect()
 }
 
 /// Compute reading sessions with their logical start dates.

@@ -77,8 +77,8 @@ function getClient(): ApiClient {
 
 export const api: ApiClient = {
     getSite: () => getClient().getSite(),
-    getItems: <T>(scope?: ScopeValue) => getClient().getItems<T>(scope),
-    getItem: <T>(id: string) => getClient().getItem<T>(id),
+    getItems: (scope?: ScopeValue) => getClient().getItems(scope),
+    getItem: (id: string) => getClient().getItem(id),
     getReadingSummary: (scope: ScopeValue, from?: string, to?: string) =>
         getClient().getReadingSummary(scope, from, to),
     getReadingMetrics: (

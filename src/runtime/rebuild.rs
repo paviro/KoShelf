@@ -4,8 +4,7 @@
 //! the watcher module is limited to event setup, debouncing, and dispatch.
 
 use crate::config::SiteConfig;
-use crate::contracts::common::ApiMeta;
-use crate::contracts::site::{SiteCapabilities, SiteResponse};
+use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::domain::library::upsert_single_item;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::koreader::{StatisticsCalculator, StatisticsParser};
@@ -233,11 +232,7 @@ pub async fn targeted_rebuild(
                     .and_then(|s| s.get())
                     .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
 
-            let site_response = SiteResponse {
-                meta: ApiMeta {
-                    version: env!("CARGO_PKG_VERSION").to_string(),
-                    generated_at: generated_at.clone(),
-                },
+            let site_data = SiteData {
                 title: config.site_title.clone(),
                 language: config.language.clone(),
                 capabilities: SiteCapabilities {
@@ -248,7 +243,7 @@ pub async fn targeted_rebuild(
             };
 
             if let Some(site_store) = site_store {
-                site_store.replace(site_response);
+                site_store.replace(site_data);
             }
         }
         Err(e) => warn!("Failed to query content type flags: {}", e),
@@ -333,11 +328,7 @@ pub async fn full_rebuild(
 
     let generated_at = config.time_config.now_rfc3339();
 
-    let site_response = SiteResponse {
-        meta: ApiMeta {
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            generated_at: generated_at.clone(),
-        },
+    let site_data = SiteData {
         title: config.site_title.clone(),
         language: config.language.clone(),
         capabilities: SiteCapabilities {
@@ -354,7 +345,7 @@ pub async fn full_rebuild(
     };
 
     if let Some(store) = site_store {
-        store.replace(site_response);
+        store.replace(site_data);
     }
 
     if let Some(store) = reading_data_store
