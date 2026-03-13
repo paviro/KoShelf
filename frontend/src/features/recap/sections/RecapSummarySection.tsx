@@ -3,7 +3,7 @@ import { LuClock3, LuFlame, LuSparkles, LuZap } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
-import type { RecapScope, RecapSummaryResponse } from '../api/recap-data';
+import type { CompletionsSummary, RecapScope } from '../api/recap-data';
 import {
     formatRecapMonth,
     formatRecapPercentage,
@@ -12,7 +12,7 @@ import {
 type RecapSummarySectionProps = {
     year: number;
     scope: RecapScope;
-    summary: RecapSummaryResponse;
+    summary: CompletionsSummary;
 };
 
 function isLeapYear(year: number): boolean {
@@ -27,6 +27,21 @@ function completionLabel(scope: RecapScope, total: number): string {
         return translation.get('comics-finished', total);
     }
     return translation.get('status.completed');
+}
+
+function decomposeSeconds(totalSeconds: number): {
+    days: number;
+    hours: number;
+    minutes: number;
+} {
+    const safe = Number.isFinite(totalSeconds)
+        ? Math.max(0, Math.floor(totalSeconds))
+        : 0;
+    return {
+        days: Math.floor(safe / 86400),
+        hours: Math.floor((safe % 86400) / 3600),
+        minutes: Math.floor((safe % 3600) / 60),
+    };
 }
 
 export function RecapSummarySection({
@@ -48,20 +63,23 @@ export function RecapSummarySection({
     const activeDaysRingOffset =
         activeDaysRingCircumference -
         (activeDaysRingCircumference * activeDaysPercentage) / 100;
-    const hasAverageSessionHours = summary.average_session_hours > 0;
+
+    const totalTime = decomposeSeconds(summary.total_reading_time_sec);
+    const avgSession = decomposeSeconds(summary.average_session_duration_sec);
+    const longestSession = decomposeSeconds(
+        summary.longest_session_duration_sec,
+    );
+
+    const hasAverageSessionHours = avgSession.hours > 0;
     const hasAverageSessionMinutes =
-        summary.average_session_hours === 0 ||
-        summary.average_session_minutes > 0;
+        avgSession.hours === 0 || avgSession.minutes > 0;
     const averageSessionHasTwoValues =
-        summary.average_session_hours > 0 &&
-        summary.average_session_minutes > 0;
-    const hasLongestSessionHours = summary.longest_session_hours > 0;
+        avgSession.hours > 0 && avgSession.minutes > 0;
+    const hasLongestSessionHours = longestSession.hours > 0;
     const hasLongestSessionMinutes =
-        summary.longest_session_hours === 0 ||
-        summary.longest_session_minutes > 0;
+        longestSession.hours === 0 || longestSession.minutes > 0;
     const longestSessionHasTwoValues =
-        summary.longest_session_hours > 0 &&
-        summary.longest_session_minutes > 0;
+        longestSession.hours > 0 && longestSession.minutes > 0;
 
     return (
         <section className="relative pl-10 recap-event">
@@ -178,18 +196,16 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-baseline gap-1">
-                                    {summary.total_time_days > 0 && (
+                                    {totalTime.days > 0 && (
                                         <>
                                             <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
-                                                {formatNumber(
-                                                    summary.total_time_days,
-                                                )}
+                                                {formatNumber(totalTime.days)}
                                             </span>
                                             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 <span className="hidden md:inline">
                                                     {translation.get(
                                                         'days_label',
-                                                        summary.total_time_days,
+                                                        totalTime.days,
                                                     )}
                                                 </span>
                                                 <span className="md:hidden">
@@ -199,13 +215,13 @@ export function RecapSummarySection({
                                         </>
                                     )}
                                     <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
-                                        {formatNumber(summary.total_time_hours)}
+                                        {formatNumber(totalTime.hours)}
                                     </span>
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         <span className="hidden md:inline">
                                             {translation.get(
                                                 'hours_label',
-                                                summary.total_time_hours,
+                                                totalTime.hours,
                                             )}
                                         </span>
                                         <span className="md:hidden">
@@ -230,11 +246,11 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
-                                    {formatNumber(summary.longest_streak)}{' '}
+                                    {formatNumber(summary.longest_streak_days)}{' '}
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {translation.get(
                                             'days_label',
-                                            summary.longest_streak,
+                                            summary.longest_streak_days,
                                         )}
                                     </span>
                                 </span>
@@ -279,16 +295,14 @@ export function RecapSummarySection({
                                     {hasAverageSessionHours && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
-                                                {formatNumber(
-                                                    summary.average_session_hours,
-                                                )}
+                                                {formatNumber(avgSession.hours)}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
                                                 {averageSessionHasTwoValues
                                                     ? translation.get('units.h')
                                                     : translation.get(
                                                           'hours_label',
-                                                          summary.average_session_hours,
+                                                          avgSession.hours,
                                                       )}
                                             </span>
                                         </>
@@ -297,7 +311,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.average_session_minutes,
+                                                    avgSession.minutes,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -305,7 +319,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.m')
                                                     : translation.get(
                                                           'minutes_label',
-                                                          summary.average_session_minutes,
+                                                          avgSession.minutes,
                                                       )}
                                             </span>
                                         </>
@@ -332,7 +346,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.longest_session_hours,
+                                                    longestSession.hours,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -340,7 +354,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.h')
                                                     : translation.get(
                                                           'hours_label',
-                                                          summary.longest_session_hours,
+                                                          longestSession.hours,
                                                       )}
                                             </span>
                                         </>
@@ -349,7 +363,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.longest_session_minutes,
+                                                    longestSession.minutes,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -357,7 +371,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.m')
                                                     : translation.get(
                                                           'minutes_label',
-                                                          summary.longest_session_minutes,
+                                                          longestSession.minutes,
                                                       )}
                                             </span>
                                         </>

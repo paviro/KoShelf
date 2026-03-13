@@ -2,12 +2,12 @@ import { HiOutlineBookOpen } from 'react-icons/hi2';
 import { LuClock3 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
-import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
+import type { CompletionGroup, RecapScope } from '../api/recap-data';
 import { formatRecapDuration, formatRecapMonth } from '../lib/recap-formatters';
 import { RecapItemCard } from '../components/RecapItemCard';
 
 type RecapTimelineSectionProps = {
-    months: RecapMonthResponse[];
+    months: CompletionGroup[];
     scope: RecapScope;
 };
 
@@ -29,15 +29,15 @@ export function RecapTimelineSection({
         <>
             {months.map((month) => (
                 <div
-                    key={month.month_key}
+                    key={month.key}
                     className="month-group space-y-6"
-                    data-month={month.month_key}
+                    data-month={month.key}
                 >
                     <div className="relative pl-10 recap-event">
                         <span className="recap-dot bg-gray-400 dark:bg-dark-400"></span>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                             <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                {formatRecapMonth(month.month_key)}
+                                {formatRecapMonth(month.key)}
                             </h3>
 
                             <div className="flex items-center gap-2">
@@ -58,7 +58,9 @@ export function RecapTimelineSection({
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-400/5 dark:from-purple-500/20 dark:to-purple-400/10 border border-purple-200/50 dark:border-purple-700/30 text-purple-700 dark:text-purple-300 text-sm">
                                     <LuClock3 className="w-4 h-4" aria-hidden />
                                     <span className="month-hours-display font-semibold">
-                                        {formatRecapDuration(month.read_time)}
+                                        {formatRecapDuration(
+                                            month.reading_time_sec,
+                                        )}
                                     </span>
                                 </div>
                             </div>
@@ -67,7 +69,7 @@ export function RecapTimelineSection({
 
                     {month.items.map((item, index) => (
                         <RecapItemCard
-                            key={`${month.month_key}:${item.title}:${item.end_date}:${index}`}
+                            key={`${month.key}:${item.title}:${item.end_date}:${index}`}
                             item={item}
                         />
                     ))}

@@ -9,7 +9,7 @@ import {
     joinUnitValueParts,
     type UnitValuePart,
 } from '../../../shared/lib/intl/unit-value';
-import type { RecapItemResponse } from '../api/recap-data';
+import type { CompletionItem } from '../api/recap-data';
 
 export function formatRecapDuration(totalSeconds: number): string {
     return joinUnitValueParts(formatRecapDurationParts(totalSeconds));
@@ -49,26 +49,6 @@ export function formatRecapDurationParts(
     }
 
     return parts;
-}
-
-export function formatRecapHoursAndMinutes(
-    hours: number,
-    minutes: number,
-): string {
-    const normalizedHours = Number.isFinite(hours)
-        ? Math.max(0, Math.floor(hours))
-        : 0;
-    const normalizedMinutes = Number.isFinite(minutes)
-        ? Math.max(0, Math.floor(minutes))
-        : 0;
-
-    if (normalizedHours > 0 && normalizedMinutes > 0) {
-        return `${formatNumber(normalizedHours)}${translation.get('units.h')} ${formatNumber(normalizedMinutes)}${translation.get('units.m')}`;
-    }
-    if (normalizedHours > 0) {
-        return `${formatNumber(normalizedHours)}${translation.get('units.h')}`;
-    }
-    return `${formatNumber(normalizedMinutes)}${translation.get('units.m')}`;
 }
 
 export function formatRecapDate(dateIso: string): string {
@@ -119,7 +99,7 @@ export function buildStarDisplay(rating: number | null | undefined): boolean[] {
 }
 
 export function resolveRecapSearchBasePath(
-    item: RecapItemResponse,
+    item: CompletionItem,
 ): '/books' | '/comics' {
     if (item.content_type === 'comic') {
         return '/comics';

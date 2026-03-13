@@ -12,7 +12,7 @@ import type { IconType } from 'react-icons';
 import { ApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
-import type { RecapShareAssets } from '../api/recap-data';
+import type { CompletionsShareAssets } from '../api/recap-data';
 
 type RecapShareVariant = 'story' | 'square' | 'banner';
 
@@ -20,7 +20,7 @@ type RecapShareModalProps = {
     open: boolean;
     onClose: () => void;
     year: number;
-    shareAssets: RecapShareAssets | null;
+    shareAssets: CompletionsShareAssets | null;
 };
 
 type ShareOption = {

@@ -2,7 +2,7 @@ import {
     patchRouteState,
     readRouteState,
 } from '../../../shared/lib/state/route-state-storage';
-import type { RecapMonthResponse, RecapScope } from '../api/recap-data';
+import type { CompletionGroup, RecapScope } from '../api/recap-data';
 
 export type RecapViewState = {
     scope: RecapScope;
@@ -78,9 +78,9 @@ export function persistRecapSortNewest(value: boolean): void {
 }
 
 export function orderRecapMonths(
-    months: RecapMonthResponse[],
+    months: CompletionGroup[],
     newestFirst: boolean,
-): RecapMonthResponse[] {
+): CompletionGroup[] {
     const copied = months.map((month) => ({
         ...month,
         items: [...month.items],

@@ -17,7 +17,7 @@ import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
-import type { RecapItemResponse } from '../api/recap-data';
+import type { CompletionItem } from '../api/recap-data';
 import {
     buildStarDisplay,
     formatRecapDateRange,
@@ -26,7 +26,7 @@ import {
 } from '../lib/recap-formatters';
 
 type RecapItemCardProps = {
-    item: RecapItemResponse;
+    item: CompletionItem;
 };
 
 export function RecapItemCard({ item }: RecapItemCardProps) {
@@ -233,7 +233,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                                         <MetricCardUnitValue
                                             value={formatRecapDurationParts(
-                                                item.reading_time,
+                                                item.reading_time_sec,
                                             )}
                                             size="compact"
                                         />

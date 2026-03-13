@@ -93,7 +93,7 @@ export function RecapRoute() {
             orderedMonths
                 .map(
                     (month) =>
-                        `${month.month_key}:${month.items.map((item) => item.end_date).join('|')}`,
+                        `${month.key}:${month.items.map((item) => item.end_date).join('|')}`,
                 )
                 .join('||'),
         [orderedMonths],
@@ -250,11 +250,13 @@ export function RecapRoute() {
                                     className="recap-timeline space-y-6"
                                     id="recapTimeline"
                                 >
-                                    <RecapSummarySection
-                                        year={recapYear.year}
-                                        scope={scope}
-                                        summary={recapYear.summary}
-                                    />
+                                    {recapYear.summary && (
+                                        <RecapSummarySection
+                                            year={recapYear.year}
+                                            scope={scope}
+                                            summary={recapYear.summary}
+                                        />
+                                    )}
                                     <RecapTimelineSection
                                         months={orderedMonths}
                                         scope={scope}

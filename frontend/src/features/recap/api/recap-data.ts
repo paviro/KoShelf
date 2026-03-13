@@ -1,77 +1,65 @@
 import { api, type ScopeValue } from '../../../shared/api';
+import type {
+    CompletionGroup,
+    CompletionItem,
+    CompletionsShareAssets,
+    CompletionsSummary,
+} from '../../../shared/contracts';
 
 export type RecapScope = ScopeValue;
-export type RecapContentType = 'book' | 'comic';
+
+export type {
+    CompletionGroup,
+    CompletionItem,
+    CompletionsShareAssets,
+    CompletionsSummary,
+};
 
 export interface RecapIndexResponse {
     available_years: number[];
     latest_year?: number | null;
 }
 
-export interface RecapSummaryResponse {
-    total_items: number;
-    total_time_seconds: number;
-    total_time_days: number;
-    total_time_hours: number;
-    longest_session_hours: number;
-    longest_session_minutes: number;
-    average_session_hours: number;
-    average_session_minutes: number;
-    active_days: number;
-    active_days_percentage: number;
-    longest_streak: number;
-    best_month?: string | null;
-}
-
-export interface RecapItemResponse {
-    item_id?: string | null;
-    title: string;
-    authors: string[];
-    start_date: string;
-    end_date: string;
-    reading_time: number;
-    session_count: number;
-    pages_read: number;
-    calendar_length_days?: number | null;
-    average_speed?: number | null;
-    avg_session_duration?: number | null;
-    rating?: number | null;
-    review_note?: string | null;
-    series?: string | null;
-    item_cover?: string | null;
-    content_type?: RecapContentType | null;
-}
-
-export interface RecapMonthResponse {
-    month_key: string;
-    items_finished: number;
-    read_time: number;
-    items: RecapItemResponse[];
-}
-
-export interface RecapShareAssets {
-    story_url: string;
-    square_url: string;
-    banner_url: string;
-}
-
 export interface RecapYearResponse {
     year: number;
-    summary: RecapSummaryResponse;
-    months: RecapMonthResponse[];
-    items: RecapItemResponse[];
-    share_assets?: RecapShareAssets | null;
+    summary: CompletionsSummary | null;
+    months: CompletionGroup[];
+    items: CompletionItem[];
+    share_assets: CompletionsShareAssets | null;
 }
 
 export async function loadRecapIndex(
     scope: RecapScope,
 ): Promise<RecapIndexResponse> {
-    return api.completions.years.get<RecapIndexResponse>(scope);
+    const data = await api.reading.availablePeriods(
+        'completions',
+        'year',
+        scope,
+    );
+
+    return {
+        available_years: data.periods
+            .map((p) => Number(p.key))
+            .filter(Number.isFinite),
+        latest_year: data.latest_key ? Number(data.latest_key) : null,
+    };
 }
 
 export async function loadRecapYear(
     scope: RecapScope,
     year: number,
 ): Promise<RecapYearResponse> {
-    return api.completions.years.byKey<RecapYearResponse>(year, scope);
+    const data = await api.reading.completions(scope, {
+        year,
+        groupBy: 'month',
+        include: 'summary,share_assets',
+    });
+
+    return {
+        year,
+        summary: data.summary ?? null,
+        months: data.groups ?? [],
+        items: data.items ?? [],
+        share_assets: data.share_assets ?? null,
+    };
 }
