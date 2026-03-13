@@ -1,15 +1,16 @@
 use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
+use crate::contracts::common::ApiMeta;
+use crate::contracts::site::{SiteCapabilities, SiteResponse};
 use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::library::scan_library;
 use crate::models::LibraryItemFormat;
 use crate::runtime::export::{ExportConfig, export_data_files};
+use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::{
-    DomainUpdateNotifier, ReadingData, RevisionDomain, RuntimeObservability,
-    SharedReadingDataStore, SharedSnapshotStore,
+    DomainUpdateNotifier, RevisionDomain, RuntimeObservability, SharedReadingDataStore,
+    SharedSiteStore,
 };
-use crate::snapshot_builder::SnapshotBuilder;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -24,7 +25,7 @@ use tokio::time::sleep;
 
 pub struct FileWatcher {
     config: SiteConfig,
-    snapshot_store: Option<SharedSnapshotStore>,
+    site_store: Option<SharedSiteStore>,
     reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<DomainUpdateNotifier>,
     library_repo: Option<LibraryRepository>,
@@ -61,7 +62,7 @@ fn decrement_pending_rebuilds(counter: &AtomicU64) -> u64 {
 impl FileWatcher {
     pub fn new(
         config: SiteConfig,
-        snapshot_store: Option<SharedSnapshotStore>,
+        site_store: Option<SharedSiteStore>,
         reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<DomainUpdateNotifier>,
         library_repo: Option<LibraryRepository>,
@@ -69,7 +70,7 @@ impl FileWatcher {
     ) -> Self {
         Self {
             config,
-            snapshot_store,
+            site_store,
             reading_data_store,
             update_notifier,
             library_repo,
@@ -126,20 +127,18 @@ impl FileWatcher {
         // Also watch the statistics database if provided
         if let Some(ref stats_path) = self.statistics_db_path
             && stats_path.exists()
+            && let Some(parent) = stats_path.parent()
         {
-            // Watch the parent directory of the statistics database
-            if let Some(parent) = stats_path.parent() {
-                watcher.watch(parent, RecursiveMode::NonRecursive)?;
-                info!(
-                    "File watcher started for statistics database: {:?}",
-                    stats_path
-                );
-            }
+            watcher.watch(parent, RecursiveMode::NonRecursive)?;
+            info!(
+                "File watcher started for statistics database: {:?}",
+                stats_path
+            );
         }
 
-        // Clone the config for the rebuild task
+        // Clone dependencies for the rebuild task
         let config_clone = self.config.clone();
-        let snapshot_store_clone = self.snapshot_store.clone();
+        let site_store_clone = self.site_store.clone();
         let reading_data_store_clone = self.reading_data_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
         let library_repo_clone = self.library_repo.clone();
@@ -147,12 +146,12 @@ impl FileWatcher {
         let pending_rebuilds_clone = pending_rebuilds.clone();
 
         // Spawn delayed rebuild task.
-        // NOTE: Snapshot building uses non-Send types (e.g. mlua::Lua, Rc-based translations),
+        // NOTE: Statistics loading uses non-Send types (e.g. mlua::Lua, Rc-based translations),
         // so this rebuild loop must not be spawned onto the multithreaded executor.
         let rebuild_task = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
             rt.block_on(async move {
-                let rebuild_delay = Duration::from_secs(10); // Wait 10 seconds after last event
+                let rebuild_delay = Duration::from_secs(10);
 
                 while let Some(initial_domains) = rebuild_rx.recv().await {
                     let current_depth = decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
@@ -163,7 +162,6 @@ impl FileWatcher {
                     let mut affected_domains: HashSet<RevisionDomain> =
                         initial_domains.into_iter().collect();
 
-                    // Wait for the delay period to debounce multiple events
                     sleep(rebuild_delay).await;
 
                     // Drain any additional events that came in during the delay
@@ -174,69 +172,116 @@ impl FileWatcher {
                         affected_domains.extend(domains);
                     }
 
-                    info!("Starting delayed snapshot refresh after quiet period");
+                    info!("Starting delayed rebuild after quiet period");
 
-                    // Create a fresh snapshot builder and recompute all payloads.
-                    let snapshot_builder = SnapshotBuilder::new(config_clone.clone());
-
-                    // Keep reading data available for data-file export in watch mode.
-                    let mut watcher_reading_data: Option<ReadingData> = None;
-
-                    match snapshot_builder.refresh_snapshot().await {
-                        Ok(result) => {
-                            let generated_at = result
-                                .snapshot
-                                .generated_at()
-                                .map(str::to_owned)
-                                .unwrap_or_else(|| config_clone.time_config.now_rfc3339());
-
-                            if let Some(ref snapshot_store) = snapshot_store_clone {
-                                snapshot_store.replace(result.snapshot);
-                            }
-
-                            if let Some(ref reading_data_store) = reading_data_store_clone {
-                                if let Some(rd) = result.reading_data {
-                                    reading_data_store.replace(rd);
-                                }
-                            } else {
-                                watcher_reading_data = result.reading_data;
-                            }
-
-                            if let Some(ref update_notifier) = update_notifier_clone {
-                                let update = update_notifier.publish_for_domains(
-                                    generated_at,
-                                    affected_domains.iter().copied(),
-                                );
-                                info!(
-                                    "Published data_changed event for domains {:?}, revision {:?}",
-                                    update.domains, update.revision,
-                                );
-                            }
-
-                            info!("Delayed snapshot refresh completed successfully");
+                    // ── Single-pass ingest ───────────────────────────────
+                    let ingest_result = match crate::runtime::ingest(&config_clone).await {
+                        Ok(r) => r,
+                        Err(e) => {
+                            warn!("Watcher ingest failed: {}", e);
+                            continue;
                         }
-                        Err(e) => warn!("Failed to refresh snapshot: {}", e),
+                    };
+
+                    let reading_data = ingest_result.reading_data(&config_clone);
+
+                    // ── Media assets ─────────────────────────────────────
+                    let media_dirs = resolve_media_dirs(
+                        &config_clone.output_dir,
+                        config_clone.is_internal_server,
+                    );
+
+                    if let Err(e) = media::create_media_directories(&media_dirs) {
+                        warn!("Failed to create media directories: {}", e);
                     }
 
-                    // Run incremental library DB update if a repository is available.
-                    if let Some(ref repo) = library_repo_clone {
-                        let db_start = Instant::now();
-                        let scanned = if !config_clone.library_paths.is_empty() {
-                            match scan_library(
-                                &config_clone.library_paths,
-                                &config_clone.metadata_location,
+                    if !config_clone.is_internal_server
+                        && let Err(e) = media::sync_static_frontend(
+                            &config_clone.output_dir,
+                            ingest_result.has_reading_data(),
+                        ) {
+                            warn!("Failed to sync static frontend: {}", e);
+                        }
+
+                    if let Err(e) = media::generate_covers(
+                        &ingest_result.filtered_items,
+                        &media_dirs.covers_dir,
+                    )
+                    .await
+                    {
+                        warn!("Failed to generate covers: {}", e);
+                    }
+
+                    if let Err(e) = media::cleanup_stale_covers(
+                        &ingest_result.filtered_items,
+                        &media_dirs.covers_dir,
+                    ) {
+                        warn!("Failed to cleanup stale covers: {}", e);
+                    }
+
+                    if let Some(ref stats_data) = ingest_result.stats_data
+                        && let Err(e) =
+                            crate::runtime::recap::generate_recap_share_images(
+                                stats_data,
+                                &ingest_result.filtered_items,
+                                config_clone.use_stable_page_metadata,
+                                &media_dirs.recap_dir,
+                                config_clone.statistics_db_path.as_deref(),
+                                &config_clone.time_config,
                             )
                             .await
-                            {
-                                Ok((items, _md5s)) => items,
-                                Err(e) => {
-                                    warn!("Watcher library scan failed: {}", e);
-                                    continue;
-                                }
-                            }
-                        } else {
-                            Vec::new()
-                        };
+                        {
+                            warn!("Failed to generate recap share images: {}", e);
+                        }
+
+                    // ── Site metadata ────────────────────────────────────
+                    let generated_at = config_clone.time_config.now_rfc3339();
+
+                    let site_response = SiteResponse {
+                        meta: ApiMeta {
+                            version: env!("CARGO_PKG_VERSION").to_string(),
+                            generated_at: generated_at.clone(),
+                        },
+                        title: config_clone.site_title.clone(),
+                        language: config_clone.language.clone(),
+                        capabilities: SiteCapabilities {
+                            has_books: ingest_result
+                                .filtered_items
+                                .iter()
+                                .any(|item| item.is_book()),
+                            has_comics: ingest_result
+                                .filtered_items
+                                .iter()
+                                .any(|item| item.is_comic()),
+                            has_reading_data: ingest_result.has_reading_data(),
+                        },
+                    };
+
+                    if let Some(ref site_store) = site_store_clone {
+                        site_store.replace(site_response);
+                    }
+
+                    if let Some(ref reading_data_store) = reading_data_store_clone
+                        && let Some(rd) = &reading_data {
+                            reading_data_store.replace(rd.clone());
+                        }
+
+                    if let Some(ref update_notifier) = update_notifier_clone {
+                        let update = update_notifier.publish_for_domains(
+                            generated_at,
+                            affected_domains.iter().copied(),
+                        );
+                        info!(
+                            "Published data_changed event for domains {:?}, revision {:?}",
+                            update.domains, update.revision,
+                        );
+                    }
+
+                    info!("Delayed rebuild completed successfully");
+
+                    // ── Library DB update ────────────────────────────────
+                    if let Some(ref repo) = library_repo_clone {
+                        let db_start = Instant::now();
 
                         let pipeline = LibraryBuildPipeline::new(
                             repo,
@@ -246,7 +291,7 @@ impl FileWatcher {
                         );
 
                         match pipeline
-                            .build(LibraryBuildMode::Incremental, scanned)
+                            .build(LibraryBuildMode::Incremental, ingest_result.raw_items)
                             .await
                         {
                             Ok(result) => {
@@ -274,7 +319,7 @@ impl FileWatcher {
                         if let Err(e) = export_data_files(
                             &config_clone.output_dir.join("data"),
                             repo,
-                            watcher_reading_data.as_ref(),
+                            reading_data.as_ref(),
                             &export_config,
                         )
                         .await
@@ -320,7 +365,6 @@ impl FileWatcher {
                 match modify_kind {
                     ModifyKind::Data(_) => self.classify_paths_to_domains(&event.paths),
                     ModifyKind::Name(_) => {
-                        // Renames can affect library identity, metadata, and covers.
                         if self.paths_contain_relevant_files(&event.paths) {
                             vec![
                                 RevisionDomain::Library,
@@ -360,27 +404,23 @@ impl FileWatcher {
         for path in paths {
             let filename = path.file_name().and_then(|s| s.to_str());
 
-            // Library items → Library + Assets (cover may change).
             if LibraryItemFormat::from_path(path).is_some() {
                 domains.push(RevisionDomain::Library);
                 domains.push(RevisionDomain::Assets);
             }
 
-            // Metadata sidecar files → Metadata.
             if let Some(filename) = filename
                 && LibraryItemFormat::is_metadata_file(filename)
             {
                 domains.push(RevisionDomain::Metadata);
             }
 
-            // KoReader .sdr directories → Metadata.
             if let Some(filename) = filename
                 && filename.ends_with(".sdr")
             {
                 domains.push(RevisionDomain::Metadata);
             }
 
-            // Statistics database → Stats.
             if let Some(ref stats_path) = self.statistics_db_path
                 && path == stats_path
             {
@@ -425,26 +465,22 @@ impl FileWatcher {
                 _ => continue,
             };
 
-            // Check for library items using LibraryItemFormat
             if let Some(format) = LibraryItemFormat::from_path(path) {
                 info!("{:?} file {}: {:?}", format, action, path);
             }
 
-            // Check metadata files
             if let Some(filename) = filename
                 && LibraryItemFormat::is_metadata_file(filename)
             {
                 info!("Metadata file {}: {:?}", action, path);
             }
 
-            // Check .sdr directories
             if let Some(filename) = filename
                 && filename.ends_with(".sdr")
             {
                 info!("KoReader metadata directory {}: {:?}", action, path);
             }
 
-            // Check statistics database
             if let Some(ref stats_path) = self.statistics_db_path
                 && path == stats_path
             {

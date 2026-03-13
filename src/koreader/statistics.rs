@@ -75,10 +75,7 @@ pub struct StatisticsCalculator;
 
 impl StatisticsCalculator {
     /// Calculate reading statistics based on the parsed data and populate completions
-    pub fn calculate_stats(
-        stats_data: &mut StatisticsData,
-        time_config: &TimeConfig,
-    ) -> ReadingStats {
+    pub fn calculate_stats(stats_data: &StatisticsData, time_config: &TimeConfig) -> ReadingStats {
         // Initialize overall stats
         let mut total_read_time = 0;
         let mut total_page_reads = 0;

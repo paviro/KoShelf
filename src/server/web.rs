@@ -1,7 +1,7 @@
 use super::ServerState;
 use super::api;
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::runtime::{DomainUpdateNotifier, SharedReadingDataStore, SharedSnapshotStore};
+use crate::runtime::{DomainUpdateNotifier, SharedReadingDataStore, SharedSiteStore};
 use anyhow::Result;
 use axum::{
     Router,
@@ -23,7 +23,7 @@ static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 pub struct WebServer {
     media_cache_dir: PathBuf,
     port: u16,
-    snapshot_store: SharedSnapshotStore,
+    site_store: SharedSiteStore,
     reading_data_store: SharedReadingDataStore,
     update_notifier: DomainUpdateNotifier,
     library_repo: LibraryRepository,
@@ -33,7 +33,7 @@ impl WebServer {
     pub fn new(
         media_cache_dir: PathBuf,
         port: u16,
-        snapshot_store: SharedSnapshotStore,
+        site_store: SharedSiteStore,
         reading_data_store: SharedReadingDataStore,
         update_notifier: DomainUpdateNotifier,
         library_repo: LibraryRepository,
@@ -41,7 +41,7 @@ impl WebServer {
         Self {
             media_cache_dir,
             port,
-            snapshot_store,
+            site_store,
             reading_data_store,
             update_notifier,
             library_repo,
@@ -50,7 +50,7 @@ impl WebServer {
 
     pub async fn run(self) -> Result<()> {
         let state = ServerState {
-            snapshot_store: self.snapshot_store.clone(),
+            site_store: self.site_store.clone(),
             reading_data_store: self.reading_data_store.clone(),
             update_notifier: self.update_notifier.clone(),
             library_repo: self.library_repo,

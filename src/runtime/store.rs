@@ -1,41 +1,33 @@
-//! Shared in-memory snapshot store.
+//! Shared in-memory site metadata store.
 
-use super::snapshot::ContractSnapshot;
+use crate::contracts::site::SiteResponse;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Default)]
-pub struct SnapshotStore {
-    inner: Arc<RwLock<Option<Arc<ContractSnapshot>>>>,
+pub struct SiteStore {
+    inner: Arc<RwLock<Option<Arc<SiteResponse>>>>,
 }
 
-impl SnapshotStore {
+impl SiteStore {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn replace(&self, snapshot: ContractSnapshot) {
+    pub fn replace(&self, site: SiteResponse) {
         let mut guard = self
             .inner
             .write()
-            .expect("snapshot store lock poisoned while writing");
-        *guard = Some(Arc::new(snapshot));
+            .expect("site store lock poisoned while writing");
+        *guard = Some(Arc::new(site));
     }
 
-    pub fn clear(&self) {
-        let mut guard = self
-            .inner
-            .write()
-            .expect("snapshot store lock poisoned while clearing");
-        *guard = None;
-    }
-
-    pub fn get(&self) -> Option<Arc<ContractSnapshot>> {
+    pub fn get(&self) -> Option<Arc<SiteResponse>> {
         let guard = self
             .inner
             .read()
-            .expect("snapshot store lock poisoned while reading");
+            .expect("site store lock poisoned while reading");
         guard.clone()
     }
 }
 
-pub type SharedSnapshotStore = Arc<SnapshotStore>;
+pub type SharedSiteStore = Arc<SiteStore>;

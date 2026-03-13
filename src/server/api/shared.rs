@@ -4,7 +4,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Deserialize;
-use std::sync::Arc;
 
 use crate::contracts::common::{ContentTypeFilter, MonthKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
@@ -13,8 +12,6 @@ use crate::domain::reading::queries::{
     self as rq, CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange,
     MetricsGroupBy, PeriodGroupBy, PeriodSource, ReadingMetric, ReadingScope,
 };
-use crate::runtime::ContractSnapshot;
-use crate::server::ServerState;
 
 // ── Query params ────────────────────────────────────────────────────────────
 
@@ -169,13 +166,6 @@ pub(crate) fn parse_sort_order(value: Option<&str>) -> ApiResult<Option<SortOrde
 pub(crate) fn parse_include(value: Option<&str>) -> ApiResult<IncludeSet> {
     IncludeSet::parse(value)
         .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))
-}
-
-pub(crate) fn runtime_snapshot(state: &ServerState) -> ApiResult<Arc<ContractSnapshot>> {
-    state
-        .snapshot_store
-        .get()
-        .ok_or_else(ApiResponseError::internal_server_error)
 }
 
 pub(crate) fn request_meta() -> crate::contracts::common::ApiMeta {

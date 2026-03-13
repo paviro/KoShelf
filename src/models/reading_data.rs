@@ -5,7 +5,7 @@ use crate::time_config::TimeConfig;
 
 /// Bundle of statistics data and time configuration used by reading
 /// and library domain services for on-demand query computation.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReadingData {
     pub stats_data: StatisticsData,
     pub time_config: TimeConfig,

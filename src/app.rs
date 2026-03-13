@@ -1,5 +1,7 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
+use crate::contracts::common::ApiMeta;
+use crate::contracts::site::{SiteCapabilities, SiteResponse};
 use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
@@ -7,11 +9,11 @@ use crate::infra::lifecycle::{
 use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
-use crate::library::{FileWatcher, MetadataLocation, scan_library};
+use crate::library::MetadataLocation;
 use crate::runtime::export::{ExportConfig, export_data_files};
-use crate::runtime::{DomainUpdateNotifier, ReadingDataStore, RuntimeObservability, SnapshotStore};
+use crate::runtime::media::{self, resolve_media_dirs};
+use crate::runtime::{DomainUpdateNotifier, ReadingDataStore, RuntimeObservability, SiteStore};
 use crate::server::WebServer;
-use crate::snapshot_builder::SnapshotBuilder;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;
@@ -82,6 +84,29 @@ fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
     resolve_runtime_data_policy(&cli_overrides)
 }
 
+/// Build a `SiteResponse` from the current library items and reading data availability.
+fn build_site_response(
+    items: &[crate::models::LibraryItem],
+    has_reading_data: bool,
+    site_title: &str,
+    language: &str,
+    time_config: &TimeConfig,
+) -> SiteResponse {
+    SiteResponse {
+        meta: ApiMeta {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            generated_at: time_config.now_rfc3339(),
+        },
+        title: site_title.to_string(),
+        language: language.to_string(),
+        capabilities: SiteCapabilities {
+            has_books: items.iter().any(|item| item.is_book()),
+            has_comics: items.iter().any(|item| item.is_comic()),
+            has_reading_data,
+        },
+    }
+}
+
 /// Run KoShelf with the provided CLI args.
 ///
 /// `src/main.rs` is responsible for logging init and Clap argument parsing.
@@ -138,7 +163,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     // Determine if we're running with internal web server (enables runtime update events)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
-    // Create site config - bundles all snapshot/export options.
+    // Create site config - bundles all configuration options.
     let config = SiteConfig {
         output_dir: plan.output_dir.clone(),
         site_title: cli.title.clone(),
@@ -157,25 +182,68 @@ pub async fn run(cli: Cli) -> Result<()> {
         runtime_data_policy,
     };
 
-    // Create snapshot builder - it handles library scanning and stats loading internally.
-    let snapshot_builder = SnapshotBuilder::new(config.clone());
     let observability = RuntimeObservability::default();
 
-    // Build initial in-memory library data.
-    let startup_library_build_started_at = Instant::now();
-    let initial_result = snapshot_builder.refresh_snapshot().await?;
-    observability.record_startup_library_build_duration(startup_library_build_started_at.elapsed());
+    // ── Shared ingest: scan library + load statistics (single pass) ──────
+    let startup_started_at = Instant::now();
+
+    if is_internal_server {
+        info!(
+            "Scanning library and serving media cache from: {:?}",
+            config.output_dir
+        );
+    } else {
+        info!(
+            "Scanning library and exporting static shell/assets to: {:?}",
+            config.output_dir
+        );
+    }
+
+    let ingest_result = crate::runtime::ingest(&config).await?;
+    let reading_data = ingest_result.reading_data(&config);
+    let has_reading_data = ingest_result.has_reading_data();
+
+    observability.record_startup_library_build_duration(startup_started_at.elapsed());
     info!(
-        "Initial library build completed in {} ms",
-        observability.snapshot().startup_library_build_duration_ms
+        "Library scan completed in {} ms ({} items, {} filtered)",
+        observability.snapshot().startup_library_build_duration_ms,
+        ingest_result.raw_items.len(),
+        ingest_result.filtered_items.len(),
     );
 
-    let initial_snapshot = initial_result.snapshot;
-    let initial_reading_data = initial_result.reading_data;
+    // Destructure so raw_items can be consumed by the library DB pipeline
+    // while filtered_items and stats_data remain available.
+    let crate::runtime::IngestResult {
+        raw_items,
+        filtered_items,
+        stats_data,
+        ..
+    } = ingest_result;
 
-    // ── Library build pipeline: populate library.sqlite ────────────────
-    //
-    // The repository is kept alive so serve-mode handlers can query it.
+    // ── Media assets: covers, recap images, static frontend ─────────────
+    let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
+    media::create_media_directories(&media_dirs)?;
+
+    if !is_internal_server {
+        media::sync_static_frontend(&config.output_dir, has_reading_data)?;
+    }
+
+    media::generate_covers(&filtered_items, &media_dirs.covers_dir).await?;
+    media::cleanup_stale_covers(&filtered_items, &media_dirs.covers_dir)?;
+
+    if let Some(ref sd) = stats_data {
+        crate::runtime::recap::generate_recap_share_images(
+            sd,
+            &filtered_items,
+            config.use_stable_page_metadata,
+            &media_dirs.recap_dir,
+            config.statistics_db_path.as_deref(),
+            &config.time_config,
+        )
+        .await?;
+    }
+
+    // ── Library DB pipeline: populate library.sqlite ─────────────────────
     let library_repo = if let Some(db_path) = config.runtime_data_policy.library_db_path() {
         let db_build_start = Instant::now();
         let pool = open_library_pool(&db_path)
@@ -187,7 +255,6 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         let repo = LibraryRepository::new(pool);
 
-        // Determine build mode: persistent DB with existing items → incremental.
         let build_mode = if config.runtime_data_policy.is_persistent() {
             let count = repo.count_items().await.unwrap_or(0);
             if count > 0 {
@@ -199,15 +266,6 @@ pub async fn run(cli: Cli) -> Result<()> {
             LibraryBuildMode::Full
         };
 
-        // Scan library (separate from snapshot builder scan during transition).
-        let scanned_items = if !config.library_paths.is_empty() {
-            let (items, _library_md5s) =
-                scan_library(&config.library_paths, &config.metadata_location).await?;
-            items
-        } else {
-            Vec::new()
-        };
-
         let pipeline = LibraryBuildPipeline::new(
             &repo,
             config.include_unread,
@@ -215,7 +273,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             &config.time_config,
         );
 
-        let result = pipeline.build(build_mode, scanned_items).await?;
+        let result = pipeline.build(build_mode, raw_items).await?;
         info!(
             "Library DB build ({:?}) completed in {} ms: {} scanned, {} upserted, {} removed, {} collisions",
             build_mode,
@@ -231,29 +289,39 @@ pub async fn run(cli: Cli) -> Result<()> {
         None
     };
 
-    if !is_internal_server {
-        // Export static data files via domain services.
-        if let Some(ref repo) = library_repo {
-            let export_config = ExportConfig {
-                site_title: cli.title.clone(),
-                language: cli.language.clone(),
-            };
-            export_data_files(
-                &plan.output_dir.join("data"),
-                repo,
-                initial_reading_data.as_ref(),
-                &export_config,
-            )
-            .await?;
-        }
+    // ── Static data file export ─────────────────────────────────────────
+    if !is_internal_server && let Some(ref repo) = library_repo {
+        let export_config = ExportConfig {
+            site_title: cli.title.clone(),
+            language: cli.language.clone(),
+        };
+        export_data_files(
+            &plan.output_dir.join("data"),
+            repo,
+            reading_data.as_ref(),
+            &export_config,
+        )
+        .await?;
     }
 
+    // ── Build site metadata ─────────────────────────────────────────────
+    let site_response = build_site_response(
+        &filtered_items,
+        has_reading_data,
+        &config.site_title,
+        &config.language,
+        &config.time_config,
+    );
+
     match plan.mode {
-        RunMode::StaticExport => Ok(()),
+        RunMode::StaticExport => {
+            info!("Static export completed.");
+            Ok(())
+        }
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher = FileWatcher::new(
+            let file_watcher = crate::library::FileWatcher::new(
                 config,
                 None,
                 None,
@@ -270,16 +338,14 @@ pub async fn run(cli: Cli) -> Result<()> {
         RunMode::Serve => {
             let library_repo = library_repo.context("Library DB is required for serve mode")?;
 
-            let initial_generated_at = initial_snapshot
-                .generated_at()
-                .map(str::to_owned)
-                .unwrap_or_else(|| config.time_config.now_rfc3339());
-            let revision_epoch = format!("serve_{}", initial_generated_at);
-            let snapshot_store = Arc::new(SnapshotStore::new());
-            snapshot_store.replace(initial_snapshot);
+            let revision_epoch = format!("serve_{}", site_response.meta.generated_at.as_str());
+            let initial_generated_at = site_response.meta.generated_at.clone();
+
+            let site_store = Arc::new(SiteStore::new());
+            site_store.replace(site_response);
 
             let reading_data_store = Arc::new(ReadingDataStore::new());
-            if let Some(rd) = initial_reading_data {
+            if let Some(rd) = reading_data {
                 reading_data_store.replace(rd);
             }
 
@@ -289,10 +355,10 @@ pub async fn run(cli: Cli) -> Result<()> {
                 observability.clone(),
             );
 
-            // Start file watcher with snapshot updates.
-            let file_watcher = FileWatcher::new(
+            // Start file watcher with site store updates.
+            let file_watcher = crate::library::FileWatcher::new(
                 config,
-                Some(snapshot_store.clone()),
+                Some(site_store.clone()),
                 Some(reading_data_store.clone()),
                 Some(update_notifier.clone()),
                 Some(library_repo.clone()),
@@ -303,7 +369,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             let web_server = WebServer::new(
                 plan.output_dir,
                 cli.port,
-                snapshot_store,
+                site_store,
                 reading_data_store,
                 update_notifier,
                 library_repo,
