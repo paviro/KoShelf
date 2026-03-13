@@ -6,9 +6,9 @@
 use crate::config::SiteConfig;
 use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::domain::library::upsert_single_item;
+use crate::infra::scanner::{MetadataLocation, scan_specific_files};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::koreader::{StatisticsCalculator, StatisticsParser};
-use crate::library::{MetadataLocation, scan_specific_files};
 use crate::models::{BookStatus, LibraryItemFormat, ReadingData};
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::build_covers_by_md5;

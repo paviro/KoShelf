@@ -2,5 +2,10 @@
 
 pub mod assets;
 pub mod lifecycle;
+pub mod scanner;
 pub mod sources;
 pub mod sqlite;
+pub mod watcher;
+
+pub use scanner::{MetadataLocation, ScannedItem, scan_library, scan_specific_files};
+pub use watcher::FileWatcher;

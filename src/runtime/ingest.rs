@@ -6,8 +6,8 @@
 //! `scan_library()` independently.
 
 use crate::config::SiteConfig;
+use crate::infra::scanner::scan_library;
 use crate::koreader::{StatisticsCalculator, StatisticsParser};
-use crate::library::scan_library;
 use crate::models::merge_precedence::normalize_partial_md5;
 use crate::models::{BookStatus, ContentType, LibraryItem, StatisticsData};
 use crate::runtime::ReadingData;

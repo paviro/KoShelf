@@ -5,10 +5,10 @@ use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
+use crate::infra::scanner::MetadataLocation;
 use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
-use crate::library::MetadataLocation;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::{ReadingDataStore, SiteStore, UpdateNotifier};
@@ -295,7 +295,7 @@ pub async fn run(cli: Cli) -> Result<()> {
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
             let file_watcher =
-                crate::library::FileWatcher::new(config, None, None, None, library_repo);
+                crate::infra::watcher::FileWatcher::new(config, None, None, None, library_repo);
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -319,7 +319,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
             // Start file watcher with site store updates.
-            let file_watcher = crate::library::FileWatcher::new(
+            let file_watcher = crate::infra::watcher::FileWatcher::new(
                 config,
                 Some(site_store.clone()),
                 Some(reading_data_store.clone()),

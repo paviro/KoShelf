@@ -11,7 +11,6 @@ pub mod domain;
 pub mod i18n;
 pub mod infra;
 pub mod koreader;
-pub mod library;
 pub mod models;
 pub mod parsers;
 pub mod runtime;
