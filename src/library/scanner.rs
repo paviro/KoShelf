@@ -416,11 +416,13 @@ pub async fn scan_specific_files(
         });
     }
 
-    info!(
-        "Targeted scan: parsed {} of {} files",
-        results.len(),
-        file_paths.len()
-    );
+    if !file_paths.is_empty() {
+        info!(
+            "Targeted scan: parsed {} of {} files",
+            results.len(),
+            file_paths.len()
+        );
+    }
     results
 }
 

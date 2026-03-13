@@ -59,9 +59,6 @@ pub fn create_media_directories(dirs: &MediaDirs) -> Result<()> {
 /// Covers are only regenerated when the source file is newer than the cached
 /// cover, or when the cover file does not exist yet.
 pub async fn generate_covers(items: &[LibraryItem], covers_dir: &Path) -> Result<()> {
-    info!("Extracting and converting book covers...");
-    let start = Instant::now();
-
     let mut tasks = Vec::new();
     let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
 
@@ -131,6 +128,7 @@ pub async fn generate_covers(items: &[LibraryItem], covers_dir: &Path) -> Result
     let total_covers = tasks.len();
 
     if total_covers > 0 {
+        let start = Instant::now();
         let pb = ProgressBar::new(total_covers as u64);
         pb.set_style(
             ProgressStyle::default_bar()

@@ -205,7 +205,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     observability.record_startup_library_build_duration(startup_started_at.elapsed());
     info!(
-        "Library scan completed in {} ms ({} items, {} filtered)",
+        "Library scan completed in {} ms ({} scanned, {} after filtering)",
         observability.snapshot().startup_library_build_duration_ms,
         ingest_result.raw_items.len(),
         ingest_result.filtered_items.len(),

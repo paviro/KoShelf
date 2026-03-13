@@ -449,7 +449,7 @@ impl StatisticsCalculator {
         });
 
         let filtered_count = original_count - stats_data.books.len();
-        log::info!(
+        log::debug!(
             "Filtered statistics to {} books present in library ({} excluded)",
             stats_data.books.len(),
             filtered_count

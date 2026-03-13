@@ -32,7 +32,7 @@
 //! - **True re-reads**: When a user finishes a book, then starts again from the beginning
 //!   and reads through again, two separate completions are detected.
 
-use log::{debug, info};
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use super::session;
@@ -363,7 +363,7 @@ impl ReadCompletionDetector {
             }
         }
 
-        info!(
+        debug!(
             "Detected completions for {} books out of {}",
             all_completions.len(),
             stats_data.books.len()

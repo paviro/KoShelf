@@ -9,7 +9,7 @@
 //!   removed items, then applies targeted upserts/deletes.
 
 use anyhow::{Context, Result};
-use log::{info, warn};
+use log::{debug, warn};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
@@ -126,7 +126,7 @@ impl<'a> LibraryBuildPipeline<'a> {
         scanned_files: u64,
         items: Vec<LibraryItem>,
     ) -> Result<LibraryBuildResult> {
-        info!(
+        debug!(
             "Running full library build ({} items after filtering)",
             items.len()
         );
@@ -161,7 +161,7 @@ impl<'a> LibraryBuildPipeline<'a> {
             upserted += 1;
         }
 
-        info!(
+        debug!(
             "Full library build complete: {} upserted, {} collisions",
             upserted, collision_count
         );
@@ -181,7 +181,7 @@ impl<'a> LibraryBuildPipeline<'a> {
         scanned_files: u64,
         items: Vec<LibraryItem>,
     ) -> Result<LibraryBuildResult> {
-        info!(
+        debug!(
             "Running incremental library build ({} items after filtering)",
             items.len()
         );
@@ -260,10 +260,10 @@ impl<'a> LibraryBuildPipeline<'a> {
         }
 
         if removed > 0 {
-            info!("Removed {} items no longer present in library", removed);
+            debug!("Removed {} items no longer present in library", removed);
         }
 
-        info!(
+        debug!(
             "Incremental library build complete: {} upserted, {} removed, {} collisions",
             upserted, removed, collision_count
         );

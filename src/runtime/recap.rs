@@ -465,7 +465,6 @@ async fn render_share_images_for_year(
         .and_then(|m| m.modified().ok())
         .unwrap_or(SystemTime::UNIX_EPOCH);
 
-    info!("Rendering share images for {}...", year);
     fs::create_dir_all(recap_dir)?;
 
     let formats = [
@@ -511,6 +510,7 @@ async fn render_share_images_for_year(
     let total_tasks = share_tasks.len();
 
     if total_tasks > 0 {
+        info!("Rendering share images for {}...", year);
         let pb = ProgressBar::new(total_tasks as u64);
         pb.set_style(
             ProgressStyle::default_bar()
@@ -561,8 +561,6 @@ pub async fn generate_recap_share_images(
     stats_db_path: Option<&Path>,
     time_config: &TimeConfig,
 ) -> Result<()> {
-    info!("Computing recap share images...");
-
     let page_scaling = PageScaling::from_inputs(use_stable_page_metadata, items, Some(stats_data));
     let md5_to_book = build_md5_to_item(items);
 

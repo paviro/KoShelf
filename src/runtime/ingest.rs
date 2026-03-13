@@ -92,6 +92,11 @@ pub async fn ingest(config: &SiteConfig) -> Result<IngestResult> {
             }
 
             StatisticsCalculator::populate_completions(&mut data, &config.time_config);
+            info!(
+                "Statistics: {} books, {} with completions",
+                data.books.len(),
+                data.books.iter().filter(|b| b.completions.is_some()).count()
+            );
             Some(data)
         } else {
             info!("Statistics database not found: {:?}", stats_path);
