@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use std::path::Path;
 
-use super::collision::detect_collisions;
+use super::collision::deduplicate_first_wins;
 use super::item_mapping::{
     capture_fingerprint_row, derive_in_book_folder_metadata_path, map_annotations_to_rows,
     map_item_to_row,
@@ -137,7 +137,7 @@ impl<'a> LibraryBuildPipeline<'a> {
             .context("Failed to clear library database before full build")?;
 
         let now = self.time_config.now_rfc3339();
-        let collision_result = detect_collisions(items, &now);
+        let collision_result = deduplicate_first_wins(items, &now);
         let collision_count = collision_result.diagnostics.len() as u64;
 
         if collision_count > 0 {
@@ -204,7 +204,7 @@ impl<'a> LibraryBuildPipeline<'a> {
 
         // First pass: collision detection on the full item set.
         let now = self.time_config.now_rfc3339();
-        let collision_result = detect_collisions(items, &now);
+        let collision_result = deduplicate_first_wins(items, &now);
         let collision_count = collision_result.diagnostics.len() as u64;
 
         // Update collision diagnostics.

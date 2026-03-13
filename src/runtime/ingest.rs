@@ -16,6 +16,7 @@ use crate::models::{BookStatus, ContentType, LibraryItem};
 use anyhow::Result;
 use log::info;
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 /// Output of the shared ingest step.
 pub struct IngestResult {
@@ -53,17 +54,21 @@ impl IngestResult {
 
 /// Scan the library and load statistics in one pass.
 ///
+/// When `covers_dir` is provided, cover images are generated during scanning
+/// with bounded concurrency — items are collected without cover data.
+///
 /// Returns both raw and filtered items so that:
 /// - The library DB pipeline receives raw items (it does its own filtering).
-/// - Cover generation, recap images, and site metadata use filtered items.
-pub async fn ingest(config: &SiteConfig) -> Result<IngestResult> {
+/// - Recap images and site metadata use filtered items.
+pub async fn ingest(config: &SiteConfig, covers_dir: Option<&Path>) -> Result<IngestResult> {
     let (raw_items, library_md5s) = if !config.library_paths.is_empty() {
-        scan_library(&config.library_paths, &config.metadata_location).await?
+        scan_library(&config.library_paths, &config.metadata_location, covers_dir).await?
     } else {
         (Vec::new(), HashSet::new())
     };
 
     // Filter items based on include_unread setting.
+    // Items already have cover_data = None (stripped during scan).
     let filtered_items: Vec<LibraryItem> = raw_items
         .iter()
         .filter(|item| {

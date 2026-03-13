@@ -54,6 +54,60 @@ pub fn create_media_directories(dirs: &MediaDirs) -> Result<()> {
 
 // ── Cover generation ────────────────────────────────────────────────────
 
+/// Encode raw cover bytes to WebP and write to disk.
+///
+/// Loads the image, resizes to 600px max height, encodes as WebP at quality 50,
+/// and writes the result to `cover_path`.
+pub fn encode_cover_to_disk(cover_data: &[u8], cover_path: &Path) -> Result<()> {
+    let img = image::load_from_memory(cover_data).context("Failed to load cover image")?;
+
+    let resized = {
+        let (original_width, original_height) = (img.width(), img.height());
+        let target_height = 600;
+        if original_height > target_height {
+            let target_width = (original_width * target_height) / original_height;
+            img.resize(
+                target_width,
+                target_height,
+                image::imageops::FilterType::CatmullRom,
+            )
+        } else {
+            img
+        }
+    };
+
+    let rgb_img = resized.to_rgb8();
+    let encoder = webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
+    let mut config =
+        webp::WebPConfig::new().map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
+    config.lossless = 0;
+    config.quality = 50.0;
+    config.method = 1;
+    config.thread_level = 1;
+
+    let webp_data = encoder
+        .encode_advanced(&config)
+        .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
+
+    fs::write(cover_path, &*webp_data)
+        .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+
+    Ok(())
+}
+
+/// Check whether a cover file needs (re)generation based on file modification times.
+pub fn cover_needs_generation(source_path: &Path, cover_path: &Path) -> bool {
+    match (fs::metadata(source_path), fs::metadata(cover_path)) {
+        (Ok(src_meta), Ok(cover_meta)) => {
+            let src_time = src_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+            let cover_time = cover_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+            src_time > cover_time
+        }
+        (Ok(_), Err(_)) => true,
+        _ => true,
+    }
+}
+
 /// Generate WebP cover images for all library items that have cover data.
 ///
 /// Covers are only regenerated when the source file is newer than the cached
@@ -68,54 +122,10 @@ pub async fn generate_covers(items: &[LibraryItem], covers_dir: &Path) -> Result
             let file_path = book.file_path.clone();
             let cover_data = cover_data.clone();
 
-            let should_generate = match (fs::metadata(&file_path), fs::metadata(&cover_path)) {
-                (Ok(epub_meta), Ok(cover_meta)) => {
-                    let epub_time = epub_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    let cover_time = cover_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    epub_time > cover_time
-                }
-                (Ok(_), Err(_)) => true,
-                _ => true,
-            };
-
-            if should_generate {
+            if cover_needs_generation(&file_path, &cover_path) {
                 let tx = progress_tx.clone();
                 let task = tokio::task::spawn_blocking(move || -> Result<()> {
-                    let img = image::load_from_memory(&cover_data)
-                        .context("Failed to load cover image")?;
-
-                    let resized = {
-                        let (original_width, original_height) = (img.width(), img.height());
-                        let target_height = 600;
-                        if original_height > target_height {
-                            let target_width = (original_width * target_height) / original_height;
-                            img.resize(
-                                target_width,
-                                target_height,
-                                image::imageops::FilterType::CatmullRom,
-                            )
-                        } else {
-                            img
-                        }
-                    };
-
-                    let rgb_img = resized.to_rgb8();
-                    let encoder =
-                        webp::Encoder::from_rgb(&rgb_img, rgb_img.width(), rgb_img.height());
-                    let mut config = webp::WebPConfig::new()
-                        .map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
-                    config.lossless = 0;
-                    config.quality = 50.0;
-                    config.method = 1;
-                    config.thread_level = 1;
-
-                    let webp_data = encoder
-                        .encode_advanced(&config)
-                        .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
-
-                    fs::write(&cover_path, &*webp_data)
-                        .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
-
+                    encode_cover_to_disk(&cover_data, &cover_path)?;
                     let _ = tx.send(());
                     Ok(())
                 });
@@ -174,11 +184,15 @@ pub async fn generate_covers(items: &[LibraryItem], covers_dir: &Path) -> Result
 
 /// Remove cover files for items that no longer exist in the library.
 pub fn cleanup_stale_covers(items: &[LibraryItem], covers_dir: &Path) -> Result<()> {
+    let current_ids: HashSet<String> = items.iter().map(|b| b.id.clone()).collect();
+    cleanup_stale_covers_by_ids(&current_ids, covers_dir)
+}
+
+/// Remove cover files whose IDs are not in the given set.
+pub fn cleanup_stale_covers_by_ids(current_ids: &HashSet<String>, covers_dir: &Path) -> Result<()> {
     if !covers_dir.exists() {
         return Ok(());
     }
-
-    let current_ids: HashSet<String> = items.iter().map(|b| b.id.clone()).collect();
 
     let entries = fs::read_dir(covers_dir)?;
     for entry in entries.flatten() {

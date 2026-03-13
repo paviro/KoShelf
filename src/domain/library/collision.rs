@@ -6,7 +6,7 @@
 
 use crate::infra::sqlite::library_repo::rows::CollisionDiagnosticRow;
 use crate::models::LibraryItem;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Result of collision detection across a set of library items.
 pub struct CollisionResult {
@@ -16,39 +16,41 @@ pub struct CollisionResult {
     pub diagnostics: Vec<CollisionDiagnosticRow>,
 }
 
-/// Detect canonical-ID collisions and select deterministic winners.
+/// Deduplicate items using first-wins semantics (single pass).
 ///
-/// Winner selection: within each group of items sharing the same `id`,
-/// the item with the lexicographically smallest `file_path` wins.
-pub fn detect_collisions(items: Vec<LibraryItem>, detected_at: &str) -> CollisionResult {
-    let mut groups: HashMap<String, Vec<LibraryItem>> = HashMap::new();
-    for item in items {
-        groups.entry(item.id.clone()).or_default().push(item);
-    }
-
-    let mut winners = Vec::with_capacity(groups.len());
+/// Iterates items once; the first item seen for each `id` wins.
+/// Subsequent items with the same ID are recorded as collision diagnostics.
+/// Order is deterministic for a given filesystem state (walkdir order).
+pub fn deduplicate_first_wins(items: Vec<LibraryItem>, detected_at: &str) -> CollisionResult {
+    let mut seen: HashSet<String> = HashSet::with_capacity(items.len());
+    let mut winners = Vec::with_capacity(items.len());
     let mut diagnostics = Vec::new();
 
-    for (_id, mut group) in groups {
-        // Sort by file_path for deterministic winner selection.
-        group.sort_by(|a, b| a.file_path.cmp(&b.file_path));
+    // Track the winning path for each ID so diagnostics can reference it.
+    let mut winner_paths: std::collections::HashMap<String, String> =
+        std::collections::HashMap::with_capacity(items.len());
 
-        let winner = group.remove(0);
-        let winner_path = winner.file_path.to_string_lossy().to_string();
-
-        // Remaining items are collision losers.
-        for loser in &group {
-            let loser_path = loser.file_path.to_string_lossy().to_string();
+    for item in items {
+        if seen.insert(item.id.clone()) {
+            winner_paths.insert(
+                item.id.clone(),
+                item.file_path.to_string_lossy().to_string(),
+            );
+            winners.push(item);
+        } else {
+            let loser_path = item.file_path.to_string_lossy().to_string();
+            let winner_path = winner_paths.get(&item.id).cloned().unwrap_or_default();
             diagnostics.push(CollisionDiagnosticRow {
-                canonical_id: loser.id.clone(),
+                canonical_id: item.id.clone(),
                 file_path: loser_path.clone(),
-                winner_item_id: winner.id.clone(),
-                reason: format!("path_precedence: {} < {}", winner_path, loser_path),
+                winner_item_id: item.id.clone(),
+                reason: format!(
+                    "first_wins: {} encountered before {}",
+                    winner_path, loser_path
+                ),
                 detected_at: detected_at.to_string(),
             });
         }
-
-        winners.push(winner);
     }
 
     CollisionResult {
@@ -93,28 +95,29 @@ mod tests {
             test_item("bbb", "/books/b.epub"),
         ];
 
-        let result = detect_collisions(items, "2026-01-01T00:00:00Z");
+        let result = deduplicate_first_wins(items, "2026-01-01T00:00:00Z");
 
         assert_eq!(result.winners.len(), 2);
         assert!(result.diagnostics.is_empty());
     }
 
     #[test]
-    fn collision_selects_earliest_path_as_winner() {
+    fn collision_keeps_first_encountered_item() {
         let items = vec![
             test_item("same-md5", "/books/z.epub"),
             test_item("same-md5", "/books/a.epub"),
         ];
 
-        let result = detect_collisions(items, "2026-01-01T00:00:00Z");
+        let result = deduplicate_first_wins(items, "2026-01-01T00:00:00Z");
 
         assert_eq!(result.winners.len(), 1);
-        assert_eq!(result.winners[0].file_path, PathBuf::from("/books/a.epub"));
+        // First-wins: /books/z.epub was encountered first
+        assert_eq!(result.winners[0].file_path, PathBuf::from("/books/z.epub"));
 
         assert_eq!(result.diagnostics.len(), 1);
-        assert_eq!(result.diagnostics[0].file_path, "/books/z.epub");
+        assert_eq!(result.diagnostics[0].file_path, "/books/a.epub");
         assert_eq!(result.diagnostics[0].canonical_id, "same-md5");
-        assert!(result.diagnostics[0].reason.contains("path_precedence"));
+        assert!(result.diagnostics[0].reason.contains("first_wins"));
     }
 
     #[test]
@@ -125,10 +128,11 @@ mod tests {
             test_item("md5-x", "/books/b.epub"),
         ];
 
-        let result = detect_collisions(items, "2026-01-01T00:00:00Z");
+        let result = deduplicate_first_wins(items, "2026-01-01T00:00:00Z");
 
         assert_eq!(result.winners.len(), 1);
-        assert_eq!(result.winners[0].file_path, PathBuf::from("/books/a.epub"));
+        // First-wins: /books/c.epub was encountered first
+        assert_eq!(result.winners[0].file_path, PathBuf::from("/books/c.epub"));
         assert_eq!(result.diagnostics.len(), 2);
     }
 }

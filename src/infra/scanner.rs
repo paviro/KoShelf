@@ -2,13 +2,16 @@ use anyhow::{Context, Result, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::Semaphore;
 
 use crate::koreader::merge_precedence::{normalize_partial_md5, resolve_canonical_partial_md5};
 use crate::koreader::{LuaParser, calculate_partial_md5};
 use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
+use crate::runtime::media;
 
 /// Configuration for where to find KOReader metadata
 #[derive(Clone, Debug, Default)]
@@ -426,9 +429,13 @@ pub async fn scan_specific_files(
     results
 }
 
+/// Maximum number of concurrent cover encode tasks.
+const COVER_ENCODE_CONCURRENCY: usize = 8;
+
 pub async fn scan_library(
     library_paths: &[PathBuf],
     metadata_location: &MetadataLocation,
+    covers_dir: Option<&Path>,
 ) -> Result<(Vec<LibraryItem>, HashSet<String>)> {
     info!("Scanning {} library paths...", library_paths.len());
     let start = Instant::now();
@@ -447,6 +454,11 @@ pub async fn scan_library(
     let mut books = Vec::new();
     let mut library_md5s = HashSet::new();
 
+    // Semaphore-bounded cover encode tasks
+    let semaphore = Arc::new(Semaphore::new(COVER_ENCODE_CONCURRENCY));
+    let mut cover_tasks: Vec<tokio::task::JoinHandle<Result<(), anyhow::Error>>> = Vec::new();
+    let mut cover_count = 0u64;
+
     // Walk through all library paths and scan for books/comics
     for library_path in library_paths {
         debug!("Scanning library path: {:?}", library_path);
@@ -464,7 +476,7 @@ pub async fn scan_library(
             debug!("Processing {:?}: {:?}", format, path);
 
             // Parse book based on format
-            let book_info = match scanner.parse_book_info(format, path).await {
+            let mut book_info = match scanner.parse_book_info(format, path).await {
                 Ok(info) => info,
                 Err(e) => {
                     log::warn!("Failed to parse {:?} {:?}: {}", format, path, e);
@@ -476,6 +488,31 @@ pub async fn scan_library(
             let koreader_metadata = scanner.parse_koreader_metadata(metadata_path).await;
             scanner.collect_md5_for_item(&mut library_md5s, path, &koreader_metadata);
             let item_id = scanner.canonical_item_id(path, koreader_metadata.as_ref())?;
+
+            // Process cover inline: take cover_data out and spawn bounded encode task
+            if let Some(covers_dir) = covers_dir {
+                if let Some(cover_data) = book_info.cover_data.take() {
+                    let cover_path = covers_dir.join(format!("{}.webp", item_id));
+                    let source_path = path.to_path_buf();
+
+                    if media::cover_needs_generation(&source_path, &cover_path) {
+                        let sem = semaphore.clone();
+                        let task = tokio::spawn(async move {
+                            let _permit = sem.acquire().await.unwrap();
+                            tokio::task::spawn_blocking(move || {
+                                media::encode_cover_to_disk(&cover_data, &cover_path)
+                            })
+                            .await
+                            .map_err(|e| anyhow::anyhow!(e))?
+                        });
+                        cover_tasks.push(task);
+                        cover_count += 1;
+                    }
+                }
+            } else {
+                // No covers_dir — just clear cover_data to free memory
+                book_info.cover_data = None;
+            }
 
             let book = LibraryItem {
                 id: item_id,
@@ -494,6 +531,36 @@ pub async fn scan_library(
 
     // Clear spinner and log summary
     spinner.finish_and_clear();
+
+    // Wait for all cover encode tasks to complete
+    if !cover_tasks.is_empty() {
+        let cover_start = Instant::now();
+        let pb = ProgressBar::new(cover_count);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
+                .unwrap()
+                .progress_chars("━╸─"),
+        );
+        pb.set_message("Extracting and converting covers:");
+
+        for task in cover_tasks {
+            match task.await {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => warn!("Cover encode failed: {}", e),
+                Err(e) => warn!("Cover encode task panicked: {}", e),
+            }
+            pb.inc(1);
+        }
+
+        pb.finish_and_clear();
+        info!(
+            "Extracted and converted {} covers in {:.1}s",
+            cover_count,
+            cover_start.elapsed().as_secs_f64()
+        );
+    }
+
     let elapsed = start.elapsed();
     info!(
         "Found {} items ({} books, {} comics) in {:.1}s",

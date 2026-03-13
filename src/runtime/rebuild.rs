@@ -151,6 +151,12 @@ pub async fn targeted_rebuild(
         warn!("Failed to generate covers: {}", e);
     }
 
+    // Cover data has been written to disk — free the raw image bytes.
+    drop(scanned);
+    for item in &mut upserted_items {
+        item.book_info.cover_data = None;
+    }
+
     // ── 6. Load all item IDs (used for stats filtering + covers map) ──
     let all_item_ids: Option<Vec<String>> = match repo.load_all_item_ids().await {
         Ok(ids) => Some(ids),
@@ -300,14 +306,15 @@ pub async fn full_rebuild(
 ) -> Result<RebuildResult> {
     info!("Starting full rebuild (no library DB available)");
 
-    let ingest_result = crate::runtime::ingest(config).await?;
-    let reading_data = ingest_result.reading_data(config);
-
     let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
 
     if let Err(e) = media::create_media_directories(&media_dirs) {
         warn!("Failed to create media directories: {}", e);
     }
+
+    // Covers are generated inline during scanning.
+    let ingest_result = crate::runtime::ingest(config, Some(&media_dirs.covers_dir)).await?;
+    let reading_data = ingest_result.reading_data(config);
 
     if !config.is_internal_server
         && let Err(e) =
@@ -316,15 +323,12 @@ pub async fn full_rebuild(
         warn!("Failed to sync static frontend: {}", e);
     }
 
-    if let Err(e) =
-        media::generate_covers(&ingest_result.filtered_items, &media_dirs.covers_dir).await
-    {
-        warn!("Failed to generate covers: {}", e);
-    }
-
-    if let Err(e) =
-        media::cleanup_stale_covers(&ingest_result.filtered_items, &media_dirs.covers_dir)
-    {
+    let filtered_ids: HashSet<String> = ingest_result
+        .filtered_items
+        .iter()
+        .map(|i| i.id.clone())
+        .collect();
+    if let Err(e) = media::cleanup_stale_covers_by_ids(&filtered_ids, &media_dirs.covers_dir) {
         warn!("Failed to cleanup stale covers: {}", e);
     }
 

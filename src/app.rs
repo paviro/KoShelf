@@ -1,6 +1,6 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
-use crate::contracts::site::SiteData;
+use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
@@ -170,10 +170,15 @@ pub async fn run(cli: Cli) -> Result<()> {
         runtime_data_policy,
     };
 
+    // ── Media directories: create before ingest so covers can be written during scan
+    let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
+    media::create_media_directories(&media_dirs)?;
+
     // ── Shared ingest: scan library + load statistics (single pass) ──────
+    // Covers are generated inline during scanning with bounded concurrency.
     let startup_started_at = Instant::now();
 
-    let ingest_result = crate::runtime::ingest(&config).await?;
+    let ingest_result = crate::runtime::ingest(&config, Some(&media_dirs.covers_dir)).await?;
     let reading_data = ingest_result.reading_data(&config);
     let has_reading_data = ingest_result.has_reading_data();
 
@@ -193,16 +198,14 @@ pub async fn run(cli: Cli) -> Result<()> {
         ..
     } = ingest_result;
 
-    // ── Media assets: covers, recap images, static frontend ─────────────
-    let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
-    media::create_media_directories(&media_dirs)?;
+    // ── Media assets: cleanup stale covers, recap images, static frontend
+    let filtered_ids: std::collections::HashSet<String> =
+        filtered_items.iter().map(|i| i.id.clone()).collect();
+    media::cleanup_stale_covers_by_ids(&filtered_ids, &media_dirs.covers_dir)?;
 
     if !is_internal_server {
         media::sync_static_frontend(&config.output_dir, has_reading_data)?;
     }
-
-    media::generate_covers(&filtered_items, &media_dirs.covers_dir).await?;
-    media::cleanup_stale_covers(&filtered_items, &media_dirs.covers_dir)?;
 
     if let Some(ref sd) = stats_data {
         crate::runtime::recap::generate_recap_share_images(
@@ -279,12 +282,31 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── Build site metadata ─────────────────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
-    let site_data = SiteData::from_items(
-        &filtered_items,
-        has_reading_data,
-        &config.site_title,
-        &config.language,
-    );
+    let site_data = if let Some(ref repo) = library_repo {
+        let (has_books, has_comics) = repo.query_content_type_flags().await?;
+        SiteData {
+            title: config.site_title.clone(),
+            language: config.language.clone(),
+            capabilities: SiteCapabilities {
+                has_books,
+                has_comics,
+                has_reading_data,
+            },
+        }
+    } else {
+        SiteData::from_items(
+            &filtered_items,
+            has_reading_data,
+            &config.site_title,
+            &config.language,
+        )
+    };
+
+    // These were only needed for startup — drop before entering the long-lived
+    // serve/watch loop to release all remaining item and stats memory.
+    // (reading_data is kept alive — it gets moved into the store in Serve mode.)
+    drop(filtered_items);
+    drop(stats_data);
 
     match plan.mode {
         RunMode::StaticExport => {
