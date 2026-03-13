@@ -2,8 +2,8 @@ use chrono::{Datelike, Duration, NaiveDate};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 
-use super::completion_calc::{CompletionConfig, ReadCompletionDetector};
-use super::session_calc as session;
+use super::completions::{CompletionConfig, ReadCompletionDetector};
+use super::sessions;
 use crate::koreader::types::{
     BookSessionStats, DailyStats, PageStat, ReadingStats, StatBook, StatisticsData, StreakInfo,
     WeeklyStats,
@@ -33,7 +33,7 @@ impl BookStatistics for StatBook {
 
         // Calculate session statistics using shared helper
         let book_stats: Vec<PageStat> = book_sessions.iter().cloned().cloned().collect();
-        let durations = session::session_durations(&book_stats);
+        let durations = sessions::session_durations(&book_stats);
         let session_count = durations.len() as i64;
         let longest_session_duration = durations.iter().max().copied();
         let average_session_duration = if !durations.is_empty() {
@@ -125,7 +125,7 @@ impl StatisticsCalculator {
 
         // Calculate overall session statistics
         let (average_session_duration, longest_session_duration) =
-            session::session_metrics(&stats_data.page_stats);
+            sessions::session_metrics(&stats_data.page_stats);
 
         // Calculate completion statistics
         let (total_completions, books_completed, most_completions) =
@@ -176,7 +176,7 @@ impl StatisticsCalculator {
 
             // Calculate session statistics for this week
             let (average_session_duration, longest_session_duration) =
-                session::session_metrics(&page_stats);
+                sessions::session_metrics(&page_stats);
 
             let weekly_stat = WeeklyStats {
                 start_date: start_date_approx.format("%Y-%m-%d").to_string(),
@@ -194,8 +194,6 @@ impl StatisticsCalculator {
         weeks.sort_by(|a, b| b.start_date.cmp(&a.start_date));
         weeks
     }
-
-    // session_metrics moved to session_calculator
 
     /// Build daily activity data from daily stats maps
     fn build_daily_activity(

@@ -314,7 +314,7 @@ fn compute_yearly_summary(
         .collect();
 
     let all_sessions =
-        crate::domain::reading::session_calc::aggregate_session_durations(&year_page_stats);
+        crate::domain::reading::sessions::aggregate_session_durations(&year_page_stats);
     let session_count = all_sessions.len() as i64;
     let longest_session_duration = all_sessions.iter().max().copied().unwrap_or(0);
     let average_session_duration = if session_count > 0 {

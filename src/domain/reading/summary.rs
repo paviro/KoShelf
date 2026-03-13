@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use chrono::NaiveDate;
 
-use super::session_calc as session;
+use super::sessions;
 use crate::contracts::reading::{
     HeatmapConfig, ReadingOverview, ReadingStreaks, ReadingSummaryData, ResolvedRange, StreakData,
 };
@@ -50,8 +50,8 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
 
     // Session metrics.
     let (average_session_duration_sec, longest_session_duration_sec) =
-        session::session_metrics(&page_stats);
-    let session_count = session::aggregate_session_durations(&page_stats).len() as i64;
+        sessions::session_metrics(&page_stats);
+    let session_count = sessions::aggregate_session_durations(&page_stats).len() as i64;
 
     // Completion counts within the resolved range.
     let (total_completions, items_completed) =
