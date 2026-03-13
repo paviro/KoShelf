@@ -132,12 +132,9 @@ impl ItemProcessor {
         locate_metadata_path(&self.config, path, format)
     }
 
-    async fn parse_koreader_metadata(
-        &self,
-        metadata_path: Option<PathBuf>,
-    ) -> Option<KoReaderMetadata> {
+    fn parse_koreader_metadata(&self, metadata_path: Option<PathBuf>) -> Option<KoReaderMetadata> {
         let metadata_path = metadata_path?;
-        match self.lua_parser.parse(&metadata_path).await {
+        match self.lua_parser.parse(&metadata_path) {
             Ok(metadata) => {
                 debug!("Found metadata at: {:?}", metadata_path);
                 Some(metadata)
@@ -397,9 +394,7 @@ async fn process_single_item(
 
     // 3. Locate + parse KOReader metadata
     let metadata_path = processor.locate_metadata_path(path, format);
-    let koreader_metadata = processor
-        .parse_koreader_metadata(metadata_path.clone())
-        .await;
+    let koreader_metadata = processor.parse_koreader_metadata(metadata_path.clone());
 
     // 4. Filter: skip unread items if configured
     if koreader_metadata.is_none() && !config.include_unread {

@@ -20,7 +20,7 @@ impl LuaParser {
         Self { lua: Lua::new() }
     }
 
-    pub async fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
+    pub fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
         debug!("Parsing Lua metadata: {:?}", lua_path);
 
         let content = fs::read_to_string(lua_path)

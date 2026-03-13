@@ -80,9 +80,8 @@ fn test_parse_koreader_generated_metadata() {
     std::fs::write(&test_file, &lua_output).unwrap();
 
     let parser = crate::koreader::LuaParser::new();
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let metadata = rt
-        .block_on(parser.parse(&test_file))
+    let metadata = parser
+        .parse(&test_file)
         .expect("Failed to parse KoReader-generated metadata");
 
     // Verify all fields were parsed correctly
