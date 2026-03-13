@@ -443,12 +443,17 @@ fn cleanup_stale_recap_share_assets(valid_years: &HashSet<String>, recap_dir: &P
     Ok(())
 }
 
-async fn render_share_images_for_year(
+/// Collect share image generation tasks for a single year.
+///
+/// Returns spawned `JoinHandle`s for images that need (re)generation.
+/// Each task sends `()` to `progress_tx` on completion for progress tracking.
+fn collect_share_tasks_for_year(
     year: i32,
     summary: &YearlySummary,
     recap_dir: &Path,
-    stats_db_path: Option<&Path>,
-) -> Result<()> {
+    stats_db_time: SystemTime,
+    progress_tx: &std::sync::mpsc::Sender<()>,
+) -> Vec<tokio::task::JoinHandle<()>> {
     let share_data = crate::share::ShareImageData {
         year,
         books_read: summary.total_books as u32,
@@ -460,24 +465,14 @@ async fn render_share_images_for_year(
         best_month: summary.best_month.clone(),
     };
 
-    let stats_db_time = stats_db_path
-        .and_then(|p| fs::metadata(p).ok())
-        .and_then(|m| m.modified().ok())
-        .unwrap_or(SystemTime::UNIX_EPOCH);
-
-    fs::create_dir_all(recap_dir)?;
-
     let formats = [
         crate::share::ShareFormat::Story,
         crate::share::ShareFormat::Square,
         crate::share::ShareFormat::Banner,
     ];
 
-    let start = Instant::now();
-    let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
-
     let recap_dir_owned = recap_dir.to_path_buf();
-    let share_tasks: Vec<_> = formats
+    formats
         .into_iter()
         .filter_map(|format| {
             let output_path = recap_dir_owned.join(format!("{}_{}", year, format.filename()));
@@ -505,48 +500,7 @@ async fn render_share_images_for_year(
                 None
             }
         })
-        .collect();
-
-    let total_tasks = share_tasks.len();
-
-    if total_tasks > 0 {
-        info!("Rendering share images for {}...", year);
-        let pb = ProgressBar::new(total_tasks as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
-                .unwrap()
-                .progress_chars("━╸─"),
-        );
-        pb.set_message(format!("Rendering share images for {}:", year));
-
-        drop(progress_tx);
-
-        let pb_clone = pb.clone();
-        let progress_task = tokio::task::spawn_blocking(move || {
-            while progress_rx.recv().is_ok() {
-                pb_clone.inc(1);
-            }
-        });
-
-        for task in share_tasks {
-            let _ = task.await;
-        }
-
-        let _ = progress_task.await;
-        pb.finish_and_clear();
-
-        let elapsed = start.elapsed();
-        info!(
-            "Rendered share images for {} in {:.1}s",
-            year,
-            elapsed.as_secs_f64()
-        );
-    } else {
-        drop(progress_tx);
-    }
-
-    Ok(())
+        .collect()
 }
 
 /// Generate recap share images for all completion years.
@@ -578,6 +532,16 @@ pub async fn generate_recap_share_images(
 
     let month_hours_all = month_hours_for(&reading_stats_all.daily_activity);
 
+    let stats_db_time = stats_db_path
+        .and_then(|p| fs::metadata(p).ok())
+        .and_then(|m| m.modified().ok())
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+
+    fs::create_dir_all(recap_dir)?;
+
+    let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
+    let mut all_tasks = Vec::new();
+
     for year in &years {
         let months_map = year_month_items.get(year).cloned().unwrap_or_default();
         let monthly = build_monthly_recaps_all(months_map, &month_hours_all);
@@ -590,7 +554,51 @@ pub async fn generate_recap_share_images(
             &stats_data.page_stats,
         );
 
-        render_share_images_for_year(*year, &summary, recap_dir, stats_db_path).await?;
+        all_tasks.extend(collect_share_tasks_for_year(
+            *year,
+            &summary,
+            recap_dir,
+            stats_db_time,
+            &progress_tx,
+        ));
+    }
+
+    let total_tasks = all_tasks.len();
+
+    if total_tasks > 0 {
+        let start = Instant::now();
+        info!("Rendering share images...");
+        let pb = ProgressBar::new(total_tasks as u64);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
+                .unwrap()
+                .progress_chars("━╸─"),
+        );
+        pb.set_message("Rendering share images:");
+
+        drop(progress_tx);
+
+        let pb_clone = pb.clone();
+        let progress_task = tokio::task::spawn_blocking(move || {
+            while progress_rx.recv().is_ok() {
+                pb_clone.inc(1);
+            }
+        });
+
+        for task in all_tasks {
+            let _ = task.await;
+        }
+
+        let _ = progress_task.await;
+        pb.finish_and_clear();
+
+        info!(
+            "Rendered share images in {:.1}s",
+            start.elapsed().as_secs_f64()
+        );
+    } else {
+        drop(progress_tx);
     }
 
     let current_years: HashSet<String> = years.iter().map(|y| y.to_string()).collect();
