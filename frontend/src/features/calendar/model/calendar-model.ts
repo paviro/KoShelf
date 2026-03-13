@@ -73,7 +73,7 @@ export function aggregateCalendarData(
         Object.assign(items, monthData.items);
 
         for (const event of monthData.events) {
-            const dedupeKey = `${event.item_id}|${event.start}|${event.end ?? ''}`;
+            const dedupeKey = `${event.item_ref}|${event.start}|${event.end ?? ''}`;
             if (seen.has(dedupeKey)) {
                 continue;
             }
@@ -95,7 +95,7 @@ export function eventMatchesScope(
         return true;
     }
 
-    const item = items[event.item_id];
+    const item = items[event.item_ref];
     if (!item) {
         return false;
     }
@@ -115,8 +115,8 @@ export function resolveMonthlyStats(
         return {
             items_read: 0,
             pages_read: 0,
-            time_read: 0,
-            days_read_pct: 0,
+            reading_time_sec: 0,
+            active_days_percentage: 0,
         };
     }
 

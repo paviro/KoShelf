@@ -45,7 +45,7 @@ export function CalendarMonthlyStatsSection({
                 iconClassName="text-purple-600 dark:text-white"
                 value={
                     <MetricCardUnitValue
-                        value={formatDurationParts(stats.time_read)}
+                        value={formatDurationParts(stats.reading_time_sec)}
                     />
                 }
                 label={translation.get('total-read-time')}
@@ -58,13 +58,18 @@ export function CalendarMonthlyStatsSection({
                     <MetricCardUnitValue
                         value={[
                             {
-                                amount: formatNumber(stats.days_read_pct),
+                                amount: formatNumber(
+                                    stats.active_days_percentage,
+                                ),
                                 unit: '%',
                             },
                         ]}
                     />
                 }
-                label={translation.get('active-days', stats.days_read_pct)}
+                label={translation.get(
+                    'active-days',
+                    stats.active_days_percentage,
+                )}
             />
         </section>
     );

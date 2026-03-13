@@ -25,7 +25,7 @@ const EVENT_COLOR_PAIR_COUNT = 10;
 
 function colorforevent(event: CalendarEventResponse): string {
     let hash = 0;
-    const token = event.item_id;
+    const token = event.item_ref;
 
     for (let index = 0; index < token.length; index += 1) {
         hash = (hash << 5) - hash + token.charCodeAt(index);
@@ -97,11 +97,11 @@ export function CalendarGrid({
     const mappedEvents = useMemo<Calendar.EventInput[]>(
         () =>
             events.map((event) => {
-                const item = items[event.item_id];
+                const item = items[event.item_ref];
                 const title = item?.title ?? translation.get('unknown-book');
 
                 return {
-                    id: `${event.item_id}-${event.start}-${event.end ?? event.start}`,
+                    id: `${event.item_ref}-${event.start}-${event.end ?? event.start}`,
                     title,
                     start: event.start,
                     end: event.end || event.start,

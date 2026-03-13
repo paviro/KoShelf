@@ -31,7 +31,7 @@ export function CalendarEventModal({
     onClose,
 }: CalendarEventModalProps) {
     const [coverFailed, setCoverFailed] = useState(false);
-    const coverKey = `${event?.item_id}\0${item?.item_cover}`;
+    const coverKey = `${event?.item_ref}\0${item?.item_cover}`;
     const [prevCoverKey, setPrevCoverKey] = useState(coverKey);
     const location = useLocation();
     const navigate = useNavigate();
@@ -131,7 +131,7 @@ export function CalendarEventModal({
                                     {translation.get('reading-time')}
                                 </div>
                                 <div className="text-gray-900 dark:text-white font-semibold">
-                                    {formatDuration(event.total_read_time)}
+                                    {formatDuration(event.reading_time_sec)}
                                 </div>
                             </div>
                         </div>
@@ -147,7 +147,7 @@ export function CalendarEventModal({
                                     {translation.get('pages-read')}
                                 </div>
                                 <div className="text-gray-900 dark:text-white font-semibold">
-                                    {formatNumber(event.total_pages_read)}
+                                    {formatNumber(event.pages_read)}
                                 </div>
                             </div>
                         </div>

@@ -177,7 +177,7 @@ export function CalendarRoute() {
     );
 
     const selectedItem = selectedEvent
-        ? (mergedCalendarData.items[selectedEvent.item_id] ?? null)
+        ? (mergedCalendarData.items[selectedEvent.item_ref] ?? null)
         : null;
     const monthlyStats = resolveMonthlyStats(
         currentMonthData ?? undefined,
