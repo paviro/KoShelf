@@ -463,32 +463,29 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 
 ## API Shape
 
-KoShelf uses a model-centric API. Endpoints map to core resources (`items`, `activity`, `completions`).
+KoShelf uses a model-centric API with two domains: **library** (items) and **reading** (statistics, calendar, completions).
 
-### Content Type Filter
+### Scope Filter
 
-- Optional query parameter: `content_type`
+- Optional query parameter: `scope`
 - Supported values: `all` (default), `books`, `comics`
-- Applied uniformly across activity/completion resources and supported by `GET /api/items`
+- Applied uniformly across library and reading endpoints
 
-### Model Resources
+### Endpoints
 
 - `GET /api/site`
-- `GET /api/items`
-- `GET /api/items/{id}`
-- `GET /api/activity/weeks`
-- `GET /api/activity/weeks/{week_key}`
-- `GET /api/activity/years/{year}/daily`
-- `GET /api/activity/years/{year}/summary`
-- `GET /api/activity/months`
-- `GET /api/activity/months/{month_key}`
-- `GET /api/completions/years`
-- `GET /api/completions/years/{year}`
-- `GET /api/events/stream`
+- `GET /api/items` — library list (supports `scope`, `sort`, `order`)
+- `GET /api/items/{id}` — item detail (supports `include=highlights,bookmarks,statistics,completions,all`)
+- `GET /api/reading/summary` — reading time and session aggregates
+- `GET /api/reading/metrics` — time-series data points (daily/weekly/monthly)
+- `GET /api/reading/available-periods` — available time periods for selectors
+- `GET /api/reading/calendar` — monthly calendar with events and stats
+- `GET /api/reading/completions` — book completion records with optional summary and share assets
+- `GET /api/events/stream` — SSE stream for live data invalidation
 
 `GET /api/site` includes the server's default `language`. The frontend uses this as the initial locale, but users can override language/region in Settings and that preference is stored per browser.
 
-In static output mode, these resources are mirrored under `data/**`, and the frontend API client composes or reshapes them for view-specific needs.
+In static output mode, equivalent data is exported as flat JSON files under `data/`.
 
 ## Generated Site Structure
 
@@ -517,82 +514,21 @@ site/
 └── data/                   # Contract payloads used by static mode (not available when using server mode)
     ├── site.json
     ├── items/
-    │   ├── index.json
-    │   └── by_id/
-    │       ├── <item-id>.json
-    │       └── ...
-    ├── activity/
-    │   ├── weeks/
-    │   │   ├── all/
-    │   │   │   ├── index.json
-    │   │   │   └── by_key/
-    │   │   │       ├── 2024-01-01.json
-    │   │   │       └── ...
-    │   │   ├── books/
-    │   │   │   ├── index.json
-    │   │   │   └── by_key/
-    │   │   │       ├── 2024-01-01.json
-    │   │   │       └── ...
-    │   │   └── comics/
-    │   │       ├── index.json
-    │   │       └── by_key/
-    │   │           ├── 2024-01-01.json
-    │   │           └── ...
-    │   ├── years/
-    │   │   ├── all/
-    │   │   │   ├── daily/
-    │   │   │   │   ├── 2024.json
-    │   │   │   │   └── ...
-    │   │   │   └── summary/
-    │   │   │       ├── 2024.json
-    │   │   │       └── ...
-    │   │   ├── books/
-    │   │   │   ├── daily/
-    │   │   │   │   ├── 2024.json
-    │   │   │   │   └── ...
-    │   │   │   └── summary/
-    │   │   │       ├── 2024.json
-    │   │   │       └── ...
-    │   │   └── comics/
-    │   │       ├── daily/
-    │   │       │   ├── 2024.json
-    │   │       │   └── ...
-    │   │       └── summary/
-    │   │           ├── 2024.json
-    │   │           └── ...
-    │   └── months/
-    │       ├── all/
-    │       │   ├── index.json
-    │       │   └── by_key/
-    │       │       ├── 2024-01.json
-    │       │       └── ...
-    │       ├── books/
-    │       │   ├── index.json
-    │       │   └── by_key/
-    │       │       ├── 2024-01.json
-    │       │       └── ...
-    │       └── comics/
-    │           ├── index.json
-    │           └── by_key/
-    │               ├── 2024-01.json
-    │               └── ...
-    └── completions/
-        └── years/
-            ├── all/
-            │   ├── index.json
-            │   └── by_key/
-            │       ├── 2024.json
-            │       └── ...
-            ├── books/
-            │   ├── index.json
-            │   └── by_key/
-            │       ├── 2024.json
-            │       └── ...
-            └── comics/
-                ├── index.json
-                └── by_key/
-                    ├── 2024.json
-                    └── ...
+    │   ├── index.json          # All items (list projection)
+    │   ├── <item-id>.json      # Per-item detail (all includes expanded)
+    │   └── ...
+    └── reading/
+        ├── summary.json        # Per-scope reading summaries
+        ├── periods.json        # All available time periods
+        ├── metrics/
+        │   ├── 2024-01.json    # Daily data points per month (all scopes)
+        │   └── ...
+        ├── calendar/
+        │   ├── 2024-01.json    # Monthly calendar data
+        │   └── ...
+        └── completions/
+            ├── 2024.json       # Per-year completions with summary + share assets
+            └── ...
 ```
 
 ## Credits

@@ -46,31 +46,11 @@ pub enum ContentTypeFilter {
 }
 
 impl ContentTypeFilter {
-    pub fn parse(value: Option<&str>) -> Result<Self, ApiErrorCode> {
-        match value {
-            None => Ok(Self::All),
-            Some(raw) => raw.parse(),
-        }
-    }
-
     pub fn as_str(self) -> &'static str {
         match self {
             Self::All => "all",
             Self::Books => "books",
             Self::Comics => "comics",
-        }
-    }
-}
-
-impl FromStr for ContentTypeFilter {
-    type Err = ApiErrorCode;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "all" => Ok(Self::All),
-            "books" => Ok(Self::Books),
-            "comics" => Ok(Self::Comics),
-            _ => Err(ApiErrorCode::InvalidContentType),
         }
     }
 }
