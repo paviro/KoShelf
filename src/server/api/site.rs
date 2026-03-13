@@ -13,11 +13,7 @@ fn empty_site_data() -> SiteData {
     SiteData {
         title: String::new(),
         language: "en_US".to_string(),
-        capabilities: SiteCapabilities {
-            has_books: false,
-            has_comics: false,
-            has_reading_data: false,
-        },
+        capabilities: SiteCapabilities::default(),
     }
 }
 

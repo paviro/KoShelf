@@ -1,7 +1,7 @@
 use axum::{Json, extract::Query, response::IntoResponse};
 
 use crate::contracts::common::ApiResponse;
-use crate::domain::reading::ReadingService;
+use crate::domain::reading;
 
 use super::shared::{
     ApiResult, ReadingAvailablePeriodsParams, ReadingCalendarParams, ReadingCompletionsParams,
@@ -15,7 +15,7 @@ pub(crate) async fn reading_summary(
     Query(params): Query<ReadingSummaryParams>,
 ) -> ApiResult<impl IntoResponse> {
     let query = parse_reading_summary_query(&params)?;
-    let data = ReadingService::summary(&reading_data, query);
+    let data = reading::summary(&reading_data, query);
     Ok(Json(ApiResponse::new(data)))
 }
 
@@ -24,7 +24,7 @@ pub(crate) async fn reading_metrics(
     Query(params): Query<ReadingMetricsParams>,
 ) -> ApiResult<impl IntoResponse> {
     let query = parse_reading_metrics_query(&params)?;
-    let data = ReadingService::metrics(&reading_data, query);
+    let data = reading::metrics(&reading_data, query);
     Ok(Json(ApiResponse::new(data)))
 }
 
@@ -33,7 +33,7 @@ pub(crate) async fn reading_available_periods(
     Query(params): Query<ReadingAvailablePeriodsParams>,
 ) -> ApiResult<impl IntoResponse> {
     let query = parse_reading_available_periods_query(&params)?;
-    let data = ReadingService::available_periods(&reading_data, query);
+    let data = reading::available_periods(&reading_data, query);
     Ok(Json(ApiResponse::new(data)))
 }
 
@@ -42,7 +42,7 @@ pub(crate) async fn reading_calendar(
     Query(params): Query<ReadingCalendarParams>,
 ) -> ApiResult<impl IntoResponse> {
     let query = parse_reading_calendar_query(&params)?;
-    let data = ReadingService::calendar(&reading_data, query);
+    let data = reading::calendar(&reading_data, query);
     Ok(Json(ApiResponse::new(data)))
 }
 
@@ -51,6 +51,6 @@ pub(crate) async fn reading_completions(
     Query(params): Query<ReadingCompletionsParams>,
 ) -> ApiResult<impl IntoResponse> {
     let query = parse_reading_completions_query(&params)?;
-    let data = ReadingService::completions(&reading_data, query);
+    let data = reading::completions(&reading_data, query);
     Ok(Json(ApiResponse::new(data)))
 }

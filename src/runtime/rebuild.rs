@@ -328,21 +328,12 @@ pub async fn full_rebuild(
 
     let generated_at = config.time_config.now_rfc3339();
 
-    let site_data = SiteData {
-        title: config.site_title.clone(),
-        language: config.language.clone(),
-        capabilities: SiteCapabilities {
-            has_books: ingest_result
-                .filtered_items
-                .iter()
-                .any(|item| item.is_book()),
-            has_comics: ingest_result
-                .filtered_items
-                .iter()
-                .any(|item| item.is_comic()),
-            has_reading_data: ingest_result.has_reading_data(),
-        },
-    };
+    let site_data = SiteData::from_items(
+        &ingest_result.filtered_items,
+        ingest_result.has_reading_data(),
+        &config.site_title,
+        &config.language,
+    );
 
     if let Some(store) = site_store {
         store.replace(site_data);

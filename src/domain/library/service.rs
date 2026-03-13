@@ -12,81 +12,73 @@ use crate::koreader::BookStatistics;
 use crate::models::{BookSessionStats, ReadingData, StatBook};
 use crate::time_config::TimeConfig;
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct LibraryService;
+pub async fn list(repo: &LibraryRepository, query: LibraryListQuery) -> Result<LibraryListData> {
+    let items = repo.list_items(&query).await?;
+    Ok(LibraryListData { items })
+}
 
-impl LibraryService {
-    pub async fn list(
-        repo: &LibraryRepository,
-        query: LibraryListQuery,
-    ) -> Result<LibraryListData> {
-        let items = repo.list_items(&query).await?;
-        Ok(LibraryListData { items })
-    }
+pub async fn detail(
+    repo: &LibraryRepository,
+    query: &LibraryDetailQuery,
+    reading_data: Option<&ReadingData>,
+) -> Result<Option<LibraryDetailData>> {
+    let Some(item) = repo.get_item(&query.id).await? else {
+        return Ok(None);
+    };
 
-    pub async fn detail(
-        repo: &LibraryRepository,
-        query: &LibraryDetailQuery,
-        reading_data: Option<&ReadingData>,
-    ) -> Result<Option<LibraryDetailData>> {
-        let Some(item) = repo.get_item(&query.id).await? else {
-            return Ok(None);
-        };
+    let includes = &query.includes;
 
-        let includes = &query.includes;
+    // Fetch annotations directly as contract types, filtered by kind.
+    let highlights = if includes.has(IncludeToken::Highlights) {
+        Some(repo.get_annotations(&query.id, Some("highlight")).await?)
+    } else {
+        None
+    };
 
-        // Fetch annotations directly as contract types, filtered by kind.
-        let highlights = if includes.has(IncludeToken::Highlights) {
-            Some(repo.get_annotations(&query.id, Some("highlight")).await?)
+    let bookmarks = if includes.has(IncludeToken::Bookmarks) {
+        Some(repo.get_annotations(&query.id, Some("bookmark")).await?)
+    } else {
+        None
+    };
+
+    // Resolve per-item statistics and completions via partial_md5_checksum
+    // linkage into the in-memory reading data.
+    let stat_book =
+        if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
+            reading_data
+                .zip(item.partial_md5_checksum.as_deref())
+                .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
         } else {
             None
         };
 
-        let bookmarks = if includes.has(IncludeToken::Bookmarks) {
-            Some(repo.get_annotations(&query.id, Some("bookmark")).await?)
-        } else {
-            None
-        };
+    let statistics = if includes.has(IncludeToken::Statistics) {
+        stat_book.as_ref().and_then(|sb| {
+            let rd = reading_data?;
+            let session_stats =
+                sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
+            Some(map_detail_statistics(sb, &session_stats, &rd.time_config))
+        })
+    } else {
+        None
+    };
 
-        // Resolve per-item statistics and completions via partial_md5_checksum
-        // linkage into the in-memory reading data.
-        let stat_book =
-            if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
-                reading_data
-                    .zip(item.partial_md5_checksum.as_deref())
-                    .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
-            } else {
-                None
-            };
+    let completions = if includes.has(IncludeToken::Completions) {
+        stat_book
+            .as_ref()
+            .and_then(|sb| sb.completions.as_ref())
+            .map(map_completions)
+    } else {
+        None
+    };
 
-        let statistics = if includes.has(IncludeToken::Statistics) {
-            stat_book.as_ref().and_then(|sb| {
-                let rd = reading_data?;
-                let session_stats =
-                    sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
-                Some(map_detail_statistics(sb, &session_stats, &rd.time_config))
-            })
-        } else {
-            None
-        };
-
-        let completions = if includes.has(IncludeToken::Completions) {
-            stat_book
-                .as_ref()
-                .and_then(|sb| sb.completions.as_ref())
-                .map(map_completions)
-        } else {
-            None
-        };
-
-        Ok(Some(LibraryDetailData {
-            item,
-            highlights,
-            bookmarks,
-            statistics,
-            completions,
-        }))
-    }
+    Ok(Some(LibraryDetailData {
+        item,
+        highlights,
+        bookmarks,
+        statistics,
+        completions,
+    }))
 }
 
 /// Case-insensitive lookup into `stats_by_md5`.

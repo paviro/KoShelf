@@ -2,19 +2,13 @@ use super::scanner::MetadataLocation;
 use crate::config::SiteConfig;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::models::LibraryItemFormat;
-use crate::runtime::{
-    RuntimeObservability, SharedReadingDataStore, SharedSiteStore, UpdateNotifier,
-};
+use crate::runtime::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::{
-    Arc,
-    atomic::{AtomicU64, Ordering},
-};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
@@ -29,33 +23,12 @@ pub struct FileWatcher {
     reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<UpdateNotifier>,
     library_repo: Option<LibraryRepository>,
-    observability: RuntimeObservability,
 }
 
 impl std::ops::Deref for FileWatcher {
     type Target = SiteConfig;
     fn deref(&self) -> &Self::Target {
         &self.config
-    }
-}
-
-fn decrement_pending_rebuilds(counter: &AtomicU64) -> u64 {
-    let mut current = counter.load(Ordering::Relaxed);
-
-    loop {
-        if current == 0 {
-            return 0;
-        }
-
-        match counter.compare_exchange_weak(
-            current,
-            current - 1,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => return current - 1,
-            Err(observed) => current = observed,
-        }
     }
 }
 
@@ -66,7 +39,6 @@ impl FileWatcher {
         reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<UpdateNotifier>,
         library_repo: Option<LibraryRepository>,
-        observability: RuntimeObservability,
     ) -> Self {
         Self {
             config,
@@ -74,15 +46,12 @@ impl FileWatcher {
             reading_data_store,
             update_notifier,
             library_repo,
-            observability,
         }
     }
 
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
         let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<WatcherRebuildEvent>();
-        let pending_rebuilds = Arc::new(AtomicU64::new(0));
-        self.observability.set_watcher_queue_depth(0);
 
         // Set up file watcher
         let mut watcher = RecommendedWatcher::new(
@@ -142,8 +111,6 @@ impl FileWatcher {
         let reading_data_store_clone = self.reading_data_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
         let library_repo_clone = self.library_repo.clone();
-        let observability_clone = self.observability.clone();
-        let pending_rebuilds_clone = pending_rebuilds.clone();
 
         // Spawn delayed rebuild task.
         // NOTE: Statistics loading uses non-Send types (e.g. mlua::Lua, Rc-based translations),
@@ -154,10 +121,6 @@ impl FileWatcher {
                 let rebuild_delay = Duration::from_secs(1);
 
                 while let Some(initial_event) = rebuild_rx.recv().await {
-                    let current_depth = decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
-                    observability_clone.set_watcher_queue_depth(current_depth);
-                    let queued_at = Instant::now();
-
                     // Accumulate paths across the debounce window.
                     let mut accumulated_paths: HashSet<PathBuf> =
                         initial_event.paths.into_iter().collect();
@@ -166,9 +129,6 @@ impl FileWatcher {
 
                     // Drain any additional events that came in during the delay
                     while let Ok(event) = rebuild_rx.try_recv() {
-                        let current_depth =
-                            decrement_pending_rebuilds(pending_rebuilds_clone.as_ref());
-                        observability_clone.set_watcher_queue_depth(current_depth);
                         accumulated_paths.extend(event.paths);
                     }
 
@@ -195,8 +155,6 @@ impl FileWatcher {
                     if let Err(e) = result {
                         warn!("Rebuild failed: {}", e);
                     }
-
-                    observability_clone.record_watcher_update_latency(queued_at.elapsed());
                 }
             })
         });
@@ -208,12 +166,7 @@ impl FileWatcher {
 
                 let rebuild_event = WatcherRebuildEvent { paths: event.paths };
 
-                if rebuild_tx.send(rebuild_event).is_ok() {
-                    let queued_depth = pending_rebuilds
-                        .fetch_add(1, Ordering::Relaxed)
-                        .saturating_add(1);
-                    self.observability.set_watcher_queue_depth(queued_depth);
-                }
+                let _ = rebuild_tx.send(rebuild_event);
             }
         }
 

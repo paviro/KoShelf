@@ -8,4 +8,4 @@ pub mod service;
 
 pub use build::{LibraryBuildMode, LibraryBuildPipeline, LibraryBuildResult, upsert_single_item};
 pub use queries::{IncludeSet, LibraryDetailQuery, LibraryListQuery};
-pub use service::LibraryService;
+pub use service::{detail, list};

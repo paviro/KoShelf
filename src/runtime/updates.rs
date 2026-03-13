@@ -1,6 +1,5 @@
 //! Update notifier used by runtime server mode.
 
-use super::observability::RuntimeObservability;
 use serde::Serialize;
 use std::sync::{
     Arc,
@@ -20,7 +19,6 @@ pub struct Update {
 struct UpdateNotifierInner {
     revision_epoch: String,
     revision: AtomicU64,
-    observability: RuntimeObservability,
     tx: watch::Sender<Update>,
 }
 
@@ -32,18 +30,6 @@ pub struct UpdateNotifier {
 
 impl UpdateNotifier {
     pub fn new(revision_epoch: impl Into<String>, initial_generated_at: impl Into<String>) -> Self {
-        Self::with_observability(
-            revision_epoch,
-            initial_generated_at,
-            RuntimeObservability::default(),
-        )
-    }
-
-    pub fn with_observability(
-        revision_epoch: impl Into<String>,
-        initial_generated_at: impl Into<String>,
-        observability: RuntimeObservability,
-    ) -> Self {
         let revision_epoch = revision_epoch.into();
         let initial_update = Update {
             revision_epoch: revision_epoch.clone(),
@@ -56,7 +42,6 @@ impl UpdateNotifier {
             inner: Arc::new(UpdateNotifierInner {
                 revision_epoch,
                 revision: AtomicU64::new(0),
-                observability,
                 tx,
             }),
         }
@@ -68,7 +53,6 @@ impl UpdateNotifier {
 
     pub fn publish(&self, generated_at: impl Into<String>) -> Update {
         let revision = self.inner.revision.fetch_add(1, Ordering::Relaxed) + 1;
-        self.inner.observability.record_invalidation_event();
 
         let update = Update {
             revision_epoch: self.inner.revision_epoch.clone(),
@@ -79,10 +63,6 @@ impl UpdateNotifier {
         // Ignore send failures when no subscribers are connected.
         let _ = self.inner.tx.send(update.clone());
         update
-    }
-
-    pub fn observability(&self) -> RuntimeObservability {
-        self.inner.observability.clone()
     }
 }
 
@@ -100,9 +80,6 @@ mod tests {
 
         let second = notifier.publish("2026-03-11T11:02:00Z");
         assert_eq!(second.revision, 2);
-
-        let telemetry = notifier.observability().snapshot();
-        assert_eq!(telemetry.invalidation_events, 2);
     }
 
     #[test]

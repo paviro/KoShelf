@@ -1,6 +1,6 @@
 use crate::cli::{Cli, parse_time_to_seconds};
 use crate::config::SiteConfig;
-use crate::contracts::site::{SiteCapabilities, SiteData};
+use crate::contracts::site::SiteData;
 use crate::domain::library::{LibraryBuildMode, LibraryBuildPipeline};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
@@ -11,7 +11,7 @@ use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::library::MetadataLocation;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::media::{self, resolve_media_dirs};
-use crate::runtime::{ReadingDataStore, RuntimeObservability, SiteStore, UpdateNotifier};
+use crate::runtime::{ReadingDataStore, SiteStore, UpdateNotifier};
 use crate::server::WebServer;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
@@ -81,24 +81,6 @@ fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
     };
 
     resolve_runtime_data_policy(&cli_overrides)
-}
-
-/// Build a `SiteData` from the current library items and reading data availability.
-fn build_site_data(
-    items: &[crate::models::LibraryItem],
-    has_reading_data: bool,
-    site_title: &str,
-    language: &str,
-) -> SiteData {
-    SiteData {
-        title: site_title.to_string(),
-        language: language.to_string(),
-        capabilities: SiteCapabilities {
-            has_books: items.iter().any(|item| item.is_book()),
-            has_comics: items.iter().any(|item| item.is_comic()),
-            has_reading_data,
-        },
-    }
 }
 
 /// Run KoShelf with the provided CLI args.
@@ -176,8 +158,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         runtime_data_policy,
     };
 
-    let observability = RuntimeObservability::default();
-
     // ── Shared ingest: scan library + load statistics (single pass) ──────
     let startup_started_at = Instant::now();
 
@@ -197,10 +177,9 @@ pub async fn run(cli: Cli) -> Result<()> {
     let reading_data = ingest_result.reading_data(&config);
     let has_reading_data = ingest_result.has_reading_data();
 
-    observability.record_startup_library_build_duration(startup_started_at.elapsed());
     info!(
         "Library scan completed in {} ms ({} scanned, {} after filtering)",
-        observability.snapshot().startup_library_build_duration_ms,
+        startup_started_at.elapsed().as_millis(),
         ingest_result.raw_items.len(),
         ingest_result.filtered_items.len(),
     );
@@ -300,7 +279,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── Build site metadata ─────────────────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
-    let site_data = build_site_data(
+    let site_data = SiteData::from_items(
         &filtered_items,
         has_reading_data,
         &config.site_title,
@@ -315,14 +294,8 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher = crate::library::FileWatcher::new(
-                config,
-                None,
-                None,
-                None,
-                library_repo,
-                observability.clone(),
-            );
+            let file_watcher =
+                crate::library::FileWatcher::new(config, None, None, None, library_repo);
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -343,11 +316,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 reading_data_store.replace(rd);
             }
 
-            let update_notifier = UpdateNotifier::with_observability(
-                revision_epoch,
-                initial_generated_at,
-                observability.clone(),
-            );
+            let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
             // Start file watcher with site store updates.
             let file_watcher = crate::library::FileWatcher::new(
@@ -356,7 +325,6 @@ pub async fn run(cli: Cli) -> Result<()> {
                 Some(reading_data_store.clone()),
                 Some(update_notifier.clone()),
                 Some(library_repo.clone()),
-                observability,
             );
 
             // Start web server (runtime media cache is served from `plan.output_dir`).

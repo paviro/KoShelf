@@ -5,7 +5,7 @@ use axum::{
 };
 
 use crate::contracts::common::ApiResponse;
-use crate::domain::library::{LibraryDetailQuery, LibraryListQuery, LibraryService};
+use crate::domain::library::{self, LibraryDetailQuery, LibraryListQuery};
 use crate::server::ServerState;
 
 use super::shared::{
@@ -23,7 +23,7 @@ pub(crate) async fn items(
 
     let list_query = LibraryListQuery { scope, sort, order };
 
-    let payload = LibraryService::list(&state.library_repo, list_query)
+    let payload = library::list(&state.library_repo, list_query)
         .await
         .map_err(|_| ApiResponseError::internal_server_error())?;
 
@@ -40,7 +40,7 @@ pub(crate) async fn item_detail(
     let query = LibraryDetailQuery::new(id, includes);
     let reading_data = state.reading_data_store.get();
 
-    let payload = LibraryService::detail(&state.library_repo, &query, reading_data.as_deref())
+    let payload = library::detail(&state.library_repo, &query, reading_data.as_deref())
         .await
         .map_err(|_| ApiResponseError::internal_server_error())?
         .ok_or_else(ApiResponseError::not_found)?;
