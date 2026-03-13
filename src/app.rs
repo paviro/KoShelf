@@ -161,18 +161,6 @@ pub async fn run(cli: Cli) -> Result<()> {
     // ── Shared ingest: scan library + load statistics (single pass) ──────
     let startup_started_at = Instant::now();
 
-    if is_internal_server {
-        info!(
-            "Scanning library and serving media cache from: {:?}",
-            config.output_dir
-        );
-    } else {
-        info!(
-            "Scanning library and exporting static shell/assets to: {:?}",
-            config.output_dir
-        );
-    }
-
     let ingest_result = crate::runtime::ingest(&config).await?;
     let reading_data = ingest_result.reading_data(&config);
     let has_reading_data = ingest_result.has_reading_data();
