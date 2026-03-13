@@ -146,11 +146,8 @@ impl SnapshotBuilder {
             self.sync_static_frontend_output(stats_data)?;
         }
 
-        let version = self.get_version();
-        let generated_at = self.get_last_updated();
-        let meta = mappers::build_meta(version.clone(), generated_at.clone());
+        let meta = mappers::build_meta(self.get_version(), self.get_last_updated());
 
-        // New /data/site.json contract payload.
         let has_books = items.iter().any(|item| item.is_book());
         let has_comics = items.iter().any(|item| item.is_comic());
         let has_statistics = stats_data.is_some();
@@ -165,11 +162,6 @@ impl SnapshotBuilder {
             },
         );
         snapshot.site = Some(site_response);
-
-        // Always emit list contracts so API/static endpoints are present even when empty.
-        let items_response =
-            mappers::map_library_list_response(mappers::build_meta(version, generated_at), items);
-        snapshot.items = Some(items_response);
 
         Ok(())
     }

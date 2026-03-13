@@ -1,14 +1,16 @@
-//! Yearly recap payload computation with share images.
+//! Recap share image generation.
+//!
+//! Computes yearly completion summaries and renders share images to disk.
+//! The snapshot completion data is no longer populated here — the reading
+//! domain service handles completions on demand.
 
 use super::SnapshotBuilder;
 use super::scaling::PageScaling;
 use super::utils::completion_year_and_month;
-use crate::contracts::{common::ContentTypeFilter, mappers, recap::RecapShareAssets};
 use crate::models::{
-    ContentType, DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem,
-    StatisticsData, YearlySummary,
+    DailyStats, LibraryItem, MonthRecap, PageStat, ReadingStats, RecapItem, StatisticsData,
+    YearlySummary,
 };
-use crate::runtime::ContractSnapshot;
 use anyhow::Result;
 use chrono::Datelike;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -18,91 +20,6 @@ use std::fs;
 use std::time::{Instant, SystemTime};
 
 type YearMonthItems = HashMap<i32, BTreeMap<String, Vec<RecapItem>>>;
-
-struct MonthlyRecaps {
-    all: Vec<MonthRecap>,
-    books: Vec<MonthRecap>,
-    comics: Vec<MonthRecap>,
-}
-
-fn build_monthly_recaps(
-    months_map: BTreeMap<String, Vec<RecapItem>>,
-    month_hours_all: &HashMap<String, i64>,
-    month_hours_books: &HashMap<String, i64>,
-    month_hours_comics: &HashMap<String, i64>,
-) -> MonthlyRecaps {
-    // Keep the same behavior as before:
-    // - month iteration order is determined by the BTreeMap key order (YYYY-MM ascending)
-    // - items are sorted by end_date descending within each month
-    // - per-type recaps are only emitted when there are items for that type
-    let mut monthly: BTreeMap<String, MonthRecap> = BTreeMap::new();
-    let mut monthly_books: BTreeMap<String, MonthRecap> = BTreeMap::new();
-    let mut monthly_comics: BTreeMap<String, MonthRecap> = BTreeMap::new();
-
-    for (ym, mut items) in months_map {
-        if items.is_empty() {
-            continue;
-        }
-
-        // Sort items by end_date descending (Newest first)
-        items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
-
-        let hours = *month_hours_all.get(&ym).unwrap_or(&0);
-        let month_recap = MonthRecap {
-            month_key: ym.clone(),
-            books_finished: items.len(),
-            hours_read_seconds: hours,
-            items: items.clone(),
-        };
-        monthly.insert(ym.clone(), month_recap);
-
-        // Books-only month recap
-        let mut items_books: Vec<RecapItem> = items
-            .iter()
-            .filter(|it| it.content_type == Some(ContentType::Book))
-            .cloned()
-            .collect();
-        if !items_books.is_empty() {
-            items_books.sort_by(|a, b| b.end_date.cmp(&a.end_date));
-            let hours_books = *month_hours_books.get(&ym).unwrap_or(&0);
-            monthly_books.insert(
-                ym.clone(),
-                MonthRecap {
-                    month_key: ym.clone(),
-                    books_finished: items_books.len(),
-                    hours_read_seconds: hours_books,
-                    items: items_books,
-                },
-            );
-        }
-
-        // Comics-only month recap
-        let mut items_comics: Vec<RecapItem> = items
-            .iter()
-            .filter(|it| it.content_type == Some(ContentType::Comic))
-            .cloned()
-            .collect();
-        if !items_comics.is_empty() {
-            items_comics.sort_by(|a, b| b.end_date.cmp(&a.end_date));
-            let hours_comics = *month_hours_comics.get(&ym).unwrap_or(&0);
-            monthly_comics.insert(
-                ym.clone(),
-                MonthRecap {
-                    month_key: ym.clone(),
-                    books_finished: items_comics.len(),
-                    hours_read_seconds: hours_comics,
-                    items: items_comics,
-                },
-            );
-        }
-    }
-
-    MonthlyRecaps {
-        all: monthly.into_values().collect(),
-        books: monthly_books.into_values().collect(),
-        comics: monthly_comics.into_values().collect(),
-    }
-}
 
 fn build_md5_to_item(items: &[LibraryItem]) -> HashMap<String, &LibraryItem> {
     let mut md5_to_book: HashMap<String, &LibraryItem> = HashMap::new();
@@ -123,7 +40,6 @@ fn group_completions_by_year_month(
     md5_to_item: &HashMap<String, &LibraryItem>,
     page_scaling: &PageScaling,
 ) -> (YearMonthItems, Vec<i32>) {
-    // Build year -> month (YYYY-MM) -> Vec<RecapItem>
     let mut year_month_items: YearMonthItems = HashMap::new();
     let mut year_set: HashSet<i32> = HashSet::new();
 
@@ -147,25 +63,17 @@ fn group_completions_by_year_month(
                     item_cover,
                     content_type,
                 ) = if let Some(item) = md5_to_item.get(&sb.md5.to_lowercase()) {
-                    let title = item.book_info.title.clone();
-                    let authors = item.book_info.authors.clone();
-                    let rating = item.rating();
-                    let review_note = item.review_note().cloned();
-                    let series_display = item.series_display();
-                    let item_id = Some(item.id.clone());
-                    let item_cover = Some(format!("/assets/covers/{}.webp", item.id));
                     (
-                        title,
-                        authors,
-                        rating,
-                        review_note,
-                        series_display,
-                        item_id,
-                        item_cover,
+                        item.book_info.title.clone(),
+                        item.book_info.authors.clone(),
+                        item.rating(),
+                        item.review_note().cloned(),
+                        item.series_display(),
+                        Some(item.id.clone()),
+                        Some(format!("/assets/covers/{}.webp", item.id)),
                         Some(item.content_type()),
                     )
                 } else {
-                    // Fallback to StatBook minimal info
                     let title = sb.title.clone();
                     let authors = sb
                         .authors
@@ -237,20 +145,42 @@ fn month_hours_for(daily: &[DailyStats]) -> HashMap<String, i64> {
     out
 }
 
+fn build_monthly_recaps_all(
+    months_map: BTreeMap<String, Vec<RecapItem>>,
+    month_hours: &HashMap<String, i64>,
+) -> Vec<MonthRecap> {
+    let mut monthly: BTreeMap<String, MonthRecap> = BTreeMap::new();
+
+    for (ym, mut items) in months_map {
+        if items.is_empty() {
+            continue;
+        }
+        items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
+        let hours = *month_hours.get(&ym).unwrap_or(&0);
+        monthly.insert(
+            ym.clone(),
+            MonthRecap {
+                month_key: ym,
+                books_finished: items.len(),
+                hours_read_seconds: hours,
+                items,
+            },
+        );
+    }
+
+    monthly.into_values().collect()
+}
+
 fn compute_yearly_summary(
     year: i32,
     monthly: &[MonthRecap],
     month_hours: &HashMap<String, i64>,
     reading_stats: &ReadingStats,
     page_stats: &[PageStat],
-    ids_filter: Option<&HashSet<i64>>,
 ) -> YearlySummary {
     let year_str = format!("{}", year);
     let year_prefix = format!("{}-", year);
 
-    // 1. Completed item count from recap months + read-time totals from daily activity.
-    //    Read-time totals intentionally come from month_hours (daily activity) so recap
-    //    matches the yearly statistics page, even for months without a completion.
     let total_books = monthly.iter().map(|month| month.books_finished).sum();
     let total_time_seconds: i64 = month_hours
         .iter()
@@ -258,19 +188,11 @@ fn compute_yearly_summary(
         .map(|(_, seconds)| *seconds)
         .sum();
 
-    // 2. Session stats from page_stats (filtered by year and (optional) id set)
     let year_page_stats: Vec<PageStat> = page_stats
         .iter()
         .filter(|ps| {
             if let Some(dt) = chrono::DateTime::from_timestamp(ps.start_time, 0) {
-                if dt.year() != year {
-                    return false;
-                }
-                if let Some(ids) = ids_filter {
-                    ids.contains(&ps.id_book)
-                } else {
-                    true
-                }
+                dt.year() == year
             } else {
                 false
             }
@@ -287,7 +209,6 @@ fn compute_yearly_summary(
         0
     };
 
-    // 3. Active days (from daily activity)
     let active_days: usize = reading_stats
         .daily_activity
         .iter()
@@ -302,7 +223,6 @@ fn compute_yearly_summary(
         };
     let active_days_percentage = (active_days as f64 / days_in_year * 100.0).round();
 
-    // 4. Longest streak within this year (based on daily activity)
     let mut year_reading_dates: Vec<chrono::NaiveDate> = reading_stats
         .daily_activity
         .iter()
@@ -329,7 +249,6 @@ fn compute_yearly_summary(
         max_streak
     };
 
-    // 5. Best month (highest reading time) in this year
     let best_month: Option<(String, i64)> = month_hours
         .iter()
         .filter(|(month_key, _)| month_key.starts_with(&year_prefix))
@@ -338,7 +257,6 @@ fn compute_yearly_summary(
 
     let best_month = best_month.and_then(|(month_key, seconds)| (seconds > 0).then_some(month_key));
 
-    // Convert totals into days/hours for display components
     let total_minutes = total_time_seconds / 60;
     let total_time_days = total_minutes / (24 * 60);
     let total_time_hours = (total_minutes % (24 * 60)) / 60;
@@ -367,23 +285,7 @@ fn compute_yearly_summary(
     }
 }
 
-fn recap_share_assets_for_year(year: i32) -> RecapShareAssets {
-    RecapShareAssets {
-        story_url: format!("/assets/recap/{}_share_story.webp", year),
-        square_url: format!("/assets/recap/{}_share_square.webp", year),
-        banner_url: format!("/assets/recap/{}_share_banner.webp", year),
-    }
-}
-
 impl SnapshotBuilder {
-    fn cleanup_stale_recap_outputs(&self, current_years: &HashSet<i32>) -> Result<()> {
-        let valid_years: HashSet<String> =
-            current_years.iter().map(|year| year.to_string()).collect();
-        self.cleanup_stale_recap_share_assets(&valid_years)?;
-
-        Ok(())
-    }
-
     fn cleanup_stale_recap_share_assets(&self, valid_years: &HashSet<String>) -> Result<()> {
         let assets_recap_dir = self.recap_dir();
         if !assets_recap_dir.exists() {
@@ -430,7 +332,6 @@ impl SnapshotBuilder {
     }
 
     async fn render_share_images_for_year(&self, year: i32, summary: &YearlySummary) -> Result<()> {
-        // Generate share images for social media
         let share_data = crate::share::ShareImageData {
             year,
             books_read: summary.total_books as u32,
@@ -450,7 +351,6 @@ impl SnapshotBuilder {
             .and_then(|m| m.modified().ok())
             .unwrap_or(SystemTime::UNIX_EPOCH);
 
-        // Generate all three formats in parallel using spawn_blocking (only if needed)
         info!("Rendering share images for {}...", year);
         let assets_recap_dir = self.recap_dir();
         fs::create_dir_all(&assets_recap_dir)?;
@@ -463,7 +363,6 @@ impl SnapshotBuilder {
 
         let start = Instant::now();
 
-        // Channel to track progress from spawned tasks
         let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
 
         let share_tasks: Vec<_> = formats
@@ -471,13 +370,12 @@ impl SnapshotBuilder {
             .filter_map(|format| {
                 let output_path = assets_recap_dir.join(format!("{}_{}", year, format.filename()));
 
-                // Check if share image needs regeneration
                 let should_generate = match fs::metadata(&output_path) {
                     Ok(img_meta) => {
                         let img_time = img_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                        stats_db_time > img_time // Only regenerate if stats DB is newer
+                        stats_db_time > img_time
                     }
-                    Err(_) => true, // Image missing, need to generate
+                    Err(_) => true,
                 };
 
                 if should_generate {
@@ -489,7 +387,6 @@ impl SnapshotBuilder {
                         {
                             log::warn!("Failed to generate share image {:?}: {}", output_path, e);
                         }
-                        // Signal progress
                         let _ = tx.send(());
                     }))
                 } else {
@@ -500,9 +397,7 @@ impl SnapshotBuilder {
 
         let total_tasks = share_tasks.len();
 
-        // Only show progress bar if there's actual work to do
         if total_tasks > 0 {
-            // Set up progress bar
             let pb = ProgressBar::new(total_tasks as u64);
             pb.set_style(
                 ProgressStyle::default_bar()
@@ -512,10 +407,8 @@ impl SnapshotBuilder {
             );
             pb.set_message(format!("Rendering share images for {}:", year));
 
-            // Drop our sender so the channel closes when all tasks complete
             drop(progress_tx);
 
-            // Spawn a task to update progress bar as tasks complete
             let pb_clone = pb.clone();
             let progress_task = tokio::task::spawn_blocking(move || {
                 while progress_rx.recv().is_ok() {
@@ -523,15 +416,12 @@ impl SnapshotBuilder {
                 }
             });
 
-            // Wait for all share image generation tasks to complete
             for task in share_tasks {
                 let _ = task.await;
             }
 
-            // Wait for progress tracking to finish
             let _ = progress_task.await;
 
-            // Clear the progress bar
             pb.finish_and_clear();
 
             let elapsed = start.elapsed();
@@ -547,186 +437,52 @@ impl SnapshotBuilder {
         Ok(())
     }
 
-    pub(crate) async fn compute_recap_data_and_share_images(
+    /// Generate recap share images for all completion years.
+    ///
+    /// Computes yearly summaries from the "all" scope and renders
+    /// share images to the recap assets directory.
+    pub(crate) async fn generate_recap_share_images(
         &self,
         stats_data: &mut StatisticsData,
         books: &[LibraryItem],
         page_scaling: &PageScaling,
-        snapshot: &mut ContractSnapshot,
     ) -> Result<()> {
-        info!("Computing recap data and share assets...");
+        info!("Computing recap share images...");
 
-        // Build md5 -> &LibraryItem map for cover/link enrichment
         let md5_to_book = build_md5_to_item(books);
 
-        // Compute reading stats for All / Books / Comics.
-        // These are used for:
-        // - monthly hour totals (from daily_activity)
-        // - active day counts / streaks (also from daily_activity)
-        // - per-year session stats (from page_stats)
+        // Compute reading stats for All scope (used for monthly hours and active days).
         let reading_stats_all =
             crate::koreader::StatisticsCalculator::calculate_stats(stats_data, &self.time_config);
-        let mut books_stats_data = stats_data.filtered_by_content_type(ContentType::Book);
-        let mut comics_stats_data = stats_data.filtered_by_content_type(ContentType::Comic);
-        let reading_stats_books = crate::koreader::StatisticsCalculator::calculate_stats(
-            &mut books_stats_data,
-            &self.time_config,
-        );
-        let reading_stats_comics = crate::koreader::StatisticsCalculator::calculate_stats(
-            &mut comics_stats_data,
-            &self.time_config,
-        );
-
-        let book_ids: HashSet<i64> = books_stats_data.books.iter().map(|b| b.id).collect();
-        let comic_ids: HashSet<i64> = comics_stats_data.books.iter().map(|b| b.id).collect();
 
         let (year_month_items, years) =
             group_completions_by_year_month(stats_data, &md5_to_book, page_scaling);
-        let years_books = mappers::years_for_content_type(&year_month_items, ContentType::Book);
-        let years_comics = mappers::years_for_content_type(&year_month_items, ContentType::Comic);
-        let years_books_set: HashSet<i32> = years_books.iter().copied().collect();
-        let years_comics_set: HashSet<i32> = years_comics.iter().copied().collect();
-
-        let recap_meta = mappers::build_meta(self.get_version(), self.get_last_updated());
-        snapshot.completion_years.clear();
-        snapshot.completion_years.insert(
-            ContentTypeFilter::All.as_str().to_string(),
-            mappers::map_completion_years_response(
-                recap_meta.clone(),
-                ContentTypeFilter::All,
-                years.clone(),
-            ),
-        );
-        snapshot.completion_years.insert(
-            ContentTypeFilter::Books.as_str().to_string(),
-            mappers::map_completion_years_response(
-                recap_meta.clone(),
-                ContentTypeFilter::Books,
-                years_books,
-            ),
-        );
-        snapshot.completion_years.insert(
-            ContentTypeFilter::Comics.as_str().to_string(),
-            mappers::map_completion_years_response(
-                recap_meta.clone(),
-                ContentTypeFilter::Comics,
-                years_comics,
-            ),
-        );
 
         if years.is_empty() {
-            snapshot.completion_years_by_key.clear();
-            let current_years: HashSet<i32> = HashSet::new();
-            self.cleanup_stale_recap_outputs(&current_years)?;
-
+            let empty: HashSet<String> = HashSet::new();
+            self.cleanup_stale_recap_share_assets(&empty)?;
             return Ok(());
         }
 
-        // Pre-compute monthly hours from daily activity: map YYYY-MM -> seconds
         let month_hours_all = month_hours_for(&reading_stats_all.daily_activity);
-        let month_hours_books = month_hours_for(&reading_stats_books.daily_activity);
-        let month_hours_comics = month_hours_for(&reading_stats_comics.daily_activity);
 
-        // Build each year contract payload for all/books/comics filters.
-        let mut completion_years_all = HashMap::new();
-        let mut completion_years_books = HashMap::new();
-        let mut completion_years_comics = HashMap::new();
-
-        for year in years.iter() {
+        for year in &years {
             let months_map = year_month_items.get(year).cloned().unwrap_or_default();
-            let monthly = build_monthly_recaps(
-                months_map,
-                &month_hours_all,
-                &month_hours_books,
-                &month_hours_comics,
-            );
+            let monthly = build_monthly_recaps_all(months_map, &month_hours_all);
 
-            // ------------------------------------------------------------------
-            // Calculate Yearly Summary Stats
-            // ------------------------------------------------------------------
             let summary = compute_yearly_summary(
                 *year,
-                &monthly.all,
+                &monthly,
                 &month_hours_all,
                 &reading_stats_all,
                 &stats_data.page_stats,
-                None,
-            );
-            let summary_books = compute_yearly_summary(
-                *year,
-                &monthly.books,
-                &month_hours_books,
-                &reading_stats_books,
-                &stats_data.page_stats,
-                Some(&book_ids),
-            );
-            let summary_comics = compute_yearly_summary(
-                *year,
-                &monthly.comics,
-                &month_hours_comics,
-                &reading_stats_comics,
-                &stats_data.page_stats,
-                Some(&comic_ids),
             );
 
             self.render_share_images_for_year(*year, &summary).await?;
-
-            let share_assets = recap_share_assets_for_year(*year);
-            completion_years_all.insert(
-                year.to_string(),
-                mappers::map_completion_year_response(
-                    recap_meta.clone(),
-                    ContentTypeFilter::All,
-                    *year,
-                    &monthly.all,
-                    &summary,
-                    Some(share_assets.clone()),
-                ),
-            );
-            if years_books_set.contains(year) {
-                completion_years_books.insert(
-                    year.to_string(),
-                    mappers::map_completion_year_response(
-                        recap_meta.clone(),
-                        ContentTypeFilter::Books,
-                        *year,
-                        &monthly.books,
-                        &summary_books,
-                        Some(share_assets.clone()),
-                    ),
-                );
-            }
-            if years_comics_set.contains(year) {
-                completion_years_comics.insert(
-                    year.to_string(),
-                    mappers::map_completion_year_response(
-                        recap_meta.clone(),
-                        ContentTypeFilter::Comics,
-                        *year,
-                        &monthly.comics,
-                        &summary_comics,
-                        Some(share_assets),
-                    ),
-                );
-            }
         }
 
-        snapshot.completion_years_by_key.clear();
-        snapshot.completion_years_by_key.insert(
-            ContentTypeFilter::All.as_str().to_string(),
-            completion_years_all,
-        );
-        snapshot.completion_years_by_key.insert(
-            ContentTypeFilter::Books.as_str().to_string(),
-            completion_years_books,
-        );
-        snapshot.completion_years_by_key.insert(
-            ContentTypeFilter::Comics.as_str().to_string(),
-            completion_years_comics,
-        );
-
-        let current_years: HashSet<i32> = years.iter().copied().collect();
-        self.cleanup_stale_recap_outputs(&current_years)?;
+        let current_years: HashSet<String> = years.iter().map(|y| y.to_string()).collect();
+        self.cleanup_stale_recap_share_assets(&current_years)?;
 
         Ok(())
     }
@@ -770,14 +526,8 @@ mod tests {
             ("2024-12".to_string(), 99_999),
         ]);
 
-        let summary = compute_yearly_summary(
-            2025,
-            &monthly,
-            &month_hours,
-            &empty_reading_stats(),
-            &[],
-            None,
-        );
+        let summary =
+            compute_yearly_summary(2025, &monthly, &month_hours, &empty_reading_stats(), &[]);
 
         assert_eq!(summary.total_books, 2);
         assert_eq!(summary.total_time_seconds, 388_800);

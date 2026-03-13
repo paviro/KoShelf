@@ -1,19 +1,16 @@
 //! Snapshot builder module - orchestrates runtime snapshots and static exports.
 //!
-//! This module is split into submodules for maintainability:
-//! - `assets`: Static shell export (static mode), core snapshot payloads, and cover generation
-//! - `library`: Book/comic detail payloads
-//! - `statistics`: Statistics payloads
-//! - `calendar`: Calendar payloads
-//! - `recap`: Yearly recap payloads + share images
+//! Submodules:
+//! - `assets`: Static shell export (static mode), site payload, and cover generation
+//! - `library`: Stale cover cleanup
+//! - `recap`: Recap share image generation
+//! - `scaling`: Synthetic stable-page scaling helpers
 //! - `utils`: Miscellaneous helpers (time formatting, version metadata)
 
 mod assets;
-mod calendar;
 mod library;
 mod recap;
 mod scaling;
-mod statistics;
 mod utils;
 
 use crate::config::SiteConfig;
@@ -38,8 +35,6 @@ pub struct SnapshotResult {
 #[derive(Debug)]
 struct SnapshotInputs {
     all_items: Vec<LibraryItem>,
-    books: Vec<LibraryItem>,
-    comics: Vec<LibraryItem>,
     stats_data: Option<StatisticsData>,
 }
 
@@ -74,8 +69,6 @@ impl SnapshotBuilder {
     }
 
     async fn collect_snapshot_inputs(&self) -> Result<SnapshotInputs> {
-        // Scan all library paths for books and comics
-        // Also returns the set of MD5 hashes for all items (for statistics filtering)
         let (all_items, library_md5s) = if !self.library_paths.is_empty() {
             scan_library(&self.library_paths, &self.metadata_location).await?
         } else {
@@ -83,30 +76,21 @@ impl SnapshotBuilder {
         };
 
         // Filter items based on include_unread setting
-        // Items without KoReader metadata (unread) should only be included if include_unread is true
         let all_items: Vec<_> = all_items
             .into_iter()
             .filter(|item| {
-                // Always include items with KoReader metadata
                 if item.koreader_metadata.is_some() {
                     return true;
                 }
-                // For items without metadata, only include if include_unread is true
-                // and the item has Unknown status (which is the case for unread items)
                 self.include_unread && item.status() == BookStatus::Unknown
             })
             .collect();
-
-        // Separate books and comics
-        let books: Vec<_> = all_items.iter().filter(|b| b.is_book()).cloned().collect();
-        let comics: Vec<_> = all_items.iter().filter(|b| b.is_comic()).cloned().collect();
 
         // Load statistics if path is provided
         let mut stats_data = if let Some(ref stats_path) = self.statistics_db_path {
             if stats_path.exists() {
                 let mut data = StatisticsParser::parse(stats_path).await?;
 
-                // Filter statistics if minimums are set
                 if self.min_pages_per_day.is_some() || self.min_time_per_day.is_some() {
                     StatisticsCalculator::filter_stats(
                         &mut data,
@@ -116,8 +100,6 @@ impl SnapshotBuilder {
                     );
                 }
 
-                // Filter statistics to library items only (unless --include-all-stats is set)
-                // This is skipped if no library paths provided (can't filter without a library)
                 if !self.include_all_stats && !all_items.is_empty() {
                     StatisticsCalculator::filter_to_library(&mut data, &library_md5s);
                 }
@@ -151,8 +133,6 @@ impl SnapshotBuilder {
 
         Ok(SnapshotInputs {
             all_items,
-            books,
-            comics,
             stats_data,
         })
     }
@@ -164,10 +144,7 @@ impl SnapshotBuilder {
                 self.output_dir
             );
         } else {
-            info!(
-                "Exporting static shell/assets and /data payloads to: {:?}",
-                self.output_dir
-            );
+            info!("Exporting static shell/assets to: {:?}", self.output_dir);
         }
         let mut ctx = self.collect_snapshot_inputs().await?;
         let page_scaling = PageScaling::from_inputs(
@@ -180,43 +157,19 @@ impl SnapshotBuilder {
         // Create output directories for media and static assets.
         self.create_directories().await?;
 
-        // Compute core payloads and, in static mode, emit embedded frontend files.
+        // Compute site payload and, in static mode, emit embedded frontend files.
         self.compute_core_snapshot_data(&ctx.all_items, &ctx.stats_data, &mut snapshot)?;
 
-        // Generate covers for all items (books and comics)
+        // Generate covers for all items (books and comics).
         self.generate_covers(&ctx.all_items).await?;
 
-        // Clean up stale covers (for deleted items)
+        // Clean up stale covers (for deleted items).
         self.cleanup_stale_covers(&ctx.all_items)?;
 
-        // Compute detail payloads for books and comics.
-        self.compute_content_detail_data(
-            ContentType::Book,
-            &ctx.books,
-            &mut ctx.stats_data,
-            &page_scaling,
-            &mut snapshot,
-        )?;
-        self.compute_content_detail_data(
-            ContentType::Comic,
-            &ctx.comics,
-            &mut ctx.stats_data,
-            &page_scaling,
-            &mut snapshot,
-        )?;
-
+        // Generate recap share images for each completion year.
         if let Some(ref mut stats_data) = ctx.stats_data {
-            self.compute_statistics_data(stats_data, &page_scaling, &mut snapshot)?;
-
-            self.compute_calendar_data(stats_data, &ctx.all_items, &page_scaling, &mut snapshot)?;
-
-            self.compute_recap_data_and_share_images(
-                stats_data,
-                &ctx.all_items,
-                &page_scaling,
-                &mut snapshot,
-            )
-            .await?;
+            self.generate_recap_share_images(stats_data, &ctx.all_items, &page_scaling)
+                .await?;
         }
 
         // Preserve processed stats data for on-demand reading endpoint computation.
@@ -229,7 +182,7 @@ impl SnapshotBuilder {
         if self.is_internal_server {
             info!("Runtime data snapshot refresh completed.");
         } else {
-            info!("Static shell/assets and /data export completed.");
+            info!("Static shell/assets export completed.");
         }
 
         Ok(SnapshotResult {

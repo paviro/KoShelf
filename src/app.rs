@@ -176,8 +176,6 @@ pub async fn run(cli: Cli) -> Result<()> {
     // ── Library build pipeline: populate library.sqlite ────────────────
     //
     // The repository is kept alive so serve-mode handlers can query it.
-    // The legacy snapshot path remains during the transition for
-    // activity/completion endpoints that haven't migrated yet.
     let library_repo = if let Some(db_path) = config.runtime_data_policy.library_db_path() {
         let db_build_start = Instant::now();
         let pool = open_library_pool(&db_path)
@@ -234,10 +232,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     };
 
     if !is_internal_server {
-        // Legacy snapshot export (covers, assets, shell files).
-        initial_snapshot.write_to_data_dir(&plan.output_dir.join("data"))?;
-
-        // New-contract data file export via domain services.
+        // Export static data files via domain services.
         if let Some(ref repo) = library_repo {
             let export_config = ExportConfig {
                 site_title: cli.title.clone(),
