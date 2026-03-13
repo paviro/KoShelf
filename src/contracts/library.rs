@@ -1,16 +1,19 @@
 use serde::{Deserialize, Serialize};
+use sqlx::types::Json;
 
 use super::common::ApiMeta;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
 pub enum LibraryContentType {
     Book,
     Comic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
 pub enum LibraryStatus {
     Reading,
     Complete,
@@ -26,31 +29,7 @@ pub struct LibrarySeries {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryListItem {
-    pub id: String,
-    pub title: String,
-    pub authors: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub series: Option<LibrarySeries>,
-    pub status: LibraryStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub progress_percentage: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rating: Option<u32>,
-    #[serde(default)]
-    pub annotation_count: usize,
-    pub cover_url: String,
-    pub content_type: LibraryContentType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryListResponse {
-    pub meta: ApiMeta,
-    pub items: Vec<LibraryListItem>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryIdentifier {
+pub struct ExternalIdentifier {
     pub scheme: String,
     pub value: String,
     pub display_scheme: String,
@@ -58,18 +37,42 @@ pub struct LibraryIdentifier {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryDetailItem {
+// ── Types queried directly from the database via FromRow ──────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct LibraryListItem {
     pub id: String,
     pub title: String,
-    pub authors: Vec<String>,
+    #[sqlx(rename = "authors_json")]
+    pub authors: Json<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub series: Option<LibrarySeries>,
+    #[sqlx(rename = "series_json")]
+    pub series: Option<Json<LibrarySeries>>,
     pub status: LibraryStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_percentage: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rating: Option<u32>,
+    pub rating: Option<i32>,
+    #[serde(default)]
+    pub annotation_count: i32,
+    pub cover_url: String,
+    pub content_type: LibraryContentType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct LibraryDetailItem {
+    pub id: String,
+    pub title: String,
+    #[sqlx(rename = "authors_json")]
+    pub authors: Json<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[sqlx(rename = "series_json")]
+    pub series: Option<Json<LibrarySeries>>,
+    pub status: LibraryStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progress_percentage: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rating: Option<i32>,
     pub cover_url: String,
     pub content_type: LibraryContentType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -81,43 +84,54 @@ pub struct LibraryDetailItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub review_note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pages: Option<u32>,
+    pub pages: Option<i32>,
     pub search_base_path: String,
-    pub subjects: Vec<String>,
-    pub identifiers: Vec<LibraryIdentifier>,
+    #[sqlx(rename = "subjects_json")]
+    pub subjects: Json<Vec<String>>,
+    #[sqlx(rename = "identifiers_json")]
+    pub identifiers: Json<Vec<ExternalIdentifier>>,
+    /// Used internally for statistics lookup; not exposed in API responses.
+    #[serde(skip)]
+    pub partial_md5_checksum: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryAnnotation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chapter: Option<String>,
-    /// RFC3339 instant normalized from KOReader's timezone-less wall-clock metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub datetime: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pageno: Option<u32>,
+    pub pageno: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }
 
+// ── Response wrappers ─────────────────────────────────────────────────
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryCompletionEntry {
-    pub start_date: String,
-    pub end_date: String,
-    pub reading_time_sec: i64,
-    pub session_count: i64,
-    pub pages_read: i64,
+pub struct LibraryListResponse {
+    pub meta: ApiMeta,
+    pub items: Vec<LibraryListItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryCompletions {
-    pub entries: Vec<LibraryCompletionEntry>,
-    pub total_completions: usize,
+pub struct LibraryDetailResponse {
+    pub meta: ApiMeta,
+    pub item: LibraryDetailItem,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_completion_date: Option<String>,
+    pub highlights: Option<Vec<LibraryAnnotation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bookmarks: Option<Vec<LibraryAnnotation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub statistics: Option<LibraryDetailStatistics>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completions: Option<LibraryCompletions>,
 }
+
+// ── Statistics (non-DB, mapped in service layer) ──────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryItemStats {
@@ -155,15 +169,18 @@ pub struct LibraryDetailStatistics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LibraryDetailResponse {
-    pub meta: ApiMeta,
-    pub item: LibraryDetailItem,
+pub struct LibraryCompletionEntry {
+    pub start_date: String,
+    pub end_date: String,
+    pub reading_time_sec: i64,
+    pub session_count: i64,
+    pub pages_read: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryCompletions {
+    pub entries: Vec<LibraryCompletionEntry>,
+    pub total_completions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub highlights: Option<Vec<LibraryAnnotation>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bookmarks: Option<Vec<LibraryAnnotation>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub statistics: Option<LibraryDetailStatistics>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub completions: Option<LibraryCompletions>,
+    pub last_completion_date: Option<String>,
 }

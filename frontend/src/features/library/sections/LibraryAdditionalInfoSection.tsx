@@ -2,11 +2,11 @@ import { LuArrowUpRight, LuBuilding2, LuHash } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
-import type { LibraryIdentifier } from '../api/library-data';
+import type { ExternalIdentifier } from '../api/library-data';
 
 type LibraryAdditionalInfoSectionProps = {
     publisher: string | null;
-    identifiers: LibraryIdentifier[];
+    identifiers: ExternalIdentifier[];
     visible: boolean;
     onToggle: () => void;
 };

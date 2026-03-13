@@ -53,6 +53,16 @@ impl ContentTypeFilter {
             Self::Comics => "comics",
         }
     }
+
+    /// SQL bind value for the `content_type` WHERE clause.
+    /// Returns `None` for `All` (matches everything via `?1 IS NULL`).
+    pub fn sql_value(self) -> Option<&'static str> {
+        match self {
+            Self::All => None,
+            Self::Books => Some("book"),
+            Self::Comics => Some("comic"),
+        }
+    }
 }
 
 impl fmt::Display for ContentTypeFilter {

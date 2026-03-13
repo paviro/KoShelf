@@ -1,15 +1,43 @@
 use anyhow::{Context, Result};
+use log::warn;
 use sqlx::SqlitePool;
+
+use super::library_db::LIBRARY_DB_REQUIRED_TABLES;
 
 /// Run all pending library DB migrations using sqlx's embedded migration system.
 ///
-/// Migration files live in `src/infra/sqlite/migrations/library/` and are
-/// embedded at compile time.
+/// If a previously applied migration has been modified (schema change), the
+/// database is reset and migrations are re-applied from scratch.  This is safe
+/// because the library DB is a rebuild-on-change cache.
 pub async fn run_library_migrations(pool: &SqlitePool) -> Result<()> {
-    sqlx::migrate!("src/infra/sqlite/migrations/library")
-        .run(pool)
+    let migrator = sqlx::migrate!("src/infra/sqlite/migrations/library");
+
+    match migrator.run(pool).await {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            warn!("Library DB schema changed — resetting database");
+            reset_library_db(pool).await?;
+            migrator
+                .run(pool)
+                .await
+                .context("Failed to run library DB migrations after reset")
+        }
+    }
+}
+
+/// Drop all library tables and the sqlx migration tracking table.
+async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
+    for table in LIBRARY_DB_REQUIRED_TABLES {
+        sqlx::query(&format!("DROP TABLE IF EXISTS {table}"))
+            .execute(pool)
+            .await
+            .ok();
+    }
+    sqlx::query("DROP TABLE IF EXISTS _sqlx_migrations")
+        .execute(pool)
         .await
-        .context("Failed to run library DB migrations")
+        .ok();
+    Ok(())
 }
 
 #[cfg(test)]

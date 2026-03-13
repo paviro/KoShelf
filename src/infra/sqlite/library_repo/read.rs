@@ -1,63 +1,54 @@
 //! Read operations for the library repository.
 
 use anyhow::{Context, Result};
-use sqlx::Row;
+
+use crate::contracts::library::{LibraryAnnotation, LibraryDetailItem, LibraryListItem};
+use crate::domain::library::queries::LibraryListQuery;
 
 use super::LibraryRepository;
-use super::queries::LibraryListFilter;
-use super::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
+use super::rows::FingerprintRow;
 
 impl LibraryRepository {
-    /// List items matching the given filter, sorted with a deterministic
+    /// List items matching the given query, sorted with a deterministic
     /// `id` tiebreaker.
-    pub async fn list_items(&self, filter: &LibraryListFilter) -> Result<Vec<LibraryItemRow>> {
-        let direction = filter
-            .sort_direction
-            .unwrap_or_else(|| filter.sort.default_direction());
+    pub async fn list_items(&self, query: &LibraryListQuery) -> Result<Vec<LibraryListItem>> {
+        let direction = query.order.unwrap_or_else(|| query.sort.default_order());
+
+        let content_type = query.scope.sql_value();
 
         let sql = format!(
             "SELECT
-                id, file_path, format, content_type, title, title_sort,
-                primary_author_sort, authors_json, series_name, series_index,
-                description, language, publisher, subjects_json, identifiers_json,
-                status, progress_percentage, rating, review_note, pages,
-                cover_url, search_base_path, annotation_count, bookmark_count,
-                highlight_count, partial_md5_checksum, last_open_at,
-                total_reading_time_sec, created_at, updated_at
+                id, title, authors_json, series_json, status,
+                progress_percentage, rating, annotation_count,
+                cover_url, content_type
              FROM library_items
              WHERE (?1 IS NULL OR content_type = ?1)
              ORDER BY {} {} NULLS LAST, id ASC",
-            filter.sort.sql_column(),
+            query.sort.sql_column(),
             direction.sql_keyword(),
         );
 
-        let rows = sqlx::query(&sql)
-            .bind(filter.content_type.as_deref())
+        sqlx::query_as::<_, LibraryListItem>(&sql)
+            .bind(content_type)
             .fetch_all(&self.pool)
             .await
-            .context("Failed to list library items")?;
-
-        Ok(rows.into_iter().map(|r| row_to_item(&r)).collect())
+            .context("Failed to list library items")
     }
 
-    pub async fn get_item(&self, id: &str) -> Result<Option<LibraryItemRow>> {
-        let row = sqlx::query(
+    pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
+        sqlx::query_as::<_, LibraryDetailItem>(
             "SELECT
-                id, file_path, format, content_type, title, title_sort,
-                primary_author_sort, authors_json, series_name, series_index,
-                description, language, publisher, subjects_json, identifiers_json,
-                status, progress_percentage, rating, review_note, pages,
-                cover_url, search_base_path, annotation_count, bookmark_count,
-                highlight_count, partial_md5_checksum, last_open_at,
-                total_reading_time_sec, created_at, updated_at
+                id, title, authors_json, series_json, status,
+                progress_percentage, rating, cover_url, content_type,
+                language, publisher, description, review_note, pages,
+                search_base_path, subjects_json, identifiers_json,
+                partial_md5_checksum
              FROM library_items WHERE id = ?1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
         .await
-        .context("Failed to get library item")?;
-
-        Ok(row.as_ref().map(row_to_item))
+        .context("Failed to get library item")
     }
 
     /// Load annotations for an item, optionally filtered by kind.
@@ -67,9 +58,9 @@ impl LibraryRepository {
         &self,
         item_id: &str,
         kind: Option<&str>,
-    ) -> Result<Vec<AnnotationRow>> {
-        let rows = sqlx::query(
-            "SELECT item_id, annotation_kind, ordinal, chapter, datetime, pageno, text, note
+    ) -> Result<Vec<LibraryAnnotation>> {
+        sqlx::query_as::<_, LibraryAnnotation>(
+            "SELECT chapter, datetime, pageno, text, note
              FROM library_annotations
              WHERE item_id = ?1 AND (?2 IS NULL OR annotation_kind = ?2)
              ORDER BY ordinal ASC",
@@ -78,47 +69,19 @@ impl LibraryRepository {
         .bind(kind)
         .fetch_all(&self.pool)
         .await
-        .context("Failed to get annotations")?;
-
-        Ok(rows
-            .into_iter()
-            .map(|r| AnnotationRow {
-                item_id: r.get("item_id"),
-                annotation_kind: r.get("annotation_kind"),
-                ordinal: r.get("ordinal"),
-                chapter: r.get("chapter"),
-                datetime: r.get("datetime"),
-                pageno: r.get("pageno"),
-                text: r.get("text"),
-                note: r.get("note"),
-            })
-            .collect())
+        .context("Failed to get annotations")
     }
 
     /// Load all stored fingerprints (for reconciliation during incremental builds).
     pub async fn load_all_fingerprints(&self) -> Result<Vec<FingerprintRow>> {
-        let rows = sqlx::query(
+        sqlx::query_as::<_, FingerprintRow>(
             "SELECT item_id, book_path, book_size_bytes, book_modified_unix_ms,
                     metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at
              FROM library_item_fingerprints",
         )
         .fetch_all(&self.pool)
         .await
-        .context("Failed to load fingerprints")?;
-
-        Ok(rows
-            .into_iter()
-            .map(|r| FingerprintRow {
-                item_id: r.get("item_id"),
-                book_path: r.get("book_path"),
-                book_size_bytes: r.get("book_size_bytes"),
-                book_modified_unix_ms: r.get("book_modified_unix_ms"),
-                metadata_path: r.get("metadata_path"),
-                metadata_size_bytes: r.get("metadata_size_bytes"),
-                metadata_modified_unix_ms: r.get("metadata_modified_unix_ms"),
-                updated_at: r.get("updated_at"),
-            })
-            .collect())
+        .context("Failed to load fingerprints")
     }
 
     pub async fn item_exists(&self, id: &str) -> Result<bool> {
@@ -132,18 +95,17 @@ impl LibraryRepository {
 
     /// Query whether the library contains books and/or comics.
     pub async fn query_content_type_flags(&self) -> Result<(bool, bool)> {
-        let row = sqlx::query(
+        let row: (i32, i32) = sqlx::query_as(
             "SELECT
-                COALESCE(MAX(content_type = 'book'), 0) AS has_books,
-                COALESCE(MAX(content_type = 'comic'), 0) AS has_comics
+                COALESCE(MAX(content_type = 'book'), 0),
+                COALESCE(MAX(content_type = 'comic'), 0)
              FROM library_items",
         )
         .fetch_one(&self.pool)
         .await
         .context("Failed to query content type flags")?;
-        let has_books: bool = row.get::<i32, _>("has_books") != 0;
-        let has_comics: bool = row.get::<i32, _>("has_comics") != 0;
-        Ok((has_books, has_comics))
+
+        Ok((row.0 != 0, row.1 != 0))
     }
 
     /// Find the fingerprint row for a given book file path.
@@ -151,7 +113,7 @@ impl LibraryRepository {
         &self,
         book_path: &str,
     ) -> Result<Option<FingerprintRow>> {
-        let row = sqlx::query(
+        sqlx::query_as::<_, FingerprintRow>(
             "SELECT item_id, book_path, book_size_bytes, book_modified_unix_ms,
                     metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at
              FROM library_item_fingerprints
@@ -160,18 +122,7 @@ impl LibraryRepository {
         .bind(book_path)
         .fetch_optional(&self.pool)
         .await
-        .context("Failed to find fingerprint by book path")?;
-
-        Ok(row.map(|r| FingerprintRow {
-            item_id: r.get("item_id"),
-            book_path: r.get("book_path"),
-            book_size_bytes: r.get("book_size_bytes"),
-            book_modified_unix_ms: r.get("book_modified_unix_ms"),
-            metadata_path: r.get("metadata_path"),
-            metadata_size_bytes: r.get("metadata_size_bytes"),
-            metadata_modified_unix_ms: r.get("metadata_modified_unix_ms"),
-            updated_at: r.get("updated_at"),
-        }))
+        .context("Failed to find fingerprint by book path")
     }
 
     /// Find the book_path whose metadata_path matches the given path.
@@ -179,73 +130,39 @@ impl LibraryRepository {
         &self,
         metadata_path: &str,
     ) -> Result<Option<String>> {
-        let row =
-            sqlx::query("SELECT book_path FROM library_item_fingerprints WHERE metadata_path = ?1")
-                .bind(metadata_path)
-                .fetch_optional(&self.pool)
-                .await
-                .context("Failed to find book path by metadata path")?;
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT book_path FROM library_item_fingerprints WHERE metadata_path = ?1",
+        )
+        .bind(metadata_path)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find book path by metadata path")?;
 
-        Ok(row.map(|r| r.get("book_path")))
+        Ok(row.map(|r| r.0))
     }
 
     /// Load all item IDs (canonical MD5s, used as library_md5s for stats filtering).
     pub async fn load_all_item_ids(&self) -> Result<Vec<String>> {
-        let rows = sqlx::query("SELECT id FROM library_items")
+        let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM library_items")
             .fetch_all(&self.pool)
             .await
             .context("Failed to load all item IDs")?;
-        Ok(rows.into_iter().map(|r| r.get("id")).collect())
+        Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
     pub async fn count_items(&self) -> Result<i64> {
-        let row = sqlx::query("SELECT COUNT(*) as cnt FROM library_items")
+        let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM library_items")
             .fetch_one(&self.pool)
             .await
             .context("Failed to count items")?;
-        Ok(row.get("cnt"))
-    }
-}
-
-fn row_to_item(r: &sqlx::sqlite::SqliteRow) -> LibraryItemRow {
-    LibraryItemRow {
-        id: r.get("id"),
-        file_path: r.get("file_path"),
-        format: r.get("format"),
-        content_type: r.get("content_type"),
-        title: r.get("title"),
-        title_sort: r.get("title_sort"),
-        primary_author_sort: r.get("primary_author_sort"),
-        authors_json: r.get("authors_json"),
-        series_name: r.get("series_name"),
-        series_index: r.get("series_index"),
-        description: r.get("description"),
-        language: r.get("language"),
-        publisher: r.get("publisher"),
-        subjects_json: r.get("subjects_json"),
-        identifiers_json: r.get("identifiers_json"),
-        status: r.get("status"),
-        progress_percentage: r.get("progress_percentage"),
-        rating: r.get("rating"),
-        review_note: r.get("review_note"),
-        pages: r.get("pages"),
-        cover_url: r.get("cover_url"),
-        search_base_path: r.get("search_base_path"),
-        annotation_count: r.get("annotation_count"),
-        bookmark_count: r.get("bookmark_count"),
-        highlight_count: r.get("highlight_count"),
-        partial_md5_checksum: r.get("partial_md5_checksum"),
-        last_open_at: r.get("last_open_at"),
-        total_reading_time_sec: r.get("total_reading_time_sec"),
-        created_at: r.get("created_at"),
-        updated_at: r.get("updated_at"),
+        Ok(row.0)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::queries::{LibraryListFilter, LibrarySort};
     use super::super::tests::{sample_annotation, sample_item, test_repo};
+    use crate::domain::library::queries::{ItemSort, LibraryListQuery};
 
     #[tokio::test]
     async fn get_item_returns_none_for_missing_id() {
@@ -268,15 +185,14 @@ mod tests {
         repo.upsert_item(&book).await.unwrap();
         repo.upsert_item(&comic).await.unwrap();
 
-        let all = repo
-            .list_items(&LibraryListFilter::default())
-            .await
-            .unwrap();
+        use crate::contracts::common::ContentTypeFilter;
+
+        let all = repo.list_items(&LibraryListQuery::default()).await.unwrap();
         assert_eq!(all.len(), 2);
 
         let books = repo
-            .list_items(&LibraryListFilter {
-                content_type: Some("book".to_string()),
+            .list_items(&LibraryListQuery {
+                scope: ContentTypeFilter::Books,
                 ..Default::default()
             })
             .await
@@ -285,8 +201,8 @@ mod tests {
         assert_eq!(books[0].id, "book1");
 
         let comics = repo
-            .list_items(&LibraryListFilter {
-                content_type: Some("comic".to_string()),
+            .list_items(&LibraryListQuery {
+                scope: ContentTypeFilter::Comics,
                 ..Default::default()
             })
             .await
@@ -300,21 +216,18 @@ mod tests {
         let repo = test_repo().await;
 
         let mut b = sample_item("id-z");
-        b.title_sort = "zebra".to_string();
+        b.title = "Zebra".to_string();
         b.file_path = "/books/z.epub".to_string();
         repo.upsert_item(&b).await.unwrap();
 
         let mut a = sample_item("id-a");
-        a.title_sort = "alpha".to_string();
+        a.title = "Alpha".to_string();
         a.file_path = "/books/a.epub".to_string();
         repo.upsert_item(&a).await.unwrap();
 
-        let items = repo
-            .list_items(&LibraryListFilter::default())
-            .await
-            .unwrap();
-        assert_eq!(items[0].title_sort, "alpha");
-        assert_eq!(items[1].title_sort, "zebra");
+        let items = repo.list_items(&LibraryListQuery::default()).await.unwrap();
+        assert_eq!(items[0].title, "Alpha");
+        assert_eq!(items[1].title, "Zebra");
     }
 
     #[tokio::test]
@@ -332,8 +245,8 @@ mod tests {
         repo.upsert_item(&high).await.unwrap();
 
         let items = repo
-            .list_items(&LibraryListFilter {
-                sort: LibrarySort::Rating,
+            .list_items(&LibraryListQuery {
+                sort: ItemSort::Rating,
                 ..Default::default()
             })
             .await

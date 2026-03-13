@@ -91,9 +91,7 @@ pub async fn targeted_rebuild(
                 if let Err(e) = repo.delete_item(&fp.item_id).await {
                     warn!("Failed to delete item {}: {}", fp.item_id, e);
                 } else {
-                    let cover_path = media_dirs
-                        .covers_dir
-                        .join(format!("{}.webp", fp.item_id));
+                    let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
                     let _ = std::fs::remove_file(&cover_path);
                     info!(
                         "Deleted item {} (book removed: {})",
@@ -106,10 +104,7 @@ pub async fn targeted_rebuild(
                 debug!("No DB fingerprint for removed path: {}", book_path_str);
             }
             Err(e) => {
-                warn!(
-                    "Failed to look up fingerprint for {}: {}",
-                    book_path_str, e
-                );
+                warn!("Failed to look up fingerprint for {}: {}", book_path_str, e);
             }
         }
     }
@@ -277,8 +272,13 @@ pub async fn targeted_rebuild(
             site_title: config.site_title.clone(),
             language: config.language.clone(),
         };
-        if let Err(e) =
-            export_data_files(&config.output_dir.join("data"), repo, rd_ref, &export_config).await
+        if let Err(e) = export_data_files(
+            &config.output_dir.join("data"),
+            repo,
+            rd_ref,
+            &export_config,
+        )
+        .await
         {
             warn!("Failed to re-export data files: {}", e);
         }

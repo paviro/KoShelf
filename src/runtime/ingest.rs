@@ -95,7 +95,10 @@ pub async fn ingest(config: &SiteConfig) -> Result<IngestResult> {
             info!(
                 "Statistics: {} books, {} with completions",
                 data.books.len(),
-                data.books.iter().filter(|b| b.completions.is_some()).count()
+                data.books
+                    .iter()
+                    .filter(|b| b.completions.is_some())
+                    .count()
             );
             Some(data)
         } else {

@@ -1,7 +1,8 @@
-//! Row types returned by and written to the library SQLite cache.
+//! Row types written to the library SQLite cache.
 //!
-//! These stay in `infra` so the repository layer is self-contained — domain and
-//! contract layers map to/from these types at their own boundaries.
+//! Read-path queries use contract types directly via `FromRow`.
+//! These types are used for the write path only, except `FingerprintRow`
+//! which is also read back for incremental build reconciliation.
 
 #[derive(Debug, Clone)]
 pub struct LibraryItemRow {
@@ -10,11 +11,8 @@ pub struct LibraryItemRow {
     pub format: String,
     pub content_type: String,
     pub title: String,
-    pub title_sort: String,
-    pub primary_author_sort: String,
     pub authors_json: String,
-    pub series_name: Option<String>,
-    pub series_index: Option<String>,
+    pub series_json: Option<String>,
     pub description: Option<String>,
     pub language: Option<String>,
     pub publisher: Option<String>,
@@ -49,7 +47,7 @@ pub struct AnnotationRow {
     pub note: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct FingerprintRow {
     pub item_id: String,
     pub book_path: String,

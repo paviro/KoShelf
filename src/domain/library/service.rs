@@ -2,19 +2,16 @@
 
 use anyhow::Result;
 
-use crate::contracts::common::{ApiMeta, ContentTypeFilter};
-use crate::contracts::library::{LibraryDetailResponse, LibraryListResponse};
-use crate::domain::library::projections::{
-    annotation_row_to_contract, book_completions_to_contract, row_to_detail_item, row_to_list_item,
-    stat_book_to_detail_statistics,
+use crate::contracts::common::ApiMeta;
+use crate::contracts::library::{
+    LibraryCompletionEntry, LibraryCompletions, LibraryDetailResponse, LibraryDetailStatistics,
+    LibraryItemStats, LibraryListResponse, LibrarySessionStats,
 };
-use crate::domain::library::queries::{
-    IncludeToken, ItemSort, LibraryDetailQuery, LibraryListQuery, SortOrder,
-};
+use crate::domain::library::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::sqlite::library_repo::queries::{LibraryListFilter, LibrarySort, SortDirection};
 use crate::koreader::BookStatistics;
-use crate::models::ReadingData;
+use crate::models::{BookSessionStats, ReadingData, StatBook};
+use crate::time_config::TimeConfig;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LibraryService;
@@ -25,10 +22,7 @@ impl LibraryService {
         query: LibraryListQuery,
         meta: ApiMeta,
     ) -> Result<LibraryListResponse> {
-        let filter = to_list_filter(query);
-        let rows = repo.list_items(&filter).await?;
-        let items = rows.iter().map(row_to_list_item).collect();
-
+        let items = repo.list_items(&query).await?;
         Ok(LibraryListResponse { meta, items })
     }
 
@@ -38,55 +32,31 @@ impl LibraryService {
         meta: ApiMeta,
         reading_data: Option<&ReadingData>,
     ) -> Result<Option<LibraryDetailResponse>> {
-        let row = repo.get_item(&query.id).await?;
-
-        let Some(row) = row else {
+        let Some(item) = repo.get_item(&query.id).await? else {
             return Ok(None);
         };
 
-        let item = row_to_detail_item(&row);
         let includes = &query.includes;
 
-        // Fetch annotations only when highlights or bookmarks are requested.
-        let (highlights, bookmarks) =
-            if includes.has(IncludeToken::Highlights) || includes.has(IncludeToken::Bookmarks) {
-                let annotation_rows = repo.get_annotations(&query.id, None).await?;
+        // Fetch annotations directly as contract types, filtered by kind.
+        let highlights = if includes.has(IncludeToken::Highlights) {
+            Some(repo.get_annotations(&query.id, Some("highlight")).await?)
+        } else {
+            None
+        };
 
-                let hl = if includes.has(IncludeToken::Highlights) {
-                    Some(
-                        annotation_rows
-                            .iter()
-                            .filter(|a| a.annotation_kind == "highlight")
-                            .map(annotation_row_to_contract)
-                            .collect(),
-                    )
-                } else {
-                    None
-                };
-
-                let bm = if includes.has(IncludeToken::Bookmarks) {
-                    Some(
-                        annotation_rows
-                            .iter()
-                            .filter(|a| a.annotation_kind == "bookmark")
-                            .map(annotation_row_to_contract)
-                            .collect(),
-                    )
-                } else {
-                    None
-                };
-
-                (hl, bm)
-            } else {
-                (None, None)
-            };
+        let bookmarks = if includes.has(IncludeToken::Bookmarks) {
+            Some(repo.get_annotations(&query.id, Some("bookmark")).await?)
+        } else {
+            None
+        };
 
         // Resolve per-item statistics and completions via partial_md5_checksum
         // linkage into the in-memory reading data.
         let stat_book =
             if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
                 reading_data
-                    .zip(row.partial_md5_checksum.as_deref())
+                    .zip(item.partial_md5_checksum.as_deref())
                     .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
             } else {
                 None
@@ -97,11 +67,7 @@ impl LibraryService {
                 let rd = reading_data?;
                 let session_stats =
                     sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
-                Some(stat_book_to_detail_statistics(
-                    sb,
-                    &session_stats,
-                    &rd.time_config,
-                ))
+                Some(map_detail_statistics(sb, &session_stats, &rd.time_config))
             })
         } else {
             None
@@ -111,7 +77,7 @@ impl LibraryService {
             stat_book
                 .as_ref()
                 .and_then(|sb| sb.completions.as_ref())
-                .map(book_completions_to_contract)
+                .map(map_completions)
         } else {
             None
         };
@@ -131,7 +97,7 @@ impl LibraryService {
 fn lookup_stat_book<'a>(
     stats_data: &'a crate::models::StatisticsData,
     md5: &str,
-) -> Option<&'a crate::models::StatBook> {
+) -> Option<&'a StatBook> {
     stats_data
         .stats_by_md5
         .get(md5)
@@ -139,31 +105,49 @@ fn lookup_stat_book<'a>(
         .or_else(|| stats_data.stats_by_md5.get(&md5.to_uppercase()))
 }
 
-fn to_list_filter(query: LibraryListQuery) -> LibraryListFilter {
-    let content_type = match query.scope {
-        ContentTypeFilter::All => None,
-        ContentTypeFilter::Books => Some("book".to_string()),
-        ContentTypeFilter::Comics => Some("comic".to_string()),
-    };
+// ── Statistics mapping (non-DB data → contract types) ─────────────────
 
-    let sort = match query.sort {
-        ItemSort::Title => LibrarySort::Title,
-        ItemSort::Author => LibrarySort::Author,
-        ItemSort::Status => LibrarySort::Status,
-        ItemSort::Progress => LibrarySort::Progress,
-        ItemSort::Rating => LibrarySort::Rating,
-        ItemSort::Annotations => LibrarySort::Annotations,
-        ItemSort::LastOpenAt => LibrarySort::LastOpenAt,
-    };
+fn map_detail_statistics(
+    stat_book: &StatBook,
+    session_stats: &BookSessionStats,
+    time_config: &TimeConfig,
+) -> LibraryDetailStatistics {
+    LibraryDetailStatistics {
+        item_stats: Some(LibraryItemStats {
+            notes: stat_book.notes,
+            last_open_at: stat_book
+                .last_open
+                .map(|ts| time_config.format_timestamp_rfc3339(ts)),
+            highlights: stat_book.highlights,
+            pages: stat_book.pages,
+            total_reading_time_sec: stat_book.total_read_time,
+        }),
+        session_stats: Some(LibrarySessionStats {
+            session_count: session_stats.session_count,
+            average_session_duration_sec: session_stats.average_session_duration,
+            longest_session_duration_sec: session_stats.longest_session_duration,
+            last_read_date: session_stats.last_read_date.clone(),
+            reading_speed: session_stats.reading_speed,
+        }),
+    }
+}
 
-    let sort_direction = query.order.map(|o| match o {
-        SortOrder::Asc => SortDirection::Asc,
-        SortOrder::Desc => SortDirection::Desc,
-    });
-
-    LibraryListFilter {
-        content_type,
-        sort,
-        sort_direction,
+fn map_completions(
+    completions: &crate::models::completions::BookCompletions,
+) -> LibraryCompletions {
+    LibraryCompletions {
+        entries: completions
+            .entries
+            .iter()
+            .map(|c| LibraryCompletionEntry {
+                start_date: c.start_date.clone(),
+                end_date: c.end_date.clone(),
+                reading_time_sec: c.reading_time,
+                session_count: c.session_count,
+                pages_read: c.pages_read,
+            })
+            .collect(),
+        total_completions: completions.total_completions,
+        last_completion_date: completions.last_completion_date.clone(),
     }
 }

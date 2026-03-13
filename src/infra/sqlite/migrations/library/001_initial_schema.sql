@@ -4,11 +4,8 @@ CREATE TABLE IF NOT EXISTS library_items (
     format TEXT NOT NULL CHECK (format IN ('epub', 'fb2', 'mobi', 'cbz', 'cbr')),
     content_type TEXT NOT NULL CHECK (content_type IN ('book', 'comic')),
     title TEXT NOT NULL,
-    title_sort TEXT NOT NULL,
-    primary_author_sort TEXT NOT NULL DEFAULT '',
     authors_json TEXT NOT NULL DEFAULT '[]',
-    series_name TEXT,
-    series_index TEXT,
+    series_json TEXT,
     description TEXT,
     language TEXT,
     publisher TEXT,
@@ -65,12 +62,6 @@ CREATE TABLE IF NOT EXISTS library_collision_diagnostics (
     PRIMARY KEY (canonical_id, file_path),
     FOREIGN KEY (winner_item_id) REFERENCES library_items(id) ON DELETE CASCADE
 );
-
-CREATE INDEX IF NOT EXISTS idx_library_items_scope_title
-    ON library_items (content_type, title_sort, id);
-
-CREATE INDEX IF NOT EXISTS idx_library_items_scope_author
-    ON library_items (content_type, primary_author_sort, id);
 
 CREATE INDEX IF NOT EXISTS idx_library_items_scope_status
     ON library_items (content_type, status, id);

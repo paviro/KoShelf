@@ -5,8 +5,8 @@ pub mod ingest;
 pub mod media;
 pub mod observability;
 pub mod reading_data;
-pub mod recap;
 pub mod rebuild;
+pub mod recap;
 pub mod store;
 pub mod updates;
 

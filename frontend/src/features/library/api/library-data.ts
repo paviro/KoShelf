@@ -38,7 +38,7 @@ export interface LibraryDetailPreviewResponse {
     item: LibraryDetailPreviewItem;
 }
 
-export interface LibraryIdentifier {
+export interface ExternalIdentifier {
     scheme: string;
     value: string;
     display_scheme: string;
@@ -62,7 +62,7 @@ export interface LibraryDetailItem {
     pages?: number | null;
     search_base_path: string;
     subjects: string[];
-    identifiers: LibraryIdentifier[];
+    identifiers: ExternalIdentifier[];
 }
 
 export interface LibraryAnnotation {

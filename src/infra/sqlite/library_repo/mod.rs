@@ -1,13 +1,12 @@
 //! Repository layer for the library SQLite cache.
 //!
 //! Provides typed read/write operations against `library.sqlite` tables.
-//! Row types live here so that `infra` stays self-contained — domain and
-//! contract layers map to/from these types at their own boundaries.
+//! Read queries return contract types directly via `FromRow`.
+//! Write operations use dedicated row types from `rows`.
 
 mod read;
 mod write;
 
-pub mod queries;
 pub mod rows;
 
 use sqlx::SqlitePool;
@@ -46,11 +45,8 @@ pub(crate) mod tests {
             format: "epub".to_string(),
             content_type: "book".to_string(),
             title: format!("Book {id}"),
-            title_sort: format!("book {id}"),
-            primary_author_sort: "doe".to_string(),
             authors_json: r#"["Jane Doe"]"#.to_string(),
-            series_name: None,
-            series_index: None,
+            series_json: None,
             description: None,
             language: Some("en".to_string()),
             publisher: None,

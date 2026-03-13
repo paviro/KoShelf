@@ -28,6 +28,25 @@ impl ItemSort {
             _ => Err(ApiErrorCode::InvalidQuery),
         }
     }
+
+    pub fn sql_column(self) -> &'static str {
+        match self {
+            Self::Title => "LOWER(title)",
+            Self::Author => "LOWER(JSON_EXTRACT(authors_json, '$[0]'))",
+            Self::Status => "status",
+            Self::Progress => "progress_percentage",
+            Self::Rating => "rating",
+            Self::Annotations => "annotation_count",
+            Self::LastOpenAt => "last_open_at",
+        }
+    }
+
+    pub fn default_order(self) -> SortOrder {
+        match self {
+            Self::Title | Self::Author | Self::Status => SortOrder::Asc,
+            Self::Progress | Self::Rating | Self::Annotations | Self::LastOpenAt => SortOrder::Desc,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +61,13 @@ impl SortOrder {
             "asc" => Ok(Self::Asc),
             "desc" => Ok(Self::Desc),
             _ => Err(ApiErrorCode::InvalidQuery),
+        }
+    }
+
+    pub fn sql_keyword(self) -> &'static str {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
         }
     }
 }

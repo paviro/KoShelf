@@ -4,6 +4,7 @@
 //! `LibraryItem` model methods and produce flattened row types ready for
 //! SQLite upsert.  No I/O happens here.
 
+use crate::contracts::library::{ExternalIdentifier, LibrarySeries};
 use crate::infra::sources::fingerprints::FileFingerprint;
 use crate::infra::sqlite::library_repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
 use crate::models::{LibraryItem, LibraryItemFormat};
@@ -23,22 +24,42 @@ pub fn map_item_to_row(
         crate::models::ContentType::Comic => "/comics",
     };
 
+    let series_json = item.series().map(|name| {
+        let series = LibrarySeries {
+            name: name.clone(),
+            index: item.series_number().cloned(),
+        };
+        serde_json::to_string(&series).unwrap_or_default()
+    });
+
+    let identifiers: Vec<ExternalIdentifier> = item
+        .identifiers()
+        .into_iter()
+        .map(|id| {
+            let display_scheme = id.display_scheme();
+            let url = id.url();
+            ExternalIdentifier {
+                scheme: id.scheme,
+                value: id.value,
+                display_scheme,
+                url,
+            }
+        })
+        .collect();
+
     LibraryItemRow {
         id: item.id.clone(),
         file_path: item.file_path.to_string_lossy().to_string(),
         format: format_str(item.format).to_string(),
         content_type: content_type.to_string(),
         title: item.book_info.title.clone(),
-        title_sort: sort_key_title(&item.book_info.title),
-        primary_author_sort: sort_key_author(&item.book_info.authors),
         authors_json: serde_json::to_string(&item.book_info.authors).unwrap_or_default(),
-        series_name: item.series().cloned(),
-        series_index: item.series_number().cloned(),
+        series_json,
         description: item.book_info.description.clone(),
         language: item.language().cloned(),
         publisher: item.publisher().cloned(),
         subjects_json: serde_json::to_string(item.subjects()).unwrap_or_default(),
-        identifiers_json: serde_json::to_string(&item.identifiers()).unwrap_or_default(),
+        identifiers_json: serde_json::to_string(&identifiers).unwrap_or_default(),
         status: item.status().to_string(),
         progress_percentage: item.progress_percentage(),
         rating: item.rating().map(|r| r as i32),
@@ -156,47 +177,5 @@ fn format_str(format: LibraryItemFormat) -> &'static str {
         LibraryItemFormat::Mobi => "mobi",
         LibraryItemFormat::Cbz => "cbz",
         LibraryItemFormat::Cbr => "cbr",
-    }
-}
-
-/// Generate a sort key for titles: lowercase, strip leading articles.
-fn sort_key_title(title: &str) -> String {
-    let lower = title.to_lowercase();
-    let trimmed = lower.trim();
-    for prefix in &["the ", "a ", "an "] {
-        if let Some(rest) = trimmed.strip_prefix(prefix) {
-            return rest.to_string();
-        }
-    }
-    trimmed.to_string()
-}
-
-/// Generate a sort key for authors: first author, lowercase.
-fn sort_key_author(authors: &[String]) -> String {
-    authors
-        .first()
-        .map(|a| a.to_lowercase())
-        .unwrap_or_default()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sort_key_title_strips_leading_articles() {
-        assert_eq!(sort_key_title("The Great Gatsby"), "great gatsby");
-        assert_eq!(sort_key_title("A Tale of Two Cities"), "tale of two cities");
-        assert_eq!(sort_key_title("An Introduction"), "introduction");
-        assert_eq!(sort_key_title("Dune"), "dune");
-    }
-
-    #[test]
-    fn sort_key_author_uses_first_author_lowercase() {
-        assert_eq!(
-            sort_key_author(&["J.R.R. Tolkien".to_string(), "Other".to_string()]),
-            "j.r.r. tolkien"
-        );
-        assert_eq!(sort_key_author(&[]), "");
     }
 }
