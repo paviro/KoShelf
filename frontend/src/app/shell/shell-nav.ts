@@ -57,7 +57,7 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
         });
     }
 
-    if (capabilities.has_activity) {
+    if (capabilities.has_reading_data) {
         items.push({
             id: 'nav-statistics',
             routeId: 'statistics',
@@ -72,9 +72,7 @@ export function buildNavItems(site: SiteResponse | undefined): NavItem[] {
             href: '/calendar',
             icon: ICONS.calendar,
         });
-    }
 
-    if (capabilities.has_completions) {
         items.push({
             id: 'nav-recap',
             routeId: 'recap',

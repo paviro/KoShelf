@@ -161,8 +161,7 @@ impl SnapshotBuilder {
             SiteCapabilities {
                 has_books,
                 has_comics,
-                has_activity: has_statistics,
-                has_completions: has_statistics,
+                has_reading_data: has_statistics,
             },
         );
         snapshot.site = Some(site_response);

@@ -6,8 +6,7 @@ use super::common::ApiMeta;
 pub struct SiteCapabilities {
     pub has_books: bool,
     pub has_comics: bool,
-    pub has_activity: bool,
-    pub has_completions: bool,
+    pub has_reading_data: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

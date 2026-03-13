@@ -20,8 +20,7 @@ fn empty_site_response(meta: ApiMeta) -> SiteResponse {
         capabilities: SiteCapabilities {
             has_books: false,
             has_comics: false,
-            has_activity: false,
-            has_completions: false,
+            has_reading_data: false,
         },
     }
 }

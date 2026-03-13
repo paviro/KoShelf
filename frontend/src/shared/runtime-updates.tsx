@@ -3,8 +3,15 @@ import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
 import { isServeMode } from './api';
 
-interface SnapshotUpdatePayload {
-    revision: number;
+interface DataChangedPayload {
+    revision_epoch: string;
+    revision: {
+        library: number;
+        metadata: number;
+        stats: number;
+        assets: number;
+    };
+    domains: string[];
     generated_at: string;
 }
 
@@ -23,7 +30,7 @@ const QUERY_PREFIXES_TO_INVALIDATE: ReadonlyArray<readonly string[]> = [
     ['recap-year'],
 ];
 
-function parseSnapshotUpdatePayload(raw: string): SnapshotUpdatePayload | null {
+function parseDataChangedPayload(raw: string): DataChangedPayload | null {
     let parsed: unknown;
     try {
         parsed = JSON.parse(raw) as unknown;
@@ -36,20 +43,14 @@ function parseSnapshotUpdatePayload(raw: string): SnapshotUpdatePayload | null {
     }
 
     const payload = parsed as Record<string, unknown>;
-    if (
-        typeof payload.revision !== 'number' ||
-        !Number.isFinite(payload.revision)
-    ) {
+    if (typeof payload.revision_epoch !== 'string') {
         return null;
     }
     if (typeof payload.generated_at !== 'string') {
         return null;
     }
 
-    return {
-        revision: payload.revision,
-        generated_at: payload.generated_at,
-    };
+    return payload as unknown as DataChangedPayload;
 }
 
 function parseSiteGeneratedAt(payload: unknown): string | null {
@@ -80,7 +81,7 @@ function invalidateRuntimeQueries(queryClient: QueryClient): void {
 
 export function RuntimeUpdatesBridge() {
     const queryClient = useQueryClient();
-    const lastRevisionRef = useRef(0);
+    const lastRevisionEpochRef = useRef<string | null>(null);
     const lastGeneratedAtRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -94,28 +95,28 @@ export function RuntimeUpdatesBridge() {
 
         const source = new EventSource('/api/events/stream');
 
-        const handleSnapshotUpdated = (event: Event) => {
+        const handleDataChanged = (event: Event) => {
             const message = event as MessageEvent<string>;
-            const payload = parseSnapshotUpdatePayload(message.data);
+            const payload = parseDataChangedPayload(message.data);
             if (!payload) {
                 return;
             }
 
-            if (payload.revision <= lastRevisionRef.current) {
+            if (
+                lastRevisionEpochRef.current !== null &&
+                payload.revision_epoch === lastRevisionEpochRef.current
+            ) {
                 return;
             }
 
-            lastRevisionRef.current = payload.revision;
+            lastRevisionEpochRef.current = payload.revision_epoch;
             invalidateRuntimeQueries(queryClient);
         };
 
-        source.addEventListener('snapshot_updated', handleSnapshotUpdated);
+        source.addEventListener('data_changed', handleDataChanged);
 
         return () => {
-            source.removeEventListener(
-                'snapshot_updated',
-                handleSnapshotUpdated,
-            );
+            source.removeEventListener('data_changed', handleDataChanged);
             source.close();
         };
     }, [queryClient]);

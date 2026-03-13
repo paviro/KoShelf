@@ -1,7 +1,5 @@
 import { translation } from '../../i18n';
-import {
-    resolveLocalePatternContext,
-} from './locale-options';
+import { resolveLocalePatternContext } from './locale-options';
 
 const FALLBACK_LOCALE = 'en-US';
 const PLAIN_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -155,10 +153,7 @@ function normalizePatternLiterals(
 ): Intl.DateTimeFormatPart[] {
     return compactDateParts(
         patternParts.map((part, index) => {
-            if (
-                part.type !== 'literal' ||
-                !isTextBearingLiteral(part.value)
-            ) {
+            if (part.type !== 'literal' || !isTextBearingLiteral(part.value)) {
                 return part;
             }
 
@@ -226,9 +221,10 @@ function formatDateObjectToMergedParts(
         options,
         resolved.patternLocale,
     ).formatToParts(value);
-    const valueParts = safeFormatter(options, resolved.valueLocale).formatToParts(
-        value,
-    );
+    const valueParts = safeFormatter(
+        options,
+        resolved.valueLocale,
+    ).formatToParts(value);
 
     if (!hasTextBearingLiterals(patternParts)) {
         return mergeDateParts(patternParts, valueParts);

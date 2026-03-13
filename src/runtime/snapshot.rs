@@ -335,8 +335,7 @@ mod tests {
                 capabilities: SiteCapabilities {
                     has_books: true,
                     has_comics: true,
-                    has_activity: true,
-                    has_completions: true,
+                    has_reading_data: true,
                 },
             }),
             items: Some(LibraryListResponse {

@@ -6,8 +6,7 @@ export interface ApiMeta {
 export interface SiteCapabilities {
     has_books: boolean;
     has_comics: boolean;
-    has_activity: boolean;
-    has_completions: boolean;
+    has_reading_data: boolean;
 }
 
 export interface SiteResponse {
