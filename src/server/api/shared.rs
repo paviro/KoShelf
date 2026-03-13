@@ -6,7 +6,7 @@ use axum::{
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::contracts::common::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
+use crate::contracts::common::{ContentTypeFilter, MonthKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
 use crate::domain::library::queries::{IncludeSet, ItemSort, SortOrder};
 use crate::domain::reading::queries::{
@@ -16,14 +16,7 @@ use crate::domain::reading::queries::{
 use crate::runtime::ContractSnapshot;
 use crate::server::ServerState;
 
-// ── Legacy query param (used by activity/completion handlers) ──────────────
-
-#[derive(Debug, Deserialize)]
-pub struct ContentTypeQuery {
-    content_type: Option<String>,
-}
-
-// ── New query params (new contract) ────────────────────────────────────────
+// ── Query params ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
 pub struct ScopeQuery {
@@ -97,14 +90,6 @@ pub(crate) struct ApiResponseError {
 }
 
 impl ApiResponseError {
-    pub(crate) fn bad_request(code: ApiErrorCode) -> Self {
-        Self {
-            status: StatusCode::BAD_REQUEST,
-            code,
-            message: None,
-        }
-    }
-
     pub(crate) fn bad_request_with_message(code: ApiErrorCode, message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
@@ -143,10 +128,6 @@ impl IntoResponse for ApiResponseError {
 pub(crate) type ApiResult<T> = Result<T, ApiResponseError>;
 
 // ── Parsing helpers ────────────────────────────────────────────────────────
-
-pub(crate) fn parse_content_type(query: ContentTypeQuery) -> ApiResult<ContentTypeFilter> {
-    ContentTypeFilter::parse(query.content_type.as_deref()).map_err(ApiResponseError::bad_request)
-}
 
 pub(crate) fn parse_scope(value: Option<&str>) -> ApiResult<ContentTypeFilter> {
     match value {
@@ -190,29 +171,11 @@ pub(crate) fn parse_include(value: Option<&str>) -> ApiResult<IncludeSet> {
         .map_err(|(code, msg)| ApiResponseError::bad_request_with_message(code, msg))
 }
 
-pub(crate) fn validate_week_key(value: &str) -> ApiResult<WeekKey> {
-    WeekKey::parse(value).map_err(ApiResponseError::bad_request)
-}
-
-pub(crate) fn validate_month_key(value: &str) -> ApiResult<MonthKey> {
-    MonthKey::parse(value).map_err(ApiResponseError::bad_request)
-}
-
-pub(crate) fn validate_year_key(value: &str) -> ApiResult<YearKey> {
-    YearKey::parse(value).map_err(ApiResponseError::bad_request)
-}
-
 pub(crate) fn runtime_snapshot(state: &ServerState) -> ApiResult<Arc<ContractSnapshot>> {
     state
         .snapshot_store
         .get()
         .ok_or_else(ApiResponseError::internal_server_error)
-}
-
-pub(crate) fn parse_validated_year(year: &YearKey) -> ApiResult<i32> {
-    year.as_str()
-        .parse::<i32>()
-        .map_err(|_| ApiResponseError::internal_server_error())
 }
 
 pub(crate) fn request_meta() -> crate::contracts::common::ApiMeta {
@@ -413,20 +376,6 @@ mod tests {
             .expect("error response body should be readable");
         serde_json::from_slice::<ApiErrorResponse>(&bytes)
             .expect("error response body should contain valid JSON")
-    }
-
-    #[tokio::test]
-    async fn bad_request_error_maps_to_bad_request_status_and_code() {
-        let response =
-            ApiResponseError::bad_request(ApiErrorCode::InvalidContentType).into_response();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-        let payload = decode_error_response(response).await;
-        assert_eq!(payload.error.code, ApiErrorCode::InvalidContentType);
-        assert_eq!(
-            payload.error.message,
-            ApiErrorCode::InvalidContentType.default_message()
-        );
     }
 
     #[tokio::test]

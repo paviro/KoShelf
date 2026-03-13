@@ -63,20 +63,6 @@ impl WebServer {
             .route("/api/site", get(api::site))
             .route("/api/items", get(api::items))
             .route("/api/items/{id}", get(api::item_detail))
-            .route("/api/activity/weeks", get(api::activity_weeks))
-            .route("/api/activity/weeks/{week_key}", get(api::activity_week))
-            .route(
-                "/api/activity/years/{year}/daily",
-                get(api::activity_year_daily),
-            )
-            .route(
-                "/api/activity/years/{year}/summary",
-                get(api::activity_year_summary),
-            )
-            .route("/api/activity/months", get(api::activity_months))
-            .route("/api/activity/months/{month_key}", get(api::activity_month))
-            .route("/api/completions/years", get(api::completion_years))
-            .route("/api/completions/years/{year}", get(api::completion_year))
             .route("/api/reading/summary", get(api::reading_summary))
             .route("/api/reading/metrics", get(api::reading_metrics))
             .route(
