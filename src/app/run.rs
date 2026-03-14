@@ -1,5 +1,6 @@
 use super::config::{Cli, SiteConfig, parse_time_to_seconds};
 use crate::pipeline::export::{ExportConfig, export_data_files};
+use crate::pipeline::frontend;
 use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::generate_recap_share_images;
@@ -204,7 +205,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── 5. Sync static frontend ────────────────────────────────────────
     if !is_internal_server {
-        media::sync_static_frontend(&config.output_dir, has_reading_data)?;
+        frontend::sync_static_frontend(&config.output_dir, has_reading_data)?;
     }
 
     // ── 6. Generate recap images ───────────────────────────────────────

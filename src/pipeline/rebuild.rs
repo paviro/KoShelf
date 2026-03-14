@@ -5,6 +5,7 @@
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
+use crate::pipeline::frontend;
 use crate::pipeline::ingest::{ingest_paths, load_reading_data};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
@@ -225,7 +226,7 @@ pub async fn full_rebuild(
 
     if !config.is_internal_server
         && let Err(e) =
-            media::sync_static_frontend(&config.output_dir, config.statistics_db_path.is_some())
+            frontend::sync_static_frontend(&config.output_dir, config.statistics_db_path.is_some())
     {
         warn!("Failed to sync static frontend: {}", e);
     }
