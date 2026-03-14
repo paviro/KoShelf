@@ -228,10 +228,10 @@ impl StatisticsCalculator {
             );
         }
 
-        // Get all unique dates with reading activity (pages_read > 0)
+        // Get all unique dates with reading activity (read_time > 0)
         let reading_dates: Vec<NaiveDate> = daily_activity
             .iter()
-            .filter(|day| day.pages_read > 0)
+            .filter(|day| day.read_time > 0)
             .filter_map(|day| NaiveDate::parse_from_str(&day.date, "%Y-%m-%d").ok())
             .collect();
 
