@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::config::SiteConfig;
+use crate::app::config::SiteConfig;
 use crate::domain::library::upsert_single_item;
 use crate::infra::scanner::{MetadataLocation, collect_paths};
 use crate::infra::sources::{

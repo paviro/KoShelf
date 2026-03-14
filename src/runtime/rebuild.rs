@@ -3,7 +3,7 @@
 //! Extracted from the file watcher so the rebuild logic is testable and
 //! the watcher module is limited to event setup, debouncing, and dispatch.
 
-use crate::config::SiteConfig;
+use crate::app::config::SiteConfig;
 use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::infra::scanner::{MetadataLocation, collect_paths};
 use crate::infra::sqlite::library_repo::LibraryRepository;

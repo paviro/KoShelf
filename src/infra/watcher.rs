@@ -1,5 +1,5 @@
 use super::scanner::MetadataLocation;
-use crate::config::SiteConfig;
+use crate::app::config::SiteConfig;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::models::LibraryItemFormat;

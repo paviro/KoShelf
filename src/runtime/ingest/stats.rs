@@ -3,7 +3,7 @@
 //! Uses DB queries instead of in-memory item collections for content-type
 //! tagging and library-item filtering.
 
-use crate::config::SiteConfig;
+use crate::app::config::SiteConfig;
 use crate::domain::reading::{PageScaling, StatisticsCalculator};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;

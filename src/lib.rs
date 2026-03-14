@@ -4,8 +4,6 @@
 //! codebase easier to test and refactor while keeping `src/main.rs` minimal.
 
 pub mod app;
-pub mod cli;
-pub mod config;
 pub mod contracts;
 pub mod domain;
 pub mod i18n;
@@ -19,8 +17,8 @@ pub mod share;
 pub mod time_config;
 pub mod utils;
 
+pub use app::Cli;
 pub use app::run;
-pub use cli::Cli;
 
 #[cfg(test)]
 mod tests;
