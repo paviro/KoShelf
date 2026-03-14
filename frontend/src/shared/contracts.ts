@@ -317,6 +317,7 @@ export interface ExportDayMetrics {
     pages_read: number;
     sessions: number;
     completions: number;
+    active_days: number;
 }
 
 export interface ExportDayMetricsByScope {

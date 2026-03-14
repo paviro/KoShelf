@@ -1,6 +1,6 @@
 //! Metrics endpoint computation for `/api/reading/metrics`.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{Datelike, NaiveDate};
 
@@ -119,6 +119,18 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
                     b.insert(key.clone(), durations.iter().copied().max().unwrap_or(0));
                 }
                 b
+            }
+            ReadingMetric::ActiveDays => {
+                let mut days_per_bucket: BTreeMap<String, HashSet<NaiveDate>> = BTreeMap::new();
+                for stat in &page_stats {
+                    let date = time_config.date_for_timestamp(stat.start_time);
+                    let key = bucket_key(date, query.group_by);
+                    days_per_bucket.entry(key).or_default().insert(date);
+                }
+                days_per_bucket
+                    .into_iter()
+                    .map(|(k, dates)| (k, dates.len() as i64))
+                    .collect()
             }
         };
 

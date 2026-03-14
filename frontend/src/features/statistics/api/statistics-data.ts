@@ -5,6 +5,11 @@ import type {
     ReadingOverview,
     ReadingStreaks,
 } from '../../../shared/contracts';
+import {
+    summarizeYearlyStats,
+    type MonthlyReadStats,
+    type YearlySummaryStats,
+} from '../model/statistics-model';
 
 export type StatisticsScope = ScopeValue;
 
@@ -134,5 +139,52 @@ export async function loadStatisticsYear(
         completions: summary.overview.completions,
         daily_activity: mergeDailyActivity(metrics.points),
         heatmap_config: summary.heatmap_config,
+    };
+}
+
+export interface StatisticsYearlySectionResponse {
+    year: number;
+    monthlyStats: MonthlyReadStats[];
+    yearlySummary: YearlySummaryStats;
+}
+
+export async function loadStatisticsYearlySection(
+    scope: StatisticsScope,
+    year: number,
+): Promise<StatisticsYearlySectionResponse> {
+    const from = `${year}-01-01`;
+    const to = `${year}-12-31`;
+
+    const metrics = await api.getReadingMetrics(
+        scope,
+        'reading_time_sec,pages_read,active_days,completions',
+        'month',
+        from,
+        to,
+    );
+
+    const monthlyStats: MonthlyReadStats[] = Array.from({ length: 12 }, () => ({
+        reading_time_sec: 0,
+        pages_read: 0,
+        active_days: 0,
+    }));
+    let totalCompletions = 0;
+
+    for (const point of metrics.points) {
+        const monthIndex = Number.parseInt(point.key.slice(5, 7), 10) - 1;
+        if (monthIndex >= 0 && monthIndex <= 11) {
+            monthlyStats[monthIndex] = {
+                reading_time_sec: (point.reading_time_sec as number) ?? 0,
+                pages_read: (point.pages_read as number) ?? 0,
+                active_days: (point.active_days as number) ?? 0,
+            };
+            totalCompletions += (point.completions as number) ?? 0;
+        }
+    }
+
+    return {
+        year,
+        monthlyStats,
+        yearlySummary: summarizeYearlyStats(monthlyStats, totalCompletions),
     };
 }

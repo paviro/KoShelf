@@ -1,5 +1,4 @@
 import type {
-    DailyActivityEntry,
     StatisticsIndexWeek,
     StatisticsScope,
 } from '../api/statistics-data';
@@ -220,32 +219,6 @@ export function isCurrentStreakActive(
         today.getDate(),
     ).padStart(2, '0')}`;
     return endDate === todayIso;
-}
-
-export function aggregateMonthlyStats(
-    dailyActivity: DailyActivityEntry[],
-): MonthlyReadStats[] {
-    const monthlyStats = Array.from({ length: 12 }, () => ({
-        reading_time_sec: 0,
-        pages_read: 0,
-        active_days: 0,
-    }));
-
-    dailyActivity.forEach((entry) => {
-        const month = Number.parseInt(entry.date.slice(5, 7), 10) - 1;
-        if (Number.isNaN(month) || month < 0 || month > 11) {
-            return;
-        }
-
-        monthlyStats[month].reading_time_sec += entry.reading_time_sec;
-        monthlyStats[month].pages_read += entry.pages_read;
-
-        if (entry.reading_time_sec > 0 || entry.pages_read > 0) {
-            monthlyStats[month].active_days += 1;
-        }
-    });
-
-    return monthlyStats;
 }
 
 export function summarizeYearlyStats(

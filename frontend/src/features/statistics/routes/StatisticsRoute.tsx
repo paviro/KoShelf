@@ -16,15 +16,16 @@ import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
     useStatisticsYearQuery,
+    useStatisticsYearlySectionQuery,
 } from '../hooks/useStatisticsQueries';
 import {
     SECTION_NAMES,
-    aggregateMonthlyStats,
     defaultSectionState,
     isCurrentStreakActive,
     persistStatisticsViewState,
     readStoredStatisticsViewState,
-    summarizeYearlyStats,
+    type MonthlyReadStats,
+    type YearlySummaryStats,
     type SectionName,
 } from '../model/statistics-model';
 import { api } from '../../../shared/api';
@@ -32,6 +33,18 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
+
+const emptyMonthlyStats: MonthlyReadStats[] = Array.from({ length: 12 }, () => ({
+    reading_time_sec: 0,
+    pages_read: 0,
+    active_days: 0,
+}));
+
+const emptySummary: YearlySummaryStats = {
+    reading_time_sec: 0,
+    completions: 0,
+    active_days: 0,
+};
 
 const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     week_key: '',
@@ -175,44 +188,30 @@ export function StatisticsRoute() {
         isFetching: heatmapYearQuery.isFetching,
         isPlaceholderData: heatmapYearQuery.isPlaceholderData,
     });
-    const yearlyQuery = useStatisticsYearQuery(
+    const yearlySectionQuery = useStatisticsYearlySectionQuery(
         scope,
         effectiveSelectedYearlyYear,
     );
-    const yearlyTransition = useQueryTransitionState({
-        data: yearlyQuery.data,
+    const yearlySectionTransition = useQueryTransitionState({
+        data: yearlySectionQuery.data,
         enabled: Boolean(effectiveSelectedYearlyYear),
-        isLoading: yearlyQuery.isLoading,
-        isFetching: yearlyQuery.isFetching,
-        isPlaceholderData: yearlyQuery.isPlaceholderData,
+        isLoading: yearlySectionQuery.isLoading,
+        isFetching: yearlySectionQuery.isFetching,
+        isPlaceholderData: yearlySectionQuery.isPlaceholderData,
     });
-    const effectiveDisplayedYearlyData = yearlyTransition.displayData;
+    const effectiveDisplayedYearlySectionData = yearlySectionTransition.displayData;
 
     const weeklyLoading =
         weekTransition.showBlockingSpinner || weekTransition.showOverlaySpinner;
     const yearlyLoading =
-        yearlyTransition.showBlockingSpinner ||
-        yearlyTransition.showOverlaySpinner;
+        yearlySectionTransition.showBlockingSpinner ||
+        yearlySectionTransition.showOverlaySpinner;
     const heatmapLoading =
         heatmapYearTransition.showBlockingSpinner ||
         heatmapYearTransition.showOverlaySpinner;
 
-    const yearlyMonthlyStats = useMemo(
-        () =>
-            aggregateMonthlyStats(
-                effectiveDisplayedYearlyData?.daily_activity ?? [],
-            ),
-        [effectiveDisplayedYearlyData],
-    );
-
-    const yearlySummary = useMemo(
-        () =>
-            summarizeYearlyStats(
-                yearlyMonthlyStats,
-                effectiveDisplayedYearlyData?.completions ?? 0,
-            ),
-        [yearlyMonthlyStats, effectiveDisplayedYearlyData],
-    );
+    const yearlyMonthlyStats = effectiveDisplayedYearlySectionData?.monthlyStats ?? emptyMonthlyStats;
+    const yearlySummary = effectiveDisplayedYearlySectionData?.yearlySummary ?? emptySummary;
 
     const validatedCurrentStreak = useMemo(() => {
         const streak = statsIndex?.streaks.current;

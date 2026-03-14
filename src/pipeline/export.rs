@@ -95,6 +95,7 @@ struct ExportDayMetrics {
     pages_read: i64,
     sessions: i64,
     completions: i64,
+    active_days: i64,
 }
 
 // ── Configuration ───────────────────────────────────────────────────────
@@ -311,6 +312,7 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
         ReadingMetric::PagesRead,
         ReadingMetric::Sessions,
         ReadingMetric::Completions,
+        ReadingMetric::ActiveDays,
     ];
 
     // For each (scope, metric), get all daily points and partition into months.
@@ -358,6 +360,7 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
                     ReadingMetric::PagesRead => day_metrics.pages_read = value,
                     ReadingMetric::Sessions => day_metrics.sessions = value,
                     ReadingMetric::Completions => day_metrics.completions = value,
+                    ReadingMetric::ActiveDays => day_metrics.active_days = value,
                     _ => {}
                 }
             }

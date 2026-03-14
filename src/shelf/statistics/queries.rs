@@ -77,6 +77,7 @@ pub enum ReadingMetric {
     Completions,
     AverageSessionDurationSec,
     LongestSessionDurationSec,
+    ActiveDays,
 }
 
 impl ReadingMetric {
@@ -88,12 +89,13 @@ impl ReadingMetric {
             "completions" => Ok(Self::Completions),
             "average_session_duration_sec" => Ok(Self::AverageSessionDurationSec),
             "longest_session_duration_sec" => Ok(Self::LongestSessionDurationSec),
+            "active_days" => Ok(Self::ActiveDays),
             _ => Err((
                 ApiErrorCode::InvalidQuery,
                 format!(
                     "'metric' must be one of: reading_time_sec, pages_read, sessions, \
-                     completions, average_session_duration_sec, longest_session_duration_sec; \
-                     got '{value}'"
+                     completions, average_session_duration_sec, longest_session_duration_sec, \
+                     active_days; got '{value}'"
                 ),
             )),
         }
@@ -107,6 +109,7 @@ impl ReadingMetric {
             Self::Completions => "completions",
             Self::AverageSessionDurationSec => "average_session_duration_sec",
             Self::LongestSessionDurationSec => "longest_session_duration_sec",
+            Self::ActiveDays => "active_days",
         }
     }
 }
@@ -487,6 +490,10 @@ mod tests {
             ReadingMetric::parse("longest_session_duration_sec").unwrap(),
             ReadingMetric::LongestSessionDurationSec
         );
+        assert_eq!(
+            ReadingMetric::parse("active_days").unwrap(),
+            ReadingMetric::ActiveDays
+        );
     }
 
     #[test]
@@ -503,6 +510,7 @@ mod tests {
             "completions",
             "average_session_duration_sec",
             "longest_session_duration_sec",
+            "active_days",
         ] {
             let metric = ReadingMetric::parse(name).unwrap();
             assert_eq!(metric.as_str(), name);

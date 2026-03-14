@@ -8,6 +8,7 @@ import {
     loadStatisticsIndex,
     loadStatisticsWeek,
     loadStatisticsYear,
+    loadStatisticsYearlySection,
     type StatisticsIndexWeek,
     type StatisticsScope,
 } from '../api/statistics-data';
@@ -77,6 +78,25 @@ export function useStatisticsYearQuery(
     return useQuery({
         queryKey: statisticsYearQueryKey(scope, year),
         queryFn: () => loadStatisticsYear(scope, year ?? 0),
+        enabled: Boolean(year),
+        placeholderData: keepPreviousData,
+    });
+}
+
+export function statisticsYearlySectionQueryKey(
+    scope: StatisticsScope,
+    year: number | null,
+) {
+    return ['statistics-yearly-section', scope, year] as const;
+}
+
+export function useStatisticsYearlySectionQuery(
+    scope: StatisticsScope,
+    year: number | null,
+) {
+    return useQuery({
+        queryKey: statisticsYearlySectionQueryKey(scope, year),
+        queryFn: () => loadStatisticsYearlySection(scope, year ?? 0),
         enabled: Boolean(year),
         placeholderData: keepPreviousData,
     });
