@@ -24,6 +24,7 @@ pub struct LibraryItemRow {
     pub review_note: Option<String>,
     pub doc_pages: Option<i32>,
     pub pagemap_doc_pages: Option<i32>,
+    pub has_synthetic_pagination: bool,
     pub parser_pages: Option<i32>,
     pub cover_url: String,
     pub search_base_path: String,

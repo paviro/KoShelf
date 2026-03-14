@@ -13,7 +13,7 @@ impl LibraryRepository {
                 authors_json, series_json,
                 description, language, publisher, subjects_json, identifiers_json,
                 status, progress_percentage, rating, review_note,
-                doc_pages, pagemap_doc_pages, parser_pages,
+                doc_pages, pagemap_doc_pages, has_synthetic_pagination, parser_pages,
                 cover_url, search_base_path, annotation_count, bookmark_count,
                 highlight_count, partial_md5_checksum, last_open_at,
                 total_reading_time_sec, created_at, updated_at
@@ -22,10 +22,10 @@ impl LibraryRepository {
                 ?6, ?7,
                 ?8, ?9, ?10, ?11, ?12,
                 ?13, ?14, ?15, ?16,
-                ?17, ?18, ?19,
-                ?20, ?21, ?22, ?23,
-                ?24, ?25, ?26,
-                ?27, ?28, ?29
+                ?17, ?18, ?19, ?20,
+                ?21, ?22, ?23, ?24,
+                ?25, ?26, ?27,
+                ?28, ?29, ?30
             )
             ON CONFLICT(id) DO UPDATE SET
                 file_path = excluded.file_path,
@@ -45,6 +45,7 @@ impl LibraryRepository {
                 review_note = excluded.review_note,
                 doc_pages = excluded.doc_pages,
                 pagemap_doc_pages = excluded.pagemap_doc_pages,
+                has_synthetic_pagination = excluded.has_synthetic_pagination,
                 parser_pages = excluded.parser_pages,
                 cover_url = excluded.cover_url,
                 search_base_path = excluded.search_base_path,
@@ -74,6 +75,7 @@ impl LibraryRepository {
         .bind(&item.review_note)
         .bind(item.doc_pages)
         .bind(item.pagemap_doc_pages)
+        .bind(item.has_synthetic_pagination)
         .bind(item.parser_pages)
         .bind(&item.cover_url)
         .bind(&item.search_base_path)

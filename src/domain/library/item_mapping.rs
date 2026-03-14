@@ -65,7 +65,8 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
             .as_ref()
             .and_then(|m| m.doc_pages)
             .map(|p| p as i32),
-        pagemap_doc_pages: item.synthetic_scaling_page_total().map(|p| p as i32),
+        pagemap_doc_pages: item.stable_display_page_total().map(|p| p as i32),
+        has_synthetic_pagination: item.synthetic_scaling_page_total().is_some(),
         parser_pages: item.book_info.pages.map(|p| p as i32),
         cover_url: format!("/assets/covers/{}.webp", item.id),
         search_base_path: search_base_path.to_string(),

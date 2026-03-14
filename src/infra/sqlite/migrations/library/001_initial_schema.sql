@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     review_note TEXT,
     doc_pages INTEGER CHECK (doc_pages IS NULL OR doc_pages > 0),
     pagemap_doc_pages INTEGER CHECK (pagemap_doc_pages IS NULL OR pagemap_doc_pages > 0),
+    has_synthetic_pagination INTEGER NOT NULL DEFAULT 0,
     parser_pages INTEGER CHECK (parser_pages IS NULL OR parser_pages > 0),
     cover_url TEXT NOT NULL,
     search_base_path TEXT NOT NULL,

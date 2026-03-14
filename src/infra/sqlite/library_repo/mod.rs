@@ -62,6 +62,7 @@ pub(crate) mod tests {
             review_note: None,
             doc_pages: Some(300),
             pagemap_doc_pages: None,
+            has_synthetic_pagination: false,
             parser_pages: Some(300),
             cover_url: format!("/assets/covers/{id}.webp"),
             search_base_path: "/books".to_string(),

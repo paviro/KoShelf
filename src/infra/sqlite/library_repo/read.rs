@@ -168,7 +168,8 @@ impl LibraryRepository {
     ) -> Result<std::collections::HashMap<String, (i32, Option<i32>)>> {
         let rows: Vec<(String, i32, Option<i32>)> = sqlx::query_as(
             "SELECT id, pagemap_doc_pages, doc_pages
-             FROM library_items WHERE pagemap_doc_pages IS NOT NULL",
+             FROM library_items
+             WHERE pagemap_doc_pages IS NOT NULL AND has_synthetic_pagination = 1",
         )
         .fetch_all(&self.pool)
         .await
