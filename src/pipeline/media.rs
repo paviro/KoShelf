@@ -6,11 +6,29 @@ use include_dir::{Dir, File, include_dir};
 use log::info;
 use std::collections::HashSet;
 use std::fs;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 use std::time::SystemTime;
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
+
+static FRONTEND_VERSION: LazyLock<String> = LazyLock::new(|| {
+    let mut hasher = DefaultHasher::new();
+    hash_embedded_dir(&FRONTEND_DIST, &mut hasher);
+    format!("{}-{:x}", env!("CARGO_PKG_VERSION"), hasher.finish())
+});
+
+fn hash_embedded_dir(dir: &Dir<'_>, hasher: &mut DefaultHasher) {
+    for file in dir.files() {
+        file.path().hash(hasher);
+        file.contents().hash(hasher);
+    }
+    for child in dir.dirs() {
+        hash_embedded_dir(child, hasher);
+    }
+}
 
 // ── Directory helpers ───────────────────────────────────────────────────
 
@@ -136,8 +154,19 @@ pub fn cleanup_stale_covers_by_ids(current_ids: &HashSet<String>, covers_dir: &P
 /// In static-export mode, copy the embedded React frontend to the output
 /// directory and clean up legacy output artifacts.
 pub fn sync_static_frontend(output_dir: &Path, has_reading_data: bool) -> Result<()> {
-    cleanup_removed_legacy_outputs(output_dir)?;
-    copy_embedded_frontend_dir(output_dir, &FRONTEND_DIST)?;
+    let version_file = output_dir.join(".version");
+    let current_version = &*FRONTEND_VERSION;
+
+    let is_current = fs::read_to_string(&version_file)
+        .map(|v| v.trim() == current_version)
+        .unwrap_or(false);
+
+    if !is_current {
+        cleanup_removed_legacy_outputs(output_dir)?;
+        copy_embedded_frontend_dir(output_dir, &FRONTEND_DIST)?;
+        fs::write(&version_file, current_version)?;
+        info!("Static frontend updated (version {})", current_version);
+    }
 
     if !has_reading_data {
         let recap_assets_dir = output_dir.join("assets").join("recap");
