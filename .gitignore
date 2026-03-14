@@ -26,3 +26,6 @@ Thumbs.db
 
 # Code signing secrets
 .env
+
+# User-specific config
+koshelf.toml
