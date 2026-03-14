@@ -30,11 +30,7 @@ async fn main() -> Result<()> {
                     .with_context(|| format!("Failed to load config file: {:?}", path))?,
             )
         }
-        None if default_config_path.exists() => {
-            // Default path exists: load it
-            log::info!("Loading config from {}", default_config_path.display());
-            Some(FileConfig::load(default_config_path)?)
-        }
+        None if default_config_path.exists() => Some(FileConfig::load(default_config_path)?),
         None => None,
     };
 
