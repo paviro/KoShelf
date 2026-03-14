@@ -214,11 +214,9 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── 6. Generate recap images ───────────────────────────────────────
     if let Some(ref rd) = reading_data {
-        // Recap share images only use aggregate stats (yearly summaries),
-        // not individual item data, so an empty items slice is fine.
         crate::runtime::recap::generate_recap_share_images(
             &rd.stats_data,
-            &[],
+            &repo,
             &rd.page_scaling,
             &media_dirs.recap_dir,
             config.statistics_db_path.as_deref(),

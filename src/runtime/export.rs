@@ -167,8 +167,8 @@ pub async fn export_data_files(
         export_reading_summary(data_dir, rd)?;
         export_reading_periods(data_dir, rd)?;
         export_reading_metrics(data_dir, rd)?;
-        export_reading_calendar(data_dir, rd)?;
-        export_reading_completions(data_dir, rd)?;
+        export_reading_calendar(data_dir, rd, library_repo).await?;
+        export_reading_completions(data_dir, rd, library_repo).await?;
     }
 
     info!("Static data export complete");
@@ -385,7 +385,11 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
 
 // ── Reading calendar export ─────────────────────────────────────────────
 
-fn export_reading_calendar(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
+async fn export_reading_calendar(
+    data_dir: &Path,
+    reading_data: &ReadingData,
+    repo: &LibraryRepository,
+) -> Result<()> {
     // Determine which months have reading data.
     let month_periods = reading::available_periods(
         reading_data,
@@ -405,12 +409,14 @@ fn export_reading_calendar(data_dir: &Path, reading_data: &ReadingData) -> Resul
         // Calendar uses scope=All; stats_by_scope is always included for all three scopes.
         let data = reading::calendar(
             reading_data,
+            repo,
             ReadingCalendarQuery {
                 month: period.key.clone(),
                 scope: ContentTypeFilter::All,
                 tz: None,
             },
-        );
+        )
+        .await;
         write_json(&calendar_dir.join(format!("{}.json", period.key)), &data)?;
         exported_stems.insert(period.key.clone());
     }
@@ -427,7 +433,11 @@ fn export_reading_calendar(data_dir: &Path, reading_data: &ReadingData) -> Resul
 
 // ── Reading completions export ──────────────────────────────────────────
 
-fn export_reading_completions(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
+async fn export_reading_completions(
+    data_dir: &Path,
+    reading_data: &ReadingData,
+    repo: &LibraryRepository,
+) -> Result<()> {
     // Determine which years have completion data.
     let year_periods = reading::available_periods(
         reading_data,
@@ -453,6 +463,7 @@ fn export_reading_completions(data_dir: &Path, reading_data: &ReadingData) -> Re
         // The StaticApiClient filters by scope and trims includes client-side.
         let data = reading::completions(
             reading_data,
+            repo,
             ReadingCompletionsQuery {
                 scope: ContentTypeFilter::All,
                 selector: CompletionsSelector::Year(year),
@@ -461,7 +472,8 @@ fn export_reading_completions(data_dir: &Path, reading_data: &ReadingData) -> Re
                     .expect("known-valid include tokens"),
                 tz: None,
             },
-        );
+        )
+        .await;
         write_json(&completions_dir.join(format!("{}.json", period.key)), &data)?;
         exported_stems.insert(period.key.clone());
     }

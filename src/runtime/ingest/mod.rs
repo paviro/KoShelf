@@ -10,4 +10,4 @@ pub mod library;
 pub mod stats;
 
 pub use library::{IngestStats, UpdateResult, ingest_paths, update_library};
-pub use stats::{build_covers_by_md5, load_reading_data};
+pub use stats::load_reading_data;

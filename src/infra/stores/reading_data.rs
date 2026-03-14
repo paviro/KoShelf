@@ -6,7 +6,6 @@
 use crate::domain::reading::PageScaling;
 use crate::koreader::types::StatisticsData;
 use crate::time_config::TimeConfig;
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// Bundle of statistics data and time configuration used by reading
@@ -16,8 +15,6 @@ pub struct ReadingData {
     pub stats_data: StatisticsData,
     pub time_config: TimeConfig,
     pub heatmap_scale_max: Option<u32>,
-    /// MD5 → cover URL for library items (e.g. `/assets/covers/{md5}.webp`).
-    pub covers_by_md5: HashMap<String, String>,
     /// Page scaling factors for synthetic page counts.
     pub page_scaling: PageScaling,
 }

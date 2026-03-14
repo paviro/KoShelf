@@ -9,14 +9,16 @@ use crate::contracts::reading::{
 use crate::domain::reading::queries::ReadingCalendarQuery;
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::shared;
+use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
 use crate::koreader::types::{PageStat, StatisticsData};
 use crate::models::ContentType;
 use crate::time_config::TimeConfig;
 
 /// Compute the calendar response for a specific month from reading data.
-pub fn reading_calendar(
+pub async fn reading_calendar(
     reading_data: &ReadingData,
+    repo: &LibraryRepository,
     query: ReadingCalendarQuery,
 ) -> ReadingCalendarData {
     let time_config = shared::resolve_time_config(&reading_data.time_config, query.tz);
@@ -38,9 +40,10 @@ pub fn reading_calendar(
         &time_config,
         month_from,
         month_to,
-        &reading_data.covers_by_md5,
+        repo,
         &reading_data.page_scaling,
-    );
+    )
+    .await;
 
     ReadingCalendarData {
         month: query.month,
@@ -150,12 +153,12 @@ fn compute_scope_stats(
 }
 
 /// Build scope-filtered events and item reference map for the month.
-fn build_events_and_items(
+async fn build_events_and_items(
     stats_data: &StatisticsData,
     time_config: &TimeConfig,
     month_from: NaiveDate,
     month_to: NaiveDate,
-    covers_by_md5: &std::collections::HashMap<String, String>,
+    repo: &LibraryRepository,
     page_scaling: &PageScaling,
 ) -> (Vec<ReadingCalendarEvent>, BTreeMap<String, CalendarItemRef>) {
     // Build book ID -> StatBook lookup.
@@ -187,6 +190,13 @@ fn build_events_and_items(
 
         // Ensure item reference exists.
         if !items.contains_key(&item_ref_key) {
+            let item_cover = repo
+                .get_item(&stat_book.md5)
+                .await
+                .ok()
+                .flatten()
+                .map(|detail| detail.cover_url);
+
             items.insert(
                 item_ref_key.clone(),
                 CalendarItemRef {
@@ -194,7 +204,7 @@ fn build_events_and_items(
                     authors: shared::parse_authors(&stat_book.authors),
                     content_type: shared::to_library_content_type(stat_book.content_type),
                     item_id: Some(stat_book.md5.clone()),
-                    item_cover: covers_by_md5.get(&stat_book.md5).cloned(),
+                    item_cover,
                 },
             );
         }
@@ -349,6 +359,15 @@ mod tests {
         }
     }
 
+    fn make_reading_data(stats: StatisticsData) -> ReadingData {
+        ReadingData {
+            stats_data: stats,
+            time_config: TimeConfig::new(None, 0),
+            heatmap_scale_max: None,
+            page_scaling: PageScaling::disabled(),
+        }
+    }
+
     #[test]
     fn month_date_range_regular_month() {
         let (from, to) = month_date_range("2026-03");
@@ -370,47 +389,35 @@ mod tests {
         assert_eq!(to, NaiveDate::from_ymd_opt(2026, 12, 31).unwrap());
     }
 
-    #[test]
-    fn empty_stats_produces_empty_calendar() {
-        let stats = make_stats_data(vec![], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+    #[tokio::test]
+    async fn empty_stats_produces_empty_calendar() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::All,
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
         assert_eq!(result.month, "2026-03");
         assert!(result.events.is_empty());
         assert!(result.items.is_empty());
         assert_eq!(result.stats_by_scope.all.items_read, 0);
     }
 
-    #[test]
-    fn single_day_event_has_no_end() {
+    #[tokio::test]
+    async fn single_day_event_has_no_end() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         // 2026-03-10 00:00:00 UTC = 1773100800
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         let ps = make_page_stat(1, 1773100800, 300);
-        let stats = make_stats_data(vec![book], vec![ps]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![ps]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::All,
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
         assert_eq!(result.events.len(), 1);
         assert_eq!(result.events[0].start, "2026-03-10");
         assert!(result.events[0].end.is_none());
@@ -418,27 +425,21 @@ mod tests {
         assert_eq!(result.events[0].pages_read, 1);
     }
 
-    #[test]
-    fn consecutive_days_merge_into_span() {
+    #[tokio::test]
+    async fn consecutive_days_merge_into_span() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // Day 1: 2026-03-10 00:00:00 UTC
         let ps1 = make_page_stat(1, 1773100800, 200);
         // Day 2: 2026-03-11 00:00:00 UTC
         let ps2 = make_page_stat(1, 1773100800 + 86400, 300);
-        let stats = make_stats_data(vec![book], vec![ps1, ps2]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![ps1, ps2]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::All,
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
         assert_eq!(result.events.len(), 1);
         assert_eq!(result.events[0].start, "2026-03-10");
         assert_eq!(result.events[0].end, Some("2026-03-12".to_string()));
@@ -446,27 +447,21 @@ mod tests {
         assert_eq!(result.events[0].pages_read, 2);
     }
 
-    #[test]
-    fn gap_creates_separate_events() {
+    #[tokio::test]
+    async fn gap_creates_separate_events() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // Day 1: 2026-03-10
         let ps1 = make_page_stat(1, 1773100800, 200);
         // Day 3: 2026-03-12 (gap on day 2)
         let ps2 = make_page_stat(1, 1773100800 + 86400 * 2, 300);
-        let stats = make_stats_data(vec![book], vec![ps1, ps2]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![ps1, ps2]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::All,
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
         assert_eq!(result.events.len(), 2);
         assert_eq!(result.events[0].start, "2026-03-10");
         assert!(result.events[0].end.is_none());
@@ -474,27 +469,21 @@ mod tests {
         assert!(result.events[1].end.is_none());
     }
 
-    #[test]
-    fn stats_by_scope_computed_for_all_scopes() {
+    #[tokio::test]
+    async fn stats_by_scope_computed_for_all_scopes() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let book = make_book(1, "A Book", "abc", Some(ContentType::Book));
         let comic = make_book(2, "A Comic", "def", Some(ContentType::Comic));
         // Both on 2026-03-10
         let ps1 = make_page_stat(1, 1773100800, 100);
         let ps2 = make_page_stat(2, 1773100800, 200);
-        let stats = make_stats_data(vec![book, comic], vec![ps1, ps2]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book, comic], vec![ps1, ps2]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::Books, // Only book events
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
 
         // Events filtered to books only.
         assert_eq!(result.events.len(), 1);
@@ -509,27 +498,22 @@ mod tests {
         assert_eq!(result.stats_by_scope.comics.reading_time_sec, 200);
     }
 
-    #[test]
-    fn page_stats_outside_month_are_excluded() {
+    #[tokio::test]
+    async fn page_stats_outside_month_are_excluded() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // 2026-02-28 (outside March)
         let ps_outside = make_page_stat(1, 1773100800 - 86400 * 10, 999);
         // 2026-03-10 (inside March)
         let ps_inside = make_page_stat(1, 1773100800, 100);
-        let stats = make_stats_data(vec![book], vec![ps_outside, ps_inside]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data =
+            make_reading_data(make_stats_data(vec![book], vec![ps_outside, ps_inside]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
             scope: ContentTypeFilter::All,
             tz: None,
         };
-        let result = reading_calendar(&reading_data, query);
+        let result = reading_calendar(&reading_data, &repo, query).await;
         assert_eq!(result.events.len(), 1);
         assert_eq!(result.events[0].reading_time_sec, 100);
         assert_eq!(result.stats_by_scope.all.reading_time_sec, 100);

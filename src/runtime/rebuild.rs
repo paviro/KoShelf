@@ -10,7 +10,7 @@ use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::models::LibraryItemFormat;
 use crate::runtime::export::{ExportConfig, export_data_files};
-use crate::runtime::ingest::{build_covers_by_md5, ingest_paths, load_reading_data};
+use crate::runtime::ingest::{ingest_paths, load_reading_data};
 use crate::runtime::media::{self, resolve_media_dirs};
 use anyhow::Result;
 use log::{debug, info, warn};
@@ -43,9 +43,6 @@ pub async fn targeted_rebuild(
         .statistics_db_path
         .as_ref()
         .is_some_and(|sp| accumulated_paths.contains(sp));
-    let library_changed = accumulated_paths
-        .iter()
-        .any(|p| LibraryItemFormat::from_path(p).is_some());
 
     let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
     if let Err(e) = media::create_media_directories(&media_dirs) {
@@ -123,21 +120,6 @@ pub async fn targeted_rebuild(
             }
             Ok(None) => {}
             Err(e) => warn!("Failed to reload statistics: {}", e),
-        }
-    }
-
-    // ── 4b. Refresh covers in existing ReadingData if library changed ──
-    if !stats_reloaded
-        && library_changed
-        && let Some(store) = reading_data_store
-        && let Some(mut rd) = store.get().map(|rd| rd.as_ref().clone())
-    {
-        match repo.load_all_item_ids().await {
-            Ok(ids) => {
-                rd.covers_by_md5 = build_covers_by_md5(ids.iter());
-                store.replace(rd);
-            }
-            Err(e) => warn!("Failed to refresh covers: {}", e),
         }
     }
 

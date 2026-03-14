@@ -48,13 +48,15 @@ use crate::domain::reading::queries::{
     CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery,
 };
 use crate::domain::reading::shared;
+use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
 use crate::koreader::types::{BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData};
 use crate::time_config::TimeConfig;
 
 /// Compute the completions response from reading data and a validated query.
-pub fn reading_completions(
+pub async fn reading_completions(
     reading_data: &ReadingData,
+    repo: &LibraryRepository,
     query: ReadingCompletionsQuery,
 ) -> ReadingCompletionsData {
     let time_config = shared::resolve_time_config(&reading_data.time_config, query.tz);
@@ -64,12 +66,12 @@ pub fn reading_completions(
     let (range, resolved_year) = resolve_completions_range(&query.selector);
 
     // Collect completion items, sorted by end_date descending.
-    let mut all_items = collect_completion_items(
-        &stats,
-        range.as_ref(),
-        &reading_data.covers_by_md5,
-        &reading_data.page_scaling,
-    );
+    let mut all_items =
+        collect_completion_items(&stats, range.as_ref(), &reading_data.page_scaling);
+
+    // Enrich with library metadata (cover, rating, review_note, series).
+    enrich_completion_items(&mut all_items, repo).await;
+
     all_items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
     let total_items = all_items.len();
@@ -89,8 +91,12 @@ pub fn reading_completions(
     // Build groups or flat items based on group_by.
     let (groups, items) = match query.group_by {
         CompletionsGroupBy::Month => {
-            let month_reading_time = compute_month_reading_times(&stats, &time_config, range.as_ref());
-            (Some(build_month_groups(all_items, &month_reading_time)), None)
+            let month_reading_time =
+                compute_month_reading_times(&stats, &time_config, range.as_ref());
+            (
+                Some(build_month_groups(all_items, &month_reading_time)),
+                None,
+            )
         }
         CompletionsGroupBy::None => (None, Some(all_items)),
     };
@@ -139,10 +145,10 @@ fn resolve_completions_range(
 
 /// Collect completion items, optionally filtered to `[from, to]`.
 /// When `range` is `None`, all completions are included.
+/// Library enrichment fields are left as `None` — populated later via `enrich_completion_items`.
 fn collect_completion_items(
     stats: &StatisticsData,
     range: Option<&(NaiveDate, NaiveDate)>,
-    covers_by_md5: &std::collections::HashMap<String, String>,
     page_scaling: &crate::domain::reading::scaling::PageScaling,
 ) -> Vec<CompletionItem> {
     let mut items = Vec::new();
@@ -179,18 +185,72 @@ fn collect_completion_items(
                 calendar_length_days: entry.calendar_length_days(),
                 average_speed,
                 average_session_duration_sec: entry.avg_session_duration(),
-                // Library enrichment fields — populated when library linking is available.
                 rating: None,
                 review_note: None,
                 series: None,
                 item_id: Some(book.md5.clone()),
-                item_cover: covers_by_md5.get(&book.md5).cloned(),
+                item_cover: None,
                 content_type: Some(shared::to_library_content_type(book.content_type)),
             });
         }
     }
 
     items
+}
+
+/// Enrich completion items with library metadata by querying the repository.
+///
+/// Populates `item_cover`, `rating`, `review_note`, and `series` for items
+/// whose MD5 matches a library item. Orphan stats books (not in library) are left unchanged.
+async fn enrich_completion_items(items: &mut [CompletionItem], repo: &LibraryRepository) {
+    // Collect unique MD5s to avoid duplicate lookups.
+    let unique_md5s: HashSet<String> = items
+        .iter()
+        .filter_map(|item| item.item_id.clone())
+        .collect();
+
+    let mut cache: HashMap<String, Option<EnrichmentData>> = HashMap::new();
+    for md5 in unique_md5s {
+        let enrichment = match repo.get_item(&md5).await {
+            Ok(Some(detail)) => Some(EnrichmentData {
+                cover_url: detail.cover_url,
+                rating: detail.rating.map(|r| r as u32),
+                review_note: detail.review_note,
+                series: detail.series.and_then(|s| format_series(&s)),
+            }),
+            _ => None,
+        };
+        cache.insert(md5, enrichment);
+    }
+
+    for item in items.iter_mut() {
+        if let Some(md5) = &item.item_id
+            && let Some(Some(enrichment)) = cache.get(md5)
+        {
+            item.item_cover = Some(enrichment.cover_url.clone());
+            item.rating = enrichment.rating;
+            item.review_note = enrichment.review_note.clone();
+            item.series = enrichment.series.clone();
+        }
+    }
+}
+
+struct EnrichmentData {
+    cover_url: String,
+    rating: Option<u32>,
+    review_note: Option<String>,
+    series: Option<String>,
+}
+
+/// Format a `LibrarySeries` as `"Name #Index"` or just `"Name"`.
+fn format_series(series: &crate::contracts::library::LibrarySeries) -> Option<String> {
+    if series.name.is_empty() {
+        return None;
+    }
+    Some(match &series.index {
+        Some(idx) => format!("{} #{}", series.name, idx),
+        None => series.name.clone(),
+    })
 }
 
 // ── Grouping ────────────────────────────────────────────────────────────────
@@ -751,16 +811,19 @@ mod tests {
         }
     }
 
-    #[test]
-    fn empty_stats_produces_empty_completions() {
-        let stats = make_stats_data(vec![], vec![]);
-        let reading_data = ReadingData {
+    fn make_reading_data(stats: StatisticsData) -> ReadingData {
+        ReadingData {
             stats_data: stats,
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
             page_scaling: PageScaling::disabled(),
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn empty_stats_produces_empty_completions() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -768,29 +831,23 @@ mod tests {
             includes: CompletionsIncludeSet::default(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         assert!(result.groups.unwrap().is_empty());
         assert!(result.items.is_none());
         assert!(result.summary.is_none());
         assert!(result.share_assets.is_none());
     }
 
-    #[test]
-    fn completions_grouped_by_month() {
+    #[tokio::test]
+    async fn completions_grouped_by_month() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc123");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2025-01-01", "2025-02-15", 3600, 10, 200),
             make_completion("2025-03-01", "2025-04-10", 7200, 20, 400),
         ]));
 
-        let stats = make_stats_data(vec![book], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -798,7 +855,7 @@ mod tests {
             includes: CompletionsIncludeSet::default(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         let groups = result.groups.unwrap();
         assert_eq!(groups.len(), 2);
         assert_eq!(groups[0].key, "2025-02");
@@ -807,8 +864,9 @@ mod tests {
         assert_eq!(groups[1].items_finished, 1);
     }
 
-    #[test]
-    fn completions_flat_list_when_group_by_none() {
+    #[tokio::test]
+    async fn completions_flat_list_when_group_by_none() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc123");
         book.completions = Some(BookCompletions::new(vec![make_completion(
             "2025-01-01",
@@ -818,14 +876,7 @@ mod tests {
             200,
         )]));
 
-        let stats = make_stats_data(vec![book], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -833,7 +884,7 @@ mod tests {
             includes: CompletionsIncludeSet::default(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         assert!(result.groups.is_none());
         let items = result.items.unwrap();
         assert_eq!(items.len(), 1);
@@ -841,22 +892,16 @@ mod tests {
         assert_eq!(items[0].authors, vec!["Author A", "Author B"]);
     }
 
-    #[test]
-    fn default_selector_returns_all_completions() {
+    #[tokio::test]
+    async fn default_selector_returns_all_completions() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let mut book = make_book(1, "Old Book", "abc");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2023-01-01", "2023-06-15", 3600, 5, 100),
             make_completion("2025-01-01", "2025-03-10", 7200, 10, 200),
         ]));
 
-        let stats = make_stats_data(vec![book], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Default,
@@ -864,7 +909,7 @@ mod tests {
             includes: CompletionsIncludeSet::default(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         let items = result.items.unwrap();
         // Default returns all completions across all years.
         assert_eq!(items.len(), 2);
@@ -873,22 +918,16 @@ mod tests {
         assert_eq!(items[1].end_date, "2023-06-15");
     }
 
-    #[test]
-    fn completions_outside_range_are_excluded() {
+    #[tokio::test]
+    async fn completions_outside_range_are_excluded() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2024-06-01", "2024-12-20", 3600, 5, 100),
             make_completion("2025-01-01", "2025-03-10", 7200, 10, 200),
         ]));
 
-        let stats = make_stats_data(vec![book], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -896,14 +935,15 @@ mod tests {
             includes: CompletionsIncludeSet::default(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         let items = result.items.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].end_date, "2025-03-10");
     }
 
-    #[test]
-    fn summary_includes_reading_activity_stats() {
+    #[tokio::test]
+    async fn summary_includes_reading_activity_stats() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc");
         book.completions = Some(BookCompletions::new(vec![make_completion(
             "2025-01-01",
@@ -919,14 +959,7 @@ mod tests {
         // 2025-01-16 00:00:00 UTC
         let ps2 = make_page_stat(1, 1736899200 + 86400, 2400);
 
-        let stats = make_stats_data(vec![book], vec![ps1, ps2]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![ps1, ps2]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -934,7 +967,7 @@ mod tests {
             includes: CompletionsIncludeSet::parse(Some("summary")).unwrap(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         let summary = result.summary.unwrap();
         assert_eq!(summary.total_items, 1);
         assert_eq!(summary.total_reading_time_sec, 4200);
@@ -943,16 +976,10 @@ mod tests {
         assert!(summary.best_month.is_some());
     }
 
-    #[test]
-    fn share_assets_provided_for_year_selector() {
-        let stats = make_stats_data(vec![], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+    #[tokio::test]
+    async fn share_assets_provided_for_year_selector() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Year(2025),
@@ -960,21 +987,15 @@ mod tests {
             includes: CompletionsIncludeSet::parse(Some("share_assets")).unwrap(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         let assets = result.share_assets.unwrap();
         assert!(assets.story_url.contains("2025"));
     }
 
-    #[test]
-    fn share_assets_none_for_range_selector() {
-        let stats = make_stats_data(vec![], vec![]);
-        let reading_data = ReadingData {
-            stats_data: stats,
-            time_config: TimeConfig::new(None, 0),
-            heatmap_scale_max: None,
-            covers_by_md5: std::collections::HashMap::new(),
-            page_scaling: PageScaling::disabled(),
-        };
+    #[tokio::test]
+    async fn share_assets_none_for_range_selector() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
             selector: CompletionsSelector::Range(
@@ -984,7 +1005,7 @@ mod tests {
             includes: CompletionsIncludeSet::parse(Some("share_assets")).unwrap(),
             tz: None,
         };
-        let result = reading_completions(&reading_data, query);
+        let result = reading_completions(&reading_data, &repo, query).await;
         assert!(result.share_assets.is_none());
     }
 

@@ -4,10 +4,12 @@
 //! The reading domain service handles completion data on demand — this module
 //! only generates the visual share assets.
 
+use crate::contracts::library::LibraryContentType;
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::types::{MonthRecap, RecapItem, YearlySummary};
+use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
-use crate::models::LibraryItem;
+use crate::models::ContentType;
 use crate::time_config::TimeConfig;
 use anyhow::Result;
 use chrono::Datelike;
@@ -30,27 +32,28 @@ fn completion_year_and_month(end_date: &str) -> Option<(i32, String)> {
     Some((year, year_month))
 }
 
-fn build_md5_to_item(items: &[LibraryItem]) -> HashMap<String, &LibraryItem> {
-    let mut md5_to_book: HashMap<String, &LibraryItem> = HashMap::new();
-    for book in items {
-        if let Some(md5) = book
-            .koreader_metadata
-            .as_ref()
-            .and_then(|m| m.partial_md5_checksum.as_ref())
-        {
-            md5_to_book.insert(md5.to_lowercase(), book);
-        }
-    }
-    md5_to_book
-}
-
-fn group_completions_by_year_month(
+async fn group_completions_by_year_month(
     stats_data: &StatisticsData,
-    md5_to_item: &HashMap<String, &LibraryItem>,
+    repo: &LibraryRepository,
     page_scaling: &PageScaling,
 ) -> (YearMonthItems, Vec<i32>) {
     let mut year_month_items: YearMonthItems = HashMap::new();
     let mut year_set: HashSet<i32> = HashSet::new();
+
+    // Pre-fetch library items for all unique MD5s.
+    let unique_md5s: HashSet<String> = stats_data
+        .books
+        .iter()
+        .filter(|sb| sb.completions.is_some())
+        .map(|sb| sb.md5.clone())
+        .collect();
+
+    let mut item_cache: HashMap<String, Option<crate::contracts::library::LibraryDetailItem>> =
+        HashMap::new();
+    for md5 in &unique_md5s {
+        let detail = repo.get_item(md5).await.ok().flatten();
+        item_cache.insert(md5.clone(), detail);
+    }
 
     for sb in &stats_data.books {
         if let Some(comps) = &sb.completions {
@@ -70,16 +73,30 @@ fn group_completions_by_year_month(
                     item_id,
                     item_cover,
                     content_type,
-                ) = if let Some(item) = md5_to_item.get(&sb.md5.to_lowercase()) {
+                ) = if let Some(Some(detail)) = item_cache.get(&sb.md5) {
+                    let series_display = detail.series.as_ref().and_then(|s| {
+                        if s.name.is_empty() {
+                            None
+                        } else {
+                            Some(match &s.index {
+                                Some(idx) => format!("{} #{}", s.name, idx),
+                                None => s.name.clone(),
+                            })
+                        }
+                    });
+                    let ct = match detail.content_type {
+                        LibraryContentType::Book => ContentType::Book,
+                        LibraryContentType::Comic => ContentType::Comic,
+                    };
                     (
-                        item.book_info.title.clone(),
-                        item.book_info.authors.clone(),
-                        item.rating(),
-                        item.review_note().cloned(),
-                        item.series_display(),
-                        Some(item.id.clone()),
-                        Some(format!("/assets/covers/{}.webp", item.id)),
-                        Some(item.content_type()),
+                        detail.title.clone(),
+                        detail.authors.0.clone(),
+                        detail.rating.map(|r| r as u32),
+                        detail.review_note.clone(),
+                        series_display,
+                        Some(detail.id.clone()),
+                        Some(detail.cover_url.clone()),
+                        Some(ct),
                     )
                 } else {
                     let title = sb.title.clone();
@@ -404,19 +421,17 @@ fn collect_share_tasks_for_year(
 /// to the recap assets directory.
 pub async fn generate_recap_share_images(
     stats_data: &StatisticsData,
-    items: &[LibraryItem],
+    repo: &LibraryRepository,
     page_scaling: &PageScaling,
     recap_dir: &Path,
     stats_db_path: Option<&Path>,
     time_config: &TimeConfig,
 ) -> Result<()> {
-    let md5_to_book = build_md5_to_item(items);
-
     let reading_stats_all =
         crate::domain::reading::StatisticsCalculator::calculate_stats(stats_data, time_config);
 
     let (year_month_items, years) =
-        group_completions_by_year_month(stats_data, &md5_to_book, page_scaling);
+        group_completions_by_year_month(stats_data, repo, page_scaling).await;
 
     if years.is_empty() {
         let empty: HashSet<String> = HashSet::new();

@@ -1,7 +1,7 @@
 //! Statistics loading: parse, filter, tag, and package reading data.
 //!
 //! Uses DB queries instead of in-memory item collections for content-type
-//! tagging and covers-by-MD5 map construction.
+//! tagging and library-item filtering.
 
 use crate::config::SiteConfig;
 use crate::domain::reading::{PageScaling, StatisticsCalculator};
@@ -10,7 +10,7 @@ use crate::infra::stores::ReadingData;
 use crate::koreader::StatisticsParser;
 use anyhow::Result;
 use log::info;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 /// Load and process reading statistics using DB queries for filtering and tagging.
 ///
@@ -63,10 +63,6 @@ pub async fn load_reading_data(
         PageScaling::disabled()
     };
 
-    // Build covers_by_md5 from DB
-    let all_ids = repo.load_all_item_ids().await?;
-    let covers_by_md5 = build_covers_by_md5(all_ids.iter());
-
     info!(
         "Statistics: {} books, {} with completions",
         data.books.len(),
@@ -80,13 +76,6 @@ pub async fn load_reading_data(
         stats_data: data,
         time_config: config.time_config.clone(),
         heatmap_scale_max: config.heatmap_scale_max,
-        covers_by_md5,
         page_scaling,
     }))
-}
-
-/// Build an md5 → cover URL map from item IDs.
-pub fn build_covers_by_md5<'a>(ids: impl Iterator<Item = &'a String>) -> HashMap<String, String> {
-    ids.map(|id| (id.clone(), format!("/assets/covers/{}.webp", id)))
-        .collect()
 }
