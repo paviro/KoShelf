@@ -532,3 +532,45 @@ fn cleanup_stale_json(
 
     Ok(())
 }
+
+// ── Export ↔ API sync guard ─────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use crate::server::api::route_paths;
+
+    /// API routes that have static export implementations in this module.
+    const EXPORTED: &[&str] = &[
+        "/api/site",
+        "/api/items",
+        "/api/items/{id}",
+        "/api/reading/summary",
+        "/api/reading/metrics",
+        "/api/reading/available-periods",
+        "/api/reading/calendar",
+        "/api/reading/completions",
+    ];
+
+    /// API routes that intentionally have no static export equivalent.
+    const NON_EXPORTED: &[&str] = &[
+        "/api/events/stream", // SSE — live-only, not exportable
+    ];
+
+    /// Verifies every API route is accounted for in either `EXPORTED` or
+    /// `NON_EXPORTED`.
+    ///
+    /// If this test fails you added a new API route without an export.
+    /// Either implement its export in this module and add it to `EXPORTED`,
+    /// or add it to `NON_EXPORTED` with a comment explaining why.
+    #[test]
+    fn export_covers_all_api_routes() {
+        for route in route_paths() {
+            assert!(
+                EXPORTED.contains(route) || NON_EXPORTED.contains(route),
+                "API route `{route}` has no export coverage. \
+                 Implement its export in pipeline/export.rs and add it to EXPORTED, \
+                 or add it to NON_EXPORTED if it cannot be statically exported."
+            );
+        }
+    }
+}

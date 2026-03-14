@@ -163,10 +163,27 @@ export class StaticApiClient implements ApiClient {
         return pickScope(groupData, selectedScope);
     }
 
-    async getReadingCalendar(month: string): Promise<ReadingCalendarData> {
-        return (await fetchJson(
+    async getReadingCalendar(
+        month: string,
+        scope: ScopeValue,
+    ): Promise<ReadingCalendarData> {
+        const data = (await fetchJson(
             `/data/reading/calendar/${month}.json`,
         )) as ReadingCalendarData;
+
+        if (scope === 'all') return data;
+
+        const expected = scope === 'books' ? 'book' : 'comic';
+        const matchingRefs = new Set(
+            Object.entries(data.items)
+                .filter(([, item]) => item.content_type === expected)
+                .map(([ref]) => ref),
+        );
+
+        return {
+            ...data,
+            events: data.events.filter((e) => matchingRefs.has(e.item_ref)),
+        };
     }
 
     async getReadingCompletions(
