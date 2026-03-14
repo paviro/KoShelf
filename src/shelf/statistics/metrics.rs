@@ -6,7 +6,7 @@ use chrono::{Datelike, NaiveDate};
 
 use super::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
 use super::shared;
-use crate::api::responses::reading::{MetricPoint, ReadingMetricsData};
+use crate::server::api::responses::reading::{MetricPoint, ReadingMetricsData};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::PageStat;
 use crate::store::memory::ReadingData;

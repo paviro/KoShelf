@@ -1,6 +1,6 @@
 //! Shared in-memory site metadata store.
 
-use crate::api::responses::site::SiteData;
+use crate::server::api::responses::site::SiteData;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone, Default)]

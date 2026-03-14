@@ -3,7 +3,7 @@
 use anyhow::Result;
 
 use super::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
-use crate::api::responses::library::{
+use crate::server::api::responses::library::{
     LibraryCompletionEntry, LibraryCompletions, LibraryDetailData, LibraryDetailStatistics,
     LibraryItemStats, LibraryListData, LibrarySessionStats,
 };

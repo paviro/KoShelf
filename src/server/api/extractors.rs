@@ -4,8 +4,8 @@ use std::sync::Arc;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 
-use crate::api::error::ApiResponseError;
-use crate::api::server::ServerState;
+use crate::server::ServerState;
+use crate::server::api::error::ApiResponseError;
 use crate::store::memory::ReadingData;
 
 pub(crate) struct ReadingDataGuard(pub(crate) Arc<ReadingData>);

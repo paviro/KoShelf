@@ -13,10 +13,10 @@ use anyhow::{Context, Result};
 use log::info;
 use serde::Serialize;
 
-use crate::api::responses::common::ContentTypeFilter;
-use crate::api::responses::library::LibraryContentType;
-use crate::api::responses::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
-use crate::api::responses::site::SiteCapabilities;
+use crate::server::api::responses::common::ContentTypeFilter;
+use crate::server::api::responses::library::LibraryContentType;
+use crate::server::api::responses::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
+use crate::server::api::responses::site::SiteCapabilities;
 use crate::shelf::library::queries::IncludeSet;
 use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
 use crate::shelf::statistics;
@@ -181,7 +181,7 @@ async fn export_item_details(
     data_dir: &Path,
     library_repo: &LibraryRepository,
     reading_data: Option<&ReadingData>,
-    items: &[crate::api::responses::library::LibraryListItem],
+    items: &[crate::server::api::responses::library::LibraryListItem],
 ) -> Result<()> {
     let items_dir = data_dir.join("items");
 

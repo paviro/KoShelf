@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use super::compute::scaling::PageScaling;
 use super::queries::ReadingCalendarQuery;
 use super::shared;
-use crate::api::responses::reading::{
+use crate::server::api::responses::reading::{
     CalendarItemRef, CalendarScopeStats, CalendarStatsByScope, ReadingCalendarData,
     ReadingCalendarEvent,
 };
@@ -348,7 +348,7 @@ fn event_overlaps_month(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::responses::common::ContentTypeFilter;
+    use crate::server::api::responses::common::ContentTypeFilter;
     use crate::shelf::statistics::PageScaling;
     use crate::source::koreader::types::{PageStat, StatBook, StatisticsData};
 

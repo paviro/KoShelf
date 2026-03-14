@@ -3,11 +3,11 @@
 //! This crate backs the `koshelf` binary. Keeping most logic in `lib.rs` makes the
 //! codebase easier to test and refactor while keeping `src/main.rs` minimal.
 
-pub mod api;
 pub mod app;
 pub mod i18n;
 pub mod infra;
 pub mod runtime;
+pub mod server;
 pub mod share;
 pub mod shelf;
 pub mod source;

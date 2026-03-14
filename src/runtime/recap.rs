@@ -4,7 +4,7 @@
 //! The reading domain service handles completion data on demand — this module
 //! only generates the visual share assets.
 
-use crate::api::responses::library::LibraryContentType;
+use crate::server::api::responses::library::LibraryContentType;
 use crate::share::{ShareFormat, ShareImageData, generate_share_image};
 use crate::shelf::models::ContentType;
 use crate::shelf::statistics::StatisticsCalculator;
@@ -51,8 +51,10 @@ async fn group_completions_by_year_month(
         .map(|sb| sb.md5.clone())
         .collect();
 
-    let mut item_cache: HashMap<String, Option<crate::api::responses::library::LibraryDetailItem>> =
-        HashMap::new();
+    let mut item_cache: HashMap<
+        String,
+        Option<crate::server::api::responses::library::LibraryDetailItem>,
+    > = HashMap::new();
     for md5 in &unique_md5s {
         let detail = repo.get_item(md5).await.ok().flatten();
         item_cache.insert(md5.clone(), detail);

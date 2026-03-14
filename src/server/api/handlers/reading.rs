@@ -1,15 +1,15 @@
 use axum::{Json, extract::Query, extract::State, response::IntoResponse};
 
-use crate::api::error::{ApiResponseError, ApiResult};
-use crate::api::extractors::ReadingDataGuard;
-use crate::api::params::{
+use crate::server::ServerState;
+use crate::server::api::error::{ApiResponseError, ApiResult};
+use crate::server::api::extractors::ReadingDataGuard;
+use crate::server::api::params::{
     ReadingAvailablePeriodsParams, ReadingCalendarParams, ReadingCompletionsParams,
     ReadingMetricsParams, ReadingSummaryParams, parse_reading_available_periods_query,
     parse_reading_calendar_query, parse_reading_completions_query, parse_reading_metrics_query,
     parse_reading_summary_query,
 };
-use crate::api::responses::common::ApiResponse;
-use crate::api::server::ServerState;
+use crate::server::api::responses::common::ApiResponse;
 use crate::shelf::statistics;
 
 pub(crate) async fn reading_summary(

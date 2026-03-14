@@ -3,11 +3,11 @@
 //! Extracted from the file watcher so the rebuild logic is testable and
 //! the watcher module is limited to event setup, debouncing, and dispatch.
 
-use crate::api::responses::site::{SiteCapabilities, SiteData};
 use crate::app::config::SiteConfig;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::{ingest_paths, load_reading_data};
 use crate::runtime::media::{self, resolve_media_dirs};
+use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::{MetadataLocation, collect_paths};
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};

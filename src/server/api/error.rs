@@ -4,7 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::api::responses::error::{ApiErrorCode, ApiErrorResponse};
+use crate::server::api::responses::error::{ApiErrorCode, ApiErrorResponse};
 
 // ── Error plumbing ─────────────────────────────────────────────────────────
 

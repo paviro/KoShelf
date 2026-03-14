@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use crate::api::error::{ApiResponseError, ApiResult};
-use crate::api::responses::common::{ContentTypeFilter, MonthKey, YearKey};
-use crate::api::responses::error::ApiErrorCode;
+use crate::server::api::error::{ApiResponseError, ApiResult};
+use crate::server::api::responses::common::{ContentTypeFilter, MonthKey, YearKey};
+use crate::server::api::responses::error::ApiErrorCode;
 use crate::shelf::library::queries::{IncludeSet, ItemSort, SortOrder};
 use crate::shelf::statistics::queries::{
     self as rq, CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange,

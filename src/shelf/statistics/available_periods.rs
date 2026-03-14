@@ -7,7 +7,7 @@ use chrono::NaiveDate;
 use super::compute::scaling::PageScaling;
 use super::queries::{DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery};
 use super::shared;
-use crate::api::responses::reading::{PeriodEntry, ReadingAvailablePeriodsData};
+use crate::server::api::responses::reading::{PeriodEntry, ReadingAvailablePeriodsData};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::StatisticsData;
 use crate::store::memory::ReadingData;

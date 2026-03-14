@@ -7,7 +7,7 @@ use chrono::NaiveDate;
 use super::compute::sessions;
 use super::queries::ReadingSummaryQuery;
 use super::shared;
-use crate::api::responses::reading::{
+use crate::server::api::responses::reading::{
     HeatmapConfig, ReadingOverview, ReadingStreaks, ReadingSummaryData, ResolvedRange, StreakData,
 };
 use crate::shelf::time_config::TimeConfig;

@@ -5,9 +5,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::api::responses::common::ApiResponse;
-use crate::api::responses::site::{SiteCapabilities, SiteData};
-use crate::api::server::ServerState;
+use crate::server::ServerState;
+use crate::server::api::responses::common::ApiResponse;
+use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 
 fn empty_site_data() -> SiteData {
     SiteData {
