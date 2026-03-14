@@ -122,7 +122,7 @@ fn scale_pages_with_factor(pages: i64, factor: f64) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::ContentType;
+    use crate::shelf::models::ContentType;
     use crate::tests::fixtures;
 
     #[test]

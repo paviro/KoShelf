@@ -1,5 +1,5 @@
-use crate::models::{BookInfo, Identifier};
-use crate::utils::sanitize_html;
+use crate::shelf::models::{BookInfo, Identifier};
+use crate::shelf::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use std::collections::HashSet;

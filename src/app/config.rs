@@ -1,8 +1,8 @@
 //! Site configuration module - bundles generator/watcher configuration.
 
+use crate::shelf::time_config::TimeConfig;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::RuntimeDataPolicy;
-use crate::time_config::TimeConfig;
 use std::path::PathBuf;
 
 /// Configuration for site generation and file watching.

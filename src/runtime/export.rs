@@ -17,10 +17,10 @@ use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::library::LibraryContentType;
 use crate::contracts::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
 use crate::contracts::site::SiteCapabilities;
-use crate::domain::library::queries::IncludeSet;
-use crate::domain::library::{self, LibraryDetailQuery, LibraryListQuery};
-use crate::domain::reading;
-use crate::domain::reading::queries::{
+use crate::shelf::library::queries::IncludeSet;
+use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
+use crate::shelf::statistics;
+use crate::shelf::statistics::queries::{
     CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, MetricsGroupBy, PeriodGroupBy,
     PeriodSource, ReadingAvailablePeriodsQuery, ReadingCalendarQuery, ReadingCompletionsQuery,
     ReadingMetric, ReadingMetricsQuery, ReadingSummaryQuery,
@@ -204,7 +204,7 @@ async fn export_item_details(
 
 fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
     let summary = ExportReadingSummary {
-        all: reading::summary(
+        all: statistics::summary(
             reading_data,
             ReadingSummaryQuery {
                 scope: ContentTypeFilter::All,
@@ -212,7 +212,7 @@ fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result
                 tz: None,
             },
         ),
-        books: reading::summary(
+        books: statistics::summary(
             reading_data,
             ReadingSummaryQuery {
                 scope: ContentTypeFilter::Books,
@@ -220,7 +220,7 @@ fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result
                 tz: None,
             },
         ),
-        comics: reading::summary(
+        comics: statistics::summary(
             reading_data,
             ReadingSummaryQuery {
                 scope: ContentTypeFilter::Comics,
@@ -273,9 +273,9 @@ fn periods_by_scope(
     };
 
     ExportPeriodsByScope {
-        all: reading::available_periods(reading_data, query(ContentTypeFilter::All)),
-        books: reading::available_periods(reading_data, query(ContentTypeFilter::Books)),
-        comics: reading::available_periods(reading_data, query(ContentTypeFilter::Comics)),
+        all: statistics::available_periods(reading_data, query(ContentTypeFilter::All)),
+        books: statistics::available_periods(reading_data, query(ContentTypeFilter::Books)),
+        comics: statistics::available_periods(reading_data, query(ContentTypeFilter::Comics)),
     }
 }
 
@@ -283,7 +283,7 @@ fn periods_by_scope(
 
 fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
     // Determine which months have reading data.
-    let month_periods = reading::available_periods(
+    let month_periods = statistics::available_periods(
         reading_data,
         ReadingAvailablePeriodsQuery {
             scope: ContentTypeFilter::All,
@@ -318,7 +318,7 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
         let scope_name = scope.as_str();
 
         for &metric in &metrics {
-            let result = reading::metrics(
+            let result = statistics::metrics(
                 reading_data,
                 ReadingMetricsQuery {
                     scope,
@@ -391,7 +391,7 @@ async fn export_reading_calendar(
     repo: &LibraryRepository,
 ) -> Result<()> {
     // Determine which months have reading data.
-    let month_periods = reading::available_periods(
+    let month_periods = statistics::available_periods(
         reading_data,
         ReadingAvailablePeriodsQuery {
             scope: ContentTypeFilter::All,
@@ -407,7 +407,7 @@ async fn export_reading_calendar(
 
     for period in &month_periods.periods {
         // Calendar uses scope=All; stats_by_scope is always included for all three scopes.
-        let data = reading::calendar(
+        let data = statistics::calendar(
             reading_data,
             repo,
             ReadingCalendarQuery {
@@ -439,7 +439,7 @@ async fn export_reading_completions(
     repo: &LibraryRepository,
 ) -> Result<()> {
     // Determine which years have completion data.
-    let year_periods = reading::available_periods(
+    let year_periods = statistics::available_periods(
         reading_data,
         ReadingAvailablePeriodsQuery {
             scope: ContentTypeFilter::All,
@@ -461,7 +461,7 @@ async fn export_reading_completions(
 
         // Export with scope=all, group_by=month, all includes.
         // The StaticApiClient filters by scope and trims includes client-side.
-        let data = reading::completions(
+        let data = statistics::completions(
             reading_data,
             repo,
             ReadingCompletionsQuery {

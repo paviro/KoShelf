@@ -1,4 +1,4 @@
-use crate::models::{Annotation, BookStatus, DocProps, KoReaderMetadata, Stats, Summary};
+use crate::shelf::models::{Annotation, BookStatus, DocProps, KoReaderMetadata, Stats, Summary};
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use mlua::{Lua, Table, Value};

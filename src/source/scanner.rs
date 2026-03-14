@@ -3,7 +3,7 @@
 //! Stripped to pure path discovery — all parsing, metadata resolution, and
 //! cover generation now live in `runtime::ingest::library`.
 
-use crate::models::LibraryItemFormat;
+use crate::shelf::models::LibraryItemFormat;
 use log::{info, warn};
 use std::path::PathBuf;
 

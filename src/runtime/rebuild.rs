@@ -5,10 +5,10 @@
 
 use crate::app::config::SiteConfig;
 use crate::contracts::site::{SiteCapabilities, SiteData};
-use crate::models::LibraryItemFormat;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::{ingest_paths, load_reading_data};
 use crate::runtime::media::{self, resolve_media_dirs};
+use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::{MetadataLocation, collect_paths};
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;

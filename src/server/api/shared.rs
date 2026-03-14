@@ -12,12 +12,12 @@ use serde::Deserialize;
 
 use crate::contracts::common::{ContentTypeFilter, MonthKey, YearKey};
 use crate::contracts::error::{ApiErrorCode, ApiErrorResponse};
-use crate::domain::library::queries::{IncludeSet, ItemSort, SortOrder};
-use crate::domain::reading::queries::{
+use crate::server::ServerState;
+use crate::shelf::library::queries::{IncludeSet, ItemSort, SortOrder};
+use crate::shelf::statistics::queries::{
     self as rq, CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange,
     MetricsGroupBy, PeriodGroupBy, PeriodSource, ReadingScope,
 };
-use crate::server::ServerState;
 use crate::store::memory::ReadingData;
 
 // ── Query params ────────────────────────────────────────────────────────────

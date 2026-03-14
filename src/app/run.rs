@@ -7,6 +7,7 @@ use crate::runtime::ingest::{load_reading_data, update_library};
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::recap::generate_recap_share_images;
 use crate::server::WebServer;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
@@ -15,7 +16,6 @@ use crate::store::memory::{ReadingDataStore, SiteStore, UpdateNotifier};
 use crate::store::sqlite::migrations::run_library_migrations;
 use crate::store::sqlite::pool::open_library_pool;
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;
 use std::collections::HashSet;

@@ -4,15 +4,13 @@ use std::collections::BTreeMap;
 
 use chrono::NaiveDate;
 
+use super::compute::scaling::PageScaling;
+use super::queries::{DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery};
+use super::shared;
 use crate::contracts::reading::{PeriodEntry, ReadingAvailablePeriodsData};
-use crate::domain::reading::queries::{
-    DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery,
-};
-use crate::domain::reading::scaling::PageScaling;
-use crate::domain::reading::shared;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::StatisticsData;
 use crate::store::memory::ReadingData;
-use crate::time_config::TimeConfig;
 
 /// Compute the available-periods response from reading data and a validated query.
 pub fn available_periods(
@@ -120,9 +118,7 @@ fn reading_data_periods(
                 start_date,
                 end_date,
                 reading_time_sec: Some(bucket.reading_time_sec),
-                pages_read: Some(crate::domain::reading::scaling::round_pages(
-                    bucket.scaled_pages,
-                )),
+                pages_read: Some(super::compute::scaling::round_pages(bucket.scaled_pages)),
                 completions: Some(bucket.completions),
             }
         })
@@ -133,7 +129,7 @@ fn reading_data_periods(
 fn completions_periods(
     stats: &StatisticsData,
     group_by: PeriodGroupBy,
-    range: Option<&crate::domain::reading::queries::DateRange>,
+    range: Option<&super::queries::DateRange>,
 ) -> Vec<PeriodEntry> {
     let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
 

@@ -2,18 +2,18 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::NaiveDate;
 
+use super::compute::scaling::PageScaling;
+use super::queries::ReadingCalendarQuery;
+use super::shared;
 use crate::contracts::reading::{
     CalendarItemRef, CalendarScopeStats, CalendarStatsByScope, ReadingCalendarData,
     ReadingCalendarEvent,
 };
-use crate::domain::reading::queries::ReadingCalendarQuery;
-use crate::domain::reading::scaling::PageScaling;
-use crate::domain::reading::shared;
-use crate::models::ContentType;
+use crate::shelf::models::ContentType;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{PageStat, StatisticsData};
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::time_config::TimeConfig;
 
 /// Compute the calendar response for a specific month from reading data.
 pub async fn reading_calendar(
@@ -136,7 +136,7 @@ fn compute_scope_stats(
         total_time += ps.duration;
     }
 
-    let total_pages = super::scaling::round_pages(scaled_pages);
+    let total_pages = super::compute::scaling::round_pages(scaled_pages);
 
     let active_days_percentage = if days_in_month > 0 {
         (unique_dates.len() as f64 / days_in_month as f64 * 100.0).round() as u8
@@ -258,7 +258,7 @@ struct DayAccumulator {
 
 impl DayAccumulator {
     fn pages_read(&self) -> i64 {
-        super::scaling::round_pages(self.scaled_pages)
+        super::compute::scaling::round_pages(self.scaled_pages)
     }
 }
 
@@ -349,7 +349,7 @@ fn event_overlaps_month(
 mod tests {
     use super::*;
     use crate::contracts::common::ContentTypeFilter;
-    use crate::domain::reading::PageScaling;
+    use crate::shelf::statistics::PageScaling;
     use crate::source::koreader::types::{PageStat, StatBook, StatisticsData};
 
     fn make_stats_data(books: Vec<StatBook>, page_stats: Vec<PageStat>) -> StatisticsData {

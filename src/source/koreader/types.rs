@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::models::ContentType;
+use crate::shelf::models::ContentType;
 
 // ── Completions ──────────────────────────────────────────────────────────
 

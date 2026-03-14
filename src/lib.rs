@@ -5,17 +5,14 @@
 
 pub mod app;
 pub mod contracts;
-pub mod domain;
 pub mod i18n;
 pub mod infra;
-pub mod models;
 pub mod runtime;
 pub mod server;
 pub mod share;
+pub mod shelf;
 pub mod source;
 pub mod store;
-pub mod time_config;
-pub mod utils;
 
 pub use app::Cli;
 pub use app::run;

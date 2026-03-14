@@ -4,7 +4,7 @@
 //! tagging and library-item filtering.
 
 use crate::app::config::SiteConfig;
-use crate::domain::reading::{PageScaling, StatisticsCalculator};
+use crate::shelf::statistics::{PageScaling, StatisticsCalculator};
 use crate::source::koreader::StatisticsParser;
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;

@@ -20,9 +20,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::app::config::SiteConfig;
-use crate::domain::library::upsert_single_item;
-use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::runtime::media;
+use crate::shelf::library::upsert_single_item;
+use crate::shelf::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};
 use crate::source::koreader::{LuaParser, calculate_partial_md5};
 use crate::source::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};

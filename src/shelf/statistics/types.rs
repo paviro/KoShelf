@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::ContentType;
+use crate::shelf::models::ContentType;
 
 // ── Calendar types ───────────────────────────────────────────────────────
 

@@ -111,7 +111,7 @@ fn test_parse_koreader_generated_metadata() {
     // Verify summary
     let summary = metadata.summary.expect("summary should be present");
     assert_eq!(summary.rating, Some(4));
-    assert_eq!(summary.status, crate::models::BookStatus::Reading);
+    assert_eq!(summary.status, crate::shelf::models::BookStatus::Reading);
 
     // Verify annotation
     assert_eq!(metadata.annotations.len(), 1);

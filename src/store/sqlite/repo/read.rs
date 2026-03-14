@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 
 use crate::contracts::library::{LibraryAnnotation, LibraryDetailItem, LibraryListItem};
-use crate::domain::library::queries::LibraryListQuery;
-use crate::models::ContentType;
+use crate::shelf::library::queries::LibraryListQuery;
+use crate::shelf::models::ContentType;
 
 use super::LibraryRepository;
 use super::rows::FingerprintRow;
@@ -232,7 +232,7 @@ impl LibraryRepository {
 mod tests {
     use super::super::tests::{sample_annotation, sample_item, test_repo};
     use crate::contracts::common::ContentTypeFilter;
-    use crate::domain::library::queries::{ItemSort, LibraryListQuery};
+    use crate::shelf::library::queries::{ItemSort, LibraryListQuery};
 
     #[tokio::test]
     async fn get_item_returns_none_for_missing_id() {

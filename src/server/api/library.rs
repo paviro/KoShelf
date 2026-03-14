@@ -5,8 +5,8 @@ use axum::{
 };
 
 use crate::contracts::common::ApiResponse;
-use crate::domain::library::{self, LibraryDetailQuery, LibraryListQuery};
 use crate::server::ServerState;
+use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
 
 use super::shared::{
     ApiResponseError, ApiResult, DetailQuery, ScopeQuery, parse_include, parse_item_sort,

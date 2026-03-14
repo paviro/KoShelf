@@ -1,6 +1,6 @@
 use crate::app::config::SiteConfig;
-use crate::models::LibraryItemFormat;
 use crate::runtime::rebuild::targeted_rebuild;
+use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::MetadataLocation;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;

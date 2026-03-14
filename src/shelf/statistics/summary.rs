@@ -4,14 +4,14 @@ use std::collections::HashMap;
 
 use chrono::NaiveDate;
 
-use super::sessions;
+use super::compute::sessions;
+use super::queries::ReadingSummaryQuery;
+use super::shared;
 use crate::contracts::reading::{
     HeatmapConfig, ReadingOverview, ReadingStreaks, ReadingSummaryData, ResolvedRange, StreakData,
 };
-use crate::domain::reading::queries::ReadingSummaryQuery;
-use crate::domain::reading::shared;
+use crate::shelf::time_config::TimeConfig;
 use crate::store::memory::ReadingData;
-use crate::time_config::TimeConfig;
 
 /// Compute the full summary response from reading data and a validated query.
 pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> ReadingSummaryData {
@@ -44,7 +44,7 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
 
     let daily_page_reads: HashMap<NaiveDate, i64> = daily_scaled_pages
         .iter()
-        .map(|(&date, &v)| (date, super::scaling::round_pages(v)))
+        .map(|(&date, &v)| (date, super::compute::scaling::round_pages(v)))
         .collect();
     let total_page_reads: i64 = daily_page_reads.values().sum();
 

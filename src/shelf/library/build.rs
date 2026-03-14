@@ -8,9 +8,9 @@ use anyhow::{Context, Result};
 use std::path::Path;
 
 use super::item_mapping::{capture_fingerprint_row, map_annotations_to_rows, map_item_to_row};
-use crate::models::LibraryItem;
+use crate::shelf::models::LibraryItem;
+use crate::shelf::time_config::TimeConfig;
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::time_config::TimeConfig;
 
 /// Upsert a single library item (row + annotations + fingerprint).
 ///

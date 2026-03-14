@@ -4,9 +4,9 @@ use chrono::{Datelike, NaiveDate};
 
 use crate::contracts::common::ContentTypeFilter;
 use crate::contracts::library::LibraryContentType;
-use crate::models::ContentType;
+use crate::shelf::models::ContentType;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{PageStat, StatisticsData};
-use crate::time_config::TimeConfig;
 
 /// Build a `TimeConfig` with an optional per-request timezone override.
 pub fn resolve_time_config(base: &TimeConfig, tz_override: Option<chrono_tz::Tz>) -> TimeConfig {

@@ -3,9 +3,9 @@
 //! Reading endpoints compute responses on demand from this data,
 //! applying scope, date-range, and timezone filters at request time.
 
-use crate::domain::reading::PageScaling;
+use crate::shelf::statistics::PageScaling;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::StatisticsData;
-use crate::time_config::TimeConfig;
 use std::sync::{Arc, RwLock};
 
 /// Bundle of statistics data and time configuration used by reading

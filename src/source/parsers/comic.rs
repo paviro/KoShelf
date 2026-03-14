@@ -1,5 +1,5 @@
-use crate::models::BookInfo;
-use crate::utils::sanitize_html;
+use crate::shelf::models::BookInfo;
+use crate::shelf::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use quick_xml::Reader;

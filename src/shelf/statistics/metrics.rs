@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, HashMap};
 
 use chrono::{Datelike, NaiveDate};
 
+use super::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
+use super::shared;
 use crate::contracts::reading::{MetricPoint, ReadingMetricsData};
-use crate::domain::reading::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
-use crate::domain::reading::shared;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::PageStat;
 use crate::store::memory::ReadingData;
-use crate::time_config::TimeConfig;
 
 /// Default time gap that separates two reading events into different sessions (seconds).
 const SESSION_GAP_SECONDS: i64 = 300;
@@ -66,7 +66,7 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
                 }
                 scaled
                     .into_iter()
-                    .map(|(k, v)| (k, crate::domain::reading::scaling::round_pages(v)))
+                    .map(|(k, v)| (k, super::compute::scaling::round_pages(v)))
                     .collect()
             }
             ReadingMetric::Sessions => {

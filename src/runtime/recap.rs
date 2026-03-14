@@ -5,14 +5,14 @@
 //! only generates the visual share assets.
 
 use crate::contracts::library::LibraryContentType;
-use crate::domain::reading::StatisticsCalculator;
-use crate::domain::reading::scaling::PageScaling;
-use crate::domain::reading::types::{MonthRecap, RecapItem, YearlySummary};
-use crate::models::ContentType;
 use crate::share::{ShareFormat, ShareImageData, generate_share_image};
+use crate::shelf::models::ContentType;
+use crate::shelf::statistics::StatisticsCalculator;
+use crate::shelf::statistics::compute::scaling::PageScaling;
+use crate::shelf::statistics::types::{MonthRecap, RecapItem, YearlySummary};
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::time_config::TimeConfig;
 use anyhow::Result;
 use chrono::Datelike;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -229,7 +229,7 @@ fn compute_yearly_summary(
         .collect();
 
     let all_sessions =
-        crate::domain::reading::sessions::aggregate_session_durations(&year_page_stats);
+        crate::shelf::statistics::compute::sessions::aggregate_session_durations(&year_page_stats);
     let session_count = all_sessions.len() as i64;
     let longest_session_duration = all_sessions.iter().max().copied().unwrap_or(0);
     let average_session_duration = if session_count > 0 {

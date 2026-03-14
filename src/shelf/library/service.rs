@@ -2,16 +2,16 @@
 
 use anyhow::Result;
 
+use super::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::contracts::library::{
     LibraryCompletionEntry, LibraryCompletions, LibraryDetailData, LibraryDetailStatistics,
     LibraryItemStats, LibraryListData, LibrarySessionStats,
 };
-use crate::domain::library::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
-use crate::domain::reading::BookStatistics;
+use crate::shelf::statistics::BookStatistics;
+use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{BookSessionStats, StatBook};
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::time_config::TimeConfig;
 
 /// Fetch a filtered, sorted list of library items.
 pub async fn list(repo: &LibraryRepository, query: LibraryListQuery) -> Result<LibraryListData> {

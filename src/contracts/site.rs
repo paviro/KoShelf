@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::LibraryItem;
+use crate::shelf::models::LibraryItem;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SiteCapabilities {
