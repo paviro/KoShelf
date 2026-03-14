@@ -42,8 +42,6 @@
     - [From KoReader Metadata](#from-koreader-metadata)
     - [From KoReader Statistics Database](#from-koreader-statistics-database-statisticssqlite3)
 - [API Shape](#api-shape)
-    - [Content Type Filter](#content-type-filter)
-    - [Model Resources](#model-resources)
 - [Generated Site Structure](#generated-site-structure)
 - [Credits](#credits)
 - [Disclaimer](#disclaimer)
@@ -463,27 +461,23 @@ Note: **Windows builds support CBZ only** (CBR/RAR is not supported).
 
 ## API Shape
 
-KoShelf uses a model-centric API with two domains: **library** (items) and **reading** (statistics, calendar, completions).
+KoShelf uses a model-centric API with two domains: **library** (items) and **reading** (statistics, calendar, completions). All responses are wrapped in a standard `ApiResponse<T>` envelope with `data` and `meta` fields.
 
-### Scope Filter
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/site` | Site metadata and capabilities |
+| `GET /api/items` | Library list (supports `scope`, `sort`, `order`) |
+| `GET /api/items/{id}` | Item detail (supports `include=highlights,bookmarks,statistics,completions,all`) |
+| `GET /api/reading/summary` | Reading time and session aggregates |
+| `GET /api/reading/metrics` | Time-series data points (daily/weekly/monthly/yearly) |
+| `GET /api/reading/available-periods` | Available time periods for selectors |
+| `GET /api/reading/calendar` | Monthly calendar with events and stats |
+| `GET /api/reading/completions` | Book completion records with optional summary and share assets |
+| `GET /api/events/stream` | SSE stream for live data invalidation |
 
-- Optional query parameter: `scope`
-- Supported values: `all` (default), `books`, `comics`
-- Applied uniformly across library and reading endpoints
+Most endpoints accept a `scope` filter (`all`, `books`, `comics`) and reading endpoints support `from`/`to` date ranges and `tz` timezone parameters.
 
-### Endpoints
-
-- `GET /api/site`
-- `GET /api/items` — library list (supports `scope`, `sort`, `order`)
-- `GET /api/items/{id}` — item detail (supports `include=highlights,bookmarks,statistics,completions,all`)
-- `GET /api/reading/summary` — reading time and session aggregates
-- `GET /api/reading/metrics` — time-series data points (daily/weekly/monthly)
-- `GET /api/reading/available-periods` — available time periods for selectors
-- `GET /api/reading/calendar` — monthly calendar with events and stats
-- `GET /api/reading/completions` — book completion records with optional summary and share assets
-- `GET /api/events/stream` — SSE stream for live data invalidation
-
-`GET /api/site` includes the server's default `language`. The frontend uses this as the initial locale, but users can override language/region in Settings and that preference is stored per browser.
+For full parameter documentation, response schemas, and examples, see the **[API Reference](docs/API.md)**.
 
 In static output mode, equivalent data is exported as flat JSON files under `data/`.
 
