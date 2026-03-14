@@ -10,7 +10,7 @@ use super::pool::LIBRARY_DB_REQUIRED_TABLES;
 /// database is reset and migrations are re-applied from scratch.  This is safe
 /// because the library DB is a rebuild-on-change cache.
 pub async fn run_library_migrations(pool: &SqlitePool) -> Result<()> {
-    let migrator = sqlx::migrate!("src/infra/sqlite/migrations/library");
+    let migrator = sqlx::migrate!("src/store/sqlite/migrations/library");
 
     match migrator.run(pool).await {
         Ok(()) => Ok(()),

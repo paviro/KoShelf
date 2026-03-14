@@ -8,9 +8,9 @@ const WEBP_QUALITY: f32 = 85.0;
 const WEBP_METHOD: i32 = 1;
 
 // Embed SVG templates at compile time
-const STORY_TEMPLATE: &str = include_str!("../../assets/share_story.svg");
-const SQUARE_TEMPLATE: &str = include_str!("../../assets/share_square.svg");
-const BANNER_TEMPLATE: &str = include_str!("../../assets/share_banner.svg");
+const STORY_TEMPLATE: &str = include_str!("../../../assets/share_story.svg");
+const SQUARE_TEMPLATE: &str = include_str!("../../../assets/share_square.svg");
+const BANNER_TEMPLATE: &str = include_str!("../../../assets/share_banner.svg");
 
 // Embed fonts at compile time for cross-platform consistency
 const FONT_REGULAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Regular.ttf"));

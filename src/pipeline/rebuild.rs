@@ -4,9 +4,9 @@
 //! the watcher module is limited to event setup, debouncing, and dispatch.
 
 use crate::app::config::SiteConfig;
-use crate::runtime::export::{ExportConfig, export_data_files};
-use crate::runtime::ingest::{ingest_paths, load_reading_data};
-use crate::runtime::media::{self, resolve_media_dirs};
+use crate::pipeline::export::{ExportConfig, export_data_files};
+use crate::pipeline::ingest::{ingest_paths, load_reading_data};
+use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::{MetadataLocation, collect_paths};

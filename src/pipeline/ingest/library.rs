@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::app::config::SiteConfig;
-use crate::runtime::media;
+use crate::pipeline::media;
 use crate::shelf::library::upsert_single_item;
 use crate::shelf::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};

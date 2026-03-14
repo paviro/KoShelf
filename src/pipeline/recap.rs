@@ -4,8 +4,8 @@
 //! The reading domain service handles completion data on demand — this module
 //! only generates the visual share assets.
 
+use crate::pipeline::share::{ShareFormat, ShareImageData, generate_share_image};
 use crate::server::api::responses::library::LibraryContentType;
-use crate::share::{ShareFormat, ShareImageData, generate_share_image};
 use crate::shelf::models::ContentType;
 use crate::shelf::statistics::StatisticsCalculator;
 use crate::shelf::statistics::compute::scaling::PageScaling;

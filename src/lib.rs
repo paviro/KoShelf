@@ -5,10 +5,8 @@
 
 pub mod app;
 pub mod i18n;
-pub mod infra;
-pub mod runtime;
+pub mod pipeline;
 pub mod server;
-pub mod share;
 pub mod shelf;
 pub mod source;
 pub mod store;

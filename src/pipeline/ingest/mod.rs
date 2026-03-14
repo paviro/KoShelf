@@ -3,11 +3,11 @@
 //! `library` handles parsing book files, deduplicating via the DB, persisting
 //! items, and generating covers — all one item at a time with no bulk vectors.
 //!
-//! `stats` loads the KOReader statistics database and tags entries using
+//! `statistics` loads the KOReader statistics database and tags entries using
 //! DB queries rather than in-memory item collections.
 
 pub mod library;
-pub mod stats;
+pub mod statistics;
 
 pub use library::{IngestStats, UpdateResult, ingest_paths, update_library};
-pub use stats::load_reading_data;
+pub use statistics::load_reading_data;
