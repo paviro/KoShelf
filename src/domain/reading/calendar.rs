@@ -153,6 +153,11 @@ fn compute_scope_stats(
 }
 
 /// Build scope-filtered events and item reference map for the month.
+///
+/// Events are built from the entire reading history so that streaks spanning
+/// month boundaries remain intact. Only events that overlap [month_from,
+/// month_to] are included in the result (cloned in full, matching old
+/// behaviour where a cross-month event appears identically in both months).
 async fn build_events_and_items(
     stats_data: &StatisticsData,
     time_config: &TimeConfig,
@@ -165,21 +170,17 @@ async fn build_events_and_items(
     let book_by_id: HashMap<i64, &crate::koreader::types::StatBook> =
         stats_data.books.iter().map(|b| (b.id, b)).collect();
 
-    // Group page stats by book, filter to month range.
+    // Group ALL page stats by book — no month filtering here.
+    // Events are built from full history, then filtered to the requested month.
     let mut stats_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
     for ps in &stats_data.page_stats {
         if ps.duration <= 0 {
             continue;
         }
-        let date = time_config.date_for_timestamp(ps.start_time);
-        if date < month_from || date > month_to {
-            continue;
-        }
         stats_by_book.entry(ps.id_book).or_default().push(ps);
     }
 
-    let mut events = Vec::new();
-    let mut items: BTreeMap<String, CalendarItemRef> = BTreeMap::new();
+    let mut all_events = Vec::new();
 
     for (book_id, page_stats) in &stats_by_book {
         let stat_book = match book_by_id.get(book_id) {
@@ -187,27 +188,6 @@ async fn build_events_and_items(
             None => continue,
         };
         let item_ref_key = stat_book.md5.clone();
-
-        // Ensure item reference exists.
-        if !items.contains_key(&item_ref_key) {
-            let item_cover = repo
-                .get_item(&stat_book.md5)
-                .await
-                .ok()
-                .flatten()
-                .map(|detail| detail.cover_url);
-
-            items.insert(
-                item_ref_key.clone(),
-                CalendarItemRef {
-                    title: stat_book.title.clone(),
-                    authors: shared::parse_authors(&stat_book.authors),
-                    content_type: shared::to_library_content_type(stat_book.content_type),
-                    item_id: Some(stat_book.md5.clone()),
-                    item_cover,
-                },
-            );
-        }
 
         // Group page stats by day — accumulate pages as float, round per day.
         let mut by_day: BTreeMap<NaiveDate, DayAccumulator> = BTreeMap::new();
@@ -220,10 +200,44 @@ async fn build_events_and_items(
 
         // Merge consecutive days into event spans.
         let days: Vec<NaiveDate> = by_day.keys().copied().collect();
-        merge_into_events(&mut events, &item_ref_key, &days, &by_day);
+        merge_into_events(&mut all_events, &item_ref_key, &days, &by_day);
+    }
+
+    // Keep only events that overlap [month_from, month_to].
+    let events: Vec<ReadingCalendarEvent> = all_events
+        .into_iter()
+        .filter(|ev| event_overlaps_month(ev, month_from, month_to))
+        .collect();
+
+    // Build item references only for books present in filtered events.
+    let mut items: BTreeMap<String, CalendarItemRef> = BTreeMap::new();
+    for ev in &events {
+        if items.contains_key(&ev.item_ref) {
+            continue;
+        }
+        if let Some(stat_book) = stats_data.stats_by_md5.get(&ev.item_ref) {
+            let item_cover = repo
+                .get_item(&stat_book.md5)
+                .await
+                .ok()
+                .flatten()
+                .map(|detail| detail.cover_url);
+
+            items.insert(
+                ev.item_ref.clone(),
+                CalendarItemRef {
+                    title: stat_book.title.clone(),
+                    authors: shared::parse_authors(&stat_book.authors),
+                    content_type: shared::to_library_content_type(stat_book.content_type),
+                    item_id: Some(stat_book.md5.clone()),
+                    item_cover,
+                },
+            );
+        }
     }
 
     // Sort events deterministically: by start date, then by item title for stability.
+    let mut events = events;
     events.sort_by(|a, b| {
         a.start.cmp(&b.start).then_with(|| {
             let title_a = items
@@ -315,6 +329,25 @@ fn make_event(
         reading_time_sec,
         pages_read,
     }
+}
+
+/// Check whether an event overlaps the [month_from, month_to] range.
+fn event_overlaps_month(
+    ev: &ReadingCalendarEvent,
+    month_from: NaiveDate,
+    month_to: NaiveDate,
+) -> bool {
+    let ev_start =
+        NaiveDate::parse_from_str(&ev.start, "%Y-%m-%d").expect("valid event start date");
+    let ev_end = match ev.end {
+        Some(ref end_str) => {
+            // `end` is exclusive (day after last reading day), so subtract 1.
+            NaiveDate::parse_from_str(end_str, "%Y-%m-%d").expect("valid event end date")
+                - chrono::Duration::days(1)
+        }
+        None => ev_start, // single-day event
+    };
+    ev_start <= month_to && ev_end >= month_from
 }
 
 #[cfg(test)]
@@ -499,10 +532,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn page_stats_outside_month_are_excluded() {
+    async fn non_overlapping_events_outside_month_are_excluded() {
         let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
-        // 2026-02-28 (outside March)
+        // 2026-02-28 (outside March, non-consecutive with Mar 10 → separate event)
         let ps_outside = make_page_stat(1, 1773100800 - 86400 * 10, 999);
         // 2026-03-10 (inside March)
         let ps_inside = make_page_stat(1, 1773100800, 100);
@@ -517,5 +550,42 @@ mod tests {
         assert_eq!(result.events.len(), 1);
         assert_eq!(result.events[0].reading_time_sec, 100);
         assert_eq!(result.stats_by_scope.all.reading_time_sec, 100);
+    }
+
+    #[tokio::test]
+    async fn cross_month_event_cloned_into_both_months() {
+        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
+        // 2026-02-28 00:00:00 UTC = 1772236800
+        let ps_feb = make_page_stat(1, 1772236800, 200);
+        // 2026-03-01 00:00:00 UTC = 1772236800 + 86400
+        let ps_mar = make_page_stat(1, 1772236800 + 86400, 300);
+        let reading_data = make_reading_data(make_stats_data(vec![book], vec![ps_feb, ps_mar]));
+
+        // Query March: the cross-month event should appear with full stats.
+        let query_mar = ReadingCalendarQuery {
+            month: "2026-03".to_string(),
+            scope: ContentTypeFilter::All,
+            tz: None,
+        };
+        let result_mar = reading_calendar(&reading_data, &repo, query_mar).await;
+        assert_eq!(result_mar.events.len(), 1);
+        assert_eq!(result_mar.events[0].start, "2026-02-28");
+        assert_eq!(result_mar.events[0].end, Some("2026-03-02".to_string()));
+        assert_eq!(result_mar.events[0].reading_time_sec, 500);
+        assert_eq!(result_mar.events[0].pages_read, 2);
+
+        // Query February: the same cross-month event should appear identically.
+        let query_feb = ReadingCalendarQuery {
+            month: "2026-02".to_string(),
+            scope: ContentTypeFilter::All,
+            tz: None,
+        };
+        let result_feb = reading_calendar(&reading_data, &repo, query_feb).await;
+        assert_eq!(result_feb.events.len(), 1);
+        assert_eq!(result_feb.events[0].start, "2026-02-28");
+        assert_eq!(result_feb.events[0].end, Some("2026-03-02".to_string()));
+        assert_eq!(result_feb.events[0].reading_time_sec, 500);
+        assert_eq!(result_feb.events[0].pages_read, 2);
     }
 }
