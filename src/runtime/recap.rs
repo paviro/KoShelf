@@ -9,9 +9,9 @@ use crate::domain::reading::StatisticsCalculator;
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::types::{MonthRecap, RecapItem, YearlySummary};
 use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
 use crate::models::ContentType;
 use crate::share::{ShareFormat, ShareImageData, generate_share_image};
+use crate::source::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
 use crate::time_config::TimeConfig;
 use anyhow::Result;
 use chrono::Datelike;
@@ -521,7 +521,7 @@ pub async fn generate_recap_share_images(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::koreader::types::StreakInfo;
+    use crate::source::koreader::types::StreakInfo;
 
     // ── Recap summary tests ─────────────────────────────────────────────
 

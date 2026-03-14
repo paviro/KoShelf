@@ -79,7 +79,7 @@ fn test_parse_koreader_generated_metadata() {
     let test_file = temp_dir.path().join("metadata.epub.lua");
     std::fs::write(&test_file, &lua_output).unwrap();
 
-    let parser = crate::koreader::LuaParser::new();
+    let parser = crate::source::koreader::LuaParser::new();
     let metadata = parser
         .parse(&test_file)
         .expect("Failed to parse KoReader-generated metadata");

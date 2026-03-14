@@ -1,7 +1,7 @@
 //! Site configuration module - bundles generator/watcher configuration.
 
 use crate::infra::lifecycle::RuntimeDataPolicy;
-use crate::infra::scanner::MetadataLocation;
+use crate::source::scanner::MetadataLocation;
 use crate::time_config::TimeConfig;
 use std::path::PathBuf;
 

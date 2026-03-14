@@ -21,16 +21,16 @@ use std::time::Instant;
 
 use crate::app::config::SiteConfig;
 use crate::domain::library::upsert_single_item;
-use crate::infra::scanner::{MetadataLocation, collect_paths};
-use crate::infra::sources::{
+use crate::infra::sqlite::library_repo::LibraryRepository;
+use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
+use crate::runtime::media;
+use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};
+use crate::source::koreader::{LuaParser, calculate_partial_md5};
+use crate::source::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
+use crate::source::scanner::{MetadataLocation, collect_paths};
+use crate::source::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::koreader::merge_precedence::{normalize_partial_md5, resolve_canonical_partial_md5};
-use crate::koreader::{LuaParser, calculate_partial_md5};
-use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
-use crate::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
-use crate::runtime::media;
 
 // ── Ingest stats ────────────────────────────────────────────────────────
 

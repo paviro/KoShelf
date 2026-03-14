@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use super::completions::{CompletionConfig, ReadCompletionDetector};
 use super::sessions;
-use crate::koreader::types::{
+use crate::source::koreader::types::{
     BookSessionStats, DailyStats, PageStat, ReadingStats, StatBook, StatisticsData, StreakInfo,
     WeeklyStats,
 };

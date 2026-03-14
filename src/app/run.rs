@@ -4,7 +4,6 @@ use crate::contracts::site::{SiteCapabilities, SiteData};
 use crate::infra::lifecycle::{
     RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
-use crate::infra::scanner::MetadataLocation;
 use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
@@ -15,6 +14,7 @@ use crate::runtime::ingest::{load_reading_data, update_library};
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::recap::generate_recap_share_images;
 use crate::server::WebServer;
+use crate::source::scanner::MetadataLocation;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;

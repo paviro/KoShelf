@@ -1,6 +1,6 @@
 use super::lua_mocks::compose_lua_mocks;
 use super::*;
-use crate::koreader::StatisticsParser;
+use crate::source::koreader::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Executor, Row, SqlitePool};

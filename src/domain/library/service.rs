@@ -10,7 +10,7 @@ use crate::domain::library::queries::{IncludeToken, LibraryDetailQuery, LibraryL
 use crate::domain::reading::BookStatistics;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
-use crate::koreader::types::{BookSessionStats, StatBook};
+use crate::source::koreader::types::{BookSessionStats, StatBook};
 use crate::time_config::TimeConfig;
 
 /// Fetch a filtered, sorted list of library items.
@@ -86,7 +86,7 @@ pub async fn detail(
 
 /// Case-insensitive lookup into `stats_by_md5`.
 fn lookup_stat_book<'a>(
-    stats_data: &'a crate::koreader::types::StatisticsData,
+    stats_data: &'a crate::source::koreader::types::StatisticsData,
     md5: &str,
 ) -> Option<&'a StatBook> {
     stats_data
@@ -123,7 +123,9 @@ fn map_detail_statistics(
     }
 }
 
-fn map_completions(completions: &crate::koreader::types::BookCompletions) -> LibraryCompletions {
+fn map_completions(
+    completions: &crate::source::koreader::types::BookCompletions,
+) -> LibraryCompletions {
     LibraryCompletions {
         entries: completions
             .entries

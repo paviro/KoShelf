@@ -4,7 +4,7 @@
 //! applying scope, date-range, and timezone filters at request time.
 
 use crate::domain::reading::PageScaling;
-use crate::koreader::types::StatisticsData;
+use crate::source::koreader::types::StatisticsData;
 use crate::time_config::TimeConfig;
 use std::sync::{Arc, RwLock};
 

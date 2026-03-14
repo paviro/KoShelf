@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use crate::koreader::types::StatisticsData;
+use crate::source::koreader::types::StatisticsData;
 
 /// Scaling factors for converting rendered page numbers to synthetic stable-page
 /// equivalents used by KOReader.

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use super::koreader_metadata::KoReaderMetadata;
-use crate::koreader::merge_precedence::{resolve_language, resolve_page_total};
+use crate::source::koreader::merge::{resolve_language, resolve_page_total};
 
 /// Content type classification (broad category)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

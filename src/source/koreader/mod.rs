@@ -1,8 +1,8 @@
-//! KoReader integration: metadata parsing and statistics database access.
+//! KOReader integration: metadata parsing and statistics database access.
 
 pub mod database;
 pub mod lua;
-pub(crate) mod merge_precedence;
+pub(crate) mod merge;
 pub mod partial_md5;
 pub mod types;
 

@@ -8,12 +8,11 @@ pub mod contracts;
 pub mod domain;
 pub mod i18n;
 pub mod infra;
-pub mod koreader;
 pub mod models;
-pub mod parsers;
 pub mod runtime;
 pub mod server;
 pub mod share;
+pub mod source;
 pub mod time_config;
 pub mod utils;
 

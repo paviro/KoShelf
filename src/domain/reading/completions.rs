@@ -50,7 +50,9 @@ use crate::domain::reading::queries::{
 use crate::domain::reading::shared;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
-use crate::koreader::types::{BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData};
+use crate::source::koreader::types::{
+    BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData,
+};
 use crate::time_config::TimeConfig;
 
 /// Compute the completions response from reading data and a validated query.
@@ -737,7 +739,9 @@ mod tests {
     use crate::contracts::common::ContentTypeFilter;
     use crate::domain::reading::PageScaling;
     use crate::domain::reading::queries::{CompletionsIncludeSet, DateRange};
-    use crate::koreader::types::{BookCompletions, ReadCompletion, StatBook, StatisticsData};
+    use crate::source::koreader::types::{
+        BookCompletions, ReadCompletion, StatBook, StatisticsData,
+    };
 
     fn make_stats_data(books: Vec<StatBook>, page_stats: Vec<PageStat>) -> StatisticsData {
         let stats_by_md5 = books.iter().map(|b| (b.md5.clone(), b.clone())).collect();

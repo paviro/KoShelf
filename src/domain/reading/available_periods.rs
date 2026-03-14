@@ -11,7 +11,7 @@ use crate::domain::reading::queries::{
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::shared;
 use crate::infra::stores::ReadingData;
-use crate::koreader::types::StatisticsData;
+use crate::source::koreader::types::StatisticsData;
 use crate::time_config::TimeConfig;
 
 /// Compute the available-periods response from reading data and a validated query.

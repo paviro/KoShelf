@@ -7,7 +7,7 @@ use crate::app::config::SiteConfig;
 use crate::domain::reading::{PageScaling, StatisticsCalculator};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
-use crate::koreader::StatisticsParser;
+use crate::source::koreader::StatisticsParser;
 use anyhow::Result;
 use log::info;
 use std::collections::HashSet;

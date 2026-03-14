@@ -1,5 +1,5 @@
-use crate::koreader::types::{PageStat, StatBook, StatisticsData};
 use crate::models::{BookInfo, ContentType, KoReaderMetadata, LibraryItem, LibraryItemFormat};
+use crate::source::koreader::types::{PageStat, StatBook, StatisticsData};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
