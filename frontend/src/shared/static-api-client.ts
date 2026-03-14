@@ -105,6 +105,7 @@ export class StaticApiClient implements ApiClient {
             language: exported.default_language,
             capabilities: exported.capabilities,
             version: exported.version,
+            generated_at: exported.generated_at,
         };
     }
 

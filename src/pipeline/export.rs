@@ -35,6 +35,7 @@ use crate::store::sqlite::repo::LibraryRepository;
 struct ExportSite {
     name: String,
     version: String,
+    generated_at: String,
     default_language: String,
     capabilities: SiteCapabilities,
 }
@@ -139,6 +140,7 @@ pub async fn export_data_files(
         &ExportSite {
             name: config.site_title.clone(),
             version: env!("CARGO_PKG_VERSION").to_string(),
+            generated_at: chrono::Utc::now().to_rfc3339(),
             default_language: config.language.clone(),
             capabilities: SiteCapabilities {
                 has_books,

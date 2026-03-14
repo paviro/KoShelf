@@ -283,6 +283,7 @@ export interface LibraryDetailData {
 export interface ExportSite {
     name: string;
     version: string;
+    generated_at: string;
     default_language: string;
     capabilities: SiteCapabilities;
 }
