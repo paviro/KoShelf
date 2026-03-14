@@ -88,7 +88,10 @@ pub fn reading_completions(
 
     // Build groups or flat items based on group_by.
     let (groups, items) = match query.group_by {
-        CompletionsGroupBy::Month => (Some(build_month_groups(all_items)), None),
+        CompletionsGroupBy::Month => {
+            let month_reading_time = compute_month_reading_times(&stats, &time_config, range.as_ref());
+            (Some(build_month_groups(all_items, &month_reading_time)), None)
+        }
         CompletionsGroupBy::None => (None, Some(all_items)),
     };
 
@@ -192,8 +195,36 @@ fn collect_completion_items(
 
 // ── Grouping ────────────────────────────────────────────────────────────────
 
+/// Compute total reading time per month from all page stats (not just completed items).
+fn compute_month_reading_times(
+    stats: &StatisticsData,
+    time_config: &TimeConfig,
+    range: Option<&(NaiveDate, NaiveDate)>,
+) -> HashMap<String, i64> {
+    let mut month_times: HashMap<String, i64> = HashMap::new();
+    for ps in &stats.page_stats {
+        if ps.duration <= 0 {
+            continue;
+        }
+        let date = time_config.date_for_timestamp(ps.start_time);
+        if let Some((from, to)) = range
+            && (date < *from || date > *to)
+        {
+            continue;
+        }
+        let key = shared::bucket_key_month(date);
+        *month_times.entry(key).or_insert(0) += ps.duration;
+    }
+    month_times
+}
+
 /// Group completion items by their end-date month key (`YYYY-MM`).
-fn build_month_groups(items: Vec<CompletionItem>) -> Vec<CompletionGroup> {
+/// `month_reading_times` provides total reading time per month from all reading
+/// activity (not just completed items)
+fn build_month_groups(
+    items: Vec<CompletionItem>,
+    month_reading_times: &HashMap<String, i64>,
+) -> Vec<CompletionGroup> {
     let mut groups: BTreeMap<String, Vec<CompletionItem>> = BTreeMap::new();
 
     for item in items {
@@ -206,7 +237,7 @@ fn build_month_groups(items: Vec<CompletionItem>) -> Vec<CompletionGroup> {
         .into_iter()
         .map(|(key, group_items)| {
             let items_finished = group_items.len();
-            let reading_time_sec: i64 = group_items.iter().map(|i| i.reading_time_sec).sum();
+            let reading_time_sec = *month_reading_times.get(&key).unwrap_or(&0);
             CompletionGroup {
                 key,
                 items_finished,
