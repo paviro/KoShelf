@@ -71,11 +71,11 @@ export function StatisticsRoute() {
         });
 
     const availableYears = useMemo(
-        () => statsIndex?.available_years ?? [],
+        () => [...(statsIndex?.available_years ?? [])].reverse(),
         [statsIndex?.available_years],
     );
     const availableWeeks = useMemo(
-        () => statsIndex?.available_weeks ?? [],
+        () => [...(statsIndex?.available_weeks ?? [])].reverse(),
         [statsIndex?.available_weeks],
     );
 

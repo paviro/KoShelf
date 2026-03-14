@@ -54,7 +54,7 @@ export function RecapRoute() {
     });
     const recapIndex = recapIndexTransition.displayData;
     const availableYears = useMemo(
-        () => recapIndex?.available_years ?? [],
+        () => [...(recapIndex?.available_years ?? [])].reverse(),
         [recapIndex?.available_years],
     );
     const latestYear = resolveLatestYear(
