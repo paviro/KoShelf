@@ -55,7 +55,7 @@ export function YearlyStatsSection({
         () =>
             Array.from({ length: 12 }, (_, monthIndex) => {
                 const stats = yearlyMonthlyStats[monthIndex] ?? {
-                    read_time: 0,
+                    reading_time_sec: 0,
                     pages_read: 0,
                     active_days: 0,
                 };
