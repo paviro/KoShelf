@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::contracts::common::ContentTypeFilter;
-use crate::contracts::error::ApiErrorCode;
+use crate::api::responses::common::ContentTypeFilter;
+use crate::api::responses::error::ApiErrorCode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemSort {

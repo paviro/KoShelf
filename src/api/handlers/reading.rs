@@ -1,15 +1,16 @@
 use axum::{Json, extract::Query, extract::State, response::IntoResponse};
 
-use crate::contracts::common::ApiResponse;
-use crate::server::ServerState;
-use crate::shelf::statistics;
-
-use super::shared::{
-    ApiResponseError, ApiResult, ReadingAvailablePeriodsParams, ReadingCalendarParams,
-    ReadingCompletionsParams, ReadingDataGuard, ReadingMetricsParams, ReadingSummaryParams,
-    parse_reading_available_periods_query, parse_reading_calendar_query,
-    parse_reading_completions_query, parse_reading_metrics_query, parse_reading_summary_query,
+use crate::api::error::{ApiResponseError, ApiResult};
+use crate::api::extractors::ReadingDataGuard;
+use crate::api::params::{
+    ReadingAvailablePeriodsParams, ReadingCalendarParams, ReadingCompletionsParams,
+    ReadingMetricsParams, ReadingSummaryParams, parse_reading_available_periods_query,
+    parse_reading_calendar_query, parse_reading_completions_query, parse_reading_metrics_query,
+    parse_reading_summary_query,
 };
+use crate::api::responses::common::ApiResponse;
+use crate::api::server::ServerState;
+use crate::shelf::statistics;
 
 pub(crate) async fn reading_summary(
     reading_data: ReadingDataGuard,

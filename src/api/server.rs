@@ -1,5 +1,4 @@
-use super::ServerState;
-use super::api;
+use super::handlers;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
@@ -19,6 +18,14 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
+
+#[derive(Clone)]
+pub struct ServerState {
+    pub site_store: SharedSiteStore,
+    pub reading_data_store: SharedReadingDataStore,
+    pub update_notifier: UpdateNotifier,
+    pub library_repo: LibraryRepository,
+}
 
 /// Axum-based HTTP server serving the API, embedded React frontend, and media assets.
 pub struct WebServer {
@@ -62,18 +69,21 @@ impl WebServer {
 
         let mut app = Router::new()
             // API endpoints
-            .route("/api/site", get(api::site))
-            .route("/api/items", get(api::items))
-            .route("/api/items/{id}", get(api::item_detail))
-            .route("/api/reading/summary", get(api::reading_summary))
-            .route("/api/reading/metrics", get(api::reading_metrics))
+            .route("/api/site", get(handlers::site))
+            .route("/api/items", get(handlers::items))
+            .route("/api/items/{id}", get(handlers::item_detail))
+            .route("/api/reading/summary", get(handlers::reading_summary))
+            .route("/api/reading/metrics", get(handlers::reading_metrics))
             .route(
                 "/api/reading/available-periods",
-                get(api::reading_available_periods),
+                get(handlers::reading_available_periods),
             )
-            .route("/api/reading/calendar", get(api::reading_calendar))
-            .route("/api/reading/completions", get(api::reading_completions))
-            .route("/api/events/stream", get(api::events_stream))
+            .route("/api/reading/calendar", get(handlers::reading_calendar))
+            .route(
+                "/api/reading/completions",
+                get(handlers::reading_completions),
+            )
+            .route("/api/events/stream", get(handlers::events_stream))
             // Embedded React shell mounted at /.
             .route("/", get(react_shell_index_handler))
             .route("/index.html", get(react_shell_index_handler))

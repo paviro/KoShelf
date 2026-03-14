@@ -1,12 +1,12 @@
 use super::cli::{Cli, parse_time_to_seconds};
 use super::config::SiteConfig;
-use crate::contracts::site::{SiteCapabilities, SiteData};
+use crate::api::WebServer;
+use crate::api::responses::site::{SiteCapabilities, SiteData};
 use crate::infra::watcher::FileWatcher;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::{load_reading_data, update_library};
 use crate::runtime::media::{self, resolve_media_dirs};
 use crate::runtime::recap::generate_recap_share_images;
-use crate::server::WebServer;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::{

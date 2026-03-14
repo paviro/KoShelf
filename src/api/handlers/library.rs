@@ -4,14 +4,13 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::contracts::common::ApiResponse;
-use crate::server::ServerState;
-use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
-
-use super::shared::{
-    ApiResponseError, ApiResult, DetailQuery, ScopeQuery, parse_include, parse_item_sort,
-    parse_scope, parse_sort_order,
+use crate::api::error::{ApiResponseError, ApiResult};
+use crate::api::params::{
+    DetailQuery, ScopeQuery, parse_include, parse_item_sort, parse_scope, parse_sort_order,
 };
+use crate::api::responses::common::ApiResponse;
+use crate::api::server::ServerState;
+use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
 
 pub(crate) async fn items(
     State(state): State<ServerState>,

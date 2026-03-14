@@ -7,7 +7,7 @@ use chrono::NaiveDate;
 use super::compute::sessions;
 use super::queries::{CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery};
 use super::shared;
-use crate::contracts::reading::{
+use crate::api::responses::reading::{
     CompletionGroup, CompletionItem, CompletionsShareAssets, CompletionsSummary,
     ReadingCompletionsData,
 };
@@ -199,7 +199,7 @@ struct EnrichmentData {
 }
 
 /// Format a `LibrarySeries` as `"Name #Index"` or just `"Name"`.
-fn format_series(series: &crate::contracts::library::LibrarySeries) -> Option<String> {
+fn format_series(series: &crate::api::responses::library::LibrarySeries) -> Option<String> {
     if series.name.is_empty() {
         return None;
     }
@@ -377,7 +377,7 @@ fn compute_best_month(page_stats: &[PageStat], time_config: &TimeConfig) -> Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::contracts::common::ContentTypeFilter;
+    use crate::api::responses::common::ContentTypeFilter;
     use crate::shelf::statistics::compute::scaling::PageScaling;
     use crate::shelf::statistics::queries::{CompletionsIncludeSet, DateRange};
     use crate::source::koreader::types::{

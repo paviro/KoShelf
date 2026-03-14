@@ -2,8 +2,8 @@
 
 use chrono::{Datelike, NaiveDate};
 
-use crate::contracts::common::ContentTypeFilter;
-use crate::contracts::library::LibraryContentType;
+use crate::api::responses::common::ContentTypeFilter;
+use crate::api::responses::library::LibraryContentType;
 use crate::shelf::models::ContentType;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{PageStat, StatisticsData};

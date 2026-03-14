@@ -4,7 +4,7 @@
 //! `LibraryItem` model methods and produce flattened row types ready for
 //! SQLite upsert.  No I/O happens here.
 
-use crate::contracts::library::{ExternalIdentifier, LibrarySeries};
+use crate::api::responses::library::{ExternalIdentifier, LibrarySeries};
 use crate::shelf::models::{ContentType, LibraryItem, LibraryItemFormat};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::fingerprints::FileFingerprint;

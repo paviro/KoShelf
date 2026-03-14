@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 
-use crate::contracts::library::{LibraryAnnotation, LibraryDetailItem, LibraryListItem};
+use crate::api::responses::library::{LibraryAnnotation, LibraryDetailItem, LibraryListItem};
 use crate::shelf::library::queries::LibraryListQuery;
 use crate::shelf::models::ContentType;
 
@@ -231,7 +231,7 @@ impl LibraryRepository {
 #[cfg(test)]
 mod tests {
     use super::super::tests::{sample_annotation, sample_item, test_repo};
-    use crate::contracts::common::ContentTypeFilter;
+    use crate::api::responses::common::ContentTypeFilter;
     use crate::shelf::library::queries::{ItemSort, LibraryListQuery};
 
     #[tokio::test]

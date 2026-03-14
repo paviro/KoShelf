@@ -1,7 +1,6 @@
 mod events;
 mod library;
 mod reading;
-mod shared;
 mod site;
 
 pub(crate) use events::events_stream;

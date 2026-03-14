@@ -222,7 +222,7 @@ impl LibraryRepository {
 mod tests {
     use super::super::rows::CollisionDiagnosticRow;
     use super::super::tests::{sample_annotation, sample_fingerprint, sample_item, test_repo};
-    use crate::contracts::library::LibraryStatus;
+    use crate::api::responses::library::LibraryStatus;
 
     #[tokio::test]
     async fn upsert_and_get_item() {

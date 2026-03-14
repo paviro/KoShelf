@@ -4,8 +4,8 @@ use chrono::NaiveDate;
 use chrono_tz::Tz;
 use std::collections::HashSet;
 
-use crate::contracts::common::ContentTypeFilter;
-use crate::contracts::error::ApiErrorCode;
+use crate::api::responses::common::ContentTypeFilter;
+use crate::api::responses::error::ApiErrorCode;
 
 // ── Scope ─────────────────────────────────────────────────────────────────
 
