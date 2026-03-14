@@ -251,13 +251,19 @@ export class StaticApiClient implements ApiClient {
             };
         }
 
-        // Aggregate into week or month buckets.
+        // Aggregate into buckets (total, week, month, or year).
         const grouped = new Map<string, Record<string, number>>();
         for (const point of allPoints) {
-            const groupKey =
-                groupBy === 'month'
-                    ? point.key.substring(0, 7)
-                    : mondayOfWeek(point.key);
+            let groupKey: string;
+            if (groupBy === 'total') {
+                groupKey = 'total';
+            } else if (groupBy === 'month') {
+                groupKey = point.key.substring(0, 7);
+            } else if (groupBy === 'year') {
+                groupKey = point.key.substring(0, 4);
+            } else {
+                groupKey = mondayOfWeek(point.key);
+            }
             const existing = grouped.get(groupKey);
             if (existing) {
                 for (const m of metricNames) {

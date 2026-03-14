@@ -159,6 +159,7 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
 /// Map a date to its bucket key string for the given grouping.
 fn bucket_key(date: NaiveDate, group_by: MetricsGroupBy) -> String {
     match group_by {
+        MetricsGroupBy::Total => "total".to_string(),
         MetricsGroupBy::Day => shared::bucket_key_day(date),
         MetricsGroupBy::Week => shared::bucket_key_week(date),
         MetricsGroupBy::Month => shared::bucket_key_month(date),
@@ -170,6 +171,9 @@ fn bucket_key(date: NaiveDate, group_by: MetricsGroupBy) -> String {
 fn all_bucket_keys(from: NaiveDate, to: NaiveDate, group_by: MetricsGroupBy) -> Vec<String> {
     let mut keys = Vec::new();
     match group_by {
+        MetricsGroupBy::Total => {
+            keys.push("total".to_string());
+        }
         MetricsGroupBy::Day => {
             let mut date = from;
             while date <= to {

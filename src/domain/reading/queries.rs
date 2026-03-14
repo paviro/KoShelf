@@ -115,6 +115,7 @@ impl ReadingMetric {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MetricsGroupBy {
+    Total,
     Day,
     Week,
     Month,
@@ -124,19 +125,21 @@ pub enum MetricsGroupBy {
 impl MetricsGroupBy {
     pub fn parse(value: &str) -> Result<Self, (ApiErrorCode, String)> {
         match value {
+            "total" => Ok(Self::Total),
             "day" => Ok(Self::Day),
             "week" => Ok(Self::Week),
             "month" => Ok(Self::Month),
             "year" => Ok(Self::Year),
             _ => Err((
                 ApiErrorCode::InvalidQuery,
-                format!("'group_by' must be one of: day, week, month, year; got '{value}'"),
+                format!("'group_by' must be one of: total, day, week, month, year; got '{value}'"),
             )),
         }
     }
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::Total => "total",
             Self::Day => "day",
             Self::Week => "week",
             Self::Month => "month",
@@ -510,6 +513,10 @@ mod tests {
 
     #[test]
     fn metrics_group_by_parses_valid_values() {
+        assert_eq!(
+            MetricsGroupBy::parse("total").unwrap(),
+            MetricsGroupBy::Total
+        );
         assert_eq!(MetricsGroupBy::parse("day").unwrap(), MetricsGroupBy::Day);
         assert_eq!(MetricsGroupBy::parse("week").unwrap(), MetricsGroupBy::Week);
         assert_eq!(
