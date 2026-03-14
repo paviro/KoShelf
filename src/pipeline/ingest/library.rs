@@ -672,7 +672,13 @@ pub async fn update_library(
 
         match classify_reconcile_action(Some(&stored), Some(&current)) {
             ReconcileAction::Unchanged if !metadata_appeared => {
-                result.unchanged += 1;
+                let cover_path = covers_dir.join(format!("{}.webp", fp.item_id));
+                if media::cover_needs_generation(book_path, &cover_path) {
+                    ingest_paths_list.push(book_path.to_path_buf());
+                    result.changed += 1;
+                } else {
+                    result.unchanged += 1;
+                }
             }
             ReconcileAction::Unchanged => {
                 // metadata_appeared — need to re-ingest to pick up the new metadata
