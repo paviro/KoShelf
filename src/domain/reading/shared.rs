@@ -135,13 +135,13 @@ pub fn bucket_key_year(date: NaiveDate) -> String {
 
 // ── Content helpers ─────────────────────────────────────────────────────────
 
-/// Parse a comma/semicolon-separated author string into trimmed author names.
+/// Parse a newline-separated author string (as stored by KOReader's statistics DB) into trimmed author names.
 pub fn parse_authors(authors_str: &str) -> Vec<String> {
     if authors_str.is_empty() {
         Vec::new()
     } else {
         authors_str
-            .split(&[',', ';'])
+            .split('\n')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect()

@@ -779,7 +779,7 @@ mod tests {
         StatBook {
             id,
             title: title.to_string(),
-            authors: "Author A; Author B".to_string(),
+            authors: "Author A\nAuthor B".to_string(),
             notes: None,
             last_open: None,
             highlights: None,
