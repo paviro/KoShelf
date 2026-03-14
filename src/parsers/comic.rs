@@ -177,10 +177,10 @@ impl ComicParser {
                         if &filename == cover_filename {
                             let extract_path = temp_dir.path().join(&filename);
                             if let Some(parent) = extract_path.parent() {
-                                let _ = fs::create_dir_all(parent);
+                                fs::create_dir_all(parent)?;
                             }
 
-                            let _ = header
+                            header
                                 .extract_to(&extract_path)
                                 .map_err(|e| anyhow!("Failed to extract cover image: {:?}", e))?;
 

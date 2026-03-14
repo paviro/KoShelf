@@ -492,10 +492,14 @@ pub async fn generate_recap_share_images(
         });
 
         for task in all_tasks {
-            let _ = task.await;
+            if let Err(e) = task.await {
+                warn!("Share image task failed: {}", e);
+            }
         }
 
-        let _ = progress_task.await;
+        if let Err(e) = progress_task.await {
+            warn!("Progress tracking task failed: {}", e);
+        }
         pb.finish_and_clear();
 
         info!(
