@@ -139,9 +139,9 @@ fn compute_scope_stats(
     let total_pages = super::scaling::round_pages(scaled_pages);
 
     let active_days_percentage = if days_in_month > 0 {
-        (unique_dates.len() as f64 / days_in_month as f64) * 100.0
+        (unique_dates.len() as f64 / days_in_month as f64 * 100.0).round() as u8
     } else {
-        0.0
+        0
     };
 
     CalendarScopeStats {

@@ -247,7 +247,7 @@ fn compute_yearly_summary(
         } else {
             365.0
         };
-    let active_days_percentage = (active_days as f64 / days_in_year * 100.0).round();
+    let active_days_percentage = (active_days as f64 / days_in_year * 100.0).round() as u8;
 
     let mut year_reading_dates: Vec<chrono::NaiveDate> = reading_stats
         .daily_activity
@@ -372,7 +372,7 @@ fn collect_share_tasks_for_year(
         reading_time_hours: summary.total_time_hours as u32,
         reading_time_days: summary.total_time_days as u32,
         active_days: summary.active_days as u32,
-        active_days_percentage: summary.active_days_percentage as u8,
+        active_days_percentage: summary.active_days_percentage,
         longest_streak: summary.longest_streak as u32,
         best_month: summary.best_month.clone(),
     };

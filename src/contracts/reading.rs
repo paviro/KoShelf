@@ -142,7 +142,7 @@ pub struct CalendarScopeStats {
     pub items_read: usize,
     pub pages_read: i64,
     pub reading_time_sec: i64,
-    pub active_days_percentage: f64,
+    pub active_days_percentage: u8,
 }
 
 // ── GET /api/reading/completions ──────────────────────────────────────────
@@ -203,7 +203,7 @@ pub struct CompletionsSummary {
     pub longest_session_duration_sec: i64,
     pub average_session_duration_sec: i64,
     pub active_days: usize,
-    pub active_days_percentage: f64,
+    pub active_days_percentage: u8,
     pub longest_streak_days: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub best_month: Option<String>,

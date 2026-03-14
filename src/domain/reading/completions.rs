@@ -360,9 +360,9 @@ fn compute_completions_summary(
         }
     };
     let active_days_percentage = if total_days > 0 {
-        (active_days as f64 / total_days as f64 * 100.0).round()
+        (active_days as f64 / total_days as f64 * 100.0).round() as u8
     } else {
-        0.0
+        0
     };
 
     let longest_streak_days = compute_longest_streak(&active_dates);

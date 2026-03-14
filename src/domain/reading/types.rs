@@ -147,7 +147,7 @@ pub struct YearlySummary {
     pub average_session_hours: i64,
     pub average_session_minutes: i64,
     pub active_days: usize,
-    pub active_days_percentage: f64,
+    pub active_days_percentage: u8,
     pub longest_streak: i64,
     pub best_month: Option<String>, // YYYY-MM
 }
