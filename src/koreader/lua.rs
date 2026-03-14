@@ -5,6 +5,7 @@ use mlua::{Lua, Table, Value};
 use std::fs;
 use std::path::Path;
 
+/// Parses KOReader `.sdr/metadata.*.lua` sidecar files into [`KoReaderMetadata`].
 pub struct LuaParser {
     lua: Lua,
 }
@@ -20,13 +21,13 @@ impl LuaParser {
         Self { lua: Lua::new() }
     }
 
+    /// Evaluate a KOReader Lua metadata file and extract its fields.
     pub fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
         debug!("Parsing Lua metadata: {:?}", lua_path);
 
         let content = fs::read_to_string(lua_path)
             .with_context(|| format!("Failed to read Lua file: {:?}", lua_path))?;
 
-        // Execute the Lua code which returns a table
         let value: Value = self
             .lua
             .load(&content)

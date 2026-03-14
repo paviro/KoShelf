@@ -19,7 +19,6 @@ const FONT_ITALIC: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Ita
 static FONT_DATABASE: LazyLock<Arc<resvg::usvg::fontdb::Database>> = LazyLock::new(|| {
     let mut fontdb = resvg::usvg::fontdb::Database::new();
 
-    // Load embedded fonts - these are bundled at compile time
     fontdb.load_font_data(FONT_REGULAR.to_vec());
     fontdb.load_font_data(FONT_ITALIC.to_vec());
 
@@ -85,10 +84,8 @@ pub fn generate_share_image(
     log::debug!("Generating share image: {:?}", output_path);
     let (width, height) = format.dimensions();
 
-    // Generate SVG content by replacing placeholders in template
     let svg_content = fill_template(data, format);
 
-    // Parse SVG with usvg using cached font database
     let options = resvg::usvg::Options {
         fontdb: FONT_DATABASE.clone(),
         ..Default::default()
@@ -97,18 +94,15 @@ pub fn generate_share_image(
     let tree =
         resvg::usvg::Tree::from_str(&svg_content, &options).context("Failed to parse SVG")?;
 
-    // Create pixmap for rendering
     let mut pixmap =
         resvg::tiny_skia::Pixmap::new(width, height).context("Failed to create pixmap")?;
 
-    // Render SVG to pixmap
     resvg::render(
         &tree,
         resvg::tiny_skia::Transform::default(),
         &mut pixmap.as_mut(),
     );
 
-    // Encode as WebP and write to file
     let encoder = webp::Encoder::from_rgba(pixmap.data(), width, height);
     let mut config =
         webp::WebPConfig::new().map_err(|_| anyhow::anyhow!("Failed to create WebP config"))?;
@@ -126,7 +120,7 @@ pub fn generate_share_image(
 
     std::fs::write(output_path, &*webp_data).context("Failed to write WebP file")?;
 
-    // Also generate SVG file (reuse the parsed tree instead of parsing again)
+    // Reuse the parsed tree for the SVG output instead of re-parsing.
     let svg_path = output_path.with_extension("svg");
     let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
     std::fs::write(svg_path, svg_output).context("Failed to write SVG file")?;
@@ -145,7 +139,6 @@ pub fn generate_share_svg(
 ) -> Result<()> {
     let svg_content = fill_template(data, format);
 
-    // Parse SVG with usvg using cached font database
     let options = resvg::usvg::Options {
         fontdb: FONT_DATABASE.clone(),
         ..Default::default()
@@ -154,7 +147,6 @@ pub fn generate_share_svg(
     let tree = resvg::usvg::Tree::from_str(&svg_content, &options)
         .context("Failed to parse SVG for path conversion")?;
 
-    // Write the processed SVG (with text converted to paths)
     let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
 
     std::fs::write(output_path, svg_output).context("Failed to write SVG file")?;

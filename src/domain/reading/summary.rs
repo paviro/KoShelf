@@ -21,17 +21,13 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
         .map(|tz| tz.to_string())
         .unwrap_or_else(|| "local".to_string());
 
-    // Filter page_stats by scope (content type).
     let stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
-
-    // Filter page_stats by date range and resolve the effective range.
     let (page_stats, resolved_from, resolved_to) = shared::filter_and_resolve_range(
         &stats.page_stats,
         query.range.as_ref().map(|r| (r.from, r.to)),
         &time_config,
     );
 
-    // Compute daily aggregates.
     // Page counts accumulate as floats (each page_stat contributes its scaling
     // factor, e.g. 1.5) and are rounded once per day to avoid per-page rounding error.
     let mut daily_read_time: HashMap<NaiveDate, i64> = HashMap::new();
@@ -46,7 +42,6 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
         *daily_scaled_pages.entry(date).or_insert(0.0) += factor;
     }
 
-    // Round per-day totals.
     let daily_page_reads: HashMap<NaiveDate, i64> = daily_scaled_pages
         .iter()
         .map(|(&date, &v)| (date, super::scaling::round_pages(v)))
@@ -56,19 +51,14 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
     let longest_reading_time_in_day_sec = daily_read_time.values().copied().max().unwrap_or(0);
     let most_pages_in_day = daily_page_reads.values().copied().max().unwrap_or(0);
 
-    // Session metrics.
     let (average_session_duration_sec, longest_session_duration_sec) =
         sessions::session_metrics(&page_stats);
     let session_count = sessions::aggregate_session_durations(&page_stats).len() as i64;
 
-    // Completion counts within the resolved range.
     let (total_completions, items_completed) =
         shared::count_completions_in_range(&stats, &resolved_from, &resolved_to);
 
-    // Streaks (computed from daily activity within range).
     let streaks = compute_streaks(&daily_read_time, &time_config);
-
-    // Heatmap config.
     let heatmap_config = HeatmapConfig {
         max_scale_sec: reading_data.heatmap_scale_max.map(|v| v as i64),
     };
@@ -120,7 +110,6 @@ fn compute_streaks(
 
     let today = time_config.today_date();
 
-    // Build streaks.
     let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new();
     let mut streak_start = sorted_dates[0];
     let mut streak_len = 1i64;
@@ -136,7 +125,6 @@ fn compute_streaks(
     }
     streaks.push((streak_len, streak_start, *sorted_dates.last().unwrap()));
 
-    // Longest streak.
     let longest = streaks
         .iter()
         .max_by_key(|&&(len, _, _)| len)
@@ -151,7 +139,7 @@ fn compute_streaks(
             end_date: None,
         });
 
-    // Current streak: the streak that ends today or yesterday.
+    // Streak ending today or yesterday counts as "current".
     let last_reading_date = *sorted_dates.last().unwrap();
     let days_since_last = (today - last_reading_date).num_days();
 

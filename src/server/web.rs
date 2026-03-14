@@ -20,6 +20,7 @@ use tower_http::services::ServeDir;
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 
+/// Axum-based HTTP server serving the API, embedded React frontend, and media assets.
 pub struct WebServer {
     media_cache_dir: PathBuf,
     port: u16,
@@ -48,6 +49,7 @@ impl WebServer {
         }
     }
 
+    /// Start listening and serving requests. Blocks until the server shuts down.
     pub async fn run(self) -> Result<()> {
         let state = ServerState {
             site_store: self.site_store.clone(),

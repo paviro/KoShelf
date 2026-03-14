@@ -31,7 +31,6 @@ impl BookStatistics for StatBook {
             .filter(|stat| stat.id_book == self.id && stat.duration > 0)
             .collect();
 
-        // Calculate session statistics using shared helper
         let book_stats: Vec<PageStat> = book_sessions.iter().cloned().cloned().collect();
         let durations = sessions::session_durations(&book_stats);
         let session_count = durations.len() as i64;
@@ -73,43 +72,38 @@ impl BookStatistics for StatBook {
     }
 }
 
-/// Main statistics calculator
+/// Computes aggregate reading statistics, streaks, and completions from raw page stats.
+///
+/// Provides filtering (`filter_stats`, `filter_to_library`) and completion
+/// detection (`populate_completions`) used by the ingest pipeline to prepare
+/// [`StatisticsData`] for all reading endpoints, plus [`ReadingStats`]
+/// aggregation for recap share images.
 pub struct StatisticsCalculator;
 
 impl StatisticsCalculator {
     /// Calculate reading statistics based on the parsed data and populate completions
     pub fn calculate_stats(stats_data: &StatisticsData, time_config: &TimeConfig) -> ReadingStats {
-        // Initialize overall stats
         let mut total_read_time = 0;
         let mut total_page_reads = 0;
-
-        // Maps to track daily stats
         let mut daily_read_time: HashMap<String, i64> = HashMap::new();
         let mut daily_page_reads: HashMap<String, i64> = HashMap::new();
+        // (year, week) -> (read_time, pages_read, page_stats)
+        let mut weekly_stats: HashMap<(i32, u32), (i64, i64, Vec<PageStat>)> = HashMap::new();
 
-        // For weekly stats, we'll organize by ISO week and track page stats for session calculation
-        let mut weekly_stats: HashMap<(i32, u32), (i64, i64, Vec<PageStat>)> = HashMap::new(); // (year, week) -> (read_time, pages_read, page_stats)
-
-        // Process all page stats
         for stat in &stats_data.page_stats {
-            // Skip invalid durations
             if stat.duration <= 0 {
                 continue;
             }
 
-            // Add to overall totals
             total_read_time += stat.duration;
             total_page_reads += 1;
 
-            // Convert unix timestamp to logical local date using configured timezone/day start
             let date = time_config.date_for_timestamp(stat.start_time);
             let date_str = date.format("%Y-%m-%d").to_string();
 
-            // Add to daily stats
             *daily_read_time.entry(date_str.clone()).or_insert(0) += stat.duration;
             *daily_page_reads.entry(date_str).or_insert(0) += 1;
 
-            // Add to weekly stats
             let year = date.year();
             let week = date.iso_week().week();
             let key = (year, week);
@@ -119,25 +113,17 @@ impl StatisticsCalculator {
             entry.2.push(stat.clone());
         }
 
-        // Find max values for daily stats
         let longest_read_time_in_day = daily_read_time.values().cloned().max().unwrap_or(0);
         let most_pages_in_day = daily_page_reads.values().cloned().max().unwrap_or(0);
 
-        // Calculate overall session statistics
         let (average_session_duration, longest_session_duration) =
             sessions::session_metrics(&stats_data.page_stats);
 
-        // Calculate completion statistics
         let (total_completions, books_completed, most_completions) =
             Self::calculate_completion_stats(stats_data);
 
-        // Convert weekly stats to WeeklyStats structs
         let weeks = Self::build_weekly_stats(weekly_stats);
-
-        // Create daily activity data for heatmap
         let daily_activity = Self::build_daily_activity(daily_read_time, daily_page_reads);
-
-        // Calculate reading streaks
         let (longest_streak, current_streak) =
             Self::calculate_streaks(&daily_activity, time_config);
 
@@ -164,17 +150,14 @@ impl StatisticsCalculator {
     ) -> Vec<WeeklyStats> {
         let mut weeks = Vec::new();
         for ((year, week), (read_time, pages_read, page_stats)) in weekly_stats {
-            // Calculate the start date of the week (Monday)
-            // This is a simplified calculation
             let start_date_approx = NaiveDate::from_isoywd_opt(year, week, chrono::Weekday::Mon)
                 .unwrap_or_else(|| {
                     NaiveDate::from_ymd_opt(year, 1, 1)
                         .unwrap_or_else(|| NaiveDate::from_ymd_opt(2020, 1, 1).unwrap())
                 });
 
-            let end_date = start_date_approx + Duration::days(6); // Sunday
+            let end_date = start_date_approx + Duration::days(6);
 
-            // Calculate session statistics for this week
             let (average_session_duration, longest_session_duration) =
                 sessions::session_metrics(&page_stats);
 
@@ -190,8 +173,7 @@ impl StatisticsCalculator {
             weeks.push(weekly_stat);
         }
 
-        // Sort weeks by start date (newest first)
-        weeks.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+        weeks.sort_by(|a, b| b.start_date.cmp(&a.start_date)); // newest first
         weeks
     }
 
@@ -210,8 +192,7 @@ impl StatisticsCalculator {
             });
         }
 
-        // Sort daily activity by date (oldest first for chronological display)
-        daily_activity.sort_by(|a, b| a.date.cmp(&b.date));
+        daily_activity.sort_by(|a, b| a.date.cmp(&b.date)); // oldest first
         daily_activity
     }
 
@@ -228,7 +209,6 @@ impl StatisticsCalculator {
             );
         }
 
-        // Get all unique dates with reading activity (read_time > 0)
         let reading_dates: Vec<NaiveDate> = daily_activity
             .iter()
             .filter(|day| day.read_time > 0)
@@ -242,14 +222,13 @@ impl StatisticsCalculator {
             );
         }
 
-        // Sort dates chronologically
         let mut sorted_dates = reading_dates;
         sorted_dates.sort();
 
         let today = time_config.today_date();
 
-        // Find all streaks and their date ranges
-        let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new(); // (length, start_date, end_date)
+        // (length, start_date, end_date)
+        let mut streaks: Vec<(i64, NaiveDate, NaiveDate)> = Vec::new();
         let mut current_streak_start = sorted_dates[0];
         let mut current_streak_length = 1i64;
 
@@ -257,23 +236,19 @@ impl StatisticsCalculator {
             let prev_date = sorted_dates[i - 1];
             let curr_date = sorted_dates[i];
 
-            // Check if current date is exactly one day after previous date
             if curr_date == prev_date + Duration::days(1) {
                 current_streak_length += 1;
             } else {
-                // End of current streak, record it
                 streaks.push((current_streak_length, current_streak_start, prev_date));
                 current_streak_start = curr_date;
                 current_streak_length = 1;
             }
         }
 
-        // Don't forget the last streak
         if let Some(&last_date) = sorted_dates.last() {
             streaks.push((current_streak_length, current_streak_start, last_date));
         }
 
-        // Find longest streak
         let longest_streak_info =
             if let Some(&(length, start, end)) = streaks.iter().max_by_key(|&&(len, _, _)| len) {
                 StreakInfo::new(
@@ -285,7 +260,6 @@ impl StatisticsCalculator {
                 StreakInfo::new(0, None, None)
             };
 
-        // Find current streak (streak that includes today or recent days)
         let current_streak_info = if let Some(&last_reading_date) = sorted_dates.last() {
             let days_since_last_read = (today - last_reading_date).num_days();
 
@@ -321,14 +295,12 @@ impl StatisticsCalculator {
         );
         let all_completions = detector.detect_all_completions(stats_data);
 
-        // Update each book with its completion data
         for book in &mut stats_data.books {
             if let Some(completions) = all_completions.get(&book.md5) {
                 book.completions = Some(completions.clone());
             }
         }
 
-        // Also update the stats_by_md5 map for consistency
         for (md5, book) in &mut stats_data.stats_by_md5 {
             if let Some(completions) = all_completions.get(md5) {
                 book.completions = Some(completions.clone());
@@ -361,7 +333,6 @@ impl StatisticsCalculator {
         min_pages: Option<u32>,
         min_time: Option<u32>,
     ) {
-        // 1. Aggregate daily totals per book per day
         let mut daily_book_pages: HashMap<(i64, String), i64> = HashMap::new();
         let mut daily_book_time: HashMap<(i64, String), i64> = HashMap::new();
 
@@ -378,10 +349,7 @@ impl StatisticsCalculator {
             *daily_book_time.entry(key).or_insert(0) += stat.duration;
         }
 
-        // 2. Identify valid (book, date) combinations
         let mut valid_book_dates: HashMap<(i64, String), bool> = HashMap::new();
-
-        // Collect all unique (book, date) combinations
         let mut all_book_dates: Vec<(i64, String)> = daily_book_pages.keys().cloned().collect();
         all_book_dates.extend(daily_book_time.keys().cloned());
         all_book_dates.sort();
@@ -406,7 +374,6 @@ impl StatisticsCalculator {
             valid_book_dates.insert(book_date, is_valid);
         }
 
-        // 3. Filter page_stats based on per-book-per-day validity
         stats_data.page_stats.retain(|stat| {
             if stat.duration <= 0 {
                 return false;
@@ -424,7 +391,6 @@ impl StatisticsCalculator {
     pub fn filter_to_library(stats_data: &mut StatisticsData, library_md5s: &HashSet<String>) {
         let original_count = stats_data.books.len();
 
-        // 1. Get IDs of books to keep (those whose MD5 is in library_md5s)
         let mut ids_to_keep: HashSet<i64> = HashSet::new();
         stats_data.books.retain(|book| {
             if library_md5s.contains(&book.md5) || library_md5s.contains(&book.md5.to_lowercase()) {
@@ -439,12 +405,10 @@ impl StatisticsCalculator {
             }
         });
 
-        // 2. Filter page_stats to only include entries for kept books
         stats_data
             .page_stats
             .retain(|stat| ids_to_keep.contains(&stat.id_book));
 
-        // 3. Update stats_by_md5 map to only include kept books
         stats_data.stats_by_md5.retain(|md5, _| {
             library_md5s.contains(md5) || library_md5s.contains(&md5.to_lowercase())
         });

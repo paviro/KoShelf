@@ -372,7 +372,6 @@ async fn process_single_item(
         ..Default::default()
     };
 
-    // 1. Detect format
     let format = match LibraryItemFormat::from_path(path) {
         Some(f) => f,
         None => {
@@ -382,7 +381,6 @@ async fn process_single_item(
         }
     };
 
-    // 2. Parse book
     let mut book_info = match processor.parse_book_info(format, path).await {
         Ok(info) => info,
         Err(e) => {
@@ -392,17 +390,14 @@ async fn process_single_item(
         }
     };
 
-    // 3. Locate + parse KOReader metadata
     let metadata_path = processor.locate_metadata_path(path, format);
     let koreader_metadata = processor.parse_koreader_metadata(metadata_path.clone());
 
-    // 4. Filter: skip unread items if configured
     if koreader_metadata.is_none() && !config.include_unread {
         stats.skipped_unread = 1;
         return stats;
     }
 
-    // 5. Compute canonical ID
     let item_id = match processor.canonical_item_id(path, koreader_metadata.as_ref()) {
         Ok(id) => id,
         Err(e) => {
@@ -412,7 +407,6 @@ async fn process_single_item(
         }
     };
 
-    // 6. Duplicate check: same ID, different path → skip
     let path_str = path.to_string_lossy();
     match repo.find_book_path_by_id(&item_id).await {
         Ok(Some(ref existing_path)) if existing_path != path_str.as_ref() => {
@@ -425,15 +419,11 @@ async fn process_single_item(
         }
         Err(e) => {
             warn!("Failed to check for duplicate ID '{}': {}", item_id, e);
-            // Continue with upsert anyway
         }
-        _ => {} // Not found or same path → proceed
+        _ => {}
     }
 
-    // Take cover data out before creating the item
     let cover_data = book_info.cover_data.take();
-
-    // 7. Build item and upsert to DB
     let item = LibraryItem {
         id: item_id.clone(),
         book_info,
@@ -452,7 +442,6 @@ async fn process_single_item(
 
     stats.upserted = 1;
 
-    // 8. Encode cover to disk — fully complete this item
     if let Some(cover_data) = cover_data {
         let cover_path = covers_dir.join(format!("{}.webp", item_id));
 
@@ -469,7 +458,6 @@ async fn process_single_item(
         }
     }
 
-    // Item + cover_data dropped — nothing kept in memory
     stats
 }
 
@@ -496,7 +484,6 @@ pub async fn ingest_paths(
     info!("Ingesting {} items...", paths.len());
     let start = Instant::now();
 
-    // Build metadata indices once, share across workers
     let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
 
     let pb = ProgressBar::new(paths.len() as u64);
@@ -508,8 +495,6 @@ pub async fn ingest_paths(
     );
     pb.set_message("Ingesting library:");
 
-    // Distribute paths to workers via a shared channel.
-    // Each worker owns its own processor (with fresh parsers + shared indices).
     let (tx, rx) = tokio::sync::mpsc::channel::<PathBuf>(INGEST_CONCURRENCY * 2);
     let rx = Arc::new(tokio::sync::Mutex::new(rx));
 
@@ -545,16 +530,13 @@ pub async fn ingest_paths(
         });
     }
 
-    // Feed all paths into the channel
     for path in paths {
-        // If all workers have errored out, send will fail — that's fine
         if tx.send(path.clone()).await.is_err() {
             break;
         }
     }
     drop(tx); // Signal no more work
 
-    // Wait for all workers and merge stats
     let mut total_stats = IngestStats::default();
     while let Some(result) = workers.join_next().await {
         match result {
@@ -594,10 +576,8 @@ pub struct UpdateResult {
 
 /// Update the library DB to match the current filesystem state.
 ///
-/// Handles both first run (empty DB → everything is Added) and subsequent
+/// Handles both first run (empty DB → everything is new) and subsequent
 /// runs (detect added/removed/modified books via fingerprint comparison).
-/// This replaces the old "skip if DB is populated" check with a single
-/// code path that always detects changes.
 pub async fn update_library(
     config: &SiteConfig,
     repo: &LibraryRepository,
@@ -607,19 +587,16 @@ pub async fn update_library(
     let fs_paths = collect_paths(&config.library_paths);
     let stored_fingerprints = repo.load_all_fingerprints().await?;
 
-    // Build lookup from book_path → stored fingerprint
     let stored_by_book_path: HashMap<&str, _> = stored_fingerprints
         .iter()
         .map(|fp| (fp.book_path.as_str(), fp))
         .collect();
 
-    // Build set of filesystem paths for quick membership checks
     let fs_path_set: HashSet<String> = fs_paths
         .iter()
         .map(|p| p.to_string_lossy().into_owned())
         .collect();
 
-    // Build metadata indices for locate_metadata_path
     let metadata_indices = MetadataIndices::new(&config.metadata_location)?;
 
     let mut result = UpdateResult::default();
@@ -637,29 +614,24 @@ pub async fn update_library(
 
         let book_path = Path::new(&fp.book_path);
 
-        // Capture current book fingerprint
         let current_book_fp = match FileFingerprint::capture(book_path) {
             Ok(f) => f,
             Err(e) => {
                 warn!("Failed to capture fingerprint for {:?}: {}", book_path, e);
-                // Can't compare — treat as changed to be safe
                 ingest_paths_list.push(book_path.to_path_buf());
                 result.changed += 1;
                 continue;
             }
         };
 
-        // Determine current metadata path: use stored path if present, otherwise
-        // check if metadata has appeared for a previously-metadataless book.
         let current_metadata_path = if let Some(ref stored_meta) = fp.metadata_path {
             Some(PathBuf::from(stored_meta))
         } else {
-            // No stored metadata — check if one appeared since last run
+            // Check if metadata has appeared since last run.
             LibraryItemFormat::from_path(book_path)
                 .and_then(|fmt| locate_metadata_path(&metadata_indices, book_path, fmt))
         };
 
-        // Capture current metadata fingerprint
         let current_metadata_fp = match &current_metadata_path {
             Some(meta_path) => match FileFingerprint::capture_optional(meta_path) {
                 Ok(fp) => fp,
@@ -679,7 +651,6 @@ pub async fn update_library(
             metadata_file: current_metadata_fp,
         };
 
-        // Reconstruct stored ItemFingerprints for comparison
         let stored_book_fp = FileFingerprint {
             path: book_path.to_path_buf(),
             size_bytes: fp.book_size_bytes as u64,
@@ -736,7 +707,6 @@ pub async fn update_library(
 
     // ── Phase 3: Execute ─────────────────────────────────────────────
 
-    // Delete removed items from DB + remove cover files
     for item_id in &remove_ids {
         if let Err(e) = repo.delete_item(item_id).await {
             warn!("Failed to delete removed item {}: {}", item_id, e);
@@ -747,7 +717,6 @@ pub async fn update_library(
         }
     }
 
-    // Ingest added + changed paths
     if !ingest_paths_list.is_empty() {
         let stats = ingest_paths(&ingest_paths_list, config, repo, covers_dir).await?;
         result.ingest_stats = Some(stats);

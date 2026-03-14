@@ -62,21 +62,16 @@ pub async fn reading_completions(
     let time_config = shared::resolve_time_config(&reading_data.time_config, query.tz);
     let stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
 
-    // Resolve optional date range and year from selector.
     let (range, resolved_year) = resolve_completions_range(&query.selector);
-
-    // Collect completion items, sorted by end_date descending.
     let mut all_items =
         collect_completion_items(&stats, range.as_ref(), &reading_data.page_scaling);
-
-    // Enrich with library metadata (cover, rating, review_note, series).
     enrich_completion_items(&mut all_items, repo).await;
 
     all_items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
     let total_items = all_items.len();
 
-    // Optional summary (computed before items are moved into groups).
+    // Must be computed before items are moved into groups.
     let summary = if query.includes.has_summary() {
         Some(compute_completions_summary(
             &stats,
@@ -88,7 +83,6 @@ pub async fn reading_completions(
         None
     };
 
-    // Build groups or flat items based on group_by.
     let (groups, items) = match query.group_by {
         CompletionsGroupBy::Month => {
             let month_reading_time =
@@ -101,7 +95,6 @@ pub async fn reading_completions(
         CompletionsGroupBy::None => (None, Some(all_items)),
     };
 
-    // Optional share assets (only meaningful when a single year is resolved).
     let share_assets = if query.includes.has_share_assets() {
         resolved_year.map(|year| CompletionsShareAssets {
             story_url: format!("/assets/recap/{year}_share_story.webp"),
@@ -201,9 +194,8 @@ fn collect_completion_items(
 /// Enrich completion items with library metadata by querying the repository.
 ///
 /// Populates `item_cover`, `rating`, `review_note`, and `series` for items
-/// whose MD5 matches a library item. Orphan stats books (not in library) are left unchanged.
+/// whose MD5 matches a library item.
 async fn enrich_completion_items(items: &mut [CompletionItem], repo: &LibraryRepository) {
-    // Collect unique MD5s to avoid duplicate lookups.
     let unique_md5s: HashSet<String> = items
         .iter()
         .filter_map(|item| item.item_id.clone())
@@ -318,7 +310,6 @@ fn compute_completions_summary(
     range: Option<&(NaiveDate, NaiveDate)>,
     total_items: usize,
 ) -> CompletionsSummary {
-    // Filter page_stats to the resolved range (or include all if no range).
     let range_page_stats: Vec<PageStat> = stats
         .page_stats
         .iter()
@@ -338,19 +329,16 @@ fn compute_completions_summary(
 
     let total_reading_time_sec: i64 = range_page_stats.iter().map(|ps| ps.duration).sum();
 
-    // Session metrics.
     let (avg_session, longest_session) = sessions::session_metrics(&range_page_stats);
     let longest_session_duration_sec = longest_session.unwrap_or(0);
     let average_session_duration_sec = avg_session.unwrap_or(0);
 
-    // Active days.
     let mut active_dates: HashSet<NaiveDate> = HashSet::new();
     for ps in &range_page_stats {
         active_dates.insert(time_config.date_for_timestamp(ps.start_time));
     }
     let active_days = active_dates.len();
 
-    // Compute total_days from explicit range, or derive from data span.
     let total_days = if let Some((from, to)) = range {
         (*to - *from).num_days() + 1
     } else {
@@ -504,14 +492,12 @@ impl ReadingProgression {
             return false;
         }
 
-        // Check minimum completion percentage
         let pages_covered = self.pages_visited.len() as i64;
         let completion_percentage = pages_covered as f64 / total_pages as f64;
         if completion_percentage < config.min_completion_percentage {
             return false;
         }
 
-        // Check if we read from early and late parts of the book
         let early_threshold = config.early_threshold(total_pages);
         let late_threshold = config.late_threshold(total_pages);
 
@@ -528,7 +514,9 @@ impl ReadingProgression {
     }
 }
 
-/// Main detector for reading completions
+/// Detects book completions by analyzing page statistics against configurable thresholds.
+///
+/// See the module-level documentation for the full algorithm description.
 pub struct ReadCompletionDetector {
     config: CompletionConfig,
     time_config: TimeConfig,
@@ -549,7 +537,6 @@ impl ReadCompletionDetector {
             book.title, book.pages
         );
 
-        // Filter page stats for this book only and with valid durations
         let book_stats: Vec<PageStat> = page_stats
             .iter()
             .filter(|stat| stat.id_book == book.id && stat.duration > 0)
@@ -567,11 +554,9 @@ impl ReadCompletionDetector {
             return BookCompletions::new(Vec::new());
         }
 
-        // Sort stats by start time
         let mut sorted_stats = book_stats;
         sorted_stats.sort_by_key(|stat| stat.start_time);
 
-        // Group stats into reading progressions
         let progressions = self.group_into_progressions(&sorted_stats, total_pages);
         debug!(
             "Found {} reading progressions for book {}",
@@ -579,12 +564,10 @@ impl ReadCompletionDetector {
             book.title
         );
 
-        // Evaluate each progression for completion
         let mut completions = Vec::new();
         let early_threshold = self.config.early_threshold(total_pages);
         let late_threshold = self.config.late_threshold(total_pages);
-        // Track best progression: (coverage%, pages, has_early, has_late)
-        let mut best_progression: Option<(f64, usize, bool, bool)> = None;
+        let mut best_progression: Option<(f64, usize, bool, bool)> = None; // (coverage%, pages, has_early, has_late)
 
         for progression in &progressions {
             let pages = progression.pages_visited.len();
@@ -606,7 +589,6 @@ impl ReadCompletionDetector {
             }
         }
 
-        // Log helpful info about why no completions were found
         if completions.is_empty() && !progressions.is_empty() {
             if let Some((coverage, pages, has_early, has_late)) = best_progression {
                 debug!(
@@ -644,17 +626,15 @@ impl ReadCompletionDetector {
         let mut progressions = Vec::new();
         let mut current_progression = ReadingProgression::new();
 
-        // Early page threshold for re-read detection
         let early_page_threshold = self.config.early_threshold(total_pages);
 
         for (i, stat) in sorted_stats.iter().enumerate() {
-            // Detect a restart: jumping back to very early pages after reading started.
-            // A split occurs when ALL conditions are met:
-            // - Current page is in first 5% of the book (restart_threshold)
-            // - Previous page was beyond early threshold (actual backwards jump, not just flipping back a few pages)
-            // - Current progression already contains early pages (real read attempt, not just previewing)
+            // Split when ALL conditions are met:
+            // - Current page is in first 5% of the book
+            // - Previous page was beyond early threshold (actual backwards jump)
+            // - Current progression already contains early pages
             // - Remaining reading from this point would form a valid completion
-            let restart_threshold = (total_pages as f64 * 0.05) as i64; // First 5% of book
+            let restart_threshold = (total_pages as f64 * 0.05) as i64;
             let prev_page = if i > 0 { sorted_stats[i - 1].page } else { 0 };
             let is_jumping_back = prev_page > early_page_threshold;
             let already_started_reading = current_progression
@@ -668,7 +648,6 @@ impl ReadCompletionDetector {
                 && already_started_reading;
 
             let should_split = if is_likely_restart {
-                // Check if remaining stats (from this point forward) form a valid completion
                 let remaining_valid = ReadingProgression::from_stats(&sorted_stats[i..])
                     .is_valid_completion(total_pages, &self.config);
                 if remaining_valid {
@@ -690,7 +669,6 @@ impl ReadCompletionDetector {
             current_progression.add_stat(stat.clone());
         }
 
-        // Don't forget the last progression
         if !current_progression.is_empty() {
             progressions.push(current_progression);
         }
@@ -704,17 +682,12 @@ impl ReadCompletionDetector {
         progression: &ReadingProgression,
         total_pages: i64,
     ) -> Option<ReadCompletion> {
-        // Use shared validation logic with logging enabled for final evaluation
         if !progression.is_valid_completion(total_pages, &self.config) {
             return None;
         }
 
         let pages_covered = progression.pages_visited.len() as i64;
-
-        // Calculate session count
         let session_count = sessions::session_count(&progression.stats);
-
-        // Convert timestamps to dates
         let start_date = self.time_config.format_date(progression.start_time);
         let end_date = self.time_config.format_date(progression.end_time);
 

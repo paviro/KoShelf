@@ -8,19 +8,17 @@ use std::path::Path;
 use std::str::FromStr;
 use tempfile::TempDir;
 
-/// Parser for KoReader statistics database
+/// Reads KOReader's `statistics.sqlite3` database to extract book metadata and page-level reading history.
 pub struct StatisticsParser;
 
 impl StatisticsParser {
-    /// Parse the statistics database from the given path
+    /// Copy the database to a temp file (to avoid locking the live DB) and parse all books and page stats.
     pub async fn parse<P: AsRef<Path>>(path: P) -> Result<StatisticsData> {
         info!("Opening statistics database: {:?}", path.as_ref());
 
-        // Create a temporary directory for the database copy
         let temp_dir = TempDir::new().with_context(|| "Failed to create temporary directory")?;
         let temp_db_path = temp_dir.path().join("statistics.db");
 
-        // Copy the database to the temporary directory
         debug!(
             "Copying database to temporary directory: {:?}",
             temp_db_path
@@ -33,7 +31,6 @@ impl StatisticsParser {
             )
         })?;
 
-        // Open the temporary database copy with read-only access
         let url = format!("sqlite:{}?mode=ro", temp_db_path.display());
         let options = SqliteConnectOptions::from_str(&url)
             .with_context(|| format!("Failed to parse statistics DB URL for {:?}", temp_db_path))?;
@@ -49,15 +46,10 @@ impl StatisticsParser {
                 )
             })?;
 
-        // Parse books
         let books = Self::parse_books(&pool).await?;
-
-        // Parse page stats
         let page_stats = Self::parse_page_stats(&pool).await?;
-
         pool.close().await;
 
-        // Create MD5 lookup map
         let mut stats_by_md5 = std::collections::HashMap::new();
         for stat_book in &books {
             stats_by_md5.insert(stat_book.md5.clone(), stat_book.clone());
@@ -113,7 +105,7 @@ impl StatisticsParser {
             total_read_pages: row
                 .try_get("total_read_pages")
                 .context("total_read_pages")?,
-            completions: None, // Will be populated later by completion detection
+            completions: None,
         })
     }
 

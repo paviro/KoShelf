@@ -14,13 +14,11 @@ async fn main() -> Result<()> {
         .init();
     let cli = Cli::parse();
 
-    // Handle --github flag
     if cli.github {
         println!("https://github.com/paviro/KOShelf");
         return Ok(());
     }
 
-    // Handle --list-languages flag
     if cli.list_languages {
         println!("{}", koshelf::i18n::list_supported_languages());
         return Ok(());

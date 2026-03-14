@@ -13,11 +13,14 @@ use crate::infra::stores::ReadingData;
 use crate::koreader::types::{BookSessionStats, StatBook};
 use crate::time_config::TimeConfig;
 
+/// Fetch a filtered, sorted list of library items.
 pub async fn list(repo: &LibraryRepository, query: LibraryListQuery) -> Result<LibraryListData> {
     let items = repo.list_items(&query).await?;
     Ok(LibraryListData { items })
 }
 
+/// Fetch a single library item with optional includes (highlights, bookmarks,
+/// statistics, completions). Returns `None` if the item ID is not found.
 pub async fn detail(
     repo: &LibraryRepository,
     query: &LibraryDetailQuery,
@@ -29,7 +32,6 @@ pub async fn detail(
 
     let includes = &query.includes;
 
-    // Fetch annotations directly as contract types, filtered by kind.
     let highlights = if includes.has(IncludeToken::Highlights) {
         Some(repo.get_annotations(&query.id, Some("highlight")).await?)
     } else {

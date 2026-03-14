@@ -156,8 +156,8 @@ fn compute_scope_stats(
 ///
 /// Events are built from the entire reading history so that streaks spanning
 /// month boundaries remain intact. Only events that overlap [month_from,
-/// month_to] are included in the result (cloned in full, matching old
-/// behaviour where a cross-month event appears identically in both months).
+/// month_to] are included in the result — a cross-month event appears
+/// identically (with full stats) in both months.
 async fn build_events_and_items(
     stats_data: &StatisticsData,
     time_config: &TimeConfig,
@@ -166,12 +166,10 @@ async fn build_events_and_items(
     repo: &LibraryRepository,
     page_scaling: &PageScaling,
 ) -> (Vec<ReadingCalendarEvent>, BTreeMap<String, CalendarItemRef>) {
-    // Build book ID -> StatBook lookup.
     let book_by_id: HashMap<i64, &crate::koreader::types::StatBook> =
         stats_data.books.iter().map(|b| (b.id, b)).collect();
 
-    // Group ALL page stats by book — no month filtering here.
-    // Events are built from full history, then filtered to the requested month.
+    // No month filtering here — events are built from full history then filtered.
     let mut stats_by_book: HashMap<i64, Vec<&PageStat>> = HashMap::new();
     for ps in &stats_data.page_stats {
         if ps.duration <= 0 {
@@ -189,7 +187,7 @@ async fn build_events_and_items(
         };
         let item_ref_key = stat_book.md5.clone();
 
-        // Group page stats by day — accumulate pages as float, round per day.
+        // Accumulate pages as float per day, round once.
         let mut by_day: BTreeMap<NaiveDate, DayAccumulator> = BTreeMap::new();
         for ps in page_stats {
             let date = time_config.date_for_timestamp(ps.start_time);
@@ -198,18 +196,15 @@ async fn build_events_and_items(
             acc.scaled_pages += page_scaling.factor_for_book_id(ps.id_book);
         }
 
-        // Merge consecutive days into event spans.
         let days: Vec<NaiveDate> = by_day.keys().copied().collect();
         merge_into_events(&mut all_events, &item_ref_key, &days, &by_day);
     }
 
-    // Keep only events that overlap [month_from, month_to].
     let events: Vec<ReadingCalendarEvent> = all_events
         .into_iter()
         .filter(|ev| event_overlaps_month(ev, month_from, month_to))
         .collect();
 
-    // Build item references only for books present in filtered events.
     let mut items: BTreeMap<String, CalendarItemRef> = BTreeMap::new();
     for ev in &events {
         if items.contains_key(&ev.item_ref) {
@@ -236,7 +231,7 @@ async fn build_events_and_items(
         }
     }
 
-    // Sort events deterministically: by start date, then by item title for stability.
+    // Sort by start date, then by title for deterministic output.
     let mut events = events;
     events.sort_by(|a, b| {
         a.start.cmp(&b.start).then_with(|| {
@@ -518,11 +513,10 @@ mod tests {
         };
         let result = reading_calendar(&reading_data, &repo, query).await;
 
-        // Events filtered to books only.
-        assert_eq!(result.events.len(), 1);
+        assert_eq!(result.events.len(), 1); // books only
         assert_eq!(result.items.len(), 1);
 
-        // But stats_by_scope covers all scopes.
+        // stats_by_scope covers all scopes regardless of query scope.
         assert_eq!(result.stats_by_scope.all.items_read, 2);
         assert_eq!(result.stats_by_scope.all.reading_time_sec, 300);
         assert_eq!(result.stats_by_scope.books.items_read, 1);

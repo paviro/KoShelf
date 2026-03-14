@@ -19,6 +19,7 @@ pub struct ReadingData {
     pub page_scaling: PageScaling,
 }
 
+/// Thread-safe store for [`ReadingData`], swapped atomically on statistics reload.
 #[derive(Debug, Clone, Default)]
 pub struct ReadingDataStore {
     inner: Arc<RwLock<Option<Arc<ReadingData>>>>,

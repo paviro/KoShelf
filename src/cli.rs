@@ -134,12 +134,10 @@ pub fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
 impl Cli {
     /// Validate CLI inputs that are independent of runtime mode.
     pub fn validate(&self) -> Result<()> {
-        // Require at least one of library_path or statistics_db
         if self.library_path.is_empty() && self.statistics_db.is_none() {
             anyhow::bail!("Either --library-path or --statistics-db (or both) must be provided");
         }
 
-        // Validate library paths if provided
         for library_path in &self.library_path {
             if !library_path.exists() {
                 anyhow::bail!("Library path does not exist: {:?}", library_path);
@@ -149,12 +147,10 @@ impl Cli {
             }
         }
 
-        // Validate include-unread option
         if self.include_unread && self.library_path.is_empty() {
             anyhow::bail!("--include-unread can only be used when --library-path is provided");
         }
 
-        // Validate docsettings-path and hashdocsettings-path options
         if self.docsettings_path.is_some() && self.hashdocsettings_path.is_some() {
             anyhow::bail!(
                 "--docsettings-path and --hashdocsettings-path are mutually exclusive. Please use only one."
@@ -169,7 +165,6 @@ impl Cli {
             anyhow::bail!("--hashdocsettings-path requires --library-path to be provided");
         }
 
-        // Validate docsettings path if provided
         if let Some(ref docsettings_path) = self.docsettings_path {
             if !docsettings_path.exists() {
                 anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
@@ -182,7 +177,6 @@ impl Cli {
             }
         }
 
-        // Validate hashdocsettings path if provided
         if let Some(ref hashdocsettings_path) = self.hashdocsettings_path {
             if !hashdocsettings_path.exists() {
                 anyhow::bail!(
@@ -198,19 +192,16 @@ impl Cli {
             }
         }
 
-        // Validate port option
         if self.output.is_some() && self.port != 3000 {
             anyhow::bail!("--port can only be used in web server mode (without --output)");
         }
 
-        // Validate statistics database if provided
         if let Some(ref stats_path) = self.statistics_db
             && !stats_path.exists()
         {
             anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
         }
 
-        // Validate data directory if it already exists
         if let Some(ref data_dir) = self.data_dir
             && data_dir.exists()
             && !data_dir.is_dir()
@@ -218,7 +209,6 @@ impl Cli {
             anyhow::bail!("Data directory path is not a directory: {:?}", data_dir);
         }
 
-        // Validate heatmap scale max
         parse_time_to_seconds(&self.heatmap_scale_max).with_context(|| {
             format!(
                 "Invalid heatmap-scale-max format: {}",
@@ -226,7 +216,6 @@ impl Cli {
             )
         })?;
 
-        // Validate min time per day
         if let Some(ref min_time_str) = self.min_time_per_day {
             parse_time_to_seconds(min_time_str)
                 .with_context(|| format!("Invalid min-time-per-day format: {}", min_time_str))?;

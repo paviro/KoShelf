@@ -41,7 +41,6 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
         Vec::new()
     };
 
-    // Build a per-metric bucket map.
     let mut metric_buckets: Vec<(&str, BTreeMap<String, i64>)> = Vec::new();
 
     for &metric in &query.metrics {
@@ -126,7 +125,6 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
         metric_buckets.push((metric.as_str(), buckets));
     }
 
-    // Merge all metric buckets into flattened MetricPoints.
     let points = all_keys
         .iter()
         .map(|key| {

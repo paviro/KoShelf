@@ -12,6 +12,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
+/// Extracts metadata and cover images from EPUB files via OPF parsing.
 pub struct EpubParser;
 
 impl Default for EpubParser {
@@ -25,10 +26,10 @@ impl EpubParser {
         Self
     }
 
+    /// Parse an EPUB file for metadata, page count, and cover image.
     pub async fn parse(&self, epub_path: &Path) -> Result<BookInfo> {
         let path = epub_path.to_path_buf();
 
-        // Run blocking I/O and parsing on the blocking threadpool
         tokio::task::spawn_blocking(move || Self::parse_sync(&path))
             .await
             .with_context(|| "Task join error")?
@@ -41,7 +42,6 @@ impl EpubParser {
         let mut zip = ZipArchive::new(file)
             .with_context(|| format!("Failed to read EPUB as zip: {:?}", epub_path))?;
 
-        // Step 1: Find the OPF file path from META-INF/container.xml
         let opf_path = {
             let mut container_xml = String::new();
             let mut container_file = zip
@@ -52,7 +52,6 @@ impl EpubParser {
         };
         debug!("Found OPF file path: {}", opf_path);
 
-        // Step 2: Read the OPF file (scope the borrow)
         let opf_xml = {
             let mut opf_xml = String::new();
             {
@@ -64,14 +63,12 @@ impl EpubParser {
             opf_xml
         };
 
-        // Step 3: Parse OPF metadata (returns BookInfo with schema:numberOfPages if present, and nav_path)
         let (mut book_info, cover_id, nav_path) = Self::parse_opf_metadata(&opf_xml)?;
 
-        // Step 3.5: If no page count from metadata, try parsing page-list from nav document
+        // If no page count from OPF metadata, try the nav document's page-list.
         if book_info.pages.is_none()
             && let Some(ref nav_rel_path) = nav_path
         {
-            // Resolve nav path relative to OPF directory
             let opf_parent = Path::new(&opf_path).parent();
             let resolved_nav_path = if let Some(parent) = opf_parent {
                 parent
@@ -90,14 +87,12 @@ impl EpubParser {
             }
         }
 
-        // Step 4: Find cover image path and MIME type in manifest
         let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
         debug!(
             "Cover image path: {:?}, MIME type: {:?}",
             cover_path, cover_mime_type
         );
 
-        // Step 4.5: Resolve cover path relative to OPF directory
         let resolved_cover_path = if let Some(ref cover_path) = cover_path {
             let opf_parent = Path::new(&opf_path).parent();
             let joined = if let Some(parent) = opf_parent {
@@ -110,7 +105,6 @@ impl EpubParser {
             None
         };
 
-        // Step 5: Extract cover image bytes
         let cover_data = if let Some(ref cover_path) = resolved_cover_path {
             match zip.by_name(cover_path) {
                 Ok(mut cover_file) => {

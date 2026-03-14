@@ -77,7 +77,6 @@ fn reading_data_periods(
         return Vec::new();
     }
 
-    // Bucket page stats by period key.
     let mut buckets: BTreeMap<String, PeriodBucket> = BTreeMap::new();
     for stat in &page_stats {
         let date = time_config.date_for_timestamp(stat.start_time);
@@ -87,7 +86,6 @@ fn reading_data_periods(
         bucket.scaled_pages += page_scaling.factor_for_book_id(stat.id_book);
     }
 
-    // Count completions per period.
     for book in &stats.books {
         let Some(ref completions) = book.completions else {
             continue;

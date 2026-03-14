@@ -53,7 +53,6 @@ pub fn filter_and_resolve_range(
             (filtered, from, to)
         }
         None => {
-            // Default to full available range.
             let today = time_config.today_date();
             if valid_stats.is_empty() {
                 return (valid_stats, today, today);

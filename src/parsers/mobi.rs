@@ -4,6 +4,7 @@ use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
+/// Extracts metadata and cover images from MOBI/AZW files via PDB + EXTH header parsing.
 pub struct MobiParser;
 
 impl Default for MobiParser {
@@ -17,6 +18,7 @@ impl MobiParser {
         Self
     }
 
+    /// Parse a MOBI file for metadata, identifiers, and cover image.
     pub async fn parse(&self, mobi_path: &Path) -> Result<BookInfo> {
         let path = mobi_path.to_path_buf();
         tokio::task::spawn_blocking(move || Self::parse_sync(&path))

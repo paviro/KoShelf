@@ -14,6 +14,7 @@ use zip::ZipArchive;
 /// Image file extensions we look for as cover candidates
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif"];
 
+/// Extracts metadata and cover images from CBZ (ZIP) and CBR (RAR) comic archives.
 pub struct ComicParser;
 
 impl Default for ComicParser {
@@ -27,6 +28,7 @@ impl ComicParser {
         Self
     }
 
+    /// Parse a CBZ or CBR comic archive for metadata (ComicInfo.xml) and cover image.
     pub async fn parse(&self, comic_path: &Path) -> Result<BookInfo> {
         let path = comic_path.to_path_buf();
         let is_cbr = path
@@ -60,7 +62,6 @@ impl ComicParser {
         let mut zip = ZipArchive::new(file)
             .with_context(|| format!("Failed to read CBZ as zip: {:?}", cbz_path))?;
 
-        // Count image files for page count
         let image_count = zip
             .file_names()
             .filter(|name| {
@@ -69,22 +70,18 @@ impl ComicParser {
             })
             .count();
 
-        // Try to find and parse ComicInfo.xml
         let mut book_info = if let Ok(mut comic_info_file) = zip.by_name("ComicInfo.xml") {
             let mut xml_content = String::new();
             comic_info_file.read_to_string(&mut xml_content)?;
             Self::parse_comic_info_xml(&xml_content)?
         } else {
-            // Fallback: extract title from filename
             Self::book_info_from_filename(cbz_path)
         };
 
-        // Set page count from image count
         if image_count > 0 {
             book_info.pages = Some(image_count as u32);
         }
 
-        // Find and extract cover image (first image file when sorted)
         let (cover_data, cover_mime_type) = Self::extract_cover_from_cbz(&mut zip)?;
         book_info.cover_data = cover_data;
         book_info.cover_mime_type = cover_mime_type;
@@ -97,15 +94,12 @@ impl ComicParser {
     fn parse_cbr_sync(cbr_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening CBR: {:?}", cbr_path);
 
-        // Create a temporary directory for extraction
         let temp_dir = tempfile::tempdir().with_context(|| "Failed to create temp directory")?;
 
-        // Open the RAR archive for the first pass (scan and metadata extraction)
         let archive = unrar::Archive::new(cbr_path)
             .open_for_processing()
             .map_err(|e| anyhow!("Failed to open CBR file: {:?}", e))?;
 
-        // Collect all entries and look for ComicInfo.xml and images
         let mut comic_info_xml: Option<String> = None;
         let mut image_files: Vec<String> = Vec::new();
 
@@ -115,15 +109,12 @@ impl ComicParser {
                 Ok(Some(header)) => {
                     let filename = header.entry().filename.to_string_lossy().to_string();
 
-                    // Get the basename for matching (RAR entries may have path prefixes)
                     let basename = Path::new(&filename)
                         .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or(&filename);
 
-                    // Check if this is ComicInfo.xml (case-insensitive, check basename)
                     if basename.eq_ignore_ascii_case("ComicInfo.xml") {
-                        // Extract to temp dir
                         let extract_path = temp_dir.path().join("ComicInfo.xml");
                         archive = header
                             .extract_to(&extract_path)
@@ -134,7 +125,6 @@ impl ComicParser {
                         continue;
                     }
 
-                    // Check if this is an image file
                     let is_image = Path::new(&filename)
                         .extension()
                         .and_then(|e| e.to_str())
@@ -148,7 +138,6 @@ impl ComicParser {
                         image_files.push(filename.clone());
                     }
 
-                    // Skip this entry in the first pass
                     archive = header
                         .skip()
                         .map_err(|e| anyhow!("Failed to skip entry: {:?}", e))?;
@@ -158,26 +147,21 @@ impl ComicParser {
             }
         }
 
-        // Parse book info
         let mut book_info = if let Some(ref xml) = comic_info_xml {
             Self::parse_comic_info_xml(xml)?
         } else {
             Self::book_info_from_filename(cbr_path)
         };
 
-        // Set page count from image count
         if !image_files.is_empty() {
             book_info.pages = Some(image_files.len() as u32);
         }
 
-        // Sort image files to find the correct cover (alphabetical first)
         image_files.sort();
 
-        // Second pass: Extract the cover image
         if let Some(cover_filename) = image_files.first() {
             debug!("Selected cover image for CBR: {}", cover_filename);
 
-            // Re-open archive for second pass to find and extract the cover
             let archive = unrar::Archive::new(cbr_path)
                 .open_for_processing()
                 .map_err(|e| anyhow!("Failed to re-open CBR file for cover extraction: {:?}", e))?;

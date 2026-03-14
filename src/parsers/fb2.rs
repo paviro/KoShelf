@@ -12,6 +12,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
+/// Extracts metadata and cover images from FB2 files (plain XML or `.fb2.zip`).
 pub struct Fb2Parser;
 
 impl Default for Fb2Parser {
@@ -25,10 +26,10 @@ impl Fb2Parser {
         Self
     }
 
+    /// Parse an FB2 file for metadata and cover image.
     pub async fn parse(&self, fb2_path: &Path) -> Result<BookInfo> {
         let path = fb2_path.to_path_buf();
 
-        // Run blocking I/O and parsing on the blocking threadpool
         tokio::task::spawn_blocking(move || Self::parse_sync(&path))
             .await
             .with_context(|| "Task join error")?
@@ -37,13 +38,9 @@ impl Fb2Parser {
     fn parse_sync(fb2_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening FB2: {:?}", fb2_path);
 
-        // Read the FB2 content, handling both plain .fb2 and .fb2.zip
         let xml_content = Self::read_fb2_content(fb2_path)?;
-
-        // Parse FB2 XML
         let (fb2_info, cover_href) = Self::parse_fb2_metadata(&xml_content)?;
 
-        // Extract cover image if referenced
         let (cover_data, cover_mime_type) = if let Some(ref cover_href) = cover_href {
             Self::extract_cover_image(&xml_content, cover_href)?
         } else {

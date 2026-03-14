@@ -207,13 +207,11 @@ pub async fn full_rebuild(
         warn!("Failed to create media directories: {}", e);
     }
 
-    // Clear DB and re-ingest
     repo.clear_all().await?;
 
     let paths = collect_paths(&config.library_paths);
     let ingest_stats = ingest_paths(&paths, config, repo, &media_dirs.covers_dir).await?;
 
-    // Cleanup stale covers
     match repo.load_all_item_ids().await {
         Ok(ids) => {
             let id_set: HashSet<String> = ids.into_iter().collect();
@@ -231,7 +229,6 @@ pub async fn full_rebuild(
         warn!("Failed to sync static frontend: {}", e);
     }
 
-    // Load stats
     let reading_data = load_reading_data(config, repo).await?;
 
     if let Some(store) = reading_data_store
@@ -242,7 +239,6 @@ pub async fn full_rebuild(
 
     let generated_at = config.time_config.now_rfc3339();
 
-    // Build site metadata from DB
     let (has_books, has_comics) = repo
         .query_content_type_flags()
         .await
@@ -273,7 +269,6 @@ pub async fn full_rebuild(
         None
     };
 
-    // Static data re-export
     if !config.is_internal_server {
         let export_config = ExportConfig {
             site_title: config.site_title.clone(),

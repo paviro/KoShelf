@@ -17,6 +17,7 @@ struct WatcherRebuildEvent {
     paths: Vec<PathBuf>,
 }
 
+/// Watches library paths and statistics DB for changes, triggering debounced rebuilds.
 pub struct FileWatcher {
     config: SiteConfig,
     site_store: Option<SharedSiteStore>,
@@ -49,11 +50,11 @@ impl FileWatcher {
         }
     }
 
+    /// Start watching and processing file changes. Blocks until an error occurs.
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
         let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<WatcherRebuildEvent>();
 
-        // Set up file watcher
         let mut watcher = RecommendedWatcher::new(
             move |result: Result<Event, notify::Error>| match result {
                 Ok(event) => {
@@ -66,7 +67,6 @@ impl FileWatcher {
             Config::default().with_poll_interval(Duration::from_secs(1)),
         )?;
 
-        // Watch all library paths if provided
         for library_path in &self.library_paths {
             watcher.watch(library_path, RecursiveMode::Recursive)?;
             info!(
@@ -75,7 +75,6 @@ impl FileWatcher {
             );
         }
 
-        // Watch external metadata locations if configured
         match &self.metadata_location {
             MetadataLocation::DocSettings(path) => {
                 watcher.watch(path, RecursiveMode::Recursive)?;
@@ -93,7 +92,6 @@ impl FileWatcher {
             }
         }
 
-        // Also watch the statistics database if provided
         if let Some(ref stats_path) = self.statistics_db_path
             && stats_path.exists()
             && let Some(parent) = stats_path.parent()
@@ -105,14 +103,12 @@ impl FileWatcher {
             );
         }
 
-        // Clone dependencies for the rebuild task
         let config_clone = self.config.clone();
         let site_store_clone = self.site_store.clone();
         let reading_data_store_clone = self.reading_data_store.clone();
         let update_notifier_clone = self.update_notifier.clone();
         let library_repo_clone = self.library_repo.clone();
 
-        // Spawn delayed rebuild task.
         // NOTE: Statistics loading uses non-Send types (e.g. mlua::Lua, Rc-based translations),
         // so this rebuild loop must not be spawned onto the multithreaded executor.
         let rebuild_task = tokio::task::spawn_blocking(move || {

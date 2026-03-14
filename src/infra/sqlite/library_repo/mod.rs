@@ -11,6 +11,7 @@ pub mod rows;
 
 use sqlx::SqlitePool;
 
+/// SQLite-backed repository for library items, annotations, and fingerprints.
 #[derive(Clone)]
 pub struct LibraryRepository {
     pool: SqlitePool,

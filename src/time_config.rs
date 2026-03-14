@@ -2,6 +2,11 @@ use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Local, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 
+/// Timezone and logical day-start offset used to map Unix timestamps to reading dates.
+///
+/// When `timezone` is `None`, the system local timezone is used.
+/// `day_start_minutes` shifts the day boundary (e.g. 240 = 04:00, so reading at
+/// 02:00 counts as the previous calendar day).
 #[derive(Clone, Debug)]
 pub struct TimeConfig {
     pub timezone: Option<Tz>,

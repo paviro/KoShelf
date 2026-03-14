@@ -30,7 +30,6 @@ pub async fn load_reading_data(
 
     let mut data = StatisticsParser::parse(stats_path).await?;
 
-    // Apply minimum thresholds filtering
     if config.min_pages_per_day.is_some() || config.min_time_per_day.is_some() {
         StatisticsCalculator::filter_stats(
             &mut data,
@@ -40,7 +39,6 @@ pub async fn load_reading_data(
         );
     }
 
-    // Filter to library items using DB query
     if !config.include_all_stats {
         let item_ids = repo.load_all_item_ids().await?;
         if !item_ids.is_empty() {
@@ -51,11 +49,9 @@ pub async fn load_reading_data(
 
     StatisticsCalculator::populate_completions(&mut data, &config.time_config);
 
-    // Tag content types using DB query
     let content_type_map = repo.load_content_types_by_id().await?;
     data.tag_content_types(&content_type_map);
 
-    // Compute page scaling factors
     let page_scaling = if config.use_stable_page_metadata {
         let scaling_inputs = repo.load_scaling_inputs().await?;
         PageScaling::from_db_inputs(&scaling_inputs, &data)

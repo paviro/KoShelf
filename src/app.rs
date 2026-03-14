@@ -91,7 +91,6 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     cli.validate()?;
 
-    // Parse heatmap scale max
     let heatmap_scale_max = parse_time_to_seconds(&cli.heatmap_scale_max).with_context(|| {
         format!(
             "Invalid heatmap-scale-max format: {}",
@@ -99,7 +98,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         )
     })?;
 
-    // Parse min time per day
     let min_time_per_day = if let Some(ref min_time_str) = cli.min_time_per_day {
         parse_time_to_seconds(min_time_str)
             .with_context(|| format!("Invalid min-time-per-day format: {}", min_time_str))?
@@ -107,7 +105,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         None
     };
 
-    // Build time configuration from CLI
     let time_config = TimeConfig::from_cli(&cli.timezone, &cli.day_start_time)?;
 
     let mut runtime_data_policy = resolve_runtime_data_policy_for_run(&cli);
@@ -123,16 +120,13 @@ pub async fn run(cli: Cli) -> Result<()> {
         ),
     }
 
-    // Determine output directory + run mode
     let plan = plan_output(&cli, &runtime_data_policy)?;
-
-    // Determine if we're running with internal web server (enables runtime update events)
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
     // In ephemeral mode, determine where runtime data (library DB) lives.
     let _runtime_temp_dir = if !runtime_data_policy.is_persistent() {
         if is_internal_server {
-            // Serve mode: output_dir is already a temp dir, reuse it.
+            // Serve mode: output_dir is already a temp dir; reuse it.
             runtime_data_policy.set_resolved_data_dir(plan.output_dir.clone());
             None
         } else {
@@ -151,7 +145,6 @@ pub async fn run(cli: Cli) -> Result<()> {
         info!("Runtime library DB path: {:?}", db_path);
     }
 
-    // Create site config - bundles all configuration options.
     let config = SiteConfig {
         output_dir: plan.output_dir.clone(),
         site_title: cli.title.clone(),
@@ -191,7 +184,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     if !config.library_paths.is_empty() {
         update_library(&config, &repo, &media_dirs.covers_dir).await?;
 
-        // Cleanup stale covers
+        // Cleanup stale covers.
         match repo.load_all_item_ids().await {
             Ok(ids) => {
                 let id_set: HashSet<String> = ids.into_iter().collect();
@@ -284,7 +277,6 @@ pub async fn run(cli: Cli) -> Result<()> {
 
             let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
-            // Start file watcher with site store updates.
             let file_watcher = crate::infra::watcher::FileWatcher::new(
                 config,
                 Some(site_store.clone()),
@@ -293,7 +285,6 @@ pub async fn run(cli: Cli) -> Result<()> {
                 Some(repo.clone()),
             );
 
-            // Start web server (runtime media cache is served from `plan.output_dir`).
             let web_server = WebServer::new(
                 plan.output_dir,
                 cli.port,
@@ -303,7 +294,6 @@ pub async fn run(cli: Cli) -> Result<()> {
                 repo,
             );
 
-            // Run both file watcher and web server concurrently
             tokio::select! {
                 result = file_watcher.run() => {
                     if let Err(e) = result {
