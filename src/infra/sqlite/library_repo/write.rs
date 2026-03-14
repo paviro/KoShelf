@@ -222,6 +222,7 @@ impl LibraryRepository {
 mod tests {
     use super::super::rows::CollisionDiagnosticRow;
     use super::super::tests::{sample_annotation, sample_fingerprint, sample_item, test_repo};
+    use crate::contracts::library::LibraryStatus;
 
     #[tokio::test]
     async fn upsert_and_get_item() {
@@ -238,10 +239,7 @@ mod tests {
 
         assert_eq!(fetched.id, "aaa");
         assert_eq!(fetched.title, "Book aaa");
-        assert_eq!(
-            fetched.status,
-            crate::contracts::library::LibraryStatus::Reading
-        );
+        assert_eq!(fetched.status, LibraryStatus::Reading);
         assert!((fetched.progress_percentage.unwrap() - 0.42).abs() < f64::EPSILON);
     }
 

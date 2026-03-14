@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
 
@@ -118,12 +119,12 @@ pub fn generate_share_image(
         .encode_advanced(&config)
         .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
-    std::fs::write(output_path, &*webp_data).context("Failed to write WebP file")?;
+    fs::write(output_path, &*webp_data).context("Failed to write WebP file")?;
 
     // Reuse the parsed tree for the SVG output instead of re-parsing.
     let svg_path = output_path.with_extension("svg");
     let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
-    std::fs::write(svg_path, svg_output).context("Failed to write SVG file")?;
+    fs::write(svg_path, svg_output).context("Failed to write SVG file")?;
 
     log::debug!("Finished creating share image: {:?}", output_path);
 
@@ -149,7 +150,7 @@ pub fn generate_share_svg(
 
     let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
 
-    std::fs::write(output_path, svg_output).context("Failed to write SVG file")?;
+    fs::write(output_path, svg_output).context("Failed to write SVG file")?;
 
     Ok(())
 }

@@ -3,7 +3,7 @@
 //! These types represent the shape of data from KOReader's statistics database
 //! and the completion analysis derived from it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -180,7 +180,7 @@ impl StatisticsData {
             .cloned()
             .collect();
 
-        let ids_to_keep: std::collections::HashSet<i64> = books.iter().map(|b| b.id).collect();
+        let ids_to_keep: HashSet<i64> = books.iter().map(|b| b.id).collect();
         let page_stats: Vec<PageStat> = self
             .page_stats
             .iter()

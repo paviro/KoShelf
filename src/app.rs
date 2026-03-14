@@ -9,14 +9,17 @@ use crate::infra::sqlite::library_db::open_library_pool;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::sqlite::migrations::run_library_migrations;
 use crate::infra::stores::{ReadingDataStore, SiteStore, UpdateNotifier};
+use crate::infra::watcher::FileWatcher;
 use crate::runtime::export::{ExportConfig, export_data_files};
 use crate::runtime::ingest::{load_reading_data, update_library};
 use crate::runtime::media::{self, resolve_media_dirs};
+use crate::runtime::recap::generate_recap_share_images;
 use crate::server::WebServer;
 use crate::time_config::TimeConfig;
 use anyhow::{Context, Result};
 use log::info;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::TempDir;
 
@@ -27,7 +30,7 @@ enum RunMode {
 }
 
 struct OutputPlan {
-    output_dir: std::path::PathBuf,
+    output_dir: PathBuf,
     /// Keep alive for Serve mode so the temp directory is cleaned up on exit.
     _temp_dir: Option<TempDir>,
     mode: RunMode,
@@ -207,7 +210,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
     // ── 6. Generate recap images ───────────────────────────────────────
     if let Some(ref rd) = reading_data {
-        crate::runtime::recap::generate_recap_share_images(
+        generate_recap_share_images(
             &rd.stats_data,
             &repo,
             &rd.page_scaling,
@@ -255,8 +258,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
         RunMode::WatchStatic => {
             info!("Watching library changes to refresh static shell/assets and /data export.");
-            let file_watcher =
-                crate::infra::watcher::FileWatcher::new(config, None, None, None, Some(repo));
+            let file_watcher = FileWatcher::new(config, None, None, None, Some(repo));
             if let Err(e) = file_watcher.run().await {
                 log::error!("File watcher error: {}", e);
             }
@@ -277,7 +279,7 @@ pub async fn run(cli: Cli) -> Result<()> {
 
             let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
-            let file_watcher = crate::infra::watcher::FileWatcher::new(
+            let file_watcher = FileWatcher::new(
                 config,
                 Some(site_store.clone()),
                 Some(reading_data_store.clone()),

@@ -2,6 +2,8 @@ use crate::models::{BookInfo, Identifier};
 use crate::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
+use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Extracts metadata and cover images from MOBI/AZW files via PDB + EXTH header parsing.
@@ -28,7 +30,7 @@ impl MobiParser {
 
     fn parse_sync(mobi_path: &PathBuf) -> Result<BookInfo> {
         debug!("Opening MOBI: {:?}", mobi_path);
-        let data = std::fs::read(mobi_path)
+        let data = fs::read(mobi_path)
             .with_context(|| format!("Failed to read MOBI file: {:?}", mobi_path))?;
 
         // Default fallback: filename stem.
@@ -452,7 +454,7 @@ impl MobiParser {
     }
 
     fn dedupe_preserve_order(items: Vec<String>) -> Vec<String> {
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = HashSet::new();
         let mut out = Vec::new();
         for s in items {
             let key = s.to_lowercase();

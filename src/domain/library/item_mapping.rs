@@ -7,8 +7,9 @@
 use crate::contracts::library::{ExternalIdentifier, LibrarySeries};
 use crate::infra::sources::fingerprints::FileFingerprint;
 use crate::infra::sqlite::library_repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
-use crate::models::{LibraryItem, LibraryItemFormat};
+use crate::models::{ContentType, LibraryItem, LibraryItemFormat};
 use crate::time_config::TimeConfig;
+use std::path::Path;
 
 /// Map a `LibraryItem` to a `LibraryItemRow` for upsert.
 pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryItemRow {
@@ -16,8 +17,8 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
     let content_type = item.content_type();
 
     let search_base_path = match content_type {
-        crate::models::ContentType::Book => "/books",
-        crate::models::ContentType::Comic => "/comics",
+        ContentType::Book => "/books",
+        ContentType::Comic => "/comics",
     };
 
     let series_json = item.series().map(|name| {
@@ -135,7 +136,7 @@ pub fn map_annotations_to_rows(
 /// metadata cannot be read.
 pub fn capture_fingerprint_row(
     item: &LibraryItem,
-    metadata_path: Option<&std::path::Path>,
+    metadata_path: Option<&Path>,
     time_config: &TimeConfig,
 ) -> Option<FingerprintRow> {
     let book_fp = FileFingerprint::capture(&item.file_path).ok()?;

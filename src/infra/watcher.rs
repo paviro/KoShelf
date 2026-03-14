@@ -3,10 +3,13 @@ use crate::config::SiteConfig;
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::models::LibraryItemFormat;
+use crate::runtime::rebuild::targeted_rebuild;
 use anyhow::Result;
 use log::{debug, info, warn};
+use notify::event::ModifyKind;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -26,7 +29,7 @@ pub struct FileWatcher {
     library_repo: Option<LibraryRepository>,
 }
 
-impl std::ops::Deref for FileWatcher {
+impl Deref for FileWatcher {
     type Target = SiteConfig;
     fn deref(&self) -> &Self::Target {
         &self.config
@@ -129,7 +132,7 @@ impl FileWatcher {
                     }
 
                     let result = if let Some(ref repo) = library_repo_clone {
-                        crate::runtime::rebuild::targeted_rebuild(
+                        targeted_rebuild(
                             accumulated_paths,
                             &config_clone,
                             repo,
@@ -173,18 +176,15 @@ impl FileWatcher {
             EventKind::Create(_) | EventKind::Remove(_) => {
                 self.paths_contain_relevant_files(&event.paths)
             }
-            EventKind::Modify(modify_kind) => {
-                use notify::event::ModifyKind;
-                match modify_kind {
-                    ModifyKind::Data(_) | ModifyKind::Name(_) | ModifyKind::Any => {
-                        self.paths_contain_relevant_files(&event.paths)
-                    }
-                    _ => {
-                        debug!("Ignoring modify event: {:?}", modify_kind);
-                        false
-                    }
+            EventKind::Modify(modify_kind) => match modify_kind {
+                ModifyKind::Data(_) | ModifyKind::Name(_) | ModifyKind::Any => {
+                    self.paths_contain_relevant_files(&event.paths)
                 }
-            }
+                _ => {
+                    debug!("Ignoring modify event: {:?}", modify_kind);
+                    false
+                }
+            },
             _ => {
                 debug!("Ignoring event kind: {:?}", event.kind);
                 false
@@ -192,7 +192,7 @@ impl FileWatcher {
         }
     }
 
-    fn paths_contain_relevant_files(&self, paths: &[std::path::PathBuf]) -> bool {
+    fn paths_contain_relevant_files(&self, paths: &[PathBuf]) -> bool {
         paths.iter().any(|path| {
             let filename = path.file_name().and_then(|s| s.to_str());
 

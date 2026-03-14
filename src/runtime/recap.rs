@@ -5,11 +5,13 @@
 //! only generates the visual share assets.
 
 use crate::contracts::library::LibraryContentType;
+use crate::domain::reading::StatisticsCalculator;
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::types::{MonthRecap, RecapItem, YearlySummary};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::koreader::types::{DailyStats, PageStat, ReadingStats, StatisticsData};
 use crate::models::ContentType;
+use crate::share::{ShareFormat, ShareImageData, generate_share_image};
 use crate::time_config::TimeConfig;
 use anyhow::Result;
 use chrono::Datelike;
@@ -18,6 +20,7 @@ use log::{info, warn};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::Path;
+use std::sync::mpsc;
 use std::time::{Instant, SystemTime};
 
 // ── Recap generation ────────────────────────────────────────────────────
@@ -364,9 +367,9 @@ fn collect_share_tasks_for_year(
     summary: &YearlySummary,
     recap_dir: &Path,
     stats_db_time: SystemTime,
-    progress_tx: &std::sync::mpsc::Sender<()>,
+    progress_tx: &mpsc::Sender<()>,
 ) -> Vec<tokio::task::JoinHandle<()>> {
-    let share_data = crate::share::ShareImageData {
+    let share_data = ShareImageData {
         year,
         books_read: summary.total_books as u32,
         reading_time_hours: summary.total_time_hours as u32,
@@ -377,11 +380,7 @@ fn collect_share_tasks_for_year(
         best_month: summary.best_month.clone(),
     };
 
-    let formats = [
-        crate::share::ShareFormat::Story,
-        crate::share::ShareFormat::Square,
-        crate::share::ShareFormat::Banner,
-    ];
+    let formats = [ShareFormat::Story, ShareFormat::Square, ShareFormat::Banner];
 
     let recap_dir_owned = recap_dir.to_path_buf();
     formats
@@ -401,9 +400,7 @@ fn collect_share_tasks_for_year(
                 let share_data = share_data.clone();
                 let tx = progress_tx.clone();
                 Some(tokio::task::spawn_blocking(move || {
-                    if let Err(e) =
-                        crate::share::generate_share_image(&share_data, format, &output_path)
-                    {
+                    if let Err(e) = generate_share_image(&share_data, format, &output_path) {
                         log::warn!("Failed to generate share image {:?}: {}", output_path, e);
                     }
                     let _ = tx.send(());
@@ -427,8 +424,7 @@ pub async fn generate_recap_share_images(
     stats_db_path: Option<&Path>,
     time_config: &TimeConfig,
 ) -> Result<()> {
-    let reading_stats_all =
-        crate::domain::reading::StatisticsCalculator::calculate_stats(stats_data, time_config);
+    let reading_stats_all = StatisticsCalculator::calculate_stats(stats_data, time_config);
 
     let (year_month_items, years) =
         group_completions_by_year_month(stats_data, repo, page_scaling).await;
@@ -448,7 +444,7 @@ pub async fn generate_recap_share_images(
 
     fs::create_dir_all(recap_dir)?;
 
-    let (progress_tx, progress_rx) = std::sync::mpsc::channel::<()>();
+    let (progress_tx, progress_rx) = mpsc::channel::<()>();
     let mut all_tasks = Vec::new();
 
     for year in &years {

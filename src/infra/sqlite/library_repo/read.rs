@@ -1,9 +1,12 @@
 //! Read operations for the library repository.
 
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
 
 use crate::contracts::library::{LibraryAnnotation, LibraryDetailItem, LibraryListItem};
 use crate::domain::library::queries::LibraryListQuery;
+use crate::models::ContentType;
 
 use super::LibraryRepository;
 use super::rows::FingerprintRow;
@@ -163,9 +166,7 @@ impl LibraryRepository {
     ///
     /// Returns `(pagemap_doc_pages, doc_pages)` pairs. `doc_pages` is the rendered
     /// page count used as fallback denominator when `stat_book.pages` is unavailable.
-    pub async fn load_scaling_inputs(
-        &self,
-    ) -> Result<std::collections::HashMap<String, (i32, Option<i32>)>> {
+    pub async fn load_scaling_inputs(&self) -> Result<HashMap<String, (i32, Option<i32>)>> {
         let rows: Vec<(String, i32, Option<i32>)> = sqlx::query_as(
             "SELECT id, pagemap_doc_pages, doc_pages
              FROM library_items
@@ -206,9 +207,7 @@ impl LibraryRepository {
     ///
     /// Used by statistics loading to tag stats entries by content type
     /// without needing in-memory items.
-    pub async fn load_content_types_by_id(
-        &self,
-    ) -> Result<std::collections::HashMap<String, crate::models::ContentType>> {
+    pub async fn load_content_types_by_id(&self) -> Result<HashMap<String, ContentType>> {
         let rows: Vec<(String, String)> =
             sqlx::query_as("SELECT id, content_type FROM library_items")
                 .fetch_all(&self.pool)
@@ -219,8 +218,8 @@ impl LibraryRepository {
             .into_iter()
             .filter_map(|(id, ct)| {
                 let content_type = match ct.as_str() {
-                    "book" => crate::models::ContentType::Book,
-                    "comic" => crate::models::ContentType::Comic,
+                    "book" => ContentType::Book,
+                    "comic" => ContentType::Comic,
                     _ => return None,
                 };
                 Some((id, content_type))
@@ -232,6 +231,7 @@ impl LibraryRepository {
 #[cfg(test)]
 mod tests {
     use super::super::tests::{sample_annotation, sample_item, test_repo};
+    use crate::contracts::common::ContentTypeFilter;
     use crate::domain::library::queries::{ItemSort, LibraryListQuery};
 
     #[tokio::test]
@@ -254,8 +254,6 @@ mod tests {
 
         repo.upsert_item(&book).await.unwrap();
         repo.upsert_item(&comic).await.unwrap();
-
-        use crate::contracts::common::ContentTypeFilter;
 
         let all = repo.list_items(&LibraryListQuery::default()).await.unwrap();
         assert_eq!(all.len(), 2);

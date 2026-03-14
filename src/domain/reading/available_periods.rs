@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 use chrono::NaiveDate;
 
 use crate::contracts::reading::{PeriodEntry, ReadingAvailablePeriodsData};
-use crate::domain::reading::queries::{PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery};
+use crate::domain::reading::queries::{
+    DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery,
+};
+use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::shared;
 use crate::infra::stores::ReadingData;
 use crate::koreader::types::StatisticsData;
@@ -64,8 +67,8 @@ fn reading_data_periods(
     stats: &StatisticsData,
     time_config: &TimeConfig,
     group_by: PeriodGroupBy,
-    range: Option<&crate::domain::reading::queries::DateRange>,
-    page_scaling: &crate::domain::reading::scaling::PageScaling,
+    range: Option<&DateRange>,
+    page_scaling: &PageScaling,
 ) -> Vec<PeriodEntry> {
     let (page_stats, resolved_from, resolved_to) = shared::filter_and_resolve_range(
         &stats.page_stats,

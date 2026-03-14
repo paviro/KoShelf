@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 use log::{debug, info, warn};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
@@ -50,7 +51,7 @@ impl StatisticsParser {
         let page_stats = Self::parse_page_stats(&pool).await?;
         pool.close().await;
 
-        let mut stats_by_md5 = std::collections::HashMap::new();
+        let mut stats_by_md5 = HashMap::new();
         for stat_book in &books {
             stats_by_md5.insert(stat_book.md5.clone(), stat_book.clone());
         }

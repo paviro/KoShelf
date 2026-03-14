@@ -6,6 +6,7 @@ use include_dir::{Dir, File, include_dir};
 use log::info;
 use std::collections::HashSet;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -141,7 +142,7 @@ pub fn sync_static_frontend(output_dir: &Path, has_reading_data: bool) -> Result
     if !has_reading_data {
         let recap_assets_dir = output_dir.join("assets").join("recap");
         if let Err(error) = fs::remove_dir_all(&recap_assets_dir)
-            && error.kind() != std::io::ErrorKind::NotFound
+            && error.kind() != ErrorKind::NotFound
         {
             return Err(error.into());
         }
@@ -162,7 +163,7 @@ fn cleanup_removed_legacy_outputs(output_dir: &Path) -> Result<()> {
     ] {
         let dir = output_dir.join(relative_dir);
         if let Err(error) = fs::remove_dir_all(&dir)
-            && error.kind() != std::io::ErrorKind::NotFound
+            && error.kind() != ErrorKind::NotFound
         {
             return Err(error.into());
         }
@@ -176,7 +177,7 @@ fn cleanup_removed_legacy_outputs(output_dir: &Path) -> Result<()> {
     ] {
         let file = output_dir.join(relative_file);
         if let Err(error) = fs::remove_file(&file)
-            && error.kind() != std::io::ErrorKind::NotFound
+            && error.kind() != ErrorKind::NotFound
         {
             return Err(error.into());
         }

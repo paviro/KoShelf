@@ -6,7 +6,7 @@ use quick_xml::Reader;
 use quick_xml::escape::unescape;
 use quick_xml::events::Event;
 use std::borrow::Cow;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
@@ -119,7 +119,7 @@ impl ComicParser {
                         archive = header
                             .extract_to(&extract_path)
                             .map_err(|e| anyhow!("Failed to extract ComicInfo.xml: {:?}", e))?;
-                        if let Ok(content) = std::fs::read_to_string(&extract_path) {
+                        if let Ok(content) = fs::read_to_string(&extract_path) {
                             comic_info_xml = Some(content);
                         }
                         continue;
@@ -177,14 +177,14 @@ impl ComicParser {
                         if &filename == cover_filename {
                             let extract_path = temp_dir.path().join(&filename);
                             if let Some(parent) = extract_path.parent() {
-                                let _ = std::fs::create_dir_all(parent);
+                                let _ = fs::create_dir_all(parent);
                             }
 
                             let _ = header
                                 .extract_to(&extract_path)
                                 .map_err(|e| anyhow!("Failed to extract cover image: {:?}", e))?;
 
-                            if let Ok(data) = std::fs::read(&extract_path) {
+                            if let Ok(data) = fs::read(&extract_path) {
                                 let mime =
                                     Self::mime_type_from_extension(&extract_path.to_string_lossy());
                                 book_info.cover_data = Some(data);

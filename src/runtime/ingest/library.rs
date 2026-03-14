@@ -12,7 +12,9 @@
 use anyhow::{Context, Result, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
@@ -111,11 +113,7 @@ impl ItemProcessor {
         }
     }
 
-    async fn parse_book_info(
-        &self,
-        format: LibraryItemFormat,
-        path: &std::path::Path,
-    ) -> Result<BookInfo> {
+    async fn parse_book_info(&self, format: LibraryItemFormat, path: &Path) -> Result<BookInfo> {
         match format {
             LibraryItemFormat::Epub => self.epub_parser.parse(path).await,
             LibraryItemFormat::Fb2 => self.fb2_parser.parse(path).await,
@@ -124,11 +122,7 @@ impl ItemProcessor {
         }
     }
 
-    fn locate_metadata_path(
-        &self,
-        path: &std::path::Path,
-        format: LibraryItemFormat,
-    ) -> Option<PathBuf> {
+    fn locate_metadata_path(&self, path: &Path, format: LibraryItemFormat) -> Option<PathBuf> {
         locate_metadata_path(&self.config, path, format)
     }
 
@@ -148,7 +142,7 @@ impl ItemProcessor {
 
     fn canonical_item_id(
         &self,
-        path: &std::path::Path,
+        path: &Path,
         koreader_metadata: Option<&KoReaderMetadata>,
     ) -> Result<String> {
         let metadata_md5 =
@@ -216,10 +210,10 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
                 let book_filename = format!("{}.epub", book_stem);
 
                 match index.entry(book_filename.clone()) {
-                    std::collections::hash_map::Entry::Occupied(_) => {
+                    Entry::Occupied(_) => {
                         duplicates.push(book_filename);
                     }
-                    std::collections::hash_map::Entry::Vacant(entry) => {
+                    Entry::Vacant(entry) => {
                         debug!("Found docsettings metadata for: {}", book_filename);
                         entry.insert(epub_metadata_path);
                     }
@@ -228,10 +222,10 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
                 let book_filename = format!("{}.fb2", book_stem);
 
                 match index.entry(book_filename.clone()) {
-                    std::collections::hash_map::Entry::Occupied(_) => {
+                    Entry::Occupied(_) => {
                         duplicates.push(book_filename);
                     }
-                    std::collections::hash_map::Entry::Vacant(entry) => {
+                    Entry::Vacant(entry) => {
                         debug!("Found docsettings metadata for: {}", book_filename);
                         entry.insert(fb2_metadata_path);
                     }
@@ -288,7 +282,7 @@ fn build_hashdocsettings_index(hashdocsettings_path: &PathBuf) -> Result<HashMap
             if epub_metadata_path.exists() {
                 debug!("Found hashdocsettings metadata for hash: {}", hash);
                 index.insert(hash.to_lowercase(), epub_metadata_path);
-            } else if let Ok(entries) = std::fs::read_dir(path) {
+            } else if let Ok(entries) = fs::read_dir(path) {
                 for entry in entries.flatten() {
                     if let Some(name) = entry.file_name().to_str()
                         && name.starts_with("metadata.")
@@ -712,7 +706,7 @@ pub async fn update_library(
             warn!("Failed to delete removed item {}: {}", item_id, e);
         } else {
             let cover_path = covers_dir.join(format!("{}.webp", item_id));
-            let _ = std::fs::remove_file(&cover_path);
+            let _ = fs::remove_file(&cover_path);
             info!("Deleted item {} (book removed from disk)", item_id);
         }
     }

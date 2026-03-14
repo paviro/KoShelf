@@ -15,6 +15,7 @@ use crate::runtime::media::{self, resolve_media_dirs};
 use anyhow::Result;
 use log::{debug, info, warn};
 use std::collections::HashSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Summary of a rebuild pass, returned to the caller for logging/observability.
@@ -86,7 +87,7 @@ pub async fn targeted_rebuild(
                     warn!("Failed to delete item {}: {}", fp.item_id, e);
                 } else {
                     let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
-                    let _ = std::fs::remove_file(&cover_path);
+                    let _ = fs::remove_file(&cover_path);
                     info!(
                         "Deleted item {} (book removed: {})",
                         fp.item_id, book_path_str
