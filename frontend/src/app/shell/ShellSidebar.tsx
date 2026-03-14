@@ -143,7 +143,7 @@ export function ShellSidebar({
                             {translation.get('github')}
                         </a>
                         <span className="text-xs text-gray-400 dark:text-dark-500 ml-1">
-                            &middot; v{version ?? '--'}
+                            &middot; {version ?? '--'}
                         </span>
                     </div>
                     <div className="text-[0.65rem] leading-tight text-gray-400 dark:text-dark-500">
