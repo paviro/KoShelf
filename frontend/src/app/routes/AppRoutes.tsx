@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 
 import { RouteScrollRestoration } from '../../shared/lib/navigation/RouteScrollRestoration';
 import { LoadingSpinner } from '../../shared/ui/feedback/LoadingSpinner';

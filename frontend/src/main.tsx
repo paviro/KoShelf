@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HashRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router';
 
 import './styles/app.css';
 import { App } from './App';
@@ -53,12 +53,7 @@ async function bootstrap(): Promise<void> {
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
                 <RuntimeUpdatesBridge />
-                <HashRouter
-                    future={{
-                        v7_startTransition: true,
-                        v7_relativeSplatPath: true,
-                    }}
-                >
+                <HashRouter>
                     <App />
                 </HashRouter>
             </QueryClientProvider>

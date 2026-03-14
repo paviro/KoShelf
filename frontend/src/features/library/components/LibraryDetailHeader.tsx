@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { LuArrowLeft } from 'react-icons/lu';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';

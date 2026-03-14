@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
 import { LuClock3, LuEye, LuFileText, LuUser, LuX } from 'react-icons/lu';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 
 import {
     buildRoutePath,

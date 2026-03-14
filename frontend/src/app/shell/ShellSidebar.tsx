@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { LuGithub, LuSettings } from 'react-icons/lu';
 import { translation } from '../../shared/i18n';
 import { formatInstant } from '../../shared/lib/intl/formatDate';

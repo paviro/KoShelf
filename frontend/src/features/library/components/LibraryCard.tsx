@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { FaHighlighter, FaPause, FaStar } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
