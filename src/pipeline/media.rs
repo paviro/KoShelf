@@ -157,11 +157,11 @@ pub fn sync_static_frontend(output_dir: &Path, has_reading_data: bool) -> Result
     let version_file = output_dir.join(".version");
     let current_version = &*FRONTEND_VERSION;
 
-    let is_current = fs::read_to_string(&version_file)
+    let version_matches = fs::read_to_string(&version_file)
         .map(|v| v.trim() == current_version)
         .unwrap_or(false);
 
-    if !is_current {
+    if !version_matches || !embedded_files_exist(output_dir, &FRONTEND_DIST) {
         cleanup_removed_legacy_outputs(output_dir)?;
         copy_embedded_frontend_dir(output_dir, &FRONTEND_DIST)?;
         fs::write(&version_file, current_version)?;
@@ -258,6 +258,15 @@ fn write_embedded_frontend_file(output_dir: &Path, file: &File<'_>) -> Result<()
     }
 
     Ok(())
+}
+
+fn embedded_files_exist(output_dir: &Path, dir: &Dir<'_>) -> bool {
+    dir.files().all(|f| {
+        let path = f.path().to_string_lossy().replace('\\', "/");
+        !path.is_empty() && output_dir.join(&path).exists()
+    }) && dir
+        .dirs()
+        .all(|child| embedded_files_exist(output_dir, child))
 }
 
 fn copy_embedded_frontend_dir(output_dir: &Path, dir: &Dir<'_>) -> Result<()> {
