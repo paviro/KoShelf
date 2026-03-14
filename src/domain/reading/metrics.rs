@@ -56,13 +56,19 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
                 b
             }
             ReadingMetric::PagesRead => {
-                let mut b: BTreeMap<String, i64> = BTreeMap::new();
+                // Each page_stat contributes its scaling factor (e.g. 1.5),
+                // rounded once per bucket to avoid per-page rounding error.
+                let mut scaled: BTreeMap<String, f64> = BTreeMap::new();
                 for stat in &page_stats {
                     let date = time_config.date_for_timestamp(stat.start_time);
                     let key = bucket_key(date, query.group_by);
-                    *b.entry(key).or_insert(0) += 1;
+                    let factor = reading_data.page_scaling.factor_for_book_id(stat.id_book);
+                    *scaled.entry(key).or_insert(0.0) += factor;
                 }
-                b
+                scaled
+                    .into_iter()
+                    .map(|(k, v)| (k, crate::domain::reading::scaling::round_pages(v)))
+                    .collect()
             }
             ReadingMetric::Sessions => {
                 let mut b: BTreeMap<String, i64> = BTreeMap::new();

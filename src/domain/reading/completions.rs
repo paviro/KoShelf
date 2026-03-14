@@ -49,9 +49,7 @@ use crate::domain::reading::queries::{
 };
 use crate::domain::reading::shared;
 use crate::infra::stores::ReadingData;
-use crate::koreader::types::{
-    BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData,
-};
+use crate::koreader::types::{BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData};
 use crate::time_config::TimeConfig;
 
 /// Compute the completions response from reading data and a validated query.
@@ -66,8 +64,12 @@ pub fn reading_completions(
     let (range, resolved_year) = resolve_completions_range(&query.selector);
 
     // Collect completion items, sorted by end_date descending.
-    let mut all_items =
-        collect_completion_items(&stats, range.as_ref(), &reading_data.covers_by_md5);
+    let mut all_items = collect_completion_items(
+        &stats,
+        range.as_ref(),
+        &reading_data.covers_by_md5,
+        &reading_data.page_scaling,
+    );
     all_items.sort_by(|a, b| b.end_date.cmp(&a.end_date));
 
     let total_items = all_items.len();
@@ -138,6 +140,7 @@ fn collect_completion_items(
     stats: &StatisticsData,
     range: Option<&(NaiveDate, NaiveDate)>,
     covers_by_md5: &std::collections::HashMap<String, String>,
+    page_scaling: &crate::domain::reading::scaling::PageScaling,
 ) -> Vec<CompletionItem> {
     let mut items = Vec::new();
 
@@ -155,6 +158,13 @@ fn collect_completion_items(
                 continue;
             }
 
+            let pages_read = page_scaling.scale_pages_for_md5(&book.md5, entry.pages_read);
+            let average_speed = if entry.reading_time > 0 && pages_read > 0 {
+                Some(pages_read as f64 / (entry.reading_time as f64 / 3600.0))
+            } else {
+                None
+            };
+
             items.push(CompletionItem {
                 title: book.title.clone(),
                 authors: shared::parse_authors(&book.authors),
@@ -162,9 +172,9 @@ fn collect_completion_items(
                 end_date: entry.end_date.clone(),
                 reading_time_sec: entry.reading_time,
                 session_count: entry.session_count,
-                pages_read: entry.pages_read,
+                pages_read,
                 calendar_length_days: entry.calendar_length_days(),
-                average_speed: entry.average_speed(),
+                average_speed,
                 average_session_duration_sec: entry.avg_session_duration(),
                 // Library enrichment fields — populated when library linking is available.
                 rating: None,
@@ -661,6 +671,7 @@ impl ReadCompletionDetector {
 mod tests {
     use super::*;
     use crate::contracts::common::ContentTypeFilter;
+    use crate::domain::reading::PageScaling;
     use crate::domain::reading::queries::{CompletionsIncludeSet, DateRange};
     use crate::koreader::types::{BookCompletions, ReadCompletion, StatBook, StatisticsData};
 
@@ -717,6 +728,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -746,6 +758,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -780,6 +793,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -810,6 +824,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -841,6 +856,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -878,6 +894,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -903,6 +920,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -924,6 +942,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,

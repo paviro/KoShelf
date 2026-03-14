@@ -32,18 +32,26 @@ pub fn summary(reading_data: &ReadingData, query: ReadingSummaryQuery) -> Readin
     );
 
     // Compute daily aggregates.
+    // Page counts accumulate as floats (each page_stat contributes its scaling
+    // factor, e.g. 1.5) and are rounded once per day to avoid per-page rounding error.
     let mut daily_read_time: HashMap<NaiveDate, i64> = HashMap::new();
-    let mut daily_page_reads: HashMap<NaiveDate, i64> = HashMap::new();
+    let mut daily_scaled_pages: HashMap<NaiveDate, f64> = HashMap::new();
     let mut total_read_time: i64 = 0;
-    let mut total_page_reads: i64 = 0;
 
     for stat in &page_stats {
         let date = time_config.date_for_timestamp(stat.start_time);
+        let factor = reading_data.page_scaling.factor_for_book_id(stat.id_book);
         total_read_time += stat.duration;
-        total_page_reads += 1;
         *daily_read_time.entry(date).or_insert(0) += stat.duration;
-        *daily_page_reads.entry(date).or_insert(0) += 1;
+        *daily_scaled_pages.entry(date).or_insert(0.0) += factor;
     }
+
+    // Round per-day totals.
+    let daily_page_reads: HashMap<NaiveDate, i64> = daily_scaled_pages
+        .iter()
+        .map(|(&date, &v)| (date, super::scaling::round_pages(v)))
+        .collect();
+    let total_page_reads: i64 = daily_page_reads.values().sum();
 
     let longest_reading_time_in_day_sec = daily_read_time.values().copied().max().unwrap_or(0);
     let most_pages_in_day = daily_page_reads.values().copied().max().unwrap_or(0);

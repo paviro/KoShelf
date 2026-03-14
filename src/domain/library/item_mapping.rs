@@ -11,11 +11,7 @@ use crate::models::{LibraryItem, LibraryItemFormat};
 use crate::time_config::TimeConfig;
 
 /// Map a `LibraryItem` to a `LibraryItemRow` for upsert.
-pub fn map_item_to_row(
-    item: &LibraryItem,
-    use_stable_page_metadata: bool,
-    time_config: &TimeConfig,
-) -> LibraryItemRow {
+pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryItemRow {
     let now = time_config.now_rfc3339();
     let content_type = item.content_type();
 
@@ -64,9 +60,13 @@ pub fn map_item_to_row(
         progress_percentage: item.progress_percentage(),
         rating: item.rating().map(|r| r as i32),
         review_note: item.review_note().cloned(),
-        pages: item
-            .doc_pages_with_stable_metadata(use_stable_page_metadata)
+        doc_pages: item
+            .koreader_metadata
+            .as_ref()
+            .and_then(|m| m.doc_pages)
             .map(|p| p as i32),
+        pagemap_doc_pages: item.synthetic_scaling_page_total().map(|p| p as i32),
+        parser_pages: item.book_info.pages.map(|p| p as i32),
         cover_url: format!("/assets/covers/{}.webp", item.id),
         search_base_path: search_base_path.to_string(),
         annotation_count: item.annotation_count() as i32,

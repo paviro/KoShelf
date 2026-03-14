@@ -14,11 +14,15 @@ use sqlx::SqlitePool;
 #[derive(Clone)]
 pub struct LibraryRepository {
     pool: SqlitePool,
+    use_stable_page_metadata: bool,
 }
 
 impl LibraryRepository {
-    pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+    pub fn new(pool: SqlitePool, use_stable_page_metadata: bool) -> Self {
+        Self {
+            pool,
+            use_stable_page_metadata,
+        }
     }
 }
 
@@ -35,7 +39,7 @@ pub(crate) mod tests {
         run_library_migrations(&pool)
             .await
             .expect("migrations should run");
-        LibraryRepository::new(pool)
+        LibraryRepository::new(pool, true)
     }
 
     pub fn sample_item(id: &str) -> LibraryItemRow {
@@ -56,7 +60,9 @@ pub(crate) mod tests {
             progress_percentage: Some(0.42),
             rating: Some(4),
             review_note: None,
-            pages: Some(300),
+            doc_pages: Some(300),
+            pagemap_doc_pages: None,
+            parser_pages: Some(300),
             cover_url: format!("/assets/covers/{id}.webp"),
             search_base_path: "/books".to_string(),
             annotation_count: 0,

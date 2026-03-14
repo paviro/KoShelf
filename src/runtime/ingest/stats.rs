@@ -4,7 +4,7 @@
 //! tagging and covers-by-MD5 map construction.
 
 use crate::config::SiteConfig;
-use crate::domain::reading::StatisticsCalculator;
+use crate::domain::reading::{PageScaling, StatisticsCalculator};
 use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::infra::stores::ReadingData;
 use crate::koreader::StatisticsParser;
@@ -55,6 +55,14 @@ pub async fn load_reading_data(
     let content_type_map = repo.load_content_types_by_id().await?;
     data.tag_content_types(&content_type_map);
 
+    // Compute page scaling factors
+    let page_scaling = if config.use_stable_page_metadata {
+        let scaling_inputs = repo.load_scaling_inputs().await?;
+        PageScaling::from_db_inputs(&scaling_inputs, &data)
+    } else {
+        PageScaling::disabled()
+    };
+
     // Build covers_by_md5 from DB
     let all_ids = repo.load_all_item_ids().await?;
     let covers_by_md5 = build_covers_by_md5(all_ids.iter());
@@ -73,6 +81,7 @@ pub async fn load_reading_data(
         time_config: config.time_config.clone(),
         heatmap_scale_max: config.heatmap_scale_max,
         covers_by_md5,
+        page_scaling,
     }))
 }
 

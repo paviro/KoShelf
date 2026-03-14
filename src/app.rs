@@ -181,7 +181,7 @@ pub async fn run(cli: Cli) -> Result<()> {
     run_library_migrations(&pool)
         .await
         .context("Failed to run library DB migrations")?;
-    let repo = LibraryRepository::new(pool);
+    let repo = LibraryRepository::new(pool, config.use_stable_page_metadata);
 
     // ── 2. Create media directories ────────────────────────────────────
     let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
@@ -219,7 +219,7 @@ pub async fn run(cli: Cli) -> Result<()> {
         crate::runtime::recap::generate_recap_share_images(
             &rd.stats_data,
             &[],
-            config.use_stable_page_metadata,
+            &rd.page_scaling,
             &media_dirs.recap_dir,
             config.statistics_db_path.as_deref(),
             &config.time_config,

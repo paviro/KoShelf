@@ -20,10 +20,9 @@ pub async fn upsert_single_item(
     repo: &LibraryRepository,
     item: &LibraryItem,
     metadata_path: Option<&Path>,
-    use_stable_page_metadata: bool,
     time_config: &TimeConfig,
 ) -> Result<()> {
-    let row = map_item_to_row(item, use_stable_page_metadata, time_config);
+    let row = map_item_to_row(item, time_config);
 
     repo.upsert_item(&row)
         .await

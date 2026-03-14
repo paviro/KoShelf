@@ -36,19 +36,28 @@ impl LibraryRepository {
     }
 
     pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
-        sqlx::query_as::<_, LibraryDetailItem>(
+        let pages_expr = if self.use_stable_page_metadata {
+            "COALESCE(pagemap_doc_pages, doc_pages, parser_pages)"
+        } else {
+            "COALESCE(doc_pages, parser_pages)"
+        };
+
+        let sql = format!(
             "SELECT
                 id, title, authors_json, series_json, status,
                 progress_percentage, rating, cover_url, content_type,
-                language, publisher, description, review_note, pages,
+                language, publisher, description, review_note,
+                {pages_expr} as pages,
                 search_base_path, subjects_json, identifiers_json,
                 partial_md5_checksum
-             FROM library_items WHERE id = ?1",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to get library item")
+             FROM library_items WHERE id = ?1"
+        );
+
+        sqlx::query_as::<_, LibraryDetailItem>(&sql)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to get library item")
     }
 
     /// Load annotations for an item, optionally filtered by kind.
@@ -148,6 +157,26 @@ impl LibraryRepository {
             .await
             .context("Failed to load all item IDs")?;
         Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    /// Load page scaling inputs keyed by item ID (MD5).
+    ///
+    /// Returns `(pagemap_doc_pages, doc_pages)` pairs. `doc_pages` is the rendered
+    /// page count used as fallback denominator when `stat_book.pages` is unavailable.
+    pub async fn load_scaling_inputs(
+        &self,
+    ) -> Result<std::collections::HashMap<String, (i32, Option<i32>)>> {
+        let rows: Vec<(String, i32, Option<i32>)> = sqlx::query_as(
+            "SELECT id, pagemap_doc_pages, doc_pages
+             FROM library_items WHERE pagemap_doc_pages IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to load page scaling inputs")?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, pagemap, doc)| (id, (pagemap, doc)))
+            .collect())
     }
 
     pub async fn count_items(&self) -> Result<i64> {

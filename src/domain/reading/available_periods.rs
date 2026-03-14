@@ -20,9 +20,13 @@ pub fn available_periods(
     let stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
 
     let periods = match query.source {
-        PeriodSource::ReadingData => {
-            reading_data_periods(&stats, &time_config, query.group_by, query.range.as_ref())
-        }
+        PeriodSource::ReadingData => reading_data_periods(
+            &stats,
+            &time_config,
+            query.group_by,
+            query.range.as_ref(),
+            &reading_data.page_scaling,
+        ),
         PeriodSource::Completions => {
             completions_periods(&stats, query.group_by, query.range.as_ref())
         }
@@ -41,7 +45,7 @@ pub fn available_periods(
 /// Accumulator for reading-data period stats.
 struct PeriodBucket {
     reading_time_sec: i64,
-    pages_read: i64,
+    scaled_pages: f64,
     completions: i64,
 }
 
@@ -49,7 +53,7 @@ impl PeriodBucket {
     fn new() -> Self {
         Self {
             reading_time_sec: 0,
-            pages_read: 0,
+            scaled_pages: 0.0,
             completions: 0,
         }
     }
@@ -61,6 +65,7 @@ fn reading_data_periods(
     time_config: &TimeConfig,
     group_by: PeriodGroupBy,
     range: Option<&crate::domain::reading::queries::DateRange>,
+    page_scaling: &crate::domain::reading::scaling::PageScaling,
 ) -> Vec<PeriodEntry> {
     let (page_stats, resolved_from, resolved_to) = shared::filter_and_resolve_range(
         &stats.page_stats,
@@ -79,7 +84,7 @@ fn reading_data_periods(
         let key = period_bucket_key(date, group_by);
         let bucket = buckets.entry(key).or_insert_with(PeriodBucket::new);
         bucket.reading_time_sec += stat.duration;
-        bucket.pages_read += 1;
+        bucket.scaled_pages += page_scaling.factor_for_book_id(stat.id_book);
     }
 
     // Count completions per period.
@@ -114,7 +119,9 @@ fn reading_data_periods(
                 start_date,
                 end_date,
                 reading_time_sec: Some(bucket.reading_time_sec),
-                pages_read: Some(bucket.pages_read),
+                pages_read: Some(crate::domain::reading::scaling::round_pages(
+                    bucket.scaled_pages,
+                )),
                 completions: Some(bucket.completions),
             }
         })

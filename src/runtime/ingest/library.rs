@@ -442,14 +442,8 @@ async fn process_single_item(
         format,
     };
 
-    if let Err(e) = upsert_single_item(
-        repo,
-        &item,
-        metadata_path.as_deref(),
-        config.use_stable_page_metadata,
-        &config.time_config,
-    )
-    .await
+    if let Err(e) =
+        upsert_single_item(repo, &item, metadata_path.as_deref(), &config.time_config).await
     {
         warn!("Failed to upsert item {:?}: {}", path, e);
         stats.errors = 1;

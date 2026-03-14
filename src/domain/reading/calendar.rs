@@ -7,6 +7,7 @@ use crate::contracts::reading::{
     ReadingCalendarEvent,
 };
 use crate::domain::reading::queries::ReadingCalendarQuery;
+use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::shared;
 use crate::infra::stores::ReadingData;
 use crate::koreader::types::{PageStat, StatisticsData};
@@ -22,8 +23,13 @@ pub fn reading_calendar(
     let (month_from, month_to) = month_date_range(&query.month);
 
     // stats_by_scope always covers all three scopes regardless of query.scope.
-    let stats_by_scope =
-        compute_stats_by_scope(&reading_data.stats_data, &time_config, month_from, month_to);
+    let stats_by_scope = compute_stats_by_scope(
+        &reading_data.stats_data,
+        &time_config,
+        month_from,
+        month_to,
+        &reading_data.page_scaling,
+    );
 
     // Events are filtered by the requested scope.
     let scoped_stats = shared::filter_stats_by_scope(&reading_data.stats_data, query.scope);
@@ -33,6 +39,7 @@ pub fn reading_calendar(
         month_from,
         month_to,
         &reading_data.covers_by_md5,
+        &reading_data.page_scaling,
     );
 
     ReadingCalendarData {
@@ -67,17 +74,26 @@ fn compute_stats_by_scope(
     time_config: &TimeConfig,
     month_from: NaiveDate,
     month_to: NaiveDate,
+    page_scaling: &PageScaling,
 ) -> CalendarStatsByScope {
     let days_in_month = (month_to - month_from).num_days() + 1;
 
     CalendarStatsByScope {
-        all: compute_scope_stats(stats_data, time_config, month_from, month_to, days_in_month),
+        all: compute_scope_stats(
+            stats_data,
+            time_config,
+            month_from,
+            month_to,
+            days_in_month,
+            page_scaling,
+        ),
         books: compute_scope_stats(
             &stats_data.filtered_by_content_type(ContentType::Book),
             time_config,
             month_from,
             month_to,
             days_in_month,
+            page_scaling,
         ),
         comics: compute_scope_stats(
             &stats_data.filtered_by_content_type(ContentType::Comic),
@@ -85,6 +101,7 @@ fn compute_stats_by_scope(
             month_from,
             month_to,
             days_in_month,
+            page_scaling,
         ),
     }
 }
@@ -95,10 +112,11 @@ fn compute_scope_stats(
     from: NaiveDate,
     to: NaiveDate,
     days_in_month: i64,
+    page_scaling: &PageScaling,
 ) -> CalendarScopeStats {
     let mut unique_books: HashSet<i64> = HashSet::new();
     let mut unique_dates: HashSet<NaiveDate> = HashSet::new();
-    let mut total_pages: i64 = 0;
+    let mut scaled_pages: f64 = 0.0;
     let mut total_time: i64 = 0;
 
     for ps in &stats_data.page_stats {
@@ -111,9 +129,11 @@ fn compute_scope_stats(
         }
         unique_books.insert(ps.id_book);
         unique_dates.insert(date);
-        total_pages += 1;
+        scaled_pages += page_scaling.factor_for_book_id(ps.id_book);
         total_time += ps.duration;
     }
+
+    let total_pages = super::scaling::round_pages(scaled_pages);
 
     let active_days_percentage = if days_in_month > 0 {
         (unique_dates.len() as f64 / days_in_month as f64) * 100.0
@@ -136,6 +156,7 @@ fn build_events_and_items(
     month_from: NaiveDate,
     month_to: NaiveDate,
     covers_by_md5: &std::collections::HashMap<String, String>,
+    page_scaling: &PageScaling,
 ) -> (Vec<ReadingCalendarEvent>, BTreeMap<String, CalendarItemRef>) {
     // Build book ID -> StatBook lookup.
     let book_by_id: HashMap<i64, &crate::koreader::types::StatBook> =
@@ -178,13 +199,13 @@ fn build_events_and_items(
             );
         }
 
-        // Group page stats by day.
+        // Group page stats by day — accumulate pages as float, round per day.
         let mut by_day: BTreeMap<NaiveDate, DayAccumulator> = BTreeMap::new();
         for ps in page_stats {
             let date = time_config.date_for_timestamp(ps.start_time);
             let acc = by_day.entry(date).or_default();
             acc.reading_time_sec += ps.duration;
-            acc.pages_read += 1;
+            acc.scaled_pages += page_scaling.factor_for_book_id(ps.id_book);
         }
 
         // Merge consecutive days into event spans.
@@ -213,7 +234,13 @@ fn build_events_and_items(
 #[derive(Default)]
 struct DayAccumulator {
     reading_time_sec: i64,
-    pages_read: i64,
+    scaled_pages: f64,
+}
+
+impl DayAccumulator {
+    fn pages_read(&self) -> i64 {
+        super::scaling::round_pages(self.scaled_pages)
+    }
 }
 
 /// Merge consecutive reading days into event spans.
@@ -230,14 +257,14 @@ fn merge_into_events(
     let mut span_start = days[0];
     let mut span_end = days[0];
     let mut span_time: i64 = by_day.get(&days[0]).map_or(0, |a| a.reading_time_sec);
-    let mut span_pages: i64 = by_day.get(&days[0]).map_or(0, |a| a.pages_read);
+    let mut span_pages: i64 = by_day.get(&days[0]).map_or(0, |a| a.pages_read());
 
     for day in &days[1..] {
         if *day == span_end + chrono::Duration::days(1) {
             span_end = *day;
             if let Some(acc) = by_day.get(day) {
                 span_time += acc.reading_time_sec;
-                span_pages += acc.pages_read;
+                span_pages += acc.pages_read();
             }
         } else {
             events.push(make_event(
@@ -246,7 +273,7 @@ fn merge_into_events(
             span_start = *day;
             span_end = *day;
             span_time = by_day.get(day).map_or(0, |a| a.reading_time_sec);
-            span_pages = by_day.get(day).map_or(0, |a| a.pages_read);
+            span_pages = by_day.get(day).map_or(0, |a| a.pages_read());
         }
     }
 
@@ -284,6 +311,7 @@ fn make_event(
 mod tests {
     use super::*;
     use crate::contracts::common::ContentTypeFilter;
+    use crate::domain::reading::PageScaling;
     use crate::koreader::types::{PageStat, StatBook, StatisticsData};
 
     fn make_stats_data(books: Vec<StatBook>, page_stats: Vec<PageStat>) -> StatisticsData {
@@ -350,6 +378,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -374,6 +403,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -401,6 +431,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -428,6 +459,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -455,6 +487,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -489,6 +522,7 @@ mod tests {
             time_config: TimeConfig::new(None, 0),
             heatmap_scale_max: None,
             covers_by_md5: std::collections::HashMap::new(),
+            page_scaling: PageScaling::disabled(),
         };
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
