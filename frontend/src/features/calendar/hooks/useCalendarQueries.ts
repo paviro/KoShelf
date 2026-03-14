@@ -28,6 +28,22 @@ export function prefetchCalendarMonthQuery(
     return queryClient.prefetchQuery(calendarMonthQueryOptions(monthKey));
 }
 
+export async function prefetchCalendarMonthsIfAvailable(
+    queryClient: QueryClient,
+    monthKeys: string[],
+): Promise<void> {
+    const { months } = await queryClient.fetchQuery({
+        queryKey: calendarMonthsQueryKey(),
+        queryFn: loadCalendarMonths,
+    });
+    const available = new Set(months);
+    await Promise.all(
+        monthKeys
+            .filter((key) => available.has(key))
+            .map((key) => prefetchCalendarMonthQuery(queryClient, key)),
+    );
+}
+
 export function useCalendarMonthsQuery() {
     return useQuery({
         queryKey: calendarMonthsQueryKey(),

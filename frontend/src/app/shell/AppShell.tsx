@@ -8,7 +8,7 @@ import {
 } from '../../features/library/hooks/useLibraryQueries';
 import { prefetchStatisticsIndexQuery } from '../../features/statistics/hooks/useStatisticsQueries';
 import { readStoredStatisticsViewState } from '../../features/statistics/model/statistics-model';
-import { prefetchCalendarMonthQuery } from '../../features/calendar/hooks/useCalendarQueries';
+import { prefetchCalendarMonthsIfAvailable } from '../../features/calendar/hooks/useCalendarQueries';
 import {
     loadInitialCalendarViewState,
     monthKey as toMonthKey,
@@ -72,10 +72,9 @@ export function AppShell({
                     shiftMonthKey(calendarMonthKey, 1),
                 ];
 
-                void Promise.all(
-                    calendarNeighborMonthKeys.map((nextMonthKey) =>
-                        prefetchCalendarMonthQuery(queryClient, nextMonthKey),
-                    ),
+                void prefetchCalendarMonthsIfAvailable(
+                    queryClient,
+                    calendarNeighborMonthKeys,
                 );
                 return;
             }
