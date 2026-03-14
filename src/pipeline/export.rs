@@ -96,6 +96,8 @@ struct ExportDayMetrics {
     sessions: i64,
     completions: i64,
     active_days: i64,
+    longest_session_duration_sec: i64,
+    average_session_duration_sec: i64,
 }
 
 // ── Configuration ───────────────────────────────────────────────────────
@@ -152,7 +154,20 @@ pub async fn export_data_files(
     )?;
 
     // items/index.json — all items, list projection (array only)
-    write_json(&data_dir.join("items").join("index.json"), items)?;
+    let items_dir = data_dir.join("items");
+    write_json(&items_dir.join("index.json"), items)?;
+
+    // items/books.json + items/comics.json — scope-filtered subsets
+    let books: Vec<_> = items
+        .iter()
+        .filter(|i| i.content_type == LibraryContentType::Book)
+        .collect();
+    let comics: Vec<_> = items
+        .iter()
+        .filter(|i| i.content_type == LibraryContentType::Comic)
+        .collect();
+    write_json(&items_dir.join("books.json"), &books)?;
+    write_json(&items_dir.join("comics.json"), &comics)?;
 
     // items/{id}.json — per-item with all includes expanded
     export_item_details(data_dir, library_repo, reading_data, items).await?;
@@ -198,7 +213,7 @@ async fn export_item_details(
         }
     }
 
-    cleanup_stale_json(&items_dir, &exported_ids, &["index"])?;
+    cleanup_stale_json(&items_dir, &exported_ids, &["index", "books", "comics"])?;
 
     Ok(())
 }
@@ -313,6 +328,8 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
         ReadingMetric::Sessions,
         ReadingMetric::Completions,
         ReadingMetric::ActiveDays,
+        ReadingMetric::LongestSessionDurationSec,
+        ReadingMetric::AverageSessionDurationSec,
     ];
 
     // For each (scope, metric), get all daily points and partition into months.
@@ -361,7 +378,12 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
                     ReadingMetric::Sessions => day_metrics.sessions = value,
                     ReadingMetric::Completions => day_metrics.completions = value,
                     ReadingMetric::ActiveDays => day_metrics.active_days = value,
-                    _ => {}
+                    ReadingMetric::LongestSessionDurationSec => {
+                        day_metrics.longest_session_duration_sec = value;
+                    }
+                    ReadingMetric::AverageSessionDurationSec => {
+                        day_metrics.average_session_duration_sec = value;
+                    }
                 }
             }
         }

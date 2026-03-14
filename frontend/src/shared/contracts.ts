@@ -318,6 +318,8 @@ export interface ExportDayMetrics {
     sessions: number;
     completions: number;
     active_days: number;
+    longest_session_duration_sec: number;
+    average_session_duration_sec: number;
 }
 
 export interface ExportDayMetricsByScope {

@@ -2,6 +2,7 @@ import type { ApiClient, CompletionsParams, ScopeValue } from './api-client';
 import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
+    ExportDayMetrics,
     ExportDayMetricsByScope,
     ExportMonthMetrics,
     ExportPeriodsByScope,
@@ -24,17 +25,6 @@ function pickScope<T>(
     scope: ScopeValue,
 ): T {
     return byScope[scope];
-}
-
-// ── Items helpers ───────────────────────────────────────────────────────
-
-function filterItemsByScope(
-    items: LibraryListItem[],
-    scope: ScopeValue,
-): LibraryListItem[] {
-    if (scope === 'all') return items;
-    const expected = scope === 'books' ? 'book' : 'comic';
-    return items.filter((item) => item.content_type === expected);
 }
 
 // ── Completions scope filter ────────────────────────────────────────────
@@ -111,14 +101,15 @@ export class StaticApiClient implements ApiClient {
 
     async getItems(scope?: ScopeValue): Promise<LibraryListData> {
         const selectedScope = normalizeScope(scope);
-        const payload = await fetchJson('/data/items/index.json');
+        const file =
+            selectedScope === 'all' ? 'index' : selectedScope;
+        const payload = await fetchJson(`/data/items/${file}.json`);
 
-        // Static export writes items/index.json as a raw array.
         const items = Array.isArray(payload)
             ? (payload as LibraryListItem[])
             : (payload as LibraryListData).items ?? [];
 
-        return { items: filterItemsByScope(items, selectedScope) };
+        return { items };
     }
 
     async getItem(id: string): Promise<LibraryDetailData> {
@@ -127,12 +118,22 @@ export class StaticApiClient implements ApiClient {
         )) as LibraryDetailData;
     }
 
-    async getReadingSummary(scope: ScopeValue): Promise<ReadingSummaryData> {
+    async getReadingSummary(
+        scope: ScopeValue,
+        from?: string,
+        to?: string,
+    ): Promise<ReadingSummaryData> {
         const selectedScope = normalizeScope(scope);
-        const exported = await this.fetchCached<ExportReadingSummary>(
-            '/data/reading/summary.json',
-        );
-        return pickScope(exported, selectedScope);
+
+        // Full-range: return the pre-computed summary.
+        if (!from && !to) {
+            const exported = await this.fetchCached<ExportReadingSummary>(
+                '/data/reading/summary.json',
+            );
+            return pickScope(exported, selectedScope);
+        }
+
+        return this.computeRangedSummary(selectedScope, from, to);
     }
 
     async getReadingMetrics(
@@ -204,6 +205,94 @@ export class StaticApiClient implements ApiClient {
 
     clearCache(): void {
         this.cache.clear();
+    }
+
+    // ── Ranged summary computation ─────────────────────────────────────
+
+    private async computeRangedSummary(
+        scope: ScopeValue,
+        from?: string,
+        to?: string,
+    ): Promise<ReadingSummaryData> {
+        const periods = await this.fetchCached<ExportReadingPeriods>(
+            '/data/reading/periods.json',
+        );
+        const monthPeriods = pickScope(periods.reading_data.month, scope);
+        const relevantMonths = monthPeriods.periods
+            .map((p) => p.key)
+            .filter((mk) => {
+                if (from && mk < from.substring(0, 7)) return false;
+                if (to && mk > to.substring(0, 7)) return false;
+                return true;
+            });
+
+        let totalTime = 0;
+        let totalPages = 0;
+        let totalSessions = 0;
+        let totalCompletions = 0;
+        let maxTimeInDay = 0;
+        let maxPagesInDay = 0;
+        let longestSession = 0;
+
+        for (const mk of relevantMonths) {
+            let monthData: ExportMonthMetrics;
+            try {
+                monthData = await this.fetchCached<ExportMonthMetrics>(
+                    `/data/reading/metrics/${mk}.json`,
+                );
+            } catch {
+                continue;
+            }
+
+            for (const [dayKey, byScope] of Object.entries(monthData.days)) {
+                if (from && dayKey < from) continue;
+                if (to && dayKey > to) continue;
+
+                const d: ExportDayMetrics = byScope[scope];
+                totalTime += d.reading_time_sec;
+                totalPages += d.pages_read;
+                totalSessions += d.sessions;
+                totalCompletions += d.completions;
+                if (d.reading_time_sec > maxTimeInDay)
+                    maxTimeInDay = d.reading_time_sec;
+                if (d.pages_read > maxPagesInDay) maxPagesInDay = d.pages_read;
+                if (d.longest_session_duration_sec > longestSession)
+                    longestSession = d.longest_session_duration_sec;
+            }
+        }
+
+        // Grab heatmap_config from the full-range summary (global, not range-dependent).
+        const fullSummary = await this.fetchCached<ExportReadingSummary>(
+            '/data/reading/summary.json',
+        );
+        const heatmap_config = pickScope(fullSummary, scope).heatmap_config;
+
+        return {
+            range: {
+                from: from ?? '',
+                to: to ?? '',
+                tz: 'UTC',
+            },
+            overview: {
+                reading_time_sec: totalTime,
+                pages_read: totalPages,
+                sessions: totalSessions,
+                completions: totalCompletions,
+                items_completed: 0,
+                longest_reading_time_in_day_sec: maxTimeInDay,
+                most_pages_in_day: maxPagesInDay,
+                longest_session_duration_sec: longestSession || null,
+                average_session_duration_sec:
+                    totalSessions > 0
+                        ? Math.round(totalTime / totalSessions)
+                        : null,
+            },
+            streaks: {
+                current: { days: 0 },
+                longest: { days: 0 },
+            },
+            heatmap_config,
+        };
     }
 
     // ── Static metrics assembly ─────────────────────────────────────────
