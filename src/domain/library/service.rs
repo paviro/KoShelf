@@ -8,9 +8,9 @@ use crate::contracts::library::{
 };
 use crate::domain::library::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::domain::reading::BookStatistics;
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::ReadingData;
 use crate::source::koreader::types::{BookSessionStats, StatBook};
+use crate::store::memory::ReadingData;
+use crate::store::sqlite::repo::LibraryRepository;
 use crate::time_config::TimeConfig;
 
 /// Fetch a filtered, sorted list of library items.

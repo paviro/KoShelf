@@ -5,8 +5,8 @@ use axum::{
 use futures::stream;
 use std::{convert::Infallible, time::Duration};
 
-use crate::infra::stores::Update;
 use crate::server::ServerState;
+use crate::store::memory::Update;
 
 fn data_changed_event(update: &Update) -> Event {
     let payload = match serde_json::to_string(update) {

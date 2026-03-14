@@ -48,11 +48,11 @@ use crate::domain::reading::queries::{
     CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery,
 };
 use crate::domain::reading::shared;
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::ReadingData;
 use crate::source::koreader::types::{
     BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData,
 };
+use crate::store::memory::ReadingData;
+use crate::store::sqlite::repo::LibraryRepository;
 use crate::time_config::TimeConfig;
 
 /// Compute the completions response from reading data and a validated query.
@@ -799,7 +799,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_stats_produces_empty_completions() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -817,7 +817,7 @@ mod tests {
 
     #[tokio::test]
     async fn completions_grouped_by_month() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc123");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2025-01-01", "2025-02-15", 3600, 10, 200),
@@ -843,7 +843,7 @@ mod tests {
 
     #[tokio::test]
     async fn completions_flat_list_when_group_by_none() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc123");
         book.completions = Some(BookCompletions::new(vec![make_completion(
             "2025-01-01",
@@ -871,7 +871,7 @@ mod tests {
 
     #[tokio::test]
     async fn default_selector_returns_all_completions() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let mut book = make_book(1, "Old Book", "abc");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2023-01-01", "2023-06-15", 3600, 5, 100),
@@ -897,7 +897,7 @@ mod tests {
 
     #[tokio::test]
     async fn completions_outside_range_are_excluded() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc");
         book.completions = Some(BookCompletions::new(vec![
             make_completion("2024-06-01", "2024-12-20", 3600, 5, 100),
@@ -920,7 +920,7 @@ mod tests {
 
     #[tokio::test]
     async fn summary_includes_reading_activity_stats() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let mut book = make_book(1, "Test Book", "abc");
         book.completions = Some(BookCompletions::new(vec![make_completion(
             "2025-01-01",
@@ -955,7 +955,7 @@ mod tests {
 
     #[tokio::test]
     async fn share_assets_provided_for_year_selector() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,
@@ -971,7 +971,7 @@ mod tests {
 
     #[tokio::test]
     async fn share_assets_none_for_range_selector() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCompletionsQuery {
             scope: ContentTypeFilter::All,

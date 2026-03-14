@@ -9,10 +9,10 @@ use crate::contracts::reading::{
 use crate::domain::reading::queries::ReadingCalendarQuery;
 use crate::domain::reading::scaling::PageScaling;
 use crate::domain::reading::shared;
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::ReadingData;
 use crate::models::ContentType;
 use crate::source::koreader::types::{PageStat, StatisticsData};
+use crate::store::memory::ReadingData;
+use crate::store::sqlite::repo::LibraryRepository;
 use crate::time_config::TimeConfig;
 
 /// Compute the calendar response for a specific month from reading data.
@@ -419,7 +419,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_stats_produces_empty_calendar() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let reading_data = make_reading_data(make_stats_data(vec![], vec![]));
         let query = ReadingCalendarQuery {
             month: "2026-03".to_string(),
@@ -435,7 +435,7 @@ mod tests {
 
     #[tokio::test]
     async fn single_day_event_has_no_end() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         // 2026-03-10 00:00:00 UTC = 1773100800
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         let ps = make_page_stat(1, 1773100800, 300);
@@ -455,7 +455,7 @@ mod tests {
 
     #[tokio::test]
     async fn consecutive_days_merge_into_span() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // Day 1: 2026-03-10 00:00:00 UTC
         let ps1 = make_page_stat(1, 1773100800, 200);
@@ -477,7 +477,7 @@ mod tests {
 
     #[tokio::test]
     async fn gap_creates_separate_events() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // Day 1: 2026-03-10
         let ps1 = make_page_stat(1, 1773100800, 200);
@@ -499,7 +499,7 @@ mod tests {
 
     #[tokio::test]
     async fn stats_by_scope_computed_for_all_scopes() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let book = make_book(1, "A Book", "abc", Some(ContentType::Book));
         let comic = make_book(2, "A Comic", "def", Some(ContentType::Comic));
         // Both on 2026-03-10
@@ -527,7 +527,7 @@ mod tests {
 
     #[tokio::test]
     async fn non_overlapping_events_outside_month_are_excluded() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // 2026-02-28 (outside March, non-consecutive with Mar 10 → separate event)
         let ps_outside = make_page_stat(1, 1773100800 - 86400 * 10, 999);
@@ -548,7 +548,7 @@ mod tests {
 
     #[tokio::test]
     async fn cross_month_event_cloned_into_both_months() {
-        let repo = crate::infra::sqlite::library_repo::tests::test_repo().await;
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
         let book = make_book(1, "Test Book", "abc123", Some(ContentType::Book));
         // 2026-02-28 00:00:00 UTC = 1772236800
         let ps_feb = make_page_stat(1, 1772236800, 200);

@@ -1,9 +1,6 @@
-//! Infrastructure boundaries for storage and assets.
+//! Infrastructure boundaries.
 
 pub mod assets;
-pub mod lifecycle;
-pub mod sqlite;
-pub mod stores;
 pub mod watcher;
 
 pub use watcher::FileWatcher;

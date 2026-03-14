@@ -13,6 +13,7 @@ pub mod runtime;
 pub mod server;
 pub mod share;
 pub mod source;
+pub mod store;
 pub mod time_config;
 pub mod utils;
 

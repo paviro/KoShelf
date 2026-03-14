@@ -7,8 +7,8 @@ use chrono::{Datelike, NaiveDate};
 use crate::contracts::reading::{MetricPoint, ReadingMetricsData};
 use crate::domain::reading::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
 use crate::domain::reading::shared;
-use crate::infra::stores::ReadingData;
 use crate::source::koreader::types::PageStat;
+use crate::store::memory::ReadingData;
 use crate::time_config::TimeConfig;
 
 /// Default time gap that separates two reading events into different sessions (seconds).

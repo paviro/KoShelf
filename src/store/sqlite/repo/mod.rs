@@ -31,7 +31,7 @@ impl LibraryRepository {
 pub(crate) mod tests {
     use super::LibraryRepository;
     use super::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
-    use crate::infra::sqlite::{open_library_pool_in_memory, run_library_migrations};
+    use crate::store::sqlite::{open_library_pool_in_memory, run_library_migrations};
 
     pub async fn test_repo() -> LibraryRepository {
         let pool = open_library_pool_in_memory()

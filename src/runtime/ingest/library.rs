@@ -21,7 +21,6 @@ use std::time::Instant;
 
 use crate::app::config::SiteConfig;
 use crate::domain::library::upsert_single_item;
-use crate::infra::sqlite::library_repo::LibraryRepository;
 use crate::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
 use crate::runtime::media;
 use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};
@@ -31,6 +30,7 @@ use crate::source::scanner::{MetadataLocation, collect_paths};
 use crate::source::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };
+use crate::store::sqlite::repo::LibraryRepository;
 
 // ── Ingest stats ────────────────────────────────────────────────────────
 

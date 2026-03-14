@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use log::warn;
 use sqlx::SqlitePool;
 
-use super::library_db::LIBRARY_DB_REQUIRED_TABLES;
+use super::pool::LIBRARY_DB_REQUIRED_TABLES;
 
 /// Run all pending library DB migrations using sqlx's embedded migration system.
 ///
@@ -43,7 +43,7 @@ async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::run_library_migrations;
-    use crate::infra::sqlite::library_db::{
+    use crate::store::sqlite::pool::{
         LIBRARY_DB_REQUIRED_INDEXES, LIBRARY_DB_REQUIRED_TABLES, open_library_pool_in_memory,
     };
 

@@ -1,9 +1,9 @@
 use crate::app::config::SiteConfig;
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::models::LibraryItemFormat;
 use crate::runtime::rebuild::targeted_rebuild;
 use crate::source::scanner::MetadataLocation;
+use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
+use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
 use log::{debug, info, warn};
 use notify::event::ModifyKind;

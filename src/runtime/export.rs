@@ -25,8 +25,8 @@ use crate::domain::reading::queries::{
     PeriodSource, ReadingAvailablePeriodsQuery, ReadingCalendarQuery, ReadingCompletionsQuery,
     ReadingMetric, ReadingMetricsQuery, ReadingSummaryQuery,
 };
-use crate::infra::sqlite::library_repo::LibraryRepository;
-use crate::infra::stores::ReadingData;
+use crate::store::memory::ReadingData;
+use crate::store::sqlite::repo::LibraryRepository;
 
 // ── Export-specific serialization types ──────────────────────────────────
 

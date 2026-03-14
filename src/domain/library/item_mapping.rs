@@ -5,9 +5,9 @@
 //! SQLite upsert.  No I/O happens here.
 
 use crate::contracts::library::{ExternalIdentifier, LibrarySeries};
-use crate::infra::sqlite::library_repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
 use crate::models::{ContentType, LibraryItem, LibraryItemFormat};
 use crate::source::fingerprints::FileFingerprint;
+use crate::store::sqlite::repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
 use crate::time_config::TimeConfig;
 use std::path::Path;
 

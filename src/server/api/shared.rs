@@ -17,8 +17,8 @@ use crate::domain::reading::queries::{
     self as rq, CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange,
     MetricsGroupBy, PeriodGroupBy, PeriodSource, ReadingScope,
 };
-use crate::infra::stores::ReadingData;
 use crate::server::ServerState;
+use crate::store::memory::ReadingData;
 
 // ── Query params ────────────────────────────────────────────────────────────
 
