@@ -170,7 +170,7 @@ async fn enrich_completion_items(items: &mut [CompletionItem], repo: &LibraryRep
         let enrichment = match repo.get_item(&md5).await {
             Ok(Some(detail)) => Some(EnrichmentData {
                 cover_url: detail.cover_url,
-                rating: detail.rating.map(|r| r as u32),
+                rating: detail.rating,
                 review_note: detail.review_note,
                 series: detail.series.and_then(|s| format_series(&s)),
             }),
@@ -193,7 +193,7 @@ async fn enrich_completion_items(items: &mut [CompletionItem], repo: &LibraryRep
 
 struct EnrichmentData {
     cover_url: String,
-    rating: Option<u32>,
+    rating: Option<i32>,
     review_note: Option<String>,
     series: Option<String>,
 }

@@ -96,7 +96,7 @@ async fn group_completions_by_year_month(
                     (
                         detail.title.clone(),
                         detail.authors.0.clone(),
-                        detail.rating.map(|r| r as u32),
+                        detail.rating,
                         detail.review_note.clone(),
                         series_display,
                         Some(detail.id.clone()),

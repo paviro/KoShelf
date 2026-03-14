@@ -318,8 +318,8 @@ fn locate_metadata_path(
 ) -> Option<PathBuf> {
     match &indices.metadata_location {
         MetadataLocation::InBookFolder => {
-            let book_stem = path.file_stem().unwrap().to_str().unwrap();
-            let sdr_path = path.parent().unwrap().join(format!("{}.sdr", book_stem));
+            let book_stem = path.file_stem().and_then(|s| s.to_str())?;
+            let sdr_path = path.parent()?.join(format!("{}.sdr", book_stem));
             let metadata_file = sdr_path.join(format.metadata_filename());
             metadata_file.exists().then_some(metadata_file)
         }

@@ -183,7 +183,7 @@ pub struct CompletionItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average_session_duration_sec: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rating: Option<u32>,
+    pub rating: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub review_note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
