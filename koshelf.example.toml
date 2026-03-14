@@ -1,0 +1,31 @@
+# KoShelf configuration file
+# Copy to koshelf.toml and adjust to your setup.
+# CLI flags override any values set here.
+
+[library]
+paths = ["/path/to/books", "/path/to/comics"]
+# docsettings_path = "/path/to/docsettings"
+# hashdocsettings_path = "/path/to/hashdocsettings"
+# statistics_db = "/path/to/statistics.sqlite3"
+# include_unread = false
+
+[koshelf]
+title = "KoShelf"
+language = "en_US"
+# timezone = "Australia/Sydney"
+# data_path = "/path/to/data"
+
+[server]
+port = 3000
+
+[output]
+# path = "/path/to/output"
+# watch = false
+
+[statistics]
+heatmap_scale_max = "2h"
+# day_start_time = "04:00"
+# min_pages_per_day = 5
+min_time_per_day = "30s"
+# include_all_stats = false
+# ignore_stable_page_metadata = false

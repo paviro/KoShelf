@@ -4,7 +4,7 @@ pub const LIBRARY_DB_FILENAME: &str = "library.sqlite";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RuntimeDataPathOptions {
-    pub data_dir: Option<PathBuf>,
+    pub data_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,14 +15,14 @@ pub enum RuntimeDataLifecycle {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeDataPolicySource {
-    CliDataDir,
+    CliDataPath,
     AutoEphemeral,
 }
 
 impl RuntimeDataPolicySource {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::CliDataDir => "cli_data_dir",
+            Self::CliDataPath => "cli_data_path",
             Self::AutoEphemeral => "auto_ephemeral",
         }
     }
@@ -32,8 +32,8 @@ impl RuntimeDataPolicySource {
 pub struct RuntimeDataPolicy {
     pub lifecycle: RuntimeDataLifecycle,
     pub source: RuntimeDataPolicySource,
-    /// User-provided persistent data directory (only set for persistent policies).
-    pub data_dir: Option<PathBuf>,
+    /// User-provided persistent data path (only set for persistent policies).
+    pub data_path: Option<PathBuf>,
     /// Resolved directory for runtime data files (currently: library DB).
     /// Always set once `set_resolved_data_dir` is called — either the
     /// user-provided persistent path or the ephemeral temp directory.
@@ -44,7 +44,7 @@ impl RuntimeDataPolicy {
     /// The user-provided persistent data directory, if any.
     pub fn persistent_data_dir(&self) -> Option<&Path> {
         if self.is_persistent() {
-            self.data_dir.as_deref()
+            self.data_path.as_deref()
         } else {
             None
         }
@@ -76,8 +76,8 @@ impl RuntimeDataPolicy {
 }
 
 pub fn resolve_runtime_data_policy(cli: &RuntimeDataPathOptions) -> RuntimeDataPolicy {
-    non_empty_path(cli.data_dir.as_ref())
-        .map(|data_dir| persistent_policy(data_dir, RuntimeDataPolicySource::CliDataDir))
+    non_empty_path(cli.data_path.as_ref())
+        .map(|data_path| persistent_policy(data_path, RuntimeDataPolicySource::CliDataPath))
         .unwrap_or_else(ephemeral_policy)
 }
 
@@ -91,7 +91,7 @@ fn persistent_policy(path: PathBuf, source: RuntimeDataPolicySource) -> RuntimeD
         lifecycle: RuntimeDataLifecycle::Persistent,
         source,
         resolved_data_dir: Some(path.clone()),
-        data_dir: Some(path),
+        data_path: Some(path),
     }
 }
 
@@ -99,7 +99,7 @@ fn ephemeral_policy() -> RuntimeDataPolicy {
     RuntimeDataPolicy {
         lifecycle: RuntimeDataLifecycle::Ephemeral,
         source: RuntimeDataPolicySource::AutoEphemeral,
-        data_dir: None,
+        data_path: None,
         resolved_data_dir: None,
     }
 }
@@ -112,21 +112,21 @@ mod tests {
     };
     use std::path::PathBuf;
 
-    fn options(data_dir: Option<&str>) -> RuntimeDataPathOptions {
+    fn options(data_path: Option<&str>) -> RuntimeDataPathOptions {
         RuntimeDataPathOptions {
-            data_dir: data_dir.map(PathBuf::from),
+            data_path: data_path.map(PathBuf::from),
         }
     }
 
     #[test]
-    fn cli_data_dir_enables_persistent_policy() {
+    fn cli_data_path_enables_persistent_policy() {
         let cli = options(Some("/cli/data"));
 
         let policy = resolve_runtime_data_policy(&cli);
 
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Persistent);
-        assert_eq!(policy.source, RuntimeDataPolicySource::CliDataDir);
-        assert_eq!(policy.data_dir, Some(PathBuf::from("/cli/data")));
+        assert_eq!(policy.source, RuntimeDataPolicySource::CliDataPath);
+        assert_eq!(policy.data_path, Some(PathBuf::from("/cli/data")));
         assert_eq!(
             policy.persistent_data_dir(),
             Some(std::path::Path::new("/cli/data"))
@@ -141,7 +141,7 @@ mod tests {
 
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Ephemeral);
         assert_eq!(policy.source, RuntimeDataPolicySource::AutoEphemeral);
-        assert_eq!(policy.data_dir, None);
+        assert_eq!(policy.data_path, None);
         assert_eq!(policy.persistent_data_dir(), None);
     }
 
@@ -153,7 +153,7 @@ mod tests {
 
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Ephemeral);
         assert_eq!(policy.source, RuntimeDataPolicySource::AutoEphemeral);
-        assert_eq!(policy.data_dir, None);
+        assert_eq!(policy.data_path, None);
     }
 
     #[test]

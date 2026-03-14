@@ -1,5 +1,4 @@
-use super::cli::{Cli, parse_time_to_seconds};
-use super::config::SiteConfig;
+use super::config::{Cli, SiteConfig, parse_time_to_seconds};
 use crate::pipeline::export::{ExportConfig, export_data_files};
 use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
@@ -80,7 +79,7 @@ fn metadata_location(cli: &Cli) -> MetadataLocation {
 
 fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
     let cli_overrides = RuntimeDataPathOptions {
-        data_dir: cli.data_dir.clone(),
+        data_path: cli.data_path.clone(),
     };
 
     resolve_runtime_data_policy(&cli_overrides)

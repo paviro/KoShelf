@@ -1,3 +1,4 @@
+use super::file::FileConfig;
 use anyhow::{Context, Result};
 use clap::Parser;
 use regex::Regex;
@@ -7,6 +8,10 @@ use std::path::PathBuf;
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
+    /// Path to a TOML configuration file
+    #[arg(short = 'c', long, display_order = 0)]
+    pub config: Option<PathBuf>,
+
     /// Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata.
     /// Can be specified multiple times. (optional if statistics_db is provided)
     #[arg(short = 'i', visible_short_alias = 'b', long, alias = "books-path", display_order = 1, action = clap::ArgAction::Append)]
@@ -92,8 +97,8 @@ pub struct Cli {
 
     /// Persistent runtime data directory for cache files (for example library.sqlite).
     /// Used for runtime library DB and media cache persistence in serve mode.
-    #[arg(long, display_order = 20)]
-    pub data_dir: Option<PathBuf>,
+    #[arg(long, alias = "data-dir", display_order = 20)]
+    pub data_path: Option<PathBuf>,
 }
 
 /// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds.
@@ -132,6 +137,129 @@ pub fn parse_time_to_seconds(time_str: &str) -> Result<Option<u32>> {
 }
 
 impl Cli {
+    /// Merge values from a TOML config file into CLI fields.
+    ///
+    /// Only overrides fields that were NOT explicitly set on the command line.
+    /// Precedence: CLI explicit args > config file > clap defaults.
+    pub fn merge_with_file_config(&mut self, config: &FileConfig, matches: &clap::ArgMatches) {
+        use clap::parser::ValueSource;
+
+        /// Returns `true` when the user did NOT pass an explicit CLI flag.
+        fn not_explicit(matches: &clap::ArgMatches, id: &str) -> bool {
+            matches.value_source(id) != Some(ValueSource::CommandLine)
+        }
+
+        // ── library section ──────────────────────────────────────────
+        if let Some(ref lib) = config.library {
+            if let Some(ref paths) = lib.paths
+                && not_explicit(matches, "library_path")
+                && !paths.is_empty()
+            {
+                self.library_path = paths.clone();
+            }
+            if let Some(ref p) = lib.docsettings_path
+                && not_explicit(matches, "docsettings_path")
+            {
+                self.docsettings_path = Some(p.clone());
+            }
+            if let Some(ref p) = lib.hashdocsettings_path
+                && not_explicit(matches, "hashdocsettings_path")
+            {
+                self.hashdocsettings_path = Some(p.clone());
+            }
+            if let Some(ref p) = lib.statistics_db
+                && not_explicit(matches, "statistics_db")
+            {
+                self.statistics_db = Some(p.clone());
+            }
+            if let Some(v) = lib.include_unread
+                && not_explicit(matches, "include_unread")
+            {
+                self.include_unread = v;
+            }
+        }
+
+        // ── koshelf section ──────────────────────────────────────────
+        if let Some(ref ks) = config.koshelf {
+            if let Some(ref v) = ks.title
+                && not_explicit(matches, "title")
+            {
+                self.title = v.clone();
+            }
+            if let Some(ref v) = ks.language
+                && not_explicit(matches, "language")
+            {
+                self.language = v.clone();
+            }
+            if let Some(ref v) = ks.timezone
+                && not_explicit(matches, "timezone")
+            {
+                self.timezone = Some(v.clone());
+            }
+            if let Some(ref p) = ks.data_path
+                && not_explicit(matches, "data_path")
+            {
+                self.data_path = Some(p.clone());
+            }
+        }
+
+        // ── server section ───────────────────────────────────────────
+        if let Some(ref srv) = config.server
+            && let Some(v) = srv.port
+            && not_explicit(matches, "port")
+        {
+            self.port = v;
+        }
+
+        // ── output section ───────────────────────────────────────────
+        if let Some(ref out) = config.output {
+            if let Some(ref p) = out.path
+                && not_explicit(matches, "output")
+            {
+                self.output = Some(p.clone());
+            }
+            if let Some(v) = out.watch
+                && not_explicit(matches, "watch")
+            {
+                self.watch = v;
+            }
+        }
+
+        // ── statistics section ───────────────────────────────────────
+        if let Some(ref stats) = config.statistics {
+            if let Some(ref v) = stats.heatmap_scale_max
+                && not_explicit(matches, "heatmap_scale_max")
+            {
+                self.heatmap_scale_max = v.clone();
+            }
+            if let Some(ref v) = stats.day_start_time
+                && not_explicit(matches, "day_start_time")
+            {
+                self.day_start_time = Some(v.clone());
+            }
+            if let Some(v) = stats.min_pages_per_day
+                && not_explicit(matches, "min_pages_per_day")
+            {
+                self.min_pages_per_day = Some(v);
+            }
+            if let Some(ref v) = stats.min_time_per_day
+                && not_explicit(matches, "min_time_per_day")
+            {
+                self.min_time_per_day = Some(v.clone());
+            }
+            if let Some(v) = stats.include_all_stats
+                && not_explicit(matches, "include_all_stats")
+            {
+                self.include_all_stats = v;
+            }
+            if let Some(v) = stats.ignore_stable_page_metadata
+                && not_explicit(matches, "ignore_stable_page_metadata")
+            {
+                self.ignore_stable_page_metadata = v;
+            }
+        }
+    }
+
     /// Validate CLI inputs that are independent of runtime mode.
     pub fn validate(&self) -> Result<()> {
         if self.library_path.is_empty() && self.statistics_db.is_none() {
@@ -202,11 +330,11 @@ impl Cli {
             anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
         }
 
-        if let Some(ref data_dir) = self.data_dir
-            && data_dir.exists()
-            && !data_dir.is_dir()
+        if let Some(ref data_path) = self.data_path
+            && data_path.exists()
+            && !data_path.is_dir()
         {
-            anyhow::bail!("Data directory path is not a directory: {:?}", data_dir);
+            anyhow::bail!("Data directory path is not a directory: {:?}", data_path);
         }
 
         parse_time_to_seconds(&self.heatmap_scale_max).with_context(|| {
