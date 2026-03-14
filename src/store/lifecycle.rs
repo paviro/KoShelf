@@ -15,14 +15,14 @@ pub enum RuntimeDataLifecycle {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeDataPolicySource {
-    CliDataPath,
+    DataPath,
     AutoEphemeral,
 }
 
 impl RuntimeDataPolicySource {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::CliDataPath => "cli_data_path",
+            Self::DataPath => "data_path",
             Self::AutoEphemeral => "auto_ephemeral",
         }
     }
@@ -77,7 +77,7 @@ impl RuntimeDataPolicy {
 
 pub fn resolve_runtime_data_policy(cli: &RuntimeDataPathOptions) -> RuntimeDataPolicy {
     non_empty_path(cli.data_path.as_ref())
-        .map(|data_path| persistent_policy(data_path, RuntimeDataPolicySource::CliDataPath))
+        .map(|data_path| persistent_policy(data_path, RuntimeDataPolicySource::DataPath))
         .unwrap_or_else(ephemeral_policy)
 }
 
@@ -125,7 +125,7 @@ mod tests {
         let policy = resolve_runtime_data_policy(&cli);
 
         assert_eq!(policy.lifecycle, RuntimeDataLifecycle::Persistent);
-        assert_eq!(policy.source, RuntimeDataPolicySource::CliDataPath);
+        assert_eq!(policy.source, RuntimeDataPolicySource::DataPath);
         assert_eq!(policy.data_path, Some(PathBuf::from("/cli/data")));
         assert_eq!(
             policy.persistent_data_dir(),

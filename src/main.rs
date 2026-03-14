@@ -4,7 +4,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use anyhow::{Context, Result};
 use clap::{CommandFactory, FromArgMatches};
-use koshelf::app::config::FileConfig;
+use koshelf::app::config::{FileConfig, merge_with_file_config};
 use koshelf::{Cli, run};
 use std::path::Path;
 
@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     };
 
     if let Some(ref fc) = file_config {
-        cli.merge_with_file_config(fc, &matches);
+        merge_with_file_config(&mut cli, fc, &matches);
     }
 
     if cli.github {
