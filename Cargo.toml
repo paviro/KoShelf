@@ -60,7 +60,7 @@ axum = "0.8.4"
 tower = "0.5"
 tower-http = { version = "0.6", features = [
     "fs",
-    "cors",
+    "set-header",
     "compression-gzip",
     "compression-br",
 ] }

@@ -1,7 +1,7 @@
 use crate::shelf::models::{Annotation, BookStatus, DocProps, KoReaderMetadata, Stats, Summary};
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
-use mlua::{Lua, Table, Value};
+use mlua::{ChunkMode, Lua, LuaOptions, StdLib, Table, Value};
 use std::fs;
 use std::path::Path;
 
@@ -18,7 +18,10 @@ impl Default for LuaParser {
 
 impl LuaParser {
     pub fn new() -> Self {
-        Self { lua: Lua::new() }
+        Self {
+            lua: Lua::new_with(StdLib::NONE, LuaOptions::default())
+                .expect("Failed to create sandboxed Lua state"),
+        }
     }
 
     /// Evaluate a KOReader Lua metadata file and extract its fields.
@@ -31,6 +34,7 @@ impl LuaParser {
         let value: Value = self
             .lua
             .load(&content)
+            .set_mode(ChunkMode::Text)
             .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
 

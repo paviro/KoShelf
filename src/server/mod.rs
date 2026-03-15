@@ -10,8 +10,8 @@ use log::info;
 use std::path::PathBuf;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
-use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -71,7 +71,18 @@ impl WebServer {
         app = app.layer(
             ServiceBuilder::new()
                 .layer(CompressionLayer::new())
-                .layer(CorsLayer::permissive()),
+                .layer(SetResponseHeaderLayer::overriding(
+                    axum::http::header::X_CONTENT_TYPE_OPTIONS,
+                    axum::http::HeaderValue::from_static("nosniff"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    axum::http::header::X_FRAME_OPTIONS,
+                    axum::http::HeaderValue::from_static("DENY"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    axum::http::header::REFERRER_POLICY,
+                    axum::http::HeaderValue::from_static("strict-origin-when-cross-origin"),
+                )),
         );
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
