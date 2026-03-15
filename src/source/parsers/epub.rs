@@ -9,7 +9,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use zip::ZipArchive;
 
 /// Extracts metadata and cover images from EPUB files via OPF parsing.
@@ -24,6 +24,26 @@ impl Default for EpubParser {
 impl EpubParser {
     pub fn new() -> Self {
         Self
+    }
+
+    /// Normalize a relative path inside a ZIP archive, stripping `..` components
+    /// to prevent path traversal within the archive.
+    fn normalize_zip_path(path: &str) -> String {
+        let mut parts: Vec<&str> = Vec::new();
+        for component in Path::new(path).components() {
+            match component {
+                Component::Normal(s) => {
+                    if let Some(s) = s.to_str() {
+                        parts.push(s);
+                    }
+                }
+                Component::ParentDir => {
+                    parts.pop();
+                }
+                _ => {} // Skip RootDir, CurDir, Prefix
+            }
+        }
+        parts.join("/")
     }
 
     /// Parse an EPUB file for metadata, page count, and cover image.
@@ -48,7 +68,7 @@ impl EpubParser {
                 .by_name("META-INF/container.xml")
                 .with_context(|| "META-INF/container.xml not found in EPUB")?;
             container_file.read_to_string(&mut container_xml)?;
-            Self::find_opf_path(&container_xml)?
+            Self::normalize_zip_path(&Self::find_opf_path(&container_xml)?)
         };
         debug!("Found OPF file path: {}", opf_path);
 
@@ -71,12 +91,14 @@ impl EpubParser {
         {
             let opf_parent = Path::new(&opf_path).parent();
             let resolved_nav_path = if let Some(parent) = opf_parent {
-                parent
-                    .join(nav_rel_path)
-                    .to_string_lossy()
-                    .replace('\\', "/")
+                Self::normalize_zip_path(
+                    &parent
+                        .join(nav_rel_path)
+                        .to_string_lossy()
+                        .replace('\\', "/"),
+                )
             } else {
-                nav_rel_path.clone()
+                Self::normalize_zip_path(nav_rel_path)
             };
 
             if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
@@ -100,7 +122,9 @@ impl EpubParser {
             } else {
                 Path::new(cover_path).to_path_buf()
             };
-            Some(joined.to_string_lossy().replace('\\', "/"))
+            Some(Self::normalize_zip_path(
+                &joined.to_string_lossy().replace('\\', "/"),
+            ))
         } else {
             None
         };

@@ -175,10 +175,18 @@ impl ComicParser {
                         let filename = header.entry().filename.to_string_lossy().to_string();
 
                         if &filename == cover_filename {
-                            let extract_path = temp_dir.path().join(&filename);
-                            if let Some(parent) = extract_path.parent() {
-                                fs::create_dir_all(parent)?;
-                            }
+                            // Use a safe fixed filename to prevent path traversal
+                            // from malicious archive entry names containing "../".
+                            let safe_name = Path::new(&filename)
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            let extract_path = temp_dir.path().join(if safe_name.is_empty() {
+                                "cover".to_string()
+                            } else {
+                                safe_name
+                            });
 
                             header
                                 .extract_to(&extract_path)
