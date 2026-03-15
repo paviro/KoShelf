@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuChevronDown } from 'react-icons/lu';
 
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -32,7 +31,7 @@ const PREVIEW_NUMBER = 10000;
 const EMPTY_LANGUAGE_OPTIONS: SupportedLanguageOption[] = [];
 
 const selectClassName =
-    'w-full appearance-none bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/60';
+    'w-full appearance-none bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/60';
 
 type SettingsSectionProps = {
     accentClass: string;
@@ -90,7 +89,7 @@ function SettingsField({
                         </p>
                     ))}
                 </div>
-                <div className="sm:w-56 flex-shrink-0">{children}</div>
+                <div className="sm:w-56 shrink-0">{children}</div>
             </div>
         </div>
     );
@@ -129,7 +128,7 @@ function SettingsSelect({
 export function SettingsRoute() {
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
     const languageOptionsQuery = useQuery({
         queryKey: ['settings', 'language-options'],
@@ -251,7 +250,7 @@ export function SettingsRoute() {
             <PageHeader title={translation.get('settings')} />
             <PageContent className="pt-[92px] md:pt-[100px] space-y-6 md:space-y-8">
                 <SettingsSection
-                    accentClass="bg-gradient-to-b from-purple-400 to-purple-600"
+                    accentClass="bg-linear-to-b from-purple-400 to-purple-600"
                     title={translation.get('appearance-setting')}
                 >
                     <SettingsField
@@ -283,7 +282,7 @@ export function SettingsRoute() {
                 </SettingsSection>
 
                 <SettingsSection
-                    accentClass="bg-gradient-to-b from-amber-400 to-amber-600"
+                    accentClass="bg-linear-to-b from-amber-400 to-amber-600"
                     title={translation.get('prefetch-setting')}
                 >
                     <SettingsField
@@ -317,7 +316,7 @@ export function SettingsRoute() {
                 </SettingsSection>
 
                 <SettingsSection
-                    accentClass="bg-gradient-to-b from-primary-400 to-primary-600"
+                    accentClass="bg-linear-to-b from-primary-400 to-primary-600"
                     title={translation.get('language-setting')}
                 >
                     <SettingsField

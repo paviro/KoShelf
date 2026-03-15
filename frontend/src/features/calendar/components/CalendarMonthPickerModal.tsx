@@ -39,7 +39,7 @@ export function CalendarMonthPickerModal({
             cardClassName="max-w-xs bg-white/95 dark:bg-dark-900/70 backdrop-blur-xl border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl overflow-hidden"
             showCloseButton={false}
         >
-            <div className="p-4 bg-gradient-to-b from-white/70 to-transparent dark:from-white/[0.02] dark:to-transparent">
+            <div className="p-4 bg-linear-to-b from-white/70 to-transparent dark:from-white/2 dark:to-transparent">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
                     {translation.get('select-month')}
                 </h3>
@@ -54,7 +54,7 @@ export function CalendarMonthPickerModal({
                                 type="button"
                                 className={`px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
                                     active
-                                        ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md'
+                                        ? 'bg-linear-to-r from-primary-600 to-primary-700 text-white shadow-md'
                                         : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-dark-700/70'
                                 }`}
                                 onClick={() => {

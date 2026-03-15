@@ -5,18 +5,13 @@ import {
 } from '@tanstack/react-query';
 
 import { api } from '../../../shared/api';
-import type {
-    LibraryDetailResponse,
-    LibraryListResponse,
-} from '../api/library-data';
+import type { LibraryDetailData, LibraryListData } from '../api/library-data';
 import type { LibraryCollection } from '../model/library-model';
 
 async function fetchLibraryList(
     collection: LibraryCollection,
-): Promise<LibraryListResponse> {
-    return api.items.list<LibraryListResponse>(
-        collection === 'comics' ? 'comics' : 'books',
-    );
+): Promise<LibraryListData> {
+    return api.getItems(collection === 'comics' ? 'comics' : 'books');
 }
 
 export function libraryListQueryKey(collection: LibraryCollection) {
@@ -40,8 +35,8 @@ export function prefetchLibraryListQuery(
 async function fetchLibraryDetail(
     collection: LibraryCollection,
     id: string,
-): Promise<LibraryDetailResponse> {
-    const detail = await api.items.get<LibraryDetailResponse>(id);
+): Promise<LibraryDetailData> {
+    const detail = await api.getItem(id);
     if (collection === 'comics' && detail.item.content_type !== 'comic') {
         throw new Error(`Item ${id} is not a comic`);
     }
@@ -84,7 +79,7 @@ export function fetchLibraryDetailQuery(
     queryClient: QueryClient,
     collection: LibraryCollection,
     id: string,
-): Promise<LibraryDetailResponse> {
+): Promise<LibraryDetailData> {
     return queryClient.fetchQuery(libraryDetailQueryOptions(collection, id));
 }
 
@@ -92,8 +87,8 @@ export function getCachedLibraryDetailQueryData(
     queryClient: QueryClient,
     collection: LibraryCollection,
     id: string,
-): LibraryDetailResponse | undefined {
-    return queryClient.getQueryData<LibraryDetailResponse>(
+): LibraryDetailData | undefined {
+    return queryClient.getQueryData<LibraryDetailData>(
         libraryDetailQueryKey(collection, id),
     );
 }

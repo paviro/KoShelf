@@ -58,11 +58,11 @@ export function LibrarySection({
         <CollapsibleSection
             sectionKey={sectionKey}
             defaultVisible={DEFAULT_VISIBILITY[sectionKey]}
-            accentClass={`bg-gradient-to-b ${style.accentClass}`}
+            accentClass={`bg-linear-to-b ${style.accentClass}`}
             title={title}
             titleBadge={
                 <span
-                    className={`bg-gradient-to-r ${style.badgeClass} text-white text-sm px-3 py-1 rounded-full shadow-md font-medium`}
+                    className={`bg-linear-to-r ${style.badgeClass} text-white text-sm px-3 py-1 rounded-full shadow-md font-medium`}
                 >
                     {items.length}
                 </span>

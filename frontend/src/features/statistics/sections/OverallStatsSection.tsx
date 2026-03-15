@@ -1,4 +1,4 @@
-import type { StatisticsIndexResponse } from '../api/statistics-data';
+import type { ReadingOverview } from '../api/statistics-data';
 import { LuClock3, LuFileText, LuSun } from 'react-icons/lu';
 
 import { DataFormatter } from '../lib/formatters';
@@ -15,7 +15,7 @@ import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSecti
 type OverallStatsSectionProps = {
     visible: boolean;
     onToggle: (sectionName: SectionName) => void;
-    overview: StatisticsIndexResponse['overview'];
+    overview: ReadingOverview;
 };
 
 export function OverallStatsSection({
@@ -26,7 +26,7 @@ export function OverallStatsSection({
     return (
         <CollapsibleSection
             sectionKey="overall-stats"
-            accentClass="bg-gradient-to-b from-purple-400 to-purple-600"
+            accentClass="bg-linear-to-b from-purple-400 to-purple-600"
             title={translation.get('overall-statistics')}
             visible={visible}
             onToggle={() => onToggle('overall-stats')}
@@ -34,12 +34,12 @@ export function OverallStatsSection({
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 mb-8">
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
+                    iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatReadTimeWithWeeksParts(
-                                overview.total_read_time,
+                                overview.reading_time_sec,
                             )}
                         />
                     }
@@ -48,15 +48,15 @@ export function OverallStatsSection({
 
                 <MetricCard
                     icon={LuFileText}
-                    iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
+                    iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
-                    value={DataFormatter.formatCount(overview.total_page_reads)}
+                    value={DataFormatter.formatCount(overview.pages_read)}
                     label={translation.get('total-pages-read')}
                 />
 
                 <MetricCard
                     icon={LuFileText}
-                    iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
+                    iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
                     value={DataFormatter.formatCount(
                         overview.most_pages_in_day,
@@ -66,12 +66,12 @@ export function OverallStatsSection({
 
                 <MetricCard
                     icon={LuSun}
-                    iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
+                    iconContainerClassName="bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600"
                     iconClassName="text-amber-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={DataFormatter.formatReadTimeParts(
-                                overview.longest_read_time_in_day,
+                                overview.longest_reading_time_in_day_sec,
                             )}
                         />
                     }
@@ -80,12 +80,12 @@ export function OverallStatsSection({
 
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
+                    iconContainerClassName="bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatSessionDurationParts(
-                                overview.longest_session_duration,
+                                overview.longest_session_duration_sec,
                             )}
                         />
                     }
@@ -94,12 +94,12 @@ export function OverallStatsSection({
 
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
+                    iconContainerClassName="bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600"
                     iconClassName="text-purple-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatSessionDurationParts(
-                                overview.average_session_duration,
+                                overview.average_session_duration_sec,
                             )}
                         />
                     }

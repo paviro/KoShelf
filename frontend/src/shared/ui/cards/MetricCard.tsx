@@ -27,7 +27,7 @@ export function MetricCard({
             <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                 <div className="flex items-center gap-3">
                     <div
-                        className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
+                        className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center shrink-0`}
                     >
                         <Icon
                             className={`w-5 h-5 ${iconClassName}`}
@@ -54,7 +54,7 @@ export function MetricCard({
         <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
             <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
                 <div
-                    className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center flex-shrink-0`}
+                    className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center shrink-0`}
                 >
                     <Icon
                         className={`w-5 h-5 ${iconClassName}`}

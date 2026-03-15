@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 
 import { listRouteIdForCollection } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { useBookCardTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
 import {
@@ -107,7 +106,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
     const listQuery = useLibraryListQuery(collection);
     const listTransition = useQueryTransitionState({

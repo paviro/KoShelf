@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
 import {
     LuCalendarDays,
@@ -17,7 +17,7 @@ import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
-import type { RecapItemResponse } from '../api/recap-data';
+import type { CompletionItem } from '../api/recap-data';
 import {
     buildStarDisplay,
     formatRecapDateRange,
@@ -26,7 +26,7 @@ import {
 } from '../lib/recap-formatters';
 
 type RecapItemCardProps = {
-    item: RecapItemResponse;
+    item: CompletionItem;
 };
 
 export function RecapItemCard({ item }: RecapItemCardProps) {
@@ -120,7 +120,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
             data-content-type={item.content_type ?? 'unknown'}
         >
             <span className="recap-dot bg-primary-500"></span>
-            <div className="bg-white dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+            <div className="bg-white dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-xl shadow-xs overflow-hidden hover:shadow-md transition-shadow duration-300">
                 <div className="flex flex-col md:flex-row md:items-stretch">
                     <div className="md:w-48 bg-gray-50 dark:bg-dark-800 p-4 md:self-start flex items-center justify-center">
                         {coverNode}
@@ -188,7 +188,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             </div>
 
                             {hasRating && (
-                                <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
+                                <div className="hidden md:flex items-center gap-0.5 shrink-0">
                                     {stars.map((filled, index) => (
                                         <LuStar
                                             key={`desktop-star-${index}`}
@@ -206,7 +206,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
 
                         <div className="mt-3 grid grid-cols-2 xl:grid-cols-4 gap-2">
                             <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuCalendarDays className="w-4 h-4 text-blue-600 dark:text-white" />
                                 </div>
                                 <div>
@@ -223,7 +223,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuClock3 className="w-4 h-4 text-purple-600 dark:text-white" />
                                 </div>
                                 <div>
@@ -233,7 +233,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                                         <MetricCardUnitValue
                                             value={formatRecapDurationParts(
-                                                item.reading_time,
+                                                item.reading_time_sec,
                                             )}
                                             size="compact"
                                         />
@@ -242,7 +242,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuFileText className="w-4 h-4 text-green-600 dark:text-white" />
                                 </div>
                                 <div>
@@ -259,7 +259,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <HiOutlineBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
                                 </div>
                                 <div>
@@ -277,7 +277,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             <div className="mt-4">
                                 <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg p-3 md:p-4">
                                     <div className="flex items-start">
-                                        <LuQuote className="w-5 h-5 text-primary-400 mt-0.5 mr-2.5 flex-shrink-0" />
+                                        <LuQuote className="w-5 h-5 text-primary-400 mt-0.5 mr-2.5 shrink-0" />
                                         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                                             {item.review_note}
                                         </p>

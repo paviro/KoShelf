@@ -51,7 +51,7 @@ export function ContentScopeFilter({
                 aria-expanded={open}
                 aria-label={translation.get('filter.aria-label')}
                 onClick={() => setOpen((current) => !current)}
-                className={`${DROPDOWN_TRIGGER_BASE_CLASSNAME} text-gray-900 dark:text-white space-x-0 sm:space-x-2 sm:justify-start w-10 sm:w-auto sm:px-4`}
+                className={`${DROPDOWN_TRIGGER_BASE_CLASSNAME} text-gray-900 dark:text-white sm:gap-2 sm:justify-start w-10 sm:w-auto sm:px-4 sm:pl-6`}
             >
                 <LuFilter
                     className={`sm:hidden w-5 h-5 ${value === 'all' ? 'text-gray-600 dark:text-gray-300' : 'text-primary-500'}`}

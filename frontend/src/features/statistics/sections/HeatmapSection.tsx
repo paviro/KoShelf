@@ -52,16 +52,16 @@ export function HeatmapSection({
         let maxActivity = 0;
 
         yearData?.daily_activity.forEach((entry) => {
-            if (entry.read_time > maxActivity) {
-                maxActivity = entry.read_time;
+            if (entry.reading_time_sec > maxActivity) {
+                maxActivity = entry.reading_time_sec;
             }
             map.set(entry.date, {
                 pages: entry.pages_read,
-                read: entry.read_time,
+                read: entry.reading_time_sec,
             });
         });
 
-        const configuredMax = yearData?.config.max_scale_seconds;
+        const configuredMax = yearData?.heatmap_config.max_scale_sec;
         if (configuredMax !== null && configuredMax !== undefined) {
             maxActivity = configuredMax;
         }
@@ -263,7 +263,7 @@ export function HeatmapSection({
             )}
 
             <div className="flex">
-                <div className="text-xs text-gray-500 dark:text-dark-400 font-medium w-8 sm:w-12 flex-shrink-0 pr-2 sm:pr-4">
+                <div className="text-xs text-gray-500 dark:text-dark-400 font-medium w-8 sm:w-12 shrink-0 pr-2 sm:pr-4">
                     <div className="h-6 mb-3"></div>
                     <div
                         className="flex flex-col justify-between text-right"
@@ -322,7 +322,7 @@ export function HeatmapSection({
                                         return (
                                             <div
                                                 key={`${week}-${day}`}
-                                                className={`w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 rounded-sm activity-cell hover:ring-1 hover:ring-inset hover:ring-gray-900 dark:hover:ring-white hover:z-10 ${colorClasses}`}
+                                                className={`w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 rounded-xs activity-cell hover:ring-1 hover:ring-inset hover:ring-gray-900 dark:hover:ring-white hover:z-10 ${colorClasses}`}
                                                 data-week={week}
                                                 data-day={day}
                                                 ref={(element) => {
@@ -347,11 +347,11 @@ export function HeatmapSection({
                 <span className="text-gray-500 dark:text-dark-400">
                     {translation.get('less')}
                 </span>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-gray-100 dark:bg-dark-800"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-100 dark:bg-green-900"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-300 dark:bg-green-700"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-500 dark:bg-green-500"></div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-sm bg-green-600 dark:bg-green-300"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-xs bg-gray-100 dark:bg-dark-800"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-xs bg-green-100 dark:bg-green-900"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-xs bg-green-300 dark:bg-green-700"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-xs bg-green-500 dark:bg-green-500"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-xs bg-green-600 dark:bg-green-300"></div>
                 <span className="text-gray-500 dark:text-dark-400">
                     {translation.get('more')}
                 </span>

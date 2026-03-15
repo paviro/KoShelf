@@ -225,18 +225,22 @@ function compareRegionLanguageCandidates(
     );
 }
 
-function supportsDatePatternLocale(locale: string, regionCode: string): boolean {
+function supportsDatePatternLocale(
+    locale: string,
+    regionCode: string,
+): boolean {
     try {
-        const resolvedLocale = new Intl.DateTimeFormat(
-            locale,
-        ).resolvedOptions().locale;
+        const resolvedLocale = new Intl.DateTimeFormat(locale).resolvedOptions()
+            .locale;
         return extractRegion(resolvedLocale) === regionCode;
     } catch {
         return false;
     }
 }
 
-function getRegionLanguageCandidates(regionCode: string): RegionLanguageCandidate[] {
+function getRegionLanguageCandidates(
+    regionCode: string,
+): RegionLanguageCandidate[] {
     const regionInfo = territoryInfo[regionCode];
     if (!regionInfo) {
         return [];
@@ -265,7 +269,9 @@ function getRegionLanguageCandidates(regionCode: string): RegionLanguageCandidat
         }
     }
 
-    return [...candidateByLanguage.values()].sort(compareRegionLanguageCandidates);
+    return [...candidateByLanguage.values()].sort(
+        compareRegionLanguageCandidates,
+    );
 }
 
 export function splitLocale(locale: string): {

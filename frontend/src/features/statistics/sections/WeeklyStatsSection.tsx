@@ -40,7 +40,7 @@ function buildWeekdayBarItems(
     startDate: string,
 ): DistributionBarItem[] {
     const days = WEEKDAY_TRANSLATION_KEYS.map((key) => ({
-        read_time: 0,
+        reading_time_sec: 0,
         pages_read: 0,
         label: translation.get(key),
     }));
@@ -49,8 +49,8 @@ function buildWeekdayBarItems(
         const start = parsePlainDate(startDate);
         if (!start) {
             return days.map((day) => ({
-                readTime: day.read_time,
-                tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+                readTime: day.reading_time_sec,
+                tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.reading_time_sec)}, ${translation.get('pages', day.pages_read)}`,
                 label: day.label,
             }));
         }
@@ -64,15 +64,15 @@ function buildWeekdayBarItems(
                 (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
             );
             if (diffDays >= 0 && diffDays < 7) {
-                days[diffDays].read_time += entry.read_time;
+                days[diffDays].reading_time_sec += entry.reading_time_sec;
                 days[diffDays].pages_read += entry.pages_read;
             }
         }
     }
 
     return days.map((day) => ({
-        readTime: day.read_time,
-        tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.read_time)}, ${translation.get('pages', day.pages_read)}`,
+        readTime: day.reading_time_sec,
+        tooltip: `${day.label}: ${DataFormatter.formatReadTime(day.reading_time_sec)}, ${translation.get('pages', day.pages_read)}`,
         label: day.label,
     }));
 }
@@ -130,12 +130,13 @@ export function WeeklyStatsSection({
         weeklyStats.end_date,
     );
     const averagePagesPerDay = weeklyStats.pages_read / averageDayCount;
-    const averageReadTimePerDay = weeklyStats.read_time / averageDayCount;
+    const averageReadTimePerDay =
+        weeklyStats.reading_time_sec / averageDayCount;
 
     return (
         <CollapsibleSection
             sectionKey="weekly-stats"
-            accentClass="bg-gradient-to-b from-blue-400 to-blue-600"
+            accentClass="bg-linear-to-b from-blue-400 to-blue-600"
             title={translation.get('weekly-statistics')}
             visible={visible}
             onToggle={() => onToggle('weekly-stats')}
@@ -162,13 +163,13 @@ export function WeeklyStatsSection({
                 <div className="week-stats grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                     <MetricCard
                         icon={LuClock3}
-                        iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
+                        iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                         iconClassName="text-primary-600 dark:text-white"
                         valueId="weekReadTime"
                         value={
                             <MetricCardUnitValue
                                 value={DataFormatter.formatReadTimeParts(
-                                    weeklyStats.read_time,
+                                    weeklyStats.reading_time_sec,
                                 )}
                             />
                         }
@@ -177,7 +178,7 @@ export function WeeklyStatsSection({
 
                     <MetricCard
                         icon={LuFileText}
-                        iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
+                        iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
                         iconClassName="text-indigo-600 dark:text-white"
                         valueId="weekPagesRead"
                         value={DataFormatter.formatCount(
@@ -188,7 +189,7 @@ export function WeeklyStatsSection({
 
                     <MetricCard
                         icon={LuFileText}
-                        iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
+                        iconContainerClassName="bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600"
                         iconClassName="text-amber-600 dark:text-white"
                         valueId="weekAvgPagesPerDay"
                         value={DataFormatter.formatAvgPages(averagePagesPerDay)}
@@ -197,7 +198,7 @@ export function WeeklyStatsSection({
 
                     <MetricCard
                         icon={LuClock3}
-                        iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
+                        iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                         iconClassName="text-green-600 dark:text-white"
                         valueId="weekAvgReadTimePerDay"
                         value={
@@ -212,13 +213,13 @@ export function WeeklyStatsSection({
 
                     <MetricCard
                         icon={LuClock3}
-                        iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
+                        iconContainerClassName="bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-pink-600"
                         iconClassName="text-pink-600 dark:text-white"
                         valueId="weekLongestSession"
                         value={
                             <MetricCardUnitValue
                                 value={formatSessionDurationParts(
-                                    weeklyStats.longest_session_duration,
+                                    weeklyStats.longest_session_duration_sec,
                                 )}
                             />
                         }
@@ -227,13 +228,13 @@ export function WeeklyStatsSection({
 
                     <MetricCard
                         icon={LuClock3}
-                        iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
+                        iconContainerClassName="bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600"
                         iconClassName="text-purple-600 dark:text-white"
                         valueId="weekAverageSession"
                         value={
                             <MetricCardUnitValue
                                 value={formatSessionDurationParts(
-                                    weeklyStats.average_session_duration,
+                                    weeklyStats.average_session_duration_sec,
                                 )}
                             />
                         }

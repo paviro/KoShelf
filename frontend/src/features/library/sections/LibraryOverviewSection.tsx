@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { BsHighlighter } from 'react-icons/bs';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
 import {
@@ -77,7 +77,7 @@ export function LibraryOverviewSection({
         <CollapsibleSection
             sectionKey="book-overview"
             defaultVisible
-            accentClass="bg-gradient-to-b from-primary-400 to-primary-600"
+            accentClass="bg-linear-to-b from-primary-400 to-primary-600"
             title={
                 item.content_type === 'comic'
                     ? translation.get('comic-overview')
@@ -99,7 +99,7 @@ export function LibraryOverviewSection({
                                     onError={() => setCoverFailed(true)}
                                 />
                             ) : (
-                                <div className="aspect-[2/3] w-full flex items-center justify-center text-5xl md:text-6xl text-gray-400 dark:text-dark-400">
+                                <div className="aspect-2/3 w-full flex items-center justify-center text-5xl md:text-6xl text-gray-400 dark:text-dark-400">
                                     <span aria-hidden="true">📖</span>
                                 </div>
                             )}
@@ -115,7 +115,7 @@ export function LibraryOverviewSection({
                         {showProgressStatus && (
                             <div className="@container bg-primary-50 dark:bg-dark-850/50 border border-primary-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
                                 <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
-                                    <div className="w-10 h-10 bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center shrink-0">
                                         <HiOutlineBookOpen
                                             className="w-5 h-5 text-primary-600 dark:text-white"
                                             aria-hidden="true"
@@ -138,7 +138,7 @@ export function LibraryOverviewSection({
                         {showCompletedStatus && (
                             <div className="@container bg-green-50 dark:bg-dark-850/50 border border-green-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
                                 <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
-                                    <div className="w-10 h-10 bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
                                         <LuCheck
                                             className="w-5 h-5 text-green-600 dark:text-white"
                                             aria-hidden="true"
@@ -168,7 +168,7 @@ export function LibraryOverviewSection({
                     <div className="flex flex-wrap gap-3 sm:gap-4">
                         <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                             <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                <div className="w-10 h-10 bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <div className="w-10 h-10 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center shrink-0">
                                     <LuFileText
                                         className="w-5 h-5 text-primary-600 dark:text-white"
                                         aria-hidden="true"
@@ -191,7 +191,7 @@ export function LibraryOverviewSection({
                         {isBook && (
                             <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                                 <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                    <div className="w-10 h-10 bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600 rounded-lg flex items-center justify-center shrink-0">
                                         <BsHighlighter
                                             className="w-5 h-5 text-amber-600 dark:text-white"
                                             aria-hidden="true"
@@ -215,7 +215,7 @@ export function LibraryOverviewSection({
                         {isBook && (
                             <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                                 <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                    <div className="w-10 h-10 bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600 rounded-lg flex items-center justify-center shrink-0">
                                         <LuNotebookPen
                                             className="w-5 h-5 text-indigo-600 dark:text-white"
                                             aria-hidden="true"
@@ -238,7 +238,7 @@ export function LibraryOverviewSection({
 
                         <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
                             <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                <div className="w-10 h-10 bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
                                     <LuLanguages
                                         className="w-5 h-5 text-green-600 dark:text-white"
                                         aria-hidden="true"
@@ -259,7 +259,7 @@ export function LibraryOverviewSection({
                     {sanitizedDescription && (
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                <div className="w-8 h-8 bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                <div className="w-8 h-8 bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 rounded-lg flex items-center justify-center mr-3">
                                     <LuFileText
                                         className="w-4 h-4 text-purple-600 dark:text-white"
                                         aria-hidden="true"
@@ -279,7 +279,7 @@ export function LibraryOverviewSection({
                     {hasSeries && (
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                <div className="w-8 h-8 bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600 rounded-lg flex items-center justify-center mr-3">
+                                <div className="w-8 h-8 bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-pink-600 rounded-lg flex items-center justify-center mr-3">
                                     <HiOutlineBookOpen
                                         className="w-4 h-4 text-pink-600 dark:text-white"
                                         aria-hidden="true"
@@ -304,7 +304,7 @@ export function LibraryOverviewSection({
                     {hasSubjects && (
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                             <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                <div className="w-8 h-8 bg-cyan-500/20 dark:bg-gradient-to-br dark:from-cyan-500 dark:to-cyan-600 rounded-lg flex items-center justify-center mr-3">
+                                <div className="w-8 h-8 bg-cyan-500/20 dark:bg-linear-to-br dark:from-cyan-500 dark:to-cyan-600 rounded-lg flex items-center justify-center mr-3">
                                     <LuTags
                                         className="w-4 h-4 text-cyan-600 dark:text-white"
                                         aria-hidden="true"

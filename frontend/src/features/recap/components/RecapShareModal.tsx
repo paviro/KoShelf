@@ -12,7 +12,7 @@ import type { IconType } from 'react-icons';
 import { ApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
-import type { RecapShareAssets } from '../api/recap-data';
+import type { CompletionsShareAssets } from '../api/recap-data';
 
 type RecapShareVariant = 'story' | 'square' | 'banner';
 
@@ -20,7 +20,7 @@ type RecapShareModalProps = {
     open: boolean;
     onClose: () => void;
     year: number;
-    shareAssets: RecapShareAssets | null;
+    shareAssets: CompletionsShareAssets | null;
 };
 
 type ShareOption = {
@@ -83,7 +83,7 @@ export function RecapShareModal({
                 detailKey: 'recap-story.details',
                 icon: LuSmartphone,
                 iconContainerClassName:
-                    'bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600',
+                    'bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600',
                 iconClassName: 'text-purple-600 dark:text-white',
                 primaryHoverClassName:
                     'hover:bg-purple-100 dark:hover:bg-purple-900/30',
@@ -99,7 +99,7 @@ export function RecapShareModal({
                 detailKey: 'recap-square.details',
                 icon: LuSquare,
                 iconContainerClassName:
-                    'bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600',
+                    'bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600',
                 iconClassName: 'text-blue-600 dark:text-white',
                 primaryHoverClassName:
                     'hover:bg-blue-100 dark:hover:bg-blue-900/30',
@@ -115,7 +115,7 @@ export function RecapShareModal({
                 detailKey: 'recap-banner.details',
                 icon: LuImage,
                 iconContainerClassName:
-                    'bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600',
+                    'bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600',
                 iconClassName: 'text-green-600 dark:text-white',
                 primaryHoverClassName:
                     'hover:bg-green-100 dark:hover:bg-green-900/30',
@@ -228,11 +228,11 @@ export function RecapShareModal({
                     return (
                         <div
                             key={option.variant}
-                            className="bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl p-4 shadow-sm"
+                            className="bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl p-4 shadow-xs"
                         >
                             <div className="flex items-center gap-3 mb-3">
                                 <div
-                                    className={`w-10 h-10 rounded-lg ${option.iconContainerClassName} flex items-center justify-center flex-shrink-0`}
+                                    className={`w-10 h-10 rounded-lg ${option.iconContainerClassName} flex items-center justify-center shrink-0`}
                                 >
                                     <Icon
                                         className={`w-5 h-5 ${option.iconClassName}`}
@@ -259,7 +259,7 @@ export function RecapShareModal({
                                     aria-label={`${primaryLabel} ${webpFilename}`}
                                 >
                                     <PrimaryIcon
-                                        className="w-4 h-4 flex-shrink-0"
+                                        className="w-4 h-4 shrink-0"
                                         aria-hidden
                                     />
                                     <span className="leading-none">

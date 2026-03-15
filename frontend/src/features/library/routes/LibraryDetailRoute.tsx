@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router';
 
 import {
     buildRoutePath,
@@ -8,7 +8,6 @@ import {
     listRouteIdForCollection,
 } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-return-state';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
@@ -46,7 +45,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const detailQuery = useLibraryDetailQuery(collection, id);
@@ -59,9 +58,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     });
     const detail = detailTransition.displayData;
     const item = detail?.item;
-    const itemStats = detail?.statistics.item_stats ?? null;
-    const sessionStats = detail?.statistics.session_stats ?? null;
-    const completions = detail?.statistics.completions ?? null;
+    const itemStats = detail?.statistics?.item_stats ?? null;
+    const sessionStats = detail?.statistics?.session_stats ?? null;
+    const completions = detail?.completions ?? null;
 
     const highlightAnnotations = detail?.highlights ?? [];
     const bookmarkAnnotations = detail?.bookmarks ?? [];

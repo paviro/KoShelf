@@ -30,7 +30,6 @@ import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTrans
 import type { CalendarEventResponse } from '../api/calendar-data';
 import type { ScopeValue } from '../../../shared/api';
 import { api } from '../../../shared/api';
-import type { SiteResponse } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
@@ -62,7 +61,7 @@ export function CalendarRoute() {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const displayedMonthKey = monthKey(displayedMonth);
@@ -177,7 +176,7 @@ export function CalendarRoute() {
     );
 
     const selectedItem = selectedEvent
-        ? (mergedCalendarData.items[selectedEvent.item_id] ?? null)
+        ? (mergedCalendarData.items[selectedEvent.item_ref] ?? null)
         : null;
     const monthlyStats = resolveMonthlyStats(
         currentMonthData ?? undefined,

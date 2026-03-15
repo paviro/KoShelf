@@ -1,4 +1,4 @@
-import { generatePath, matchPath } from 'react-router-dom';
+import { generatePath, matchPath } from 'react-router';
 
 export type RouteId =
     | 'root'

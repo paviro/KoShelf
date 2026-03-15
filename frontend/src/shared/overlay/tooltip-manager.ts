@@ -47,7 +47,7 @@ export class TooltipManager {
 
         this.overlay = new AnchoredOverlay({
             className:
-                'heatmap-tooltip z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-normal break-words opacity-90 [--tooltip-color:theme(colors.gray.900)] dark:[--tooltip-color:theme(colors.gray.100)]',
+                'heatmap-tooltip z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded-sm shadow-lg pointer-events-none whitespace-normal wrap-break-word opacity-90 [--tooltip-color:var(--color-gray-900)] dark:[--tooltip-color:var(--color-gray-100)]',
             contentClassName: 'heatmap-tooltip__content max-w-xs',
             hideClassName: 'hidden',
             placementClassPrefix: 'tooltip-',

@@ -6,6 +6,37 @@
 
 @import '@event-calendar/build/dist/event-calendar.min.css';
 
+@reference "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Custom colors used by @apply in this file (subset of app.css @theme) */
+@theme {
+    --color-primary-200: #bae6fd;
+    --color-primary-300: #7dd3fc;
+    --color-primary-600: #0284c7;
+    --color-primary-700: #0369a1;
+    --color-primary-800: #075985;
+    --color-primary-900: #0c4a6e;
+
+    --color-dark-600: #4b5563;
+    --color-dark-700: #374151;
+    --color-dark-800: #1f2937;
+    --color-dark-900: #111827;
+    --color-dark-925: #0a0f1a;
+}
+
+:root {
+    --calendar-dark-bg: #111827;
+    --calendar-dark-border: #374151;
+    --calendar-dark-accent: #4b5563;
+    --calendar-dark-button-bg: #1f2937;
+    --calendar-button-active: #0284c7;
+    --calendar-button-active-border: #0369a1;
+    --calendar-primary-lighter: rgba(14, 165, 233, 0.1);
+    --calendar-primary-light: #38bdf8;
+    --calendar-primary: #0284c7;
+}
+
 /* EventCalendar Custom Styles */
 .ec {
     @apply font-sans;
@@ -13,43 +44,43 @@
 
 /* Custom EC-Dark Theme */
 .ec-dark .ec {
-    --ec-bg-color: theme('calendar.darkBg');
-    --ec-bg-fallback-color: theme('calendar.darkBg');
-    --ec-color-400: theme('calendar.primaryLight');
-    --ec-color-300: theme('calendar.darkBorder');
-    --ec-color-200: theme('calendar.darkButtonBg');
-    --ec-color-100: theme('calendar.darkBg');
-    --ec-border-color: theme('calendar.darkBorder');
-    --ec-accent-color: theme('calendar.darkAccent');
-    --ec-button-bg-color: theme('calendar.darkButtonBg');
-    --ec-button-border-color: theme('calendar.darkBorder');
+    --ec-bg-color: var(--calendar-dark-bg);
+    --ec-bg-fallback-color: var(--calendar-dark-bg);
+    --ec-color-400: var(--calendar-primary-light);
+    --ec-color-300: var(--calendar-dark-border);
+    --ec-color-200: var(--calendar-dark-button-bg);
+    --ec-color-100: var(--calendar-dark-bg);
+    --ec-border-color: var(--calendar-dark-border);
+    --ec-accent-color: var(--calendar-dark-accent);
+    --ec-button-bg-color: var(--calendar-dark-button-bg);
+    --ec-button-border-color: var(--calendar-dark-border);
     --ec-button-text-color: white;
-    --ec-button-active-bg-color: theme('calendar.buttonActive');
-    --ec-button-active-border-color: theme('calendar.buttonActiveBorder');
+    --ec-button-active-bg-color: var(--calendar-button-active);
+    --ec-button-active-border-color: var(--calendar-button-active-border);
     --ec-button-active-text-color: white;
-    --ec-today-bg-color: theme('calendar.primaryLighter');
-    --ec-event-bg-color: theme('calendar.primary');
+    --ec-today-bg-color: var(--calendar-primary-lighter);
+    --ec-event-bg-color: var(--calendar-primary);
     --ec-event-text-color: white;
-    --ec-popup-bg-color: theme('calendar.darkButtonBg');
-    --ec-list-day-bg-color: theme('calendar.darkButtonBg');
-    --ec-now-indicator-color: theme('calendar.primaryLight');
+    --ec-popup-bg-color: var(--calendar-dark-button-bg);
+    --ec-list-day-bg-color: var(--calendar-dark-button-bg);
+    --ec-now-indicator-color: var(--calendar-primary-light);
 }
 
 @media (prefers-color-scheme: dark) {
     .calendar-container .ec {
-        --ec-bg-color: theme('calendar.darkBg');
-        --ec-border-color: theme('calendar.darkBorder');
-        --ec-popup-bg-color: theme('calendar.darkButtonBg');
-        --ec-button-bg-color: theme('calendar.darkButtonBg');
-        --ec-button-border-color: theme('calendar.darkBorder');
+        --ec-bg-color: var(--calendar-dark-bg);
+        --ec-border-color: var(--calendar-dark-border);
+        --ec-popup-bg-color: var(--calendar-dark-button-bg);
+        --ec-button-bg-color: var(--calendar-dark-button-bg);
+        --ec-button-border-color: var(--calendar-dark-border);
         --ec-button-text-color: white;
-        --ec-button-active-bg-color: theme('calendar.buttonActive');
-        --ec-button-active-border-color: theme('calendar.buttonActiveBorder');
+        --ec-button-active-bg-color: var(--calendar-button-active);
+        --ec-button-active-border-color: var(--calendar-button-active-border);
         --ec-button-active-text-color: white;
-        --ec-today-bg-color: theme('calendar.primaryLighter');
-        --ec-event-bg-color: theme('calendar.primary');
+        --ec-today-bg-color: var(--calendar-primary-lighter);
+        --ec-event-bg-color: var(--calendar-primary);
         --ec-event-text-color: white;
-        --ec-now-indicator-color: theme('calendar.primaryLight');
+        --ec-now-indicator-color: var(--calendar-primary-light);
     }
 }
 
@@ -78,30 +109,30 @@
     @apply w-full overflow-x-auto flex flex-col flex-1;
     /* flex-1 makes it fill remaining space in the flex parent */
     --calendar-event-text-color: #ffffff;
-    --calendar-event-color-0: theme('colors.lime.500');
-    --calendar-event-color-1: theme('colors.indigo.500');
-    --calendar-event-color-2: theme('colors.green.600');
-    --calendar-event-color-3: theme('colors.cyan.500');
-    --calendar-event-color-4: theme('colors.pink.600');
-    --calendar-event-color-5: theme('colors.purple.500');
-    --calendar-event-color-6: theme('colors.fuchsia.600');
-    --calendar-event-color-7: theme('colors.rose.500');
-    --calendar-event-color-8: theme('colors.emerald.500');
-    --calendar-event-color-9: theme('colors.yellow.400');
+    --calendar-event-color-0: var(--color-lime-500);
+    --calendar-event-color-1: var(--color-indigo-500);
+    --calendar-event-color-2: var(--color-green-600);
+    --calendar-event-color-3: var(--color-cyan-500);
+    --calendar-event-color-4: var(--color-pink-600);
+    --calendar-event-color-5: var(--color-purple-500);
+    --calendar-event-color-6: var(--color-fuchsia-600);
+    --calendar-event-color-7: var(--color-rose-500);
+    --calendar-event-color-8: var(--color-emerald-500);
+    --calendar-event-color-9: var(--color-yellow-400);
 }
 
 .dark .calendar-container {
     --calendar-event-text-color: #ffffff;
-    --calendar-event-color-0: theme('colors.lime.600');
-    --calendar-event-color-1: theme('colors.indigo.600');
-    --calendar-event-color-2: theme('colors.green.600');
-    --calendar-event-color-3: theme('colors.cyan.500');
-    --calendar-event-color-4: theme('colors.pink.600');
-    --calendar-event-color-5: theme('colors.purple.600');
-    --calendar-event-color-6: theme('colors.fuchsia.600');
-    --calendar-event-color-7: theme('colors.rose.600');
-    --calendar-event-color-8: theme('colors.emerald.600');
-    --calendar-event-color-9: theme('colors.yellow.500');
+    --calendar-event-color-0: var(--color-lime-600);
+    --calendar-event-color-1: var(--color-indigo-600);
+    --calendar-event-color-2: var(--color-green-600);
+    --calendar-event-color-3: var(--color-cyan-500);
+    --calendar-event-color-4: var(--color-pink-600);
+    --calendar-event-color-5: var(--color-purple-600);
+    --calendar-event-color-6: var(--color-fuchsia-600);
+    --calendar-event-color-7: var(--color-rose-600);
+    --calendar-event-color-8: var(--color-emerald-600);
+    --calendar-event-color-9: var(--color-yellow-500);
 }
 
 .calendar-container .ec {
@@ -158,13 +189,13 @@
 
 .calendar-container .ec .ec-header .ec-days {
     margin: 0;
-    @apply bg-gray-200 dark:bg-dark-800 shadow-sm border-b border-gray-200 dark:border-dark-700 rounded-t-lg;
+    @apply bg-gray-200 dark:bg-dark-800 shadow-xs border-b border-gray-200 dark:border-dark-700 rounded-t-lg;
     @apply text-gray-800 dark:text-primary-300 text-sm md:text-base lg:text-lg xl:text-xl py-0 font-medium;
 }
 
 .calendar-container .ec .ec-header .ec-grid {
     margin: 0;
-    @apply bg-gray-200 dark:bg-dark-800 shadow-sm border-b border-gray-200 dark:border-dark-700 rounded-t-lg;
+    @apply bg-gray-200 dark:bg-dark-800 shadow-xs border-b border-gray-200 dark:border-dark-700 rounded-t-lg;
     @apply text-gray-800 dark:text-primary-300 text-sm md:text-base lg:text-lg xl:text-xl py-0 font-medium;
 }
 
@@ -210,8 +241,7 @@
 }
 
 .calendar-container .ec .ec-main {
-    @apply bg-gray-50 dark:bg-dark-925 border border-gray-200 dark:border-dark-700 shadow-sm;
-    border-top: none;
+    @apply bg-gray-50 dark:bg-dark-925 shadow-xs;
 }
 
 /* Style the calendar body */
@@ -233,7 +263,7 @@
 /* Today highlighting */
 .calendar-container .ec .ec-today {
     @apply bg-primary-200/60 dark:bg-primary-900/30 font-medium;
-    border-inline-start: 1px solid theme('colors.primary.400');
+    border-inline-start: 1px solid var(--color-primary-400);
 }
 
 .calendar-container .ec .ec-day.ec-today .ec-day-foot {
@@ -242,7 +272,7 @@
 
 /* Event styling */
 .calendar-container .ec-event {
-    @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-2xs md:text-xs lg:text-sm;
+    @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-[0.65rem]/[1rem] md:text-xs lg:text-sm;
 }
 
 /* Scrollbar styling */

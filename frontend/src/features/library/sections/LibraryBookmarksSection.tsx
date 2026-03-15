@@ -18,7 +18,7 @@ export function LibraryBookmarksSection({
         <CollapsibleSection
             sectionKey="bookmarks"
             defaultVisible
-            accentClass="bg-gradient-to-b from-yellow-400 to-yellow-600"
+            accentClass="bg-linear-to-b from-yellow-400 to-yellow-600"
             title={translation.get('bookmarks')}
             titleBadge={
                 <span className="ml-3 text-sm font-normal text-gray-500 dark:text-dark-400">

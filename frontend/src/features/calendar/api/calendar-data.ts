@@ -1,33 +1,17 @@
 import { api } from '../../../shared/api';
+import type {
+    CalendarItemRef,
+    CalendarScopeStats,
+    ReadingCalendarEvent,
+} from '../../../shared/contracts';
 
 export type CalendarContentType = 'book' | 'comic';
 
-export interface CalendarMonthsResponse {
-    months: string[];
-}
+export type CalendarEventResponse = ReadingCalendarEvent;
 
-export interface CalendarEventResponse {
-    item_id: string;
-    start: string;
-    end?: string;
-    total_read_time: number;
-    total_pages_read: number;
-}
+export type CalendarItemResponse = CalendarItemRef;
 
-export interface CalendarItemResponse {
-    title: string;
-    authors: string[];
-    content_type: CalendarContentType;
-    item_id?: string;
-    item_cover?: string;
-}
-
-export interface CalendarMonthlyStats {
-    items_read: number;
-    pages_read: number;
-    time_read: number;
-    days_read_pct: number;
-}
+export type CalendarMonthlyStats = CalendarScopeStats;
 
 export interface CalendarScopedMonthlyStats {
     all: CalendarMonthlyStats;
@@ -41,32 +25,29 @@ export interface CalendarMonthResponse {
     stats: CalendarScopedMonthlyStats;
 }
 
-type ActivityMonthPayload = {
-    events: CalendarEventResponse[];
-    items: Record<string, CalendarItemResponse>;
-    stats: CalendarMonthlyStats;
-};
+export interface CalendarMonthsResponse {
+    months: string[];
+}
 
 export async function loadCalendarMonths(): Promise<CalendarMonthsResponse> {
-    return api.activity.months.list<CalendarMonthsResponse>('all');
+    const data = await api.getAvailablePeriods('reading_data', 'month', 'all');
+    return {
+        months: data.periods.map((p) => p.key),
+    };
 }
 
 export async function loadCalendarMonth(
     monthKey: string,
 ): Promise<CalendarMonthResponse> {
-    const [allPayload, booksPayload, comicsPayload] = await Promise.all([
-        api.activity.months.get<ActivityMonthPayload>(monthKey, 'all'),
-        api.activity.months.get<ActivityMonthPayload>(monthKey, 'books'),
-        api.activity.months.get<ActivityMonthPayload>(monthKey, 'comics'),
-    ]);
+    const data = await api.getReadingCalendar(monthKey, 'all');
 
     return {
-        events: allPayload.events,
-        items: allPayload.items,
+        events: data.events,
+        items: data.items,
         stats: {
-            all: allPayload.stats,
-            books: booksPayload.stats,
-            comics: comicsPayload.stats,
+            all: data.stats_by_scope.all,
+            books: data.stats_by_scope.books,
+            comics: data.stats_by_scope.comics,
         },
     };
 }

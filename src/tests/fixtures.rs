@@ -1,7 +1,7 @@
-use crate::models::{
-    BookInfo, ContentType, KoReaderMetadata, LibraryItem, LibraryItemFormat, PageStat, StatBook,
-    StatisticsData,
+use crate::shelf::models::{
+    BookInfo, ContentType, KoReaderMetadata, LibraryItem, LibraryItemFormat,
 };
+use crate::source::koreader::types::{PageStat, StatBook, StatisticsData};
 use std::collections::HashMap;
 use std::path::PathBuf;
 

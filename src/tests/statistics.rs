@@ -1,7 +1,7 @@
-use crate::koreader::statistics::StatisticsCalculator;
-use crate::models::ContentType;
+use crate::shelf::models::ContentType;
+use crate::shelf::statistics::StatisticsCalculator;
+use crate::shelf::time_config::TimeConfig;
 use crate::tests::fixtures;
-use crate::time_config::TimeConfig;
 
 #[test]
 fn test_filter_stats_per_book_per_day() {

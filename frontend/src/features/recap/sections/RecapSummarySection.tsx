@@ -3,7 +3,7 @@ import { LuClock3, LuFlame, LuSparkles, LuZap } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
-import type { RecapScope, RecapSummaryResponse } from '../api/recap-data';
+import type { CompletionsSummary, RecapScope } from '../api/recap-data';
 import {
     formatRecapMonth,
     formatRecapPercentage,
@@ -12,7 +12,7 @@ import {
 type RecapSummarySectionProps = {
     year: number;
     scope: RecapScope;
-    summary: RecapSummaryResponse;
+    summary: CompletionsSummary;
 };
 
 function isLeapYear(year: number): boolean {
@@ -27,6 +27,21 @@ function completionLabel(scope: RecapScope, total: number): string {
         return translation.get('comics-finished', total);
     }
     return translation.get('status.completed');
+}
+
+function decomposeSeconds(totalSeconds: number): {
+    days: number;
+    hours: number;
+    minutes: number;
+} {
+    const safe = Number.isFinite(totalSeconds)
+        ? Math.max(0, Math.floor(totalSeconds))
+        : 0;
+    return {
+        days: Math.floor(safe / 86400),
+        hours: Math.floor((safe % 86400) / 3600),
+        minutes: Math.floor((safe % 3600) / 60),
+    };
 }
 
 export function RecapSummarySection({
@@ -48,20 +63,23 @@ export function RecapSummarySection({
     const activeDaysRingOffset =
         activeDaysRingCircumference -
         (activeDaysRingCircumference * activeDaysPercentage) / 100;
-    const hasAverageSessionHours = summary.average_session_hours > 0;
+
+    const totalTime = decomposeSeconds(summary.total_reading_time_sec);
+    const avgSession = decomposeSeconds(summary.average_session_duration_sec);
+    const longestSession = decomposeSeconds(
+        summary.longest_session_duration_sec,
+    );
+
+    const hasAverageSessionHours = avgSession.hours > 0;
     const hasAverageSessionMinutes =
-        summary.average_session_hours === 0 ||
-        summary.average_session_minutes > 0;
+        avgSession.hours === 0 || avgSession.minutes > 0;
     const averageSessionHasTwoValues =
-        summary.average_session_hours > 0 &&
-        summary.average_session_minutes > 0;
-    const hasLongestSessionHours = summary.longest_session_hours > 0;
+        avgSession.hours > 0 && avgSession.minutes > 0;
+    const hasLongestSessionHours = longestSession.hours > 0;
     const hasLongestSessionMinutes =
-        summary.longest_session_hours === 0 ||
-        summary.longest_session_minutes > 0;
+        longestSession.hours === 0 || longestSession.minutes > 0;
     const longestSessionHasTwoValues =
-        summary.longest_session_hours > 0 &&
-        summary.longest_session_minutes > 0;
+        longestSession.hours > 0 && longestSession.minutes > 0;
 
     return (
         <section className="relative pl-10 recap-event">
@@ -72,7 +90,7 @@ export function RecapSummarySection({
                 </h3>
 
                 <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 md:gap-3">
-                    <div className="col-span-2 lg:col-span-2 lg:row-span-2 bg-gradient-to-br from-teal-500/10 via-teal-400/5 to-transparent dark:from-teal-500/20 dark:via-teal-400/10 dark:to-dark-800 border border-teal-200/50 dark:border-teal-700/30 rounded-xl p-4 shadow-sm relative overflow-hidden group hover:shadow-lg hover:border-teal-300/70 dark:hover:border-teal-600/50 transition-all duration-300">
+                    <div className="col-span-2 lg:col-span-2 lg:row-span-2 bg-linear-to-br from-teal-500/10 via-teal-400/5 to-transparent dark:from-teal-500/20 dark:via-teal-400/10 dark:to-dark-800 border border-teal-200/50 dark:border-teal-700/30 rounded-xl p-4 shadow-xs relative overflow-hidden group hover:shadow-lg hover:border-teal-300/70 dark:hover:border-teal-600/50 transition-all duration-300">
                         <div className="absolute -top-12 -right-12 w-32 h-32 bg-teal-400/25 dark:bg-teal-400/15 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-teal-300/20 dark:bg-teal-500/10 rounded-full blur-xl"></div>
 
@@ -106,7 +124,7 @@ export function RecapSummarySection({
                                 </div>
                             </div>
 
-                            <div className="hidden xl:block relative w-24 h-24 flex-shrink-0">
+                            <div className="hidden xl:block relative w-24 h-24 shrink-0">
                                 <svg
                                     className="w-full h-full transform -rotate-90"
                                     viewBox="0 0 100 100"
@@ -144,17 +162,17 @@ export function RecapSummarySection({
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 bg-gradient-to-br from-blue-500/10 via-blue-400/5 to-transparent dark:from-blue-500/20 dark:via-blue-400/10 dark:to-dark-800 border border-blue-200/50 dark:border-blue-700/30 rounded-xl p-4 shadow-sm relative overflow-hidden group hover:shadow-lg hover:border-blue-300/70 dark:hover:border-blue-600/50 transition-all duration-300">
+                    <div className="col-span-1 lg:col-span-2 bg-linear-to-br from-blue-500/10 via-blue-400/5 to-transparent dark:from-blue-500/20 dark:via-blue-400/10 dark:to-dark-800 border border-blue-200/50 dark:border-blue-700/30 rounded-xl p-4 shadow-xs relative overflow-hidden group hover:shadow-lg hover:border-blue-300/70 dark:hover:border-blue-600/50 transition-all duration-300">
                         <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-400/20 dark:bg-blue-400/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="flex items-center gap-3 relative z-10">
-                            <div className="w-10 h-10 rounded-xl bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <HiOutlineBookOpen
                                     className="w-5 h-5 text-blue-600 dark:text-white"
                                     aria-hidden
                                 />
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
+                                <span className="text-2xl/none md:text-3xl font-black text-gray-900 dark:text-white">
                                     {formatNumber(summary.total_items)}
                                 </span>
                                 <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
@@ -167,10 +185,10 @@ export function RecapSummarySection({
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 bg-gradient-to-br from-purple-500/10 via-purple-400/5 to-transparent dark:from-purple-500/20 dark:via-purple-400/10 dark:to-dark-800 border border-purple-200/50 dark:border-purple-700/30 rounded-xl p-4 shadow-sm relative overflow-hidden group hover:shadow-lg hover:border-purple-300/70 dark:hover:border-purple-600/50 transition-all duration-300">
+                    <div className="col-span-1 lg:col-span-2 bg-linear-to-br from-purple-500/10 via-purple-400/5 to-transparent dark:from-purple-500/20 dark:via-purple-400/10 dark:to-dark-800 border border-purple-200/50 dark:border-purple-700/30 rounded-xl p-4 shadow-xs relative overflow-hidden group hover:shadow-lg hover:border-purple-300/70 dark:hover:border-purple-600/50 transition-all duration-300">
                         <div className="absolute -top-6 -left-6 w-16 h-16 bg-purple-400/20 dark:bg-purple-400/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="flex items-center gap-3 relative z-10">
-                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-10 h-10 rounded-xl bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuClock3
                                     className="w-5 h-5 text-purple-600 dark:text-white"
                                     aria-hidden
@@ -178,18 +196,16 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-baseline gap-1">
-                                    {summary.total_time_days > 0 && (
+                                    {totalTime.days > 0 && (
                                         <>
-                                            <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
-                                                {formatNumber(
-                                                    summary.total_time_days,
-                                                )}
+                                            <span className="text-2xl/none md:text-3xl font-black text-gray-900 dark:text-white">
+                                                {formatNumber(totalTime.days)}
                                             </span>
                                             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 <span className="hidden md:inline">
                                                     {translation.get(
                                                         'days_label',
-                                                        summary.total_time_days,
+                                                        totalTime.days,
                                                     )}
                                                 </span>
                                                 <span className="md:hidden">
@@ -198,14 +214,14 @@ export function RecapSummarySection({
                                             </span>
                                         </>
                                     )}
-                                    <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
-                                        {formatNumber(summary.total_time_hours)}
+                                    <span className="text-2xl/none md:text-3xl font-black text-gray-900 dark:text-white">
+                                        {formatNumber(totalTime.hours)}
                                     </span>
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         <span className="hidden md:inline">
                                             {translation.get(
                                                 'hours_label',
-                                                summary.total_time_hours,
+                                                totalTime.hours,
                                             )}
                                         </span>
                                         <span className="md:hidden">
@@ -220,9 +236,9 @@ export function RecapSummarySection({
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-red-500/20 dark:bg-gradient-to-br dark:from-red-500 dark:to-orange-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-8 h-8 rounded-lg bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-orange-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuFlame
                                     className="w-4 h-4 text-red-500 dark:text-white"
                                     aria-hidden
@@ -230,11 +246,11 @@ export function RecapSummarySection({
                             </div>
                             <div className="flex flex-col min-w-0">
                                 <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
-                                    {formatNumber(summary.longest_streak)}{' '}
+                                    {formatNumber(summary.longest_streak_days)}{' '}
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {translation.get(
                                             'days_label',
-                                            summary.longest_streak,
+                                            summary.longest_streak_days,
                                         )}
                                     </span>
                                 </span>
@@ -246,9 +262,9 @@ export function RecapSummarySection({
                     </div>
 
                     {bestMonth && (
-                        <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/40 transition-all duration-300 group flex items-center">
+                        <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/40 transition-all duration-300 group flex items-center">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-yellow-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-yellow-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                     <LuSparkles
                                         className="w-4 h-4 text-amber-500 dark:text-white"
                                         aria-hidden
@@ -266,9 +282,9 @@ export function RecapSummarySection({
                         </div>
                     )}
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:border-orange-300/50 dark:hover:border-orange-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-orange-300/50 dark:hover:border-orange-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuClock3
                                     className="w-4 h-4 text-orange-500 dark:text-white"
                                     aria-hidden
@@ -279,16 +295,14 @@ export function RecapSummarySection({
                                     {hasAverageSessionHours && (
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
-                                                {formatNumber(
-                                                    summary.average_session_hours,
-                                                )}
+                                                {formatNumber(avgSession.hours)}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
                                                 {averageSessionHasTwoValues
                                                     ? translation.get('units.h')
                                                     : translation.get(
                                                           'hours_label',
-                                                          summary.average_session_hours,
+                                                          avgSession.hours,
                                                       )}
                                             </span>
                                         </>
@@ -297,7 +311,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.average_session_minutes,
+                                                    avgSession.minutes,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -305,7 +319,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.m')
                                                     : translation.get(
                                                           'minutes_label',
-                                                          summary.average_session_minutes,
+                                                          avgSession.minutes,
                                                       )}
                                             </span>
                                         </>
@@ -318,9 +332,9 @@ export function RecapSummarySection({
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:border-pink-300/50 dark:hover:border-pink-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-pink-300/50 dark:hover:border-pink-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-rose-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            <div className="w-8 h-8 rounded-lg bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-rose-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuZap
                                     className="w-4 h-4 text-pink-500 dark:text-white"
                                     aria-hidden
@@ -332,7 +346,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.longest_session_hours,
+                                                    longestSession.hours,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -340,7 +354,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.h')
                                                     : translation.get(
                                                           'hours_label',
-                                                          summary.longest_session_hours,
+                                                          longestSession.hours,
                                                       )}
                                             </span>
                                         </>
@@ -349,7 +363,7 @@ export function RecapSummarySection({
                                         <>
                                             <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
-                                                    summary.longest_session_minutes,
+                                                    longestSession.minutes,
                                                 )}
                                             </span>
                                             <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
@@ -357,7 +371,7 @@ export function RecapSummarySection({
                                                     ? translation.get('units.m')
                                                     : translation.get(
                                                           'minutes_label',
-                                                          summary.longest_session_minutes,
+                                                          longestSession.minutes,
                                                       )}
                                             </span>
                                         </>

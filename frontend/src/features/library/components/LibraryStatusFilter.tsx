@@ -74,7 +74,7 @@ export function LibraryStatusFilter({
             </button>
 
             <div
-                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} right-0 w-max min-w-[10rem] ${open ? '' : 'hidden'}`}
+                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} right-0 w-max min-w-40 ${open ? '' : 'hidden'}`}
                 role="menu"
             >
                 {options.map((option, index) => {

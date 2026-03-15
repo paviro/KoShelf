@@ -55,7 +55,7 @@ export function YearlyStatsSection({
         () =>
             Array.from({ length: 12 }, (_, monthIndex) => {
                 const stats = yearlyMonthlyStats[monthIndex] ?? {
-                    read_time: 0,
+                    reading_time_sec: 0,
                     pages_read: 0,
                     active_days: 0,
                 };
@@ -68,7 +68,7 @@ export function YearlyStatsSection({
                     includeYear: Boolean(selectedYear),
                 });
                 const valueLabel = DataFormatter.formatReadTime(
-                    stats.read_time,
+                    stats.reading_time_sec,
                 );
                 const pagesLabel = translation.get('pages', stats.pages_read);
                 const activeDaysLabel = translation.get(
@@ -80,7 +80,7 @@ export function YearlyStatsSection({
                 );
 
                 return {
-                    readTime: stats.read_time,
+                    readTime: stats.reading_time_sec,
                     tooltip: `${monthLabel}: ${valueLabel}, ${pagesLabel}, ${formattedActiveDays} ${activeDaysLabel}`,
                     label: formatMonthOfYear(monthIndex, {
                         monthStyle: 'short',
@@ -117,7 +117,7 @@ export function YearlyStatsSection({
     return (
         <CollapsibleSection
             sectionKey="yearly-stats"
-            accentClass="bg-gradient-to-b from-violet-400 to-violet-600"
+            accentClass="bg-linear-to-b from-violet-400 to-violet-600"
             title={translation.get('yearly-statistics')}
             visible={visible}
             onToggle={() => onToggle('yearly-stats')}
@@ -137,13 +137,13 @@ export function YearlyStatsSection({
                 <MetricCard
                     variant="compact"
                     icon={LuClock3}
-                    iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
+                    iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
                     valueId="yearlyStatsReadTime"
                     value={
                         <MetricCardUnitValue
                             value={DataFormatter.formatReadTimeWithDaysParts(
-                                yearlySummary.read_time,
+                                yearlySummary.reading_time_sec,
                             )}
                         />
                     }
@@ -153,19 +153,17 @@ export function YearlyStatsSection({
                 <MetricCard
                     variant="compact"
                     icon={HiOutlineBookOpen}
-                    iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
+                    iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     valueId="yearlyStatsCompletedCount"
-                    value={DataFormatter.formatCount(
-                        yearlySummary.completed_count,
-                    )}
+                    value={DataFormatter.formatCount(yearlySummary.completions)}
                     label={translation.get('completed-books')}
                 />
 
                 <MetricCard
                     variant="compact"
                     icon={LuCalendarDays}
-                    iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
+                    iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
                     valueId="yearlyStatsActiveDays"
                     value={DataFormatter.formatCount(yearlySummary.active_days)}

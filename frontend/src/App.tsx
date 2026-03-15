@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 
 import { AppRoutes } from './app/routes/AppRoutes';
 import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
-import type { SiteResponse } from './shared/contracts';
+import type { SiteData } from './shared/contracts';
 import { I18N_LANGUAGE_CHANGE_EVENT, translation } from './shared/i18n';
 
 function resolveDefaultRoute(
-    site: SiteResponse | undefined,
+    site: SiteData | undefined,
 ): '/books' | '/comics' | '/statistics' {
     if (site?.capabilities.has_books) {
         return '/books';
@@ -29,7 +29,7 @@ export function App() {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const site = siteQuery.data;
@@ -64,8 +64,8 @@ export function App() {
             navItems={navItems}
             currentPath={location.pathname}
             siteTitle={site?.title ?? 'KoShelf'}
-            generatedAt={site?.meta.generated_at}
-            version={site?.meta.version}
+            generatedAt={site?.generated_at}
+            version={site?.version}
         >
             <div className="min-h-full">
                 <AppRoutes

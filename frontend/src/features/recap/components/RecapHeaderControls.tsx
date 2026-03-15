@@ -79,7 +79,7 @@ export function RecapHeaderControls({
 
             <button
                 type="button"
-                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 title={shareLabel}
                 aria-label={shareLabel}
                 onClick={onShareClick}
@@ -90,7 +90,7 @@ export function RecapHeaderControls({
 
             <button
                 type="button"
-                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-sm"
+                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs"
                 title={sortLabel}
                 aria-label={sortLabel}
                 onClick={onToggleSort}

@@ -49,7 +49,7 @@ export function DistributionBarChart({
                     >
                         <div className="relative h-full flex items-end">
                             <div
-                                className={`w-full cursor-pointer rounded-t-sm bg-gradient-to-t opacity-35 transition-[height,opacity] duration-500 ease-out overflow-hidden ${barClassName}`}
+                                className={`w-full cursor-pointer rounded-t-sm bg-linear-to-t opacity-35 transition-[height,opacity] duration-500 ease-out overflow-hidden ${barClassName}`}
                                 style={{
                                     height: `${heightPercent}%`,
                                     opacity: item.readTime > 0 ? 1 : 0.35,

@@ -78,7 +78,7 @@ export function CalendarHeader({
                     <div className="flex items-center space-x-1">
                         <button
                             type="button"
-                            className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm"
+                            className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-xs"
                             title={translation.get('previous-month.aria-label')}
                             aria-label={translation.get(
                                 'previous-month.aria-label',
@@ -92,7 +92,7 @@ export function CalendarHeader({
                         </button>
                         <button
                             type="button"
-                            className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-sm"
+                            className="px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 text-gray-900 dark:text-white rounded-lg transition-colors duration-200 flex items-center justify-center backdrop-blur-xs"
                             title={translation.get('next-month.aria-label')}
                             aria-label={translation.get(
                                 'next-month.aria-label',
@@ -108,7 +108,7 @@ export function CalendarHeader({
 
                     <button
                         type="button"
-                        className={`hidden sm:flex px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 rounded-lg font-medium text-sm md:text-base transition-colors duration-200 items-center justify-center backdrop-blur-sm ${
+                        className={`hidden sm:flex px-3 md:px-4 py-2 h-10 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 rounded-lg font-medium text-sm md:text-base transition-colors duration-200 items-center justify-center backdrop-blur-xs ${
                             todayDisabled
                                 ? 'bg-gray-100 dark:bg-dark-800 text-gray-400 dark:text-dark-400 cursor-not-allowed'
                                 : 'bg-primary-600 hover:bg-primary-700 text-white'

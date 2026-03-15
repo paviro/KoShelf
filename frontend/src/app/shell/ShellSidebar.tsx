@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { LuGithub, LuSettings } from 'react-icons/lu';
 import { translation } from '../../shared/i18n';
 import { formatInstant } from '../../shared/lib/intl/formatDate';
@@ -30,10 +30,10 @@ export function ShellSidebar({
     const settingsActive = isActivePath(currentPath, 'settings');
 
     return (
-        <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-sm border-r border-gray-200/50 dark:border-dark-700/50 flex-col z-30">
+        <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white/90 dark:bg-dark-950/75 backdrop-blur-xs border-r border-gray-200/50 dark:border-dark-700/50 flex-col z-30">
             <div className="py-4 px-6 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div className="w-10 h-10 bg-linear-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
                         <BrandIcon
                             className="w-6 h-6 text-white"
                             aria-hidden="true"
@@ -65,7 +65,7 @@ export function ShellSidebar({
                             <div
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ease-out border-2 border-transparent ${
                                     active
-                                        ? 'bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg !border-primary-400/50'
+                                        ? 'bg-linear-to-br from-primary-500 to-primary-600 shadow-lg border-primary-400/50!'
                                         : 'bg-gray-100 dark:bg-dark-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/40 group-hover:border-primary-200 dark:group-hover:border-primary-600/50 group-hover:-translate-y-0.5'
                                 }`}
                             >
@@ -106,8 +106,8 @@ export function ShellSidebar({
                         <div
                             className={`w-6 h-6 rounded-lg flex items-center justify-center mr-2 ${
                                 settingsActive
-                                    ? 'bg-gradient-to-br from-primary-400 to-primary-500'
-                                    : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                                    ? 'bg-linear-to-br from-primary-400 to-primary-500'
+                                    : 'bg-linear-to-br from-gray-500 to-gray-600'
                             }`}
                         >
                             <LuSettings
@@ -128,7 +128,7 @@ export function ShellSidebar({
                 </Link>
                 <div className="bg-gray-100/50 dark:bg-dark-900/50 border border-gray-200/50 dark:border-dark-700/50 rounded-lg p-3">
                     <div className="flex items-center mb-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center mr-2">
+                        <div className="w-6 h-6 bg-linear-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center mr-2">
                             <LuGithub
                                 className="w-3 h-3 text-white"
                                 aria-hidden="true"
@@ -143,7 +143,7 @@ export function ShellSidebar({
                             {translation.get('github')}
                         </a>
                         <span className="text-xs text-gray-400 dark:text-dark-500 ml-1">
-                            &middot; v{version ?? '--'}
+                            &middot; {version ?? '--'}
                         </span>
                     </div>
                     <div className="text-[0.65rem] leading-tight text-gray-400 dark:text-dark-500">

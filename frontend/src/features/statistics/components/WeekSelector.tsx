@@ -214,7 +214,7 @@ export function WeekSelector({
                                 >
                                     <div className="flex items-center">
                                         <LuCalendarDays
-                                            className="w-4 h-4 text-primary-400 mr-2 flex-shrink-0"
+                                            className="w-4 h-4 text-primary-400 mr-2 shrink-0"
                                             aria-hidden="true"
                                         />
                                         <span className="week-date-display">

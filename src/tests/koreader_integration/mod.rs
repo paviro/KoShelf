@@ -9,6 +9,11 @@ use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 use tempfile::TempDir;
 
+#[cfg(unix)]
+use std::os::unix::fs::symlink;
+#[cfg(windows)]
+use std::os::windows::fs::symlink_dir;
+
 /// Global test directory containing the cloned KoReader repository.
 /// Uses OnceLock to ensure we only clone once per test run.
 static KOREADER_DIR: OnceLock<KoReaderTestDir> = OnceLock::new();
@@ -104,8 +109,6 @@ fn get_koreader_dir() -> &'static KoReaderTestDir {
         // This allows paths like "spec/front/unit/data/tall.pdf" to resolve correctly
         #[cfg(unix)]
         {
-            use std::os::unix::fs::symlink;
-
             // Create spec/front -> spec (pointing to current directory relatively)
             let spec_front = koreader_path.join("spec/front");
             if !spec_front.exists() {
@@ -121,8 +124,6 @@ fn get_koreader_dir() -> &'static KoReaderTestDir {
         }
         #[cfg(windows)]
         {
-            use std::os::windows::fs::symlink_dir;
-
             let spec_front = koreader_path.join("spec/front");
             if !spec_front.exists() {
                 let _ = symlink_dir(&koreader_path.join("spec"), &spec_front);

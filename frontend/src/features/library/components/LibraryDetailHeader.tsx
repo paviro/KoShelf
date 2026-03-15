@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { LuArrowLeft } from 'react-icons/lu';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
-import { itemDetailDownloadHref } from '../../../shared/api';
+import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import type { LibraryCollection } from '../model/library-model';
@@ -28,7 +28,7 @@ export function LibraryDetailHeader({
 
     useClickOutside(dropdownRef, () => setShareOpen(false), shareOpen);
 
-    const jsonHref = itemDetailDownloadHref(itemId);
+    const jsonHref = api.getItemDownloadHref(itemId);
     const jsonDownloadName = `${collection}-${itemId}.json`;
 
     const header = useMemo(
@@ -37,7 +37,7 @@ export function LibraryDetailHeader({
                 <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <Link
                         to={backHref}
-                        className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0"
+                        className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer shrink-0"
                         title={translation.get('go-back.aria-label')}
                         aria-label={translation.get('go-back.aria-label')}
                     >

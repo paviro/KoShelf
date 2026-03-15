@@ -18,7 +18,7 @@ export function LibraryHighlightsSection({
         <CollapsibleSection
             sectionKey="highlights"
             defaultVisible
-            accentClass="bg-gradient-to-b from-amber-400 to-amber-600"
+            accentClass="bg-linear-to-b from-amber-400 to-amber-600"
             title={translation.get('highlights-quotes')}
             titleBadge={
                 <span className="ml-3 text-sm font-normal text-gray-500 dark:text-dark-400">

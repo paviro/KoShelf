@@ -1,5 +1,4 @@
 import type {
-    DailyActivityEntry,
     StatisticsIndexWeek,
     StatisticsScope,
 } from '../api/statistics-data';
@@ -27,14 +26,14 @@ export type SectionName = (typeof SECTION_NAMES)[number];
 export type SectionVisibilityState = Record<SectionName, boolean>;
 
 export type MonthlyReadStats = {
-    read_time: number;
+    reading_time_sec: number;
     pages_read: number;
     active_days: number;
 };
 
 export type YearlySummaryStats = {
-    read_time: number;
-    completed_count: number;
+    reading_time_sec: number;
+    completions: number;
     active_days: number;
 };
 
@@ -151,9 +150,13 @@ export function formatReadTimeWithWeeksParts(seconds: number): UnitValuePart[] {
 }
 
 export function formatSessionDurationParts(
-    seconds: number | null,
+    seconds: number | null | undefined,
 ): UnitValuePart[] {
-    if (seconds === null || !Number.isFinite(seconds)) {
+    if (
+        seconds === null ||
+        seconds === undefined ||
+        !Number.isFinite(seconds)
+    ) {
         return [{ amount: '--' }];
     }
 
@@ -179,8 +182,8 @@ function formatSingleStreakDate(dateStr: string): string {
 }
 
 export function formatStreakDateRange(
-    startDate: string | null,
-    endDate: string | null,
+    startDate: string | null | undefined,
+    endDate: string | null | undefined,
 ): string {
     if (!startDate && !endDate) {
         return '';
@@ -204,7 +207,9 @@ export function formatStreakDateRange(
     });
 }
 
-export function isCurrentStreakActive(endDate: string | null): boolean {
+export function isCurrentStreakActive(
+    endDate: string | null | undefined,
+): boolean {
     if (!endDate) {
         return false;
     }
@@ -216,44 +221,18 @@ export function isCurrentStreakActive(endDate: string | null): boolean {
     return endDate === todayIso;
 }
 
-export function aggregateMonthlyStats(
-    dailyActivity: DailyActivityEntry[],
-): MonthlyReadStats[] {
-    const monthlyStats = Array.from({ length: 12 }, () => ({
-        read_time: 0,
-        pages_read: 0,
-        active_days: 0,
-    }));
-
-    dailyActivity.forEach((entry) => {
-        const month = Number.parseInt(entry.date.slice(5, 7), 10) - 1;
-        if (Number.isNaN(month) || month < 0 || month > 11) {
-            return;
-        }
-
-        monthlyStats[month].read_time += entry.read_time;
-        monthlyStats[month].pages_read += entry.pages_read;
-
-        if (entry.read_time > 0 || entry.pages_read > 0) {
-            monthlyStats[month].active_days += 1;
-        }
-    });
-
-    return monthlyStats;
-}
-
 export function summarizeYearlyStats(
     monthlyStats: MonthlyReadStats[],
-    completedCount: number,
+    completions: number,
 ): YearlySummaryStats {
     const summary: YearlySummaryStats = {
-        read_time: 0,
-        completed_count: completedCount,
+        reading_time_sec: 0,
+        completions,
         active_days: 0,
     };
 
     monthlyStats.forEach((month) => {
-        summary.read_time += month.read_time;
+        summary.reading_time_sec += month.reading_time_sec;
         summary.active_days += month.active_days;
     });
 

@@ -1,9 +1,0 @@
-//! Runtime data storage for contract snapshots.
-
-pub mod snapshot;
-pub mod store;
-pub mod updates;
-
-pub use snapshot::ContractSnapshot;
-pub use store::{SharedSnapshotStore, SnapshotStore};
-pub use updates::{SnapshotUpdate, SnapshotUpdateNotifier};

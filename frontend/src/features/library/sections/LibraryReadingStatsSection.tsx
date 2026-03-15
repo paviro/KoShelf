@@ -40,7 +40,7 @@ export function LibraryReadingStatsSection({
         <CollapsibleSection
             sectionKey="reading-stats"
             defaultVisible={false}
-            accentClass="bg-gradient-to-b from-blue-400 to-blue-600"
+            accentClass="bg-linear-to-b from-blue-400 to-blue-600"
             title={translation.get('reading-statistics')}
             visible={visible}
             onToggle={onToggle}
@@ -49,12 +49,12 @@ export function LibraryReadingStatsSection({
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600"
+                    iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                itemStats?.total_read_time,
+                                itemStats?.total_reading_time_sec,
                             )}
                         />
                     }
@@ -63,7 +63,7 @@ export function LibraryReadingStatsSection({
 
                 <MetricCard
                     icon={HiOutlineBookOpen}
-                    iconContainerClassName="bg-indigo-500/20 dark:bg-gradient-to-br dark:from-indigo-500 dark:to-indigo-600"
+                    iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
                     value={formatNumber(sessionStats.session_count)}
                     label={translation.get(
@@ -74,12 +74,12 @@ export function LibraryReadingStatsSection({
 
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
+                    iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                sessionStats.average_session_duration,
+                                sessionStats.average_session_duration_sec,
                             )}
                         />
                     }
@@ -88,12 +88,12 @@ export function LibraryReadingStatsSection({
 
                 <MetricCard
                     icon={LuClock3}
-                    iconContainerClassName="bg-pink-500/20 dark:bg-gradient-to-br dark:from-pink-500 dark:to-pink-600"
+                    iconContainerClassName="bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-pink-600"
                     iconClassName="text-pink-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
                             value={formatDurationFromSecondsParts(
-                                sessionStats.longest_session_duration,
+                                sessionStats.longest_session_duration_sec,
                             )}
                         />
                     }
@@ -102,7 +102,7 @@ export function LibraryReadingStatsSection({
 
                 <MetricCard
                     icon={LuZap}
-                    iconContainerClassName="bg-amber-500/20 dark:bg-gradient-to-br dark:from-amber-500 dark:to-amber-600"
+                    iconContainerClassName="bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600"
                     iconClassName="text-amber-600 dark:text-white"
                     value={formatReadingSpeed(sessionStats.reading_speed)}
                     label={translation.get('pages-per-hour')}
@@ -110,7 +110,7 @@ export function LibraryReadingStatsSection({
 
                 <MetricCard
                     icon={LuCalendarDays}
-                    iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
+                    iconContainerClassName="bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600"
                     iconClassName="text-purple-600 dark:text-white"
                     value={formatIsoDate(sessionStats.last_read_date)}
                     label={translation.get('last-read')}
@@ -120,7 +120,7 @@ export function LibraryReadingStatsSection({
             {completions && completions.total_completions > 0 && (
                 <div className="mt-8">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <div className="w-2 h-5 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-full mr-3"></div>
+                        <div className="w-2 h-5 bg-linear-to-b from-emerald-400 to-emerald-600 rounded-full mr-3"></div>
                         {translation.get('reading-completions')}
                     </h3>
 
@@ -129,13 +129,13 @@ export function LibraryReadingStatsSection({
                             const averageSessionDuration =
                                 entry.session_count > 0
                                     ? Math.floor(
-                                          entry.reading_time /
+                                          entry.reading_time_sec /
                                               entry.session_count,
                                       )
                                     : null;
                             const averageSpeed = calculateAverageReadingSpeed(
                                 entry.pages_read,
-                                entry.reading_time,
+                                entry.reading_time_sec,
                             );
                             const calendarLength = calculateCalendarLengthDays(
                                 entry.start_date,
@@ -148,7 +148,7 @@ export function LibraryReadingStatsSection({
                                     className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4"
                                 >
                                     <div className="flex items-center space-x-4">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-primary-500/10 to-primary-600/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 bg-linear-to-br from-primary-500/10 to-primary-600/10 rounded-lg flex items-center justify-center shrink-0">
                                             <LuCalendarDays
                                                 className="w-5 h-5 text-primary-600 dark:text-primary-400"
                                                 aria-hidden="true"
@@ -170,7 +170,7 @@ export function LibraryReadingStatsSection({
                                                         aria-hidden="true"
                                                     />
                                                     {formatDurationFromSeconds(
-                                                        entry.reading_time,
+                                                        entry.reading_time_sec,
                                                     )}
                                                 </span>
 

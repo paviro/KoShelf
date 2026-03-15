@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
@@ -16,32 +16,47 @@ import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
     useStatisticsYearQuery,
+    useStatisticsYearlySectionQuery,
 } from '../hooks/useStatisticsQueries';
 import {
     SECTION_NAMES,
-    aggregateMonthlyStats,
     defaultSectionState,
     isCurrentStreakActive,
     persistStatisticsViewState,
     readStoredStatisticsViewState,
-    summarizeYearlyStats,
+    type MonthlyReadStats,
+    type YearlySummaryStats,
     type SectionName,
 } from '../model/statistics-model';
 import { api } from '../../../shared/api';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
-import type { SiteResponse } from '../../../shared/contracts';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
+
+const emptyMonthlyStats: MonthlyReadStats[] = Array.from(
+    { length: 12 },
+    () => ({
+        reading_time_sec: 0,
+        pages_read: 0,
+        active_days: 0,
+    }),
+);
+
+const emptySummary: YearlySummaryStats = {
+    reading_time_sec: 0,
+    completions: 0,
+    active_days: 0,
+};
 
 const EMPTY_WEEKLY_STATS: StatisticsWeekResponse = {
     week_key: '',
     start_date: '',
     end_date: '',
-    read_time: 0,
+    reading_time_sec: 0,
     pages_read: 0,
-    longest_session_duration: null,
-    average_session_duration: null,
+    longest_session_duration_sec: null,
+    average_session_duration_sec: null,
     daily_activity: [],
 };
 
@@ -52,7 +67,7 @@ export function StatisticsRoute() {
 
     const siteQuery = useQuery({
         queryKey: ['site'],
-        queryFn: () => api.site.get<SiteResponse>(),
+        queryFn: () => api.getSite(),
     });
 
     const statsIndexQuery = useStatisticsIndexQuery(scope);
@@ -72,11 +87,11 @@ export function StatisticsRoute() {
         });
 
     const availableYears = useMemo(
-        () => statsIndex?.available_years ?? [],
+        () => [...(statsIndex?.available_years ?? [])].reverse(),
         [statsIndex?.available_years],
     );
     const availableWeeks = useMemo(
-        () => statsIndex?.available_weeks ?? [],
+        () => [...(statsIndex?.available_weeks ?? [])].reverse(),
         [statsIndex?.available_weeks],
     );
 
@@ -90,16 +105,17 @@ export function StatisticsRoute() {
         () => initialViewState.selectedYearlyYear,
     );
 
-    const effectiveSelectedWeekKey = useMemo(() => {
-        if (
-            selectedWeekKey &&
-            availableWeeks.some((week) => week.week_key === selectedWeekKey)
-        ) {
-            return selectedWeekKey;
+    const effectiveSelectedWeek = useMemo(() => {
+        if (selectedWeekKey) {
+            const found = availableWeeks.find(
+                (week) => week.week_key === selectedWeekKey,
+            );
+            if (found) return found;
         }
 
-        return availableWeeks[0]?.week_key ?? null;
+        return availableWeeks[0] ?? null;
     }, [availableWeeks, selectedWeekKey]);
+    const effectiveSelectedWeekKey = effectiveSelectedWeek?.week_key ?? null;
     const effectiveSelectedHeatmapYear = useMemo(() => {
         if (
             selectedHeatmapYear !== null &&
@@ -156,7 +172,7 @@ export function StatisticsRoute() {
         statsIndexTransition.hasFreshData,
     ]);
 
-    const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeekKey);
+    const weekQuery = useStatisticsWeekQuery(scope, effectiveSelectedWeek);
     const weekTransition = useQueryTransitionState({
         data: weekQuery.data,
         enabled: Boolean(effectiveSelectedWeekKey),
@@ -175,44 +191,33 @@ export function StatisticsRoute() {
         isFetching: heatmapYearQuery.isFetching,
         isPlaceholderData: heatmapYearQuery.isPlaceholderData,
     });
-    const yearlyQuery = useStatisticsYearQuery(
+    const yearlySectionQuery = useStatisticsYearlySectionQuery(
         scope,
         effectiveSelectedYearlyYear,
     );
-    const yearlyTransition = useQueryTransitionState({
-        data: yearlyQuery.data,
+    const yearlySectionTransition = useQueryTransitionState({
+        data: yearlySectionQuery.data,
         enabled: Boolean(effectiveSelectedYearlyYear),
-        isLoading: yearlyQuery.isLoading,
-        isFetching: yearlyQuery.isFetching,
-        isPlaceholderData: yearlyQuery.isPlaceholderData,
+        isLoading: yearlySectionQuery.isLoading,
+        isFetching: yearlySectionQuery.isFetching,
+        isPlaceholderData: yearlySectionQuery.isPlaceholderData,
     });
-    const effectiveDisplayedYearlyData = yearlyTransition.displayData;
+    const effectiveDisplayedYearlySectionData =
+        yearlySectionTransition.displayData;
 
     const weeklyLoading =
         weekTransition.showBlockingSpinner || weekTransition.showOverlaySpinner;
     const yearlyLoading =
-        yearlyTransition.showBlockingSpinner ||
-        yearlyTransition.showOverlaySpinner;
+        yearlySectionTransition.showBlockingSpinner ||
+        yearlySectionTransition.showOverlaySpinner;
     const heatmapLoading =
         heatmapYearTransition.showBlockingSpinner ||
         heatmapYearTransition.showOverlaySpinner;
 
-    const yearlyMonthlyStats = useMemo(
-        () =>
-            aggregateMonthlyStats(
-                effectiveDisplayedYearlyData?.daily_activity ?? [],
-            ),
-        [effectiveDisplayedYearlyData],
-    );
-
-    const yearlySummary = useMemo(
-        () =>
-            summarizeYearlyStats(
-                yearlyMonthlyStats,
-                effectiveDisplayedYearlyData?.summary.completed_count ?? 0,
-            ),
-        [yearlyMonthlyStats, effectiveDisplayedYearlyData],
-    );
+    const yearlyMonthlyStats =
+        effectiveDisplayedYearlySectionData?.monthlyStats ?? emptyMonthlyStats;
+    const yearlySummary =
+        effectiveDisplayedYearlySectionData?.yearlySummary ?? emptySummary;
 
     const validatedCurrentStreak = useMemo(() => {
         const streak = statsIndex?.streaks.current;

@@ -79,10 +79,9 @@ fn test_parse_koreader_generated_metadata() {
     let test_file = temp_dir.path().join("metadata.epub.lua");
     std::fs::write(&test_file, &lua_output).unwrap();
 
-    let parser = crate::koreader::LuaParser::new();
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let metadata = rt
-        .block_on(parser.parse(&test_file))
+    let parser = crate::source::koreader::LuaParser::new();
+    let metadata = parser
+        .parse(&test_file)
         .expect("Failed to parse KoReader-generated metadata");
 
     // Verify all fields were parsed correctly
@@ -112,7 +111,7 @@ fn test_parse_koreader_generated_metadata() {
     // Verify summary
     let summary = metadata.summary.expect("summary should be present");
     assert_eq!(summary.rating, Some(4));
-    assert_eq!(summary.status, crate::models::BookStatus::Reading);
+    assert_eq!(summary.status, crate::shelf::models::BookStatus::Reading);
 
     // Verify annotation
     assert_eq!(metadata.annotations.len(), 1);
