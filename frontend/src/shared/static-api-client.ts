@@ -101,21 +101,18 @@ export class StaticApiClient implements ApiClient {
 
     async getItems(scope?: ScopeValue): Promise<LibraryListData> {
         const selectedScope = normalizeScope(scope);
-        const file =
-            selectedScope === 'all' ? 'index' : selectedScope;
+        const file = selectedScope === 'all' ? 'index' : selectedScope;
         const payload = await fetchJson(`/data/items/${file}.json`);
 
         const items = Array.isArray(payload)
             ? (payload as LibraryListItem[])
-            : (payload as LibraryListData).items ?? [];
+            : ((payload as LibraryListData).items ?? []);
 
         return { items };
     }
 
     async getItem(id: string): Promise<LibraryDetailData> {
-        return (await fetchJson(
-            `/data/items/${id}.json`,
-        )) as LibraryDetailData;
+        return (await fetchJson(`/data/items/${id}.json`)) as LibraryDetailData;
     }
 
     async getReadingSummary(
@@ -305,7 +302,10 @@ export class StaticApiClient implements ApiClient {
         to?: string,
     ): Promise<ReadingMetricsData> {
         // Parse comma-separated metrics.
-        const metricNames = metric.split(',').map((m) => m.trim()).filter(Boolean);
+        const metricNames = metric
+            .split(',')
+            .map((m) => m.trim())
+            .filter(Boolean);
 
         // Determine which month files to load from the periods index.
         const periods = await this.fetchCached<ExportReadingPeriods>(
@@ -322,7 +322,10 @@ export class StaticApiClient implements ApiClient {
         });
 
         // Load month files and extract metric+scope data.
-        const allPoints: Array<{ key: string; values: Record<string, number> }> = [];
+        const allPoints: Array<{
+            key: string;
+            values: Record<string, number>;
+        }> = [];
 
         for (const mk of relevantMonths) {
             let monthData: ExportMonthMetrics;
@@ -342,7 +345,10 @@ export class StaticApiClient implements ApiClient {
                     byScope[scope];
                 const values: Record<string, number> = {};
                 for (const m of metricNames) {
-                    values[m] = (scopeMetrics[m as keyof typeof scopeMetrics] as number) ?? 0;
+                    values[m] =
+                        (scopeMetrics[
+                            m as keyof typeof scopeMetrics
+                        ] as number) ?? 0;
                 }
                 allPoints.push({ key: dayKey, values });
             }

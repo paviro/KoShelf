@@ -659,7 +659,7 @@ class HoverPreviewManager {
         this.previewElement = document.createElement('aside');
         this.previewElement.id = PREVIEW_ELEMENT_ID;
         this.previewElement.className =
-            'fixed z-[70] hidden w-[min(22rem,calc(100vw-1.25rem))] pointer-events-none rounded-3xl border border-gray-200/95 bg-white/95 p-4 shadow-[0_30px_70px_-28px_rgba(15,23,42,0.55)] ring-1 ring-black/5 backdrop-blur-sm will-change-transform dark:border-dark-600/80 dark:bg-dark-900/90 dark:ring-white/10';
+            'fixed z-70 hidden w-[min(22rem,calc(100vw-1.25rem))] pointer-events-none rounded-3xl border border-gray-200/95 bg-white/95 p-4 shadow-[0_30px_70px_-28px_rgba(15,23,42,0.55)] ring-1 ring-black/5 backdrop-blur-xs will-change-transform dark:border-dark-600/80 dark:bg-dark-900/90 dark:ring-white/10';
         this.previewElement.setAttribute('role', 'tooltip');
         this.previewElement.setAttribute('aria-hidden', 'true');
         this.previewElement.style.opacity = '0';
@@ -669,7 +669,7 @@ class HoverPreviewManager {
             'opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1)';
 
         this.previewElement.innerHTML = `
-            <span data-preview-arrow class="absolute h-3 w-3 rounded-sm border-l border-t border-gray-200/95 bg-white/95 dark:border-dark-600/80 dark:bg-dark-900/90"></span>
+            <span data-preview-arrow class="absolute h-3 w-3 rounded-xs border-l border-t border-gray-200/95 bg-white/95 dark:border-dark-600/80 dark:bg-dark-900/90"></span>
             <div data-preview-title class="text-[1rem] font-semibold leading-tight tracking-tight text-gray-900 dark:text-white"></div>
             <div data-preview-author class="mt-1 text-[11px] font-medium uppercase tracking-[0.05em] text-gray-500 dark:text-gray-300 hidden"></div>
             <div data-preview-series class="mt-2 w-fit rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-gray-600 dark:border-dark-500 dark:bg-dark-800 dark:text-gray-300 hidden"></div>

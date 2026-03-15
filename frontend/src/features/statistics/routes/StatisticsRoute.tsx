@@ -34,11 +34,14 @@ import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
 import { translation } from '../../../shared/i18n';
 
-const emptyMonthlyStats: MonthlyReadStats[] = Array.from({ length: 12 }, () => ({
-    reading_time_sec: 0,
-    pages_read: 0,
-    active_days: 0,
-}));
+const emptyMonthlyStats: MonthlyReadStats[] = Array.from(
+    { length: 12 },
+    () => ({
+        reading_time_sec: 0,
+        pages_read: 0,
+        active_days: 0,
+    }),
+);
 
 const emptySummary: YearlySummaryStats = {
     reading_time_sec: 0,
@@ -199,7 +202,8 @@ export function StatisticsRoute() {
         isFetching: yearlySectionQuery.isFetching,
         isPlaceholderData: yearlySectionQuery.isPlaceholderData,
     });
-    const effectiveDisplayedYearlySectionData = yearlySectionTransition.displayData;
+    const effectiveDisplayedYearlySectionData =
+        yearlySectionTransition.displayData;
 
     const weeklyLoading =
         weekTransition.showBlockingSpinner || weekTransition.showOverlaySpinner;
@@ -210,8 +214,10 @@ export function StatisticsRoute() {
         heatmapYearTransition.showBlockingSpinner ||
         heatmapYearTransition.showOverlaySpinner;
 
-    const yearlyMonthlyStats = effectiveDisplayedYearlySectionData?.monthlyStats ?? emptyMonthlyStats;
-    const yearlySummary = effectiveDisplayedYearlySectionData?.yearlySummary ?? emptySummary;
+    const yearlyMonthlyStats =
+        effectiveDisplayedYearlySectionData?.monthlyStats ?? emptyMonthlyStats;
+    const yearlySummary =
+        effectiveDisplayedYearlySectionData?.yearlySummary ?? emptySummary;
 
     const validatedCurrentStreak = useMemo(() => {
         const streak = statsIndex?.streaks.current;

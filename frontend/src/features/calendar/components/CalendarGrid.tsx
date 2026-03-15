@@ -198,7 +198,7 @@ export function CalendarGrid({
     return (
         <section
             ref={containerRef}
-            className="calendar-container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg shadow-sm"
+            className="calendar-container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg shadow-xs"
         />
     );
 }

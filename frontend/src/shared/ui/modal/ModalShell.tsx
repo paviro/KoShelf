@@ -99,7 +99,7 @@ export function ModalShell({
     return (
         <div
             ref={backdropRef}
-            className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 ${
+            className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 transition-opacity duration-300 ${
                 isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
             } ${containerClassName}`}
             onMouseDown={handleBackdropMouseDown}

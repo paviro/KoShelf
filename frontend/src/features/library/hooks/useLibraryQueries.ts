@@ -5,18 +5,13 @@ import {
 } from '@tanstack/react-query';
 
 import { api } from '../../../shared/api';
-import type {
-    LibraryDetailData,
-    LibraryListData,
-} from '../api/library-data';
+import type { LibraryDetailData, LibraryListData } from '../api/library-data';
 import type { LibraryCollection } from '../model/library-model';
 
 async function fetchLibraryList(
     collection: LibraryCollection,
 ): Promise<LibraryListData> {
-    return api.getItems(
-        collection === 'comics' ? 'comics' : 'books',
-    );
+    return api.getItems(collection === 'comics' ? 'comics' : 'books');
 }
 
 export function libraryListQueryKey(collection: LibraryCollection) {

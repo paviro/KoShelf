@@ -1,128 +1,181 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@source "../index.html";
+@custom-variant dark (&:where(.dark, .dark *));
+@plugin "@tailwindcss/typography";
 
-@layer utilities {
-    .loading-reveal-delayed {
+@theme {
+    --color-primary-50: #f0f9ff;
+    --color-primary-100: #e0f2fe;
+    --color-primary-200: #bae6fd;
+    --color-primary-300: #7dd3fc;
+    --color-primary-400: #38bdf8;
+    --color-primary-500: #0ea5e9;
+    --color-primary-600: #0284c7;
+    --color-primary-700: #0369a1;
+    --color-primary-800: #075985;
+    --color-primary-900: #0c4a6e;
+
+    --color-dark-50: #f9fafb;
+    --color-dark-100: #f3f4f6;
+    --color-dark-200: #e5e7eb;
+    --color-dark-300: #d1d5db;
+    --color-dark-400: #9ca3af;
+    --color-dark-500: #6b7280;
+    --color-dark-600: #4b5563;
+    --color-dark-700: #374151;
+    --color-dark-800: #1f2937;
+    --color-dark-850: #1a222e;
+    --color-dark-900: #111827;
+    --color-dark-925: #0a0f1a;
+    --color-dark-950: #030712;
+
+    --font-size-2xs: 0.65rem;
+    --font-size-2xs--line-height: 1rem;
+}
+
+@utility aspect-book {
+    aspect-ratio: 2 / 3;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+}
+
+@keyframes loading-reveal {
+    from {
         opacity: 0;
-        animation-name: loading-reveal;
-        animation-duration: 140ms;
-        animation-timing-function: ease-out;
-        animation-fill-mode: both;
     }
-
-    @keyframes loading-reveal {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
+    to {
+        opacity: 1;
     }
+}
 
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
+@utility loading-reveal-delayed {
+    opacity: 0;
+    animation-name: loading-reveal;
+    animation-duration: 140ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+}
 
-    .scrollbar-hide::-webkit-scrollbar {
+@utility scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
         display: none;
     }
+}
 
+@utility page-centered-state {
     /*
      * Full-page status states (error/empty/no-results) live inside PageContent,
      * which has top/bottom padding around the fixed shell chrome.
      * This utility neutralizes that extra offset so states center against the
      * visible viewport below the fixed header and above the mobile nav.
      */
-    .page-centered-state {
-        /* mobile nav top = bottom-4 (1rem) + nav height (~3.75rem) + safe area */
-        --mobile-nav-top-offset: calc(4.75rem + env(safe-area-inset-bottom));
-        --page-centered-state-edge-padding: 1rem;
-        @apply w-full flex items-center justify-center;
-        min-height: calc(100dvh - 70px - var(--mobile-nav-top-offset));
-        padding-top: var(--page-centered-state-edge-padding);
-        padding-bottom: var(--page-centered-state-edge-padding);
-        margin-top: -1.125rem;
-        margin-bottom: calc(-7rem + var(--mobile-nav-top-offset));
+    /* mobile nav top = bottom-4 (1rem) + nav height (~3.75rem) + safe area */
+    --mobile-nav-top-offset: calc(4.75rem + env(safe-area-inset-bottom));
+    --page-centered-state-edge-padding: 1rem;
+    @apply w-full flex items-center justify-center;
+    min-height: calc(100dvh - 70px - var(--mobile-nav-top-offset));
+    padding-top: var(--page-centered-state-edge-padding);
+    padding-bottom: var(--page-centered-state-edge-padding);
+    margin-top: -1.125rem;
+    margin-bottom: calc(-7rem + var(--mobile-nav-top-offset));
+
+    @media (width >= theme(--breakpoint-md)) {
+        min-height: calc(100dvh - 80px - var(--mobile-nav-top-offset));
+        margin-top: -1rem;
     }
 
-    @screen md {
-        .page-centered-state {
-            min-height: calc(100dvh - 80px - var(--mobile-nav-top-offset));
-            margin-top: -1rem;
-        }
+    @media (width >= theme(--breakpoint-lg)) {
+        min-height: calc(100dvh - 80px);
+        margin-bottom: -1.5rem;
     }
+}
 
-    @screen lg {
-        .page-centered-state {
-            min-height: calc(100dvh - 80px);
-            margin-bottom: -1.5rem;
-        }
-    }
-
+@utility dropdown-trigger {
     /* Dropdown Anchor Positioning */
-    .dropdown-trigger {
-        anchor-name: --dropdown-anchor;
-    }
+    anchor-name: --dropdown-anchor;
+}
 
-    .dropdown-menu {
-        position: absolute;
-        margin-top: 0.5rem;
+@utility dropdown-menu {
+    position: absolute;
+    margin-top: 0.5rem;
 
-        /* Fallback for browsers without anchor support */
-        top: 100%;
-        left: 0;
+    /* Fallback for browsers without anchor support */
+    top: 100%;
+    left: 0;
 
-        /* Anchor Positioning */
-        position-anchor: --dropdown-anchor;
-        top: anchor(bottom);
-        left: anchor(left);
-        position-try-fallbacks:
-            flip-inline,
-            flip-block,
-            flip-inline flip-block;
-    }
+    /* Anchor Positioning */
+    position-anchor: --dropdown-anchor;
+    top: anchor(bottom);
+    left: anchor(left);
+    position-try-fallbacks:
+        flip-inline,
+        flip-block,
+        flip-inline flip-block;
+}
 
+@utility dropdown-menu-right {
     /* Right-aligned dropdown variant */
-    .dropdown-menu-right {
-        position: absolute;
-        margin-top: 0.5rem;
+    position: absolute;
+    margin-top: 0.5rem;
 
-        /* Fallback for browsers without anchor support */
-        top: 100%;
-        right: 0;
+    /* Fallback for browsers without anchor support */
+    top: 100%;
+    right: 0;
 
-        /* Anchor Positioning */
-        position-anchor: --dropdown-anchor;
-        top: anchor(bottom);
-        right: anchor(right);
-        position-try-fallbacks:
-            flip-inline,
-            flip-block,
-            flip-inline flip-block;
-    }
+    /* Anchor Positioning */
+    position-anchor: --dropdown-anchor;
+    top: anchor(bottom);
+    right: anchor(right);
+    position-try-fallbacks:
+        flip-inline,
+        flip-block,
+        flip-inline flip-block;
+}
 
+@utility heatmap-tooltip {
     /* Heatmap Tooltip */
-    .heatmap-tooltip {
-        position: fixed;
-        margin-bottom: 0;
-        z-index: 50;
-        /* Default arrow x position (center) if JS fails */
-        --arrow-x: 50%;
-        --arrow-y: 50%;
-        --tooltip-outline-color: #374151;
-        border: 1px solid var(--tooltip-outline-color);
-    }
+    position: fixed;
+    margin-bottom: 0;
+    z-index: 50;
+    /* Default arrow x position (center) if JS fails */
+    --arrow-x: 50%;
+    --arrow-y: 50%;
+    --tooltip-outline-color: #374151;
+    border: 1px solid var(--tooltip-outline-color);
 
-    .dark .heatmap-tooltip {
+    .dark & {
         --tooltip-outline-color: #d1d5db;
     }
 
     /* Tooltip Arrow (Speech Bubble) */
-    .heatmap-tooltip::before,
-    .heatmap-tooltip::after {
+    &::before {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        pointer-events: none;
+    }
+    &::after {
         content: '';
         position: absolute;
         width: 0;
@@ -131,17 +184,19 @@
         pointer-events: none;
     }
 
-    .heatmap-tooltip::before {
+    &::before {
         border-width: 7px;
     }
 
-    .heatmap-tooltip::after {
+    &::after {
         /* Arrow size must match JS (arrowSize) */
         border-width: 6px;
     }
+}
 
+@utility tooltip-top {
     /* Arrow pointing down (tooltip on top) */
-    .tooltip-top::before {
+    &::before {
         top: 100%;
         border-color: var(--tooltip-outline-color) transparent transparent
             transparent;
@@ -149,15 +204,17 @@
         margin-left: -7px;
     }
 
-    .tooltip-top::after {
+    &::after {
         top: 100%;
         border-color: var(--tooltip-color) transparent transparent transparent;
         left: var(--arrow-x);
         margin-left: -6px;
     }
+}
 
+@utility tooltip-bottom {
     /* Arrow pointing up (tooltip on bottom) */
-    .tooltip-bottom::before {
+    &::before {
         bottom: 100%;
         border-color: transparent transparent var(--tooltip-outline-color)
             transparent;
@@ -165,15 +222,17 @@
         margin-left: -7px;
     }
 
-    .tooltip-bottom::after {
+    &::after {
         bottom: 100%;
         border-color: transparent transparent var(--tooltip-color) transparent;
         left: var(--arrow-x);
         margin-left: -6px;
     }
+}
 
+@utility tooltip-left {
     /* Arrow pointing right (tooltip on left) */
-    .tooltip-left::before {
+    &::before {
         left: 100%;
         border-color: transparent transparent transparent
             var(--tooltip-outline-color);
@@ -181,15 +240,17 @@
         margin-top: -7px;
     }
 
-    .tooltip-left::after {
+    &::after {
         left: 100%;
         border-color: transparent transparent transparent var(--tooltip-color);
         top: var(--arrow-y);
         margin-top: -6px;
     }
+}
 
+@utility tooltip-right {
     /* Arrow pointing left (tooltip on right) */
-    .tooltip-right::before {
+    &::before {
         right: 100%;
         border-color: transparent var(--tooltip-outline-color) transparent
             transparent;
@@ -197,11 +258,227 @@
         margin-top: -7px;
     }
 
-    .tooltip-right::after {
+    &::after {
         right: 100%;
         border-color: transparent var(--tooltip-color) transparent transparent;
         top: var(--arrow-y);
         margin-top: -6px;
+    }
+}
+
+@utility sidebar-item {
+    @apply flex items-center px-4 py-3 text-gray-700 dark:text-dark-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg mx-2 transition-all duration-200;
+}
+
+@utility sidebar-item-active {
+    @apply bg-primary-600 text-white shadow-lg;
+}
+
+@utility sidebar-item-modern {
+    @apply flex items-center space-x-3 px-4 py-3 rounded-lg mx-2;
+    @apply hover:bg-primary-50 dark:hover:bg-primary-900/20;
+    transition: background-color 0.2s ease-out;
+
+    &:active {
+        @apply scale-[0.98];
+    }
+}
+
+@utility sidebar-item-modern-active {
+    @apply bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700/50 shadow-xs;
+}
+
+@utility nav-item {
+    @apply text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200;
+}
+
+@utility nav-item-active {
+    @apply text-primary-400 bg-gray-100/60 dark:bg-dark-700/60;
+}
+
+@utility book-card {
+    @apply relative bg-white dark:bg-dark-800 rounded-lg overflow-hidden transition-all duration-250;
+}
+
+@utility book-progress-bar {
+    @apply absolute bottom-0 left-0 h-1 bg-linear-to-r transition-all duration-300;
+}
+
+@utility progress-reading {
+    @apply from-primary-500 to-primary-400;
+}
+
+@utility progress-complete {
+    @apply from-green-500 to-green-400;
+}
+
+@utility search-input {
+    @apply w-full bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+}
+
+@utility filter-button {
+    @apply px-4 py-2 bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white rounded-lg transition-all duration-200 shadow-sm;
+}
+
+@utility filter-button-active {
+    @apply bg-primary-600 text-white;
+}
+
+@utility book-description {
+    & p {
+        @apply mb-4;
+    }
+
+    & p:last-child {
+        @apply mb-0;
+    }
+
+    & h1,
+    & h2,
+    & h3,
+    & h4,
+    & h5,
+    & h6 {
+        @apply mt-6 mb-3;
+    }
+
+    & h1:first-child,
+    & h2:first-child,
+    & h3:first-child,
+    & h4:first-child,
+    & h5:first-child,
+    & h6:first-child {
+        @apply mt-0;
+    }
+
+    & ul,
+    & ol {
+        @apply mb-4;
+    }
+
+    & blockquote {
+        @apply my-4;
+    }
+
+    --tw-prose-body: var(--color-gray-700);
+    --tw-prose-headings: var(--color-gray-900);
+    --tw-prose-links: var(--color-primary-600);
+    --tw-prose-bold: var(--color-gray-900);
+    --tw-prose-counters: var(--color-gray-500);
+    --tw-prose-bullets: var(--color-gray-300);
+    --tw-prose-hr: var(--color-gray-200);
+    --tw-prose-quotes: var(--color-gray-900);
+    --tw-prose-quote-borders: var(--color-gray-200);
+    --tw-prose-captions: var(--color-gray-500);
+    --tw-prose-code: var(--color-gray-900);
+    --tw-prose-pre-code: var(--color-gray-100);
+    --tw-prose-pre-bg: var(--color-gray-800);
+    --tw-prose-th-borders: var(--color-gray-300);
+    --tw-prose-td-borders: var(--color-gray-200);
+
+    .dark & {
+        --tw-prose-body: var(--color-dark-300);
+        --tw-prose-headings: var(--color-dark-100);
+        --tw-prose-links: var(--color-primary-300);
+        --tw-prose-bold: var(--color-dark-100);
+        --tw-prose-counters: var(--color-dark-400);
+        --tw-prose-bullets: var(--color-dark-500);
+        --tw-prose-hr: var(--color-dark-700);
+        --tw-prose-quotes: var(--color-dark-100);
+        --tw-prose-quote-borders: var(--color-dark-700);
+        --tw-prose-captions: var(--color-dark-400);
+        --tw-prose-code: var(--color-dark-100);
+        --tw-prose-pre-code: var(--color-dark-200);
+        --tw-prose-pre-bg: var(--color-dark-800);
+        --tw-prose-th-borders: var(--color-dark-600);
+        --tw-prose-td-borders: var(--color-dark-700);
+    }
+}
+
+@utility week-stats {
+    /* Weekly Stats Transitions */
+    transition:
+        opacity 0.3s ease-out,
+        transform 0.3s ease-out;
+
+    &.transition-out {
+        opacity: 0.3;
+    }
+
+    &.transition-in {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@utility recap-timeline {
+    /* Recap timeline */
+    position: relative;
+
+    &:before {
+        content: '';
+        position: fixed;
+        left: calc(1rem + 12px);
+        /* px-4 (1rem) + 12px offset */
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--color-gray-200);
+        z-index: 0;
+    }
+
+    @media (width >= theme(--breakpoint-md)) {
+        &:before {
+            left: calc(1.5rem + 12px);
+            /* md:px-6 (1.5rem) + 12px offset */
+        }
+    }
+
+    @media (width >= theme(--breakpoint-lg)) {
+        &:before {
+            left: calc(16rem + 1.5rem + 12px);
+            /* lg:ml-64 (16rem) + md:px-6 (1.5rem) + 12px offset */
+        }
+    }
+
+    .dark &:before {
+        background: var(--color-gray-700);
+    }
+}
+
+@utility recap-dot {
+    position: absolute;
+    left: 7px;
+    top: 1rem;
+    transform: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
+
+    @media (width >= theme(--breakpoint-md)) {
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
+@utility recap-dot-top {
+    /* Yearly summary dot stays aligned with the title, not centered */
+    top: 0.5rem;
+    transform: none;
+
+    @media (width >= theme(--breakpoint-md)) {
+        top: 0.75rem;
+        transform: none;
+    }
+}
+
+@utility recap-cover-max {
+    /* Fixed cover frame avoids layout shift; image itself uses object-contain. */
+    height: 20rem;
+
+    @media (width >= theme(--breakpoint-md)) {
+        height: 15rem;
     }
 }
 
@@ -237,151 +514,6 @@
 }
 
 @layer components {
-    .sidebar-item {
-        @apply flex items-center px-4 py-3 text-gray-700 dark:text-dark-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg mx-2 transition-all duration-200;
-    }
-
-    .sidebar-item-active {
-        @apply bg-primary-600 text-white shadow-lg;
-    }
-
-    .sidebar-item-modern {
-        @apply flex items-center space-x-3 px-4 py-3 rounded-lg mx-2;
-        @apply hover:bg-primary-50 dark:hover:bg-primary-900/20;
-        transition: background-color 0.2s ease-out;
-    }
-
-    .sidebar-item-modern:active {
-        @apply scale-[0.98];
-    }
-
-    .sidebar-item-modern-active {
-        @apply bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700/50 shadow-sm;
-    }
-
-    .nav-item {
-        @apply text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200;
-    }
-
-    .nav-item-active {
-        @apply text-primary-400 bg-gray-100/60 dark:bg-dark-700/60;
-    }
-
-    .book-card {
-        @apply relative bg-white dark:bg-dark-800 rounded-lg overflow-hidden transition-all duration-[250ms];
-    }
-
-    .book-progress-bar {
-        @apply absolute bottom-0 left-0 h-1 bg-gradient-to-r transition-all duration-300;
-    }
-
-    .progress-reading {
-        @apply from-primary-500 to-primary-400;
-    }
-
-    .progress-complete {
-        @apply from-green-500 to-green-400;
-    }
-
-    .search-input {
-        @apply w-full bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
-    }
-
-    .filter-button {
-        @apply px-4 py-2 bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 text-gray-600 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white rounded-lg transition-all duration-200 shadow;
-    }
-
-    .filter-button-active {
-        @apply bg-primary-600 text-white;
-    }
-
-    .book-description p {
-        @apply mb-4;
-    }
-
-    .book-description p:last-child {
-        @apply mb-0;
-    }
-
-    .book-description h1,
-    .book-description h2,
-    .book-description h3,
-    .book-description h4,
-    .book-description h5,
-    .book-description h6 {
-        @apply mt-6 mb-3;
-    }
-
-    .book-description h1:first-child,
-    .book-description h2:first-child,
-    .book-description h3:first-child,
-    .book-description h4:first-child,
-    .book-description h5:first-child,
-    .book-description h6:first-child {
-        @apply mt-0;
-    }
-
-    .book-description ul,
-    .book-description ol {
-        @apply mb-4;
-    }
-
-    .book-description blockquote {
-        @apply my-4;
-    }
-
-    .book-description {
-        --tw-prose-body: theme(colors.gray.700);
-        --tw-prose-headings: theme(colors.gray.900);
-        --tw-prose-links: theme(colors.primary.600);
-        --tw-prose-bold: theme(colors.gray.900);
-        --tw-prose-counters: theme(colors.gray.500);
-        --tw-prose-bullets: theme(colors.gray.300);
-        --tw-prose-hr: theme(colors.gray.200);
-        --tw-prose-quotes: theme(colors.gray.900);
-        --tw-prose-quote-borders: theme(colors.gray.200);
-        --tw-prose-captions: theme(colors.gray.500);
-        --tw-prose-code: theme(colors.gray.900);
-        --tw-prose-pre-code: theme(colors.gray.100);
-        --tw-prose-pre-bg: theme(colors.gray.800);
-        --tw-prose-th-borders: theme(colors.gray.300);
-        --tw-prose-td-borders: theme(colors.gray.200);
-    }
-
-    .dark .book-description {
-        --tw-prose-body: theme(colors.dark.300);
-        --tw-prose-headings: theme(colors.dark.100);
-        --tw-prose-links: theme(colors.primary.300);
-        --tw-prose-bold: theme(colors.dark.100);
-        --tw-prose-counters: theme(colors.dark.400);
-        --tw-prose-bullets: theme(colors.dark.500);
-        --tw-prose-hr: theme(colors.dark.700);
-        --tw-prose-quotes: theme(colors.dark.100);
-        --tw-prose-quote-borders: theme(colors.dark.700);
-        --tw-prose-captions: theme(colors.dark.400);
-        --tw-prose-code: theme(colors.dark.100);
-        --tw-prose-pre-code: theme(colors.dark.200);
-        --tw-prose-pre-bg: theme(colors.dark.800);
-        --tw-prose-th-borders: theme(colors.dark.600);
-        --tw-prose-td-borders: theme(colors.dark.700);
-    }
-
-    /* Weekly Stats Transitions */
-    .week-stats {
-        transition:
-            opacity 0.3s ease-out,
-            transform 0.3s ease-out;
-    }
-
-    .week-stats.transition-out {
-        opacity: 0.3;
-    }
-
-    .week-stats.transition-in {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
     #statsLoadingIndicator {
         transition: opacity 0.25s ease-in-out;
         opacity: 0;
@@ -389,83 +521,6 @@
 
     #statsLoadingIndicator.active {
         opacity: 1;
-    }
-
-    /* Recap timeline */
-    .recap-timeline {
-        position: relative;
-    }
-
-    .recap-timeline:before {
-        content: '';
-        position: fixed;
-        left: calc(1rem + 12px);
-        /* px-4 (1rem) + 12px offset */
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: theme(colors.gray.200);
-        z-index: 0;
-    }
-
-    @screen md {
-        .recap-timeline:before {
-            left: calc(1.5rem + 12px);
-            /* md:px-6 (1.5rem) + 12px offset */
-        }
-    }
-
-    @screen lg {
-        .recap-timeline:before {
-            left: calc(16rem + 1.5rem + 12px);
-            /* lg:ml-64 (16rem) + md:px-6 (1.5rem) + 12px offset */
-        }
-    }
-
-    .dark .recap-timeline:before {
-        background: theme(colors.gray.700);
-    }
-
-    .recap-dot {
-        position: absolute;
-        left: 7px;
-        top: 1rem;
-        transform: none;
-        width: 12px;
-        height: 12px;
-        border-radius: 9999px;
-        box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
-    }
-
-    @screen md {
-        .recap-dot {
-            top: 50%;
-            transform: translateY(-50%);
-        }
-    }
-
-    /* Yearly summary dot stays aligned with the title, not centered */
-    .recap-dot-top {
-        top: 0.5rem;
-        transform: none;
-    }
-
-    @screen md {
-        .recap-dot-top {
-            top: 0.75rem;
-            transform: none;
-        }
-    }
-
-    /* Fixed cover frame avoids layout shift; image itself uses object-contain. */
-    .recap-cover-max {
-        height: 20rem;
-    }
-
-    @screen md {
-        .recap-cover-max {
-            height: 15rem;
-        }
     }
 
     /* PWA Update Toggling */

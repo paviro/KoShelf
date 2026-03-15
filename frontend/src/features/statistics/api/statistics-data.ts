@@ -53,9 +53,7 @@ export interface StatisticsYearResponse {
     heatmap_config: HeatmapConfig;
 }
 
-function mergeDailyActivity(
-    points: MetricPoint[],
-): DailyActivityEntry[] {
+function mergeDailyActivity(points: MetricPoint[]): DailyActivityEntry[] {
     return points.map((p) => ({
         date: p.key,
         reading_time_sec: (p.reading_time_sec as number) ?? 0,

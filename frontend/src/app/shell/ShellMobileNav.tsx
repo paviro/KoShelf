@@ -14,7 +14,7 @@ export function ShellMobileNav({ navItems, currentPath }: ShellMobileNavProps) {
 
     return (
         <nav className="lg:hidden fixed bottom-4 left-8 right-8 z-50">
-            <div className="bg-white/75 dark:bg-dark-950/75 backdrop-blur-sm border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl">
+            <div className="bg-white/75 dark:bg-dark-950/75 backdrop-blur-xs border border-gray-200/50 dark:border-dark-700/50 rounded-2xl px-2 py-1.5 shadow-2xl">
                 <div className="flex items-center justify-around overflow-x-auto scrollbar-hide">
                     {navItems.map((item) => {
                         const active = isActivePath(currentPath, item.routeId);

@@ -27,21 +27,21 @@ export function CalendarMonthlyStatsSection({
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
             <MetricCard
                 icon={HiOutlineBookOpen}
-                iconContainerClassName="bg-blue-500/20 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600"
+                iconContainerClassName="bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600"
                 iconClassName="text-blue-600 dark:text-white"
                 value={stats.items_read}
                 label={completedLabel}
             />
             <MetricCard
                 icon={LuFileText}
-                iconContainerClassName="bg-green-500/20 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600"
+                iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                 iconClassName="text-green-600 dark:text-white"
                 value={formatNumber(stats.pages_read)}
                 label={translation.get('total-pages-read')}
             />
             <MetricCard
                 icon={LuClock3}
-                iconContainerClassName="bg-purple-500/20 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600"
+                iconContainerClassName="bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600"
                 iconClassName="text-purple-600 dark:text-white"
                 value={
                     <MetricCardUnitValue
@@ -52,7 +52,7 @@ export function CalendarMonthlyStatsSection({
             />
             <MetricCard
                 icon={LuCalendarDays}
-                iconContainerClassName="bg-orange-500/20 dark:bg-gradient-to-br dark:from-orange-500 dark:to-orange-600"
+                iconContainerClassName="bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-orange-600"
                 iconClassName="text-orange-600 dark:text-white"
                 value={
                     <MetricCardUnitValue

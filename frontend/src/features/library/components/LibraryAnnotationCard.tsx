@@ -43,7 +43,7 @@ export function LibraryAnnotationCard({
     const hasBody = hasText || hasNote;
 
     return (
-        <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-sm">
+        <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-xs">
             <header className="flex items-center justify-between text-sm text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center gap-3">
                     {variant === 'bookmark' && (
@@ -107,7 +107,7 @@ export function LibraryAnnotationCard({
                     {hasText && (
                         <div className="relative">
                             <div
-                                className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${styles.quoteBarClass} rounded-full`}
+                                className={`absolute top-0 left-0 w-1 h-full bg-linear-to-b ${styles.quoteBarClass} rounded-full`}
                             ></div>
 
                             {variant === 'bookmark' && (
@@ -127,9 +127,9 @@ export function LibraryAnnotationCard({
                     {hasNote && (
                         <div className={hasText ? 'mt-6' : ''}>
                             <div className="flex items-center mb-3">
-                                <div className="h-px bg-gray-200 dark:bg-dark-700 flex-grow mr-3"></div>
+                                <div className="h-px bg-gray-200 dark:bg-dark-700 grow mr-3"></div>
                                 <div className="flex items-center space-x-2">
-                                    <div className="w-6 h-6 bg-primary-500/20 dark:bg-gradient-to-br dark:from-primary-500 dark:to-primary-600 rounded-full flex items-center justify-center">
+                                    <div className="w-6 h-6 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-full flex items-center justify-center">
                                         <LuNotebookPen
                                             className="w-3 h-3 text-primary-600 dark:text-white"
                                             aria-hidden="true"
@@ -141,7 +141,7 @@ export function LibraryAnnotationCard({
                                         {translation.get('my-note')}
                                     </div>
                                 </div>
-                                <div className="h-px bg-gray-200 dark:bg-dark-700 flex-grow ml-3"></div>
+                                <div className="h-px bg-gray-200 dark:bg-dark-700 grow ml-3"></div>
                             </div>
                             <div className="bg-gray-100 dark:bg-dark-850/50 p-4 rounded-lg border border-gray-200 dark:border-dark-700/30">
                                 <p className="text-gray-700 dark:text-dark-200 leading-relaxed whitespace-pre-wrap">

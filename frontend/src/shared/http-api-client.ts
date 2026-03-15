@@ -29,7 +29,9 @@ function appendParams(
 
 export class HttpApiClient implements ApiClient {
     async getSite(): Promise<SiteData> {
-        const response = (await fetchJson('/api/site')) as ApiResponse<SiteData>;
+        const response = (await fetchJson(
+            '/api/site',
+        )) as ApiResponse<SiteData>;
         return {
             ...response.data,
             version: response.meta.version,

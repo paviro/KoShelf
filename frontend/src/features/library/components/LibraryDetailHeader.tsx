@@ -37,7 +37,7 @@ export function LibraryDetailHeader({
                 <div className="flex items-center space-x-3 min-w-0 flex-1">
                     <Link
                         to={backHref}
-                        className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer flex-shrink-0"
+                        className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer shrink-0"
                         title={translation.get('go-back.aria-label')}
                         aria-label={translation.get('go-back.aria-label')}
                     >
