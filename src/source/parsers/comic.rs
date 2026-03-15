@@ -6,7 +6,9 @@ use quick_xml::Reader;
 use quick_xml::escape::unescape;
 use quick_xml::events::Event;
 use std::borrow::Cow;
-use std::fs::{self, File};
+#[cfg(not(windows))]
+use std::fs;
+use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
