@@ -180,7 +180,7 @@ pub enum Command {
 
     /// Set the authentication password.
     /// No-ops if a password is already set (use --overwrite to replace it).
-    /// If no password argument is provided, prompts interactively.
+    /// If no password argument is provided, prompts interactively unless --random is used.
     SetPassword {
         /// Path to the data directory containing koshelf.sqlite.
         /// Falls back to top-level --data-path / KOSHELF_DATA_PATH / koshelf.toml when omitted.
@@ -192,6 +192,11 @@ pub enum Command {
         /// CLI flag takes precedence over env var; omit both for interactive mode.
         #[arg(long, env = "KOSHELF_PASSWORD")]
         password: Option<String>,
+
+        /// Generate and set a random password (printed once to stderr).
+        /// Mutually exclusive with --password / KOSHELF_PASSWORD.
+        #[arg(long, default_value = "false", conflicts_with = "password")]
+        random: bool,
 
         /// Overwrite an existing password. Also invalidates all sessions.
         #[arg(long, default_value = "false")]
@@ -365,7 +370,8 @@ impl Cli {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_time_to_seconds;
+    use super::{Cli, Command, parse_time_to_seconds};
+    use clap::{CommandFactory, FromArgMatches};
 
     #[test]
     fn parse_time_off_alias_maps_to_none() {
@@ -375,5 +381,44 @@ mod tests {
     #[test]
     fn parse_time_auto_maps_to_none() {
         assert_eq!(parse_time_to_seconds("auto").unwrap(), None);
+    }
+
+    #[test]
+    fn set_password_random_conflicts_with_password() {
+        let matches = Cli::command().try_get_matches_from([
+            "koshelf",
+            "set-password",
+            "--random",
+            "--password",
+            "explicit-pass",
+        ]);
+
+        assert!(
+            matches.is_err(),
+            "--random and --password should be mutually exclusive"
+        );
+    }
+
+    #[test]
+    fn set_password_random_parses() {
+        let matches = Cli::command()
+            .try_get_matches_from(["koshelf", "set-password", "--random"])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+
+        let Some(Command::SetPassword {
+            password,
+            random,
+            overwrite,
+            ..
+        }) = cli.command
+        else {
+            panic!("expected set-password command")
+        };
+
+        assert_eq!(password, None);
+        assert!(random);
+        assert!(!overwrite);
     }
 }

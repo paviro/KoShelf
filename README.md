@@ -237,8 +237,10 @@ KoShelf can operate in several modes:
 
 - `koshelf list-languages`: Print all supported UI locales
 - `koshelf github`: Print the repository URL
-- `koshelf set-password --data-path <PATH> [--password <VALUE>] [--overwrite]`: Set or rotate the serve-mode authentication password
+- `koshelf set-password --data-path <PATH> [--password <VALUE> | --random] [--overwrite]`: Set or rotate the serve-mode authentication password
     - without `--password`, KoShelf prompts interactively
+    - with `--random`, KoShelf generates a random password and prints it once
+    - `--password` and `--random` are mutually exclusive
     - `--data-path` can be omitted when provided by `KOSHELF_DATA_PATH` or `koshelf.toml`
     - without `--overwrite`, command is idempotent (no-op if password already exists)
 
@@ -319,6 +321,9 @@ Compatibility note:
 
 # Set/rotate auth password explicitly
 ./koshelf set-password --data-path ~/koshelf-data --overwrite
+
+# Rotate to a generated random password
+./koshelf set-password --data-path ~/koshelf-data --overwrite --random
 
 # Generate static site with file watching and statistics
 ./koshelf --library-path ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch

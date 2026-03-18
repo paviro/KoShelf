@@ -97,12 +97,13 @@ async fn run_command(command: Command, fallback_data_path: Option<PathBuf>) -> R
         Command::SetPassword {
             data_path,
             password,
+            random,
             overwrite,
         } => {
             let resolved_data_path = data_path.or(fallback_data_path).context(
                 "set-password requires a data path. Provide --data-path, set KOSHELF_DATA_PATH, or configure koshelf.data_path in your config file",
             )?;
-            run_set_password_command(resolved_data_path, password, overwrite).await
+            run_set_password_command(resolved_data_path, password, random, overwrite).await
         }
     }
 }
@@ -110,6 +111,7 @@ async fn run_command(command: Command, fallback_data_path: Option<PathBuf>) -> R
 async fn run_set_password_command(
     data_path: PathBuf,
     password_arg: Option<String>,
+    random: bool,
     overwrite: bool,
 ) -> Result<()> {
     std::fs::create_dir_all(&data_path).with_context(|| {
@@ -136,18 +138,23 @@ async fn run_set_password_command(
         return Ok(());
     }
 
-    let new_password = match password_arg {
-        Some(value) => value,
-        None => {
-            let first = rpassword::prompt_password("New password: ")
-                .context("Failed to read password from terminal")?;
-            let second = rpassword::prompt_password("Confirm new password: ")
-                .context("Failed to read password confirmation from terminal")?;
-            if first != second {
-                anyhow::bail!("Passwords do not match")
+    let (new_password, is_random_password) = if random {
+        (generate_random_password()?, true)
+    } else {
+        let password = match password_arg {
+            Some(value) => value,
+            None => {
+                let first = rpassword::prompt_password("New password: ")
+                    .context("Failed to read password from terminal")?;
+                let second = rpassword::prompt_password("Confirm new password: ")
+                    .context("Failed to read password confirmation from terminal")?;
+                if first != second {
+                    anyhow::bail!("Passwords do not match")
+                }
+                first
             }
-            first
-        }
+        };
+        (password, false)
     };
 
     let new_hash = hash_password(&new_password)?;
@@ -160,6 +167,23 @@ async fn run_set_password_command(
             let token_key = generate_token_key()?;
             set_stored_auth(&koshelf_pool, &new_hash, &token_key).await?;
         }
+    }
+
+    if is_random_password {
+        eprintln!();
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!("SET-PASSWORD");
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!("Generated authentication password: {}", new_password);
+        eprintln!("This password will not be shown again. Save it now.");
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!();
     }
 
     info!(
