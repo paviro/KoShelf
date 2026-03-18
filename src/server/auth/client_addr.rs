@@ -30,11 +30,9 @@ impl axum::extract::FromRequestParts<ServerState> for ClientContext {
             .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
 
         let context = match state.auth_state.as_ref() {
-            Some(auth_state) => {
-                auth_state
-                    .client_addr_resolver
-                    .resolve(&parts.headers, peer_ip)
-            }
+            Some(auth_state) => auth_state
+                .client_addr_resolver
+                .resolve(&parts.headers, peer_ip),
             None => ClientContext {
                 client_ip: peer_ip,
                 peer_ip,

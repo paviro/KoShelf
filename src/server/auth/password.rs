@@ -3,6 +3,7 @@ use argon2::password_hash::{PasswordHash, SaltString};
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rusty_paseto::core::Key;
 use sqlx::{Row, SqlitePool};
+use std::fmt::{Display, Formatter};
 
 const MIN_PASSWORD_CHARS: usize = 8;
 const MAX_PASSWORD_CHARS: usize = 1024;
@@ -10,19 +11,44 @@ const AUTO_PASSWORD_CHARS: usize = 16;
 const TOKEN_KEY_BYTES: usize = 32;
 const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-pub fn validate_password_length(raw: &str) -> Result<()> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PasswordLengthError {
+    TooShort { min: usize },
+    TooLong { max: usize },
+}
+
+impl Display for PasswordLengthError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TooShort { min } => {
+                write!(f, "Password must be at least {min} characters long")
+            }
+            Self::TooLong { max } => {
+                write!(f, "Password must be at most {max} characters long")
+            }
+        }
+    }
+}
+
+impl std::error::Error for PasswordLengthError {}
+
+pub fn validate_password_length(raw: &str) -> std::result::Result<(), PasswordLengthError> {
     let char_count = raw.chars().count();
     if char_count < MIN_PASSWORD_CHARS {
-        anyhow::bail!("Password must be at least {MIN_PASSWORD_CHARS} characters long");
+        return Err(PasswordLengthError::TooShort {
+            min: MIN_PASSWORD_CHARS,
+        });
     }
     if char_count > MAX_PASSWORD_CHARS {
-        anyhow::bail!("Password must be at most {MAX_PASSWORD_CHARS} characters long");
+        return Err(PasswordLengthError::TooLong {
+            max: MAX_PASSWORD_CHARS,
+        });
     }
     Ok(())
 }
 
 pub fn hash_password(raw: &str) -> Result<String> {
-    validate_password_length(raw)?;
+    validate_password_length(raw).map_err(|error| anyhow::anyhow!("{error}"))?;
 
     let salt_bytes = Key::<16>::try_new_random()
         .map_err(|error| anyhow::anyhow!("Failed to generate password salt: {error}"))?;
@@ -162,8 +188,9 @@ pub async fn set_password_hash_and_revoke_sessions(
 #[cfg(test)]
 mod tests {
     use super::{
-        generate_random_password, generate_token_key, get_stored_auth, hash_password,
-        set_password_hash_and_revoke_sessions, set_stored_auth,
+        PasswordLengthError, generate_random_password, generate_token_key, get_stored_auth,
+        hash_password, set_password_hash_and_revoke_sessions, set_stored_auth,
+        validate_password_length,
     };
     use crate::store::sqlite::{open_library_pool_in_memory, run_koshelf_migrations};
 
@@ -180,6 +207,21 @@ mod tests {
     fn generated_token_key_has_expected_length() {
         let key = generate_token_key().expect("token key generation should succeed");
         assert_eq!(key.len(), 32);
+    }
+
+    #[test]
+    fn password_length_validation_returns_too_short_error() {
+        let error =
+            validate_password_length("short").expect_err("short password should fail validation");
+        assert_eq!(error, PasswordLengthError::TooShort { min: 8 });
+    }
+
+    #[test]
+    fn password_length_validation_returns_too_long_error() {
+        let password = "a".repeat(1025);
+        let error = validate_password_length(&password)
+            .expect_err("overly long password should fail validation");
+        assert_eq!(error, PasswordLengthError::TooLong { max: 1024 });
     }
 
     #[tokio::test]

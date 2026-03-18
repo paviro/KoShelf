@@ -6,6 +6,17 @@ import { translation } from '../../../shared/i18n';
 import { SettingsField } from '../../settings/components/SettingsField';
 import { SettingsInput } from '../../settings/components/SettingsInput';
 
+const DEFAULT_MIN_PASSWORD_CHARS = 8;
+
+function minPasswordCharsFromDetails(
+    details: Record<string, unknown> | undefined,
+): number {
+    const value = details?.min_chars;
+    return typeof value === 'number' && value > 0
+        ? Math.floor(value)
+        : DEFAULT_MIN_PASSWORD_CHARS;
+}
+
 function resolvePasswordChangeError(error: unknown): string {
     if (
         isApiHttpError(error) &&
@@ -18,10 +29,11 @@ function resolvePasswordChangeError(error: unknown): string {
     if (
         isApiHttpError(error) &&
         error.status === 400 &&
-        error.code === 'invalid_query' &&
-        error.apiMessage?.toLowerCase().includes('at least 8')
+        error.code === 'password_too_short'
     ) {
-        return translation.get('password-too-short');
+        return translation.get('password-too-short', {
+            min: minPasswordCharsFromDetails(error.details),
+        });
     }
 
     if (isApiHttpError(error)) {
@@ -50,10 +62,12 @@ export function PasswordChangeSection() {
                 return;
             }
 
-            if (newPassword.length < 8) {
+            if (newPassword.length < DEFAULT_MIN_PASSWORD_CHARS) {
                 setFeedback({
                     type: 'error',
-                    message: translation.get('password-too-short'),
+                    message: translation.get('password-too-short', {
+                        min: DEFAULT_MIN_PASSWORD_CHARS,
+                    }),
                 });
                 return;
             }

@@ -113,6 +113,11 @@ impl WebServer {
             app = app.merge(auth_routes);
         }
 
+        app = app.layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth::middleware::auth_middleware,
+        ));
+
         app = app.layer(
             ServiceBuilder::new()
                 .layer(CompressionLayer::new())
@@ -129,11 +134,6 @@ impl WebServer {
                     axum::http::HeaderValue::from_static("strict-origin-when-cross-origin"),
                 )),
         );
-
-        app = app.layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            auth::middleware::auth_middleware,
-        ));
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 

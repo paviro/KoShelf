@@ -11,6 +11,7 @@ export type FetchJsonOptions = {
 type ApiHttpErrorOptions = {
     code?: string;
     apiMessage?: string;
+    details?: Record<string, unknown>;
     retryAfterSeconds?: number;
 };
 
@@ -18,6 +19,7 @@ type ApiErrorEnvelope = {
     error?: {
         code?: string;
         message?: string;
+        details?: unknown;
     };
 };
 
@@ -26,6 +28,7 @@ export class ApiHttpError extends Error {
     readonly url: string;
     readonly code?: string;
     readonly apiMessage?: string;
+    readonly details?: Record<string, unknown>;
     readonly retryAfterSeconds?: number;
 
     constructor(
@@ -40,6 +43,7 @@ export class ApiHttpError extends Error {
         this.url = url;
         this.code = options.code;
         this.apiMessage = options.apiMessage;
+        this.details = options.details;
         this.retryAfterSeconds = options.retryAfterSeconds;
     }
 }
@@ -80,6 +84,7 @@ function parseRetryAfterSeconds(
 async function parseErrorEnvelope(response: Response): Promise<{
     code?: string;
     apiMessage?: string;
+    details?: Record<string, unknown>;
 }> {
     const contentType = response.headers.get('content-type') ?? '';
     if (!contentType.toLowerCase().includes('application/json')) {
@@ -90,10 +95,18 @@ async function parseErrorEnvelope(response: Response): Promise<{
         const payload = (await response.json()) as ApiErrorEnvelope;
         const code = payload.error?.code;
         const apiMessage = payload.error?.message;
+        const rawDetails = payload.error?.details;
+        const details =
+            rawDetails &&
+            typeof rawDetails === 'object' &&
+            !Array.isArray(rawDetails)
+                ? (rawDetails as Record<string, unknown>)
+                : undefined;
 
         return {
             code: typeof code === 'string' ? code : undefined,
             apiMessage: typeof apiMessage === 'string' ? apiMessage : undefined,
+            details,
         };
     } catch {
         return {};
@@ -124,6 +137,7 @@ export async function fetchJson(
         throw new ApiHttpError(url, response.status, {
             code: errorPayload.code,
             apiMessage: errorPayload.apiMessage,
+            details: errorPayload.details,
             retryAfterSeconds: parseRetryAfterSeconds(
                 response.headers.get('retry-after'),
             ),

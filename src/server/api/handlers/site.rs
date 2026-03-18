@@ -1,7 +1,7 @@
 use axum::{
     Json,
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, header::CACHE_CONTROL},
     response::{IntoResponse, Response},
 };
 
@@ -40,5 +40,10 @@ pub(crate) async fn site(
         data.authenticated = Some(is_authenticated);
     }
 
-    (StatusCode::OK, Json(ApiResponse::new(data))).into_response()
+    (
+        StatusCode::OK,
+        [(CACHE_CONTROL, "private, no-store")],
+        Json(ApiResponse::new(data)),
+    )
+        .into_response()
 }

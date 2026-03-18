@@ -4,6 +4,7 @@ use axum::http::{HeaderMap, StatusCode, header::HOST, header::RETRY_AFTER, heade
 use axum::response::{IntoResponse, Response};
 use governor::clock::{Clock, DefaultClock};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::net::IpAddr;
 
 use super::client_addr::ClientContext;
@@ -13,7 +14,7 @@ use crate::server::api::responses::common::ApiResponse;
 use crate::server::api::responses::error::{ApiErrorCode, ApiErrorResponse};
 
 use super::password::{
-    get_stored_auth, hash_password, set_password_hash_and_revoke_sessions,
+    PasswordLengthError, get_stored_auth, hash_password, set_password_hash_and_revoke_sessions,
     validate_password_length, verify_password,
 };
 use super::session::{SessionInfo, create_token, delete_session, list_sessions};
@@ -168,11 +169,18 @@ pub async fn change_password(
     }
 
     if let Err(error) = validate_password_length(&payload.new_password) {
-        return api_error_message_response(
-            StatusCode::BAD_REQUEST,
-            ApiErrorCode::InvalidQuery,
-            error.to_string(),
-        );
+        return match error {
+            PasswordLengthError::TooShort { min } => api_error_details_response(
+                StatusCode::BAD_REQUEST,
+                ApiErrorCode::PasswordTooShort,
+                Some(json!({ "min_chars": min })),
+            ),
+            PasswordLengthError::TooLong { .. } => api_error_message_response(
+                StatusCode::BAD_REQUEST,
+                ApiErrorCode::InvalidQuery,
+                error.to_string(),
+            ),
+        };
     }
 
     let auth_row = match get_stored_auth(&auth_state.pool).await {
@@ -275,6 +283,18 @@ fn api_error_message_response(
     message: impl Into<String>,
 ) -> Response {
     (status, Json(ApiErrorResponse::new(code, message.into()))).into_response()
+}
+
+fn api_error_details_response(
+    status: StatusCode,
+    code: ApiErrorCode,
+    details: Option<serde_json::Value>,
+) -> Response {
+    (
+        status,
+        Json(ApiErrorResponse::from_code_with_details(code, details)),
+    )
+        .into_response()
 }
 
 fn to_session_response(session: SessionInfo, current_session_id: &str) -> SessionInfoResponse {
