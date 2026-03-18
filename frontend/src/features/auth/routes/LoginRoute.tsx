@@ -3,9 +3,7 @@ import { Navigate, useNavigate } from 'react-router';
 
 import { BRAND_ICON } from '../../../app/shell/shell-nav';
 import { api, isApiHttpError } from '../../../shared/api';
-import { fetchJson } from '../../../shared/api-fetch';
 import { translation } from '../../../shared/i18n';
-import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { LoginPasswordField } from '../components/LoginPasswordField';
 import { LoginSubmitButton } from '../components/LoginSubmitButton';
 
@@ -44,7 +42,6 @@ export function LoginRoute({
     const [password, setPassword] = useState('');
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitPending, setSubmitPending] = useState(false);
-    const [sessionCheckPending, setSessionCheckPending] = useState(true);
     const BrandIcon = BRAND_ICON;
     const loginTitle = translation.get('login-title', { site: siteTitle });
 
@@ -53,64 +50,10 @@ export function LoginRoute({
     }, [loginTitle]);
 
     useEffect(() => {
-        if (!siteLoaded) {
-            setSessionCheckPending(true);
-            return;
-        }
-
-        if (!authEnabled) {
-            setSessionCheckPending(false);
-            return;
-        }
-
-        if (authenticated) {
+        if (siteLoaded && authEnabled && authenticated) {
             navigate(defaultRoute, { replace: true });
-            return;
         }
-
-        let cancelled = false;
-
-        const checkExistingSession = async () => {
-            setSessionCheckPending(true);
-            try {
-                await fetchJson('/api/auth/sessions', {
-                    redirectOnUnauthorized: false,
-                });
-                if (!cancelled) {
-                    navigate(defaultRoute, { replace: true });
-                }
-            } catch (error) {
-                if (
-                    !cancelled &&
-                    (!isApiHttpError(error) || error.status !== 401)
-                ) {
-                    setSubmitError(resolveLoginErrorMessage(error));
-                }
-            } finally {
-                if (!cancelled) {
-                    setSessionCheckPending(false);
-                }
-            }
-        };
-
-        void checkExistingSession();
-
-        return () => {
-            cancelled = true;
-        };
     }, [authenticated, authEnabled, defaultRoute, navigate, siteLoaded]);
-
-    if (!siteLoaded || sessionCheckPending) {
-        return (
-            <main className="min-h-dvh flex items-center justify-center px-6 py-10 bg-gray-100 dark:bg-dark-925">
-                <LoadingSpinner
-                    size="lg"
-                    srLabel="Loading login"
-                    delayMs={10}
-                />
-            </main>
-        );
-    }
 
     if (!authEnabled) {
         return <Navigate to={defaultRoute} replace />;
