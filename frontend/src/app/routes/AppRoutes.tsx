@@ -9,6 +9,7 @@ import {
     LibraryDetailRoute,
     LibraryListRoute,
     LoginRoute,
+    ReaderRoute,
     RecapRoute,
     SettingsRoute,
     StatisticsRoute,
@@ -101,12 +102,20 @@ export function AppRoutes({
                         element={<LibraryDetailRoute collection="books" />}
                     />
                     <Route
+                        path={routePathPattern('books-read')}
+                        element={<ReaderRoute collection="books" />}
+                    />
+                    <Route
                         path={routePathPattern('comics-list')}
                         element={<LibraryListRoute collection="comics" />}
                     />
                     <Route
                         path={routePathPattern('comics-detail')}
                         element={<LibraryDetailRoute collection="comics" />}
+                    />
+                    <Route
+                        path={routePathPattern('comics-read')}
+                        element={<ReaderRoute collection="comics" />}
                     />
                     <Route
                         path={routePathPattern('recap')}

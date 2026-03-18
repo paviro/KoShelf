@@ -1,11 +1,17 @@
 import { useMemo, useRef, useState } from 'react';
-import { LuArrowLeft } from 'react-icons/lu';
+import { LuArrowLeft, LuBookOpen } from 'react-icons/lu';
 import { Link } from 'react-router';
+
+import {
+    buildRoutePath,
+    readerRouteIdForCollection,
+} from '../../../app/routes/route-registry';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
+import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
 
 type LibraryDetailHeaderProps = {
@@ -37,6 +43,12 @@ export function LibraryDetailHeader({
         ? `${primaryAuthor ? `${primaryAuthor} - ` : ''}${title}.${format}`
         : undefined;
     const fileLabel = format?.toUpperCase() ?? null;
+    const readerHref =
+        fileHref && isReaderFormatSupported(format)
+            ? buildRoutePath(readerRouteIdForCollection(collection), {
+                  id: itemId,
+              })
+            : null;
 
     const header = useMemo(
         () => ({
@@ -81,6 +93,22 @@ export function LibraryDetailHeader({
             ),
             controls: (
                 <div className="flex items-center space-x-2">
+                    {readerHref && (
+                        <Link
+                            to={readerHref}
+                            title={translation.get('open-reader-aria')}
+                            aria-label={translation.get('open-reader-aria')}
+                            className="flex items-center justify-center gap-1.5 h-10 px-3 md:px-4 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs text-sm font-medium text-gray-600 dark:text-gray-300"
+                        >
+                            <LuBookOpen
+                                className="w-5 h-5"
+                                aria-hidden="true"
+                            />
+                            <span className="hidden sm:inline">
+                                {translation.get('open-in-reader')}
+                            </span>
+                        </Link>
+                    )}
                     <div className="relative" ref={dropdownRef}>
                         <button
                             id="shareDropdownButton"
@@ -90,11 +118,11 @@ export function LibraryDetailHeader({
                             aria-controls="shareDropdownMenu"
                             title={translation.get('share')}
                             aria-label={translation.get('share')}
-                            className="dropdown-trigger p-2 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors"
+                            className="dropdown-trigger flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs"
                             onClick={() => setShareOpen((current) => !current)}
                         >
                             <svg
-                                className="w-5 h-5 text-primary-400"
+                                className="w-5 h-5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -149,7 +177,18 @@ export function LibraryDetailHeader({
                 </div>
             ),
         }),
-        [backHref, fileDownloadName, fileHref, fileLabel, jsonDownloadName, jsonHref, primaryAuthor, shareOpen, title],
+        [
+            backHref,
+            fileDownloadName,
+            fileHref,
+            fileLabel,
+            jsonDownloadName,
+            jsonHref,
+            primaryAuthor,
+            readerHref,
+            shareOpen,
+            title,
+        ],
     );
 
     useRouteHeader(header);

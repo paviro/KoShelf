@@ -2,17 +2,20 @@ import { translation } from '../../../shared/i18n';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import { LibraryAnnotationCard } from '../components/LibraryAnnotationCard';
 import type { LibraryAnnotation } from '../api/library-data';
+import { annotationReaderHref } from '../lib/library-reader-links';
 
 type LibraryHighlightsSectionProps = {
     annotations: LibraryAnnotation[];
     visible: boolean;
     onToggle: () => void;
+    readerBaseHref?: string | null;
 };
 
 export function LibraryHighlightsSection({
     annotations,
     visible,
     onToggle,
+    readerBaseHref,
 }: LibraryHighlightsSectionProps) {
     return (
         <CollapsibleSection
@@ -35,6 +38,11 @@ export function LibraryHighlightsSection({
                         key={`${annotation.datetime ?? ''}-${annotation.pageno ?? ''}-${index}`}
                         annotation={annotation}
                         variant="highlight"
+                        readerHref={annotationReaderHref(
+                            readerBaseHref,
+                            'highlight',
+                            index,
+                        )}
                     />
                 ))}
             </div>

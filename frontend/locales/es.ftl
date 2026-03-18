@@ -274,6 +274,13 @@ close-search =
     .aria-label = Cerrar
 go-back =
     .aria-label = Volver
+open-reader-aria = Abrir en el lector
+reader-loading = Cargando libro…
+reader-error = Error al cargar el libro
+reader-previous-page = Página anterior
+reader-next-page = Página siguiente
+open-at-annotation = Abrir en la anotación
+open-in-reader = Abrir
 select-month = Seleccionar mes
 
 # -----------------------------------

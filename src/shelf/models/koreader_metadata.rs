@@ -29,6 +29,8 @@ pub struct Annotation {
     pub pos1: Option<String>,
     pub text: Option<String>, // Optional: highlights have text, bookmarks don't
     pub note: Option<String>,
+    pub color: Option<String>,
+    pub drawer: Option<String>,
 }
 
 impl Annotation {
