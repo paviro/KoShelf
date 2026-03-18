@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuChevronDown } from 'react-icons/lu';
 
+import { PasswordChangeSection } from '../../auth/components/PasswordChangeSection';
+import { SessionManagementSection } from '../../auth/components/SessionManagementSection';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
@@ -25,13 +26,12 @@ import {
 } from '../../../shared/lib/network/prefetch-preference';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
+import { SettingsField } from '../components/SettingsField';
+import { SettingsSelect } from '../components/SettingsSelect';
 
 const PREVIEW_DATE = new Date(Date.UTC(2026, 2, 5, 18, 20, 0, 0));
 const PREVIEW_NUMBER = 10000;
 const EMPTY_LANGUAGE_OPTIONS: SupportedLanguageOption[] = [];
-
-const selectClassName =
-    'w-full appearance-none bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/60';
 
 type SettingsSectionProps = {
     accentClass: string;
@@ -57,74 +57,6 @@ function SettingsSection({
     );
 }
 
-type SettingsFieldProps = {
-    label: string;
-    htmlFor: string;
-    hints?: string[];
-    children: React.ReactNode;
-};
-
-function SettingsField({
-    label,
-    htmlFor,
-    hints,
-    children,
-}: SettingsFieldProps) {
-    return (
-        <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="space-y-0.5">
-                    <label
-                        htmlFor={htmlFor}
-                        className="block text-sm font-medium text-gray-900 dark:text-white"
-                    >
-                        {label}
-                    </label>
-                    {hints?.map((line, i) => (
-                        <p
-                            key={i}
-                            className="text-xs text-gray-500 dark:text-dark-400"
-                        >
-                            {line}
-                        </p>
-                    ))}
-                </div>
-                <div className="sm:w-56 shrink-0">{children}</div>
-            </div>
-        </div>
-    );
-}
-
-type SettingsSelectProps = {
-    children: React.ReactNode;
-    className?: string;
-} & Omit<
-    React.SelectHTMLAttributes<HTMLSelectElement>,
-    'children' | 'className'
->;
-
-function SettingsSelect({
-    children,
-    className,
-    ...props
-}: SettingsSelectProps) {
-    const resolvedClassName = className
-        ? `${selectClassName} ${className}`
-        : selectClassName;
-
-    return (
-        <div className="relative">
-            <select {...props} className={resolvedClassName}>
-                {children}
-            </select>
-            <LuChevronDown
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-dark-400"
-                aria-hidden="true"
-            />
-        </div>
-    );
-}
-
 export function SettingsRoute() {
     const siteQuery = useQuery({
         queryKey: ['site'],
@@ -140,6 +72,8 @@ export function SettingsRoute() {
     const [prefetchOnIntentEnabled, setPrefetchOnIntentEnabled] = useState(() =>
         getPrefetchOnIntentPreference(),
     );
+
+    const authEnabled = siteQuery.data?.capabilities.auth_enabled === true;
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);
@@ -443,6 +377,28 @@ export function SettingsRoute() {
                         </div>
                     </div>
                 </SettingsSection>
+
+                {authEnabled ? (
+                    <SettingsSection
+                        accentClass="bg-linear-to-b from-rose-400 to-red-600"
+                        title={translation.get('password-setting')}
+                    >
+                        <PasswordChangeSection
+                            minPasswordChars={
+                                siteQuery.data?.password_policy?.min_chars
+                            }
+                        />
+                    </SettingsSection>
+                ) : null}
+
+                {authEnabled ? (
+                    <SettingsSection
+                        accentClass="bg-linear-to-b from-sky-400 to-blue-600"
+                        title={translation.get('sessions-setting')}
+                    >
+                        <SessionManagementSection locale={currentUiLocale} />
+                    </SettingsSection>
+                ) : null}
             </PageContent>
         </>
     );

@@ -17,6 +17,8 @@ language = "en_US"
 
 [server]
 port = 3000
+# enable_auth = true
+# trusted_proxies = ["127.0.0.1/32", "::1/128"]
 
 [output]
 # path = "/path/to/output"

@@ -64,8 +64,10 @@ fn cleanup_removed_legacy_outputs(output_dir: &Path) -> Result<()> {
         "statistics",
         "calendar",
         "recap",
+        "core",
         "assets/css",
         "assets/js",
+        "assets/icons",
     ] {
         let dir = output_dir.join(relative_dir);
         if let Err(error) = fs::remove_dir_all(&dir)

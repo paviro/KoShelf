@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
-import { api, isServeMode } from './api';
+import { api, isApiHttpError, isServeMode } from './api';
+import { fetchJson, isLoginHashRoute, redirectToLogin } from './api-fetch';
+import type { SiteData } from './contracts';
 
 interface DataChangedPayload {
     revision_epoch: string;
@@ -90,7 +92,9 @@ export function RuntimeUpdatesBridge() {
             return;
         }
 
-        const source = new EventSource('/api/events/stream');
+        let source: EventSource | null = null;
+        let disposed = false;
+        let authProbeInFlight = false;
 
         const handleDataChanged = (event: Event) => {
             const message = event as MessageEvent<string>;
@@ -110,11 +114,68 @@ export function RuntimeUpdatesBridge() {
             invalidateRuntimeQueries(queryClient);
         };
 
-        source.addEventListener('data_changed', handleDataChanged);
+        const closeSource = () => {
+            if (!source) {
+                return;
+            }
 
-        return () => {
             source.removeEventListener('data_changed', handleDataChanged);
             source.close();
+            source = null;
+        };
+
+        const verifyAuthOnStreamError = async () => {
+            if (authProbeInFlight || disposed || isLoginHashRoute()) {
+                return;
+            }
+
+            const site = queryClient.getQueryData<SiteData>(['site']);
+            if (!site?.capabilities.auth_enabled) {
+                return;
+            }
+
+            authProbeInFlight = true;
+            try {
+                await fetchJson('/api/auth/sessions', {
+                    redirectOnUnauthorized: false,
+                });
+            } catch (error) {
+                if (isApiHttpError(error) && error.status === 401) {
+                    redirectToLogin();
+                }
+            } finally {
+                authProbeInFlight = false;
+            }
+        };
+
+        const ensureSource = () => {
+            if (disposed || source || isLoginHashRoute()) {
+                return;
+            }
+
+            source = new EventSource('/api/events/stream');
+            source.addEventListener('data_changed', handleDataChanged);
+            source.onerror = () => {
+                void verifyAuthOnStreamError();
+            };
+        };
+
+        const handleHashChange = () => {
+            if (isLoginHashRoute()) {
+                closeSource();
+                return;
+            }
+
+            ensureSource();
+        };
+
+        ensureSource();
+        window.addEventListener('hashchange', handleHashChange);
+
+        return () => {
+            disposed = true;
+            window.removeEventListener('hashchange', handleHashChange);
+            closeSource();
         };
     }, [queryClient]);
 

@@ -49,6 +49,34 @@ preview-date = Preview Date
 preview-number = Preview Number
 region-setting-majority-group = Majority-speaking regions
 region-setting-all-group = All Supported Regions
+login = Log In
+login-title = Sign in to { $site }
+login-password = Password
+login-submit = Sign In
+login-error = Invalid password
+login-rate-limited = Too many attempts. Please try again shortly.
+password-setting = Password
+change-password = Change Password
+current-password = Current Password
+new-password = New Password
+confirm-password = Confirm Password
+password-changed = Password changed successfully
+password-too-short = Password must be at least { $min } characters
+password-mismatch = Passwords do not match
+incorrect-password = Incorrect current password
+sessions-setting = Sessions
+current-session = Current Session
+this-device = This device
+last-active = Last active
+revoke-session = Revoke
+revoke-session-confirm = Revoke this session?
+session-revoked = Session revoked
+session-device-info = { $browser } on { $os }
+logout = Log Out
+current-password-placeholder = Enter current password
+new-password-placeholder = Min. 8 characters
+new-password-hint = Must be at least 8 characters
+confirm-password-placeholder = Re-enter new password
 
 # -----------------------------------
 #        Book List & Library

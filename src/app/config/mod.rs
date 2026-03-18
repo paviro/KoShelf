@@ -2,20 +2,39 @@ pub mod cli;
 pub mod file;
 pub mod site;
 
-pub use cli::{Cli, parse_time_to_seconds};
+pub use cli::{Cli, Command, parse_time_to_seconds, parse_trusted_proxy_nets};
 pub use file::FileConfig;
 pub use site::SiteConfig;
 
 /// Merge values from a TOML config file into CLI fields.
 ///
-/// Only overrides fields that were NOT explicitly set on the command line.
-/// Precedence: CLI explicit args > config file > clap defaults.
+/// Only overrides fields that were NOT explicitly set via CLI or env vars.
+/// Precedence: CLI explicit args > env vars > config file > clap defaults.
 pub fn merge_with_file_config(cli: &mut Cli, config: &FileConfig, matches: &clap::ArgMatches) {
     use clap::parser::ValueSource;
 
-    /// Returns `true` when the user did NOT pass an explicit CLI flag.
+    fn is_explicit_value_source(source: Option<ValueSource>) -> bool {
+        matches!(
+            source,
+            Some(ValueSource::CommandLine | ValueSource::EnvVariable)
+        )
+    }
+
+    /// Returns `true` when the user did NOT pass an explicit CLI/env value.
     fn not_explicit(matches: &clap::ArgMatches, id: &str) -> bool {
-        matches.value_source(id) != Some(ValueSource::CommandLine)
+        if is_explicit_value_source(matches.value_source(id)) {
+            return false;
+        }
+
+        if id.contains('_') {
+            let dashed = id.replace('_', "-");
+            let has_dashed_id = matches.ids().any(|arg_id| arg_id.as_str() == dashed);
+            if has_dashed_id && is_explicit_value_source(matches.value_source(&dashed)) {
+                return false;
+            }
+        }
+
+        true
     }
 
     // ── library section ──────────────────────────────────────────
@@ -73,11 +92,23 @@ pub fn merge_with_file_config(cli: &mut Cli, config: &FileConfig, matches: &clap
     }
 
     // ── server section ───────────────────────────────────────────
-    if let Some(ref srv) = config.server
-        && let Some(v) = srv.port
-        && not_explicit(matches, "port")
-    {
-        cli.port = v;
+    if let Some(ref srv) = config.server {
+        if let Some(v) = srv.port
+            && not_explicit(matches, "port")
+        {
+            cli.port = v;
+        }
+        if let Some(v) = srv.enable_auth
+            && not_explicit(matches, "enable_auth")
+        {
+            cli.enable_auth = v;
+        }
+        if let Some(ref values) = srv.trusted_proxies
+            && not_explicit(matches, "trusted_proxies")
+            && !values.is_empty()
+        {
+            cli.trusted_proxies = values.clone();
+        }
     }
 
     // ── output section ───────────────────────────────────────────
@@ -126,5 +157,68 @@ pub fn merge_with_file_config(cli: &mut Cli, config: &FileConfig, matches: &clap
         {
             cli.ignore_stable_page_metadata = v;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_with_file_config;
+    use crate::app::config::cli::Cli;
+    use crate::app::config::file::{FileConfig, KoshelfSection};
+    use clap::{CommandFactory, FromArgMatches};
+    use std::path::PathBuf;
+
+    #[test]
+    fn cli_data_path_wins_over_file_config() {
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "--data-path",
+                "/runtime/from-cli",
+                "--library-path",
+                "/library",
+            ])
+            .expect("CLI args should parse");
+
+        let mut cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let file_config = FileConfig {
+            koshelf: Some(KoshelfSection {
+                data_path: Some(PathBuf::from("/runtime/from-config")),
+                ..KoshelfSection::default()
+            }),
+            ..FileConfig::default()
+        };
+
+        merge_with_file_config(&mut cli, &file_config, &matches);
+
+        assert_eq!(
+            cli.data_path,
+            Some(PathBuf::from("/runtime/from-cli")),
+            "explicit CLI value should not be overridden by config file"
+        );
+    }
+
+    #[test]
+    fn file_config_data_path_is_used_when_cli_not_explicit() {
+        let matches = Cli::command()
+            .try_get_matches_from(["koshelf", "--library-path", "/library"])
+            .expect("CLI args should parse");
+
+        let mut cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let file_config = FileConfig {
+            koshelf: Some(KoshelfSection {
+                data_path: Some(PathBuf::from("/runtime/from-config")),
+                ..KoshelfSection::default()
+            }),
+            ..FileConfig::default()
+        };
+
+        merge_with_file_config(&mut cli, &file_config, &matches);
+
+        assert_eq!(
+            cli.data_path,
+            Some(PathBuf::from("/runtime/from-config")),
+            "config file should provide fallback value"
+        );
     }
 }

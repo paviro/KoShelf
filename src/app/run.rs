@@ -1,27 +1,36 @@
-use super::config::{Cli, SiteConfig, parse_time_to_seconds};
+use super::config::{Cli, Command, SiteConfig, parse_time_to_seconds, parse_trusted_proxy_nets};
 use crate::pipeline::export::{ExportConfig, export_data_files};
 use crate::pipeline::frontend;
 use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::generate_recap_share_images;
 use crate::pipeline::watcher::FileWatcher;
-use crate::server::WebServer;
-use crate::server::api::responses::site::{SiteCapabilities, SiteData};
+use crate::server::api::responses::site::{PasswordPolicy, SiteCapabilities, SiteData};
+use crate::server::auth::AuthState;
+use crate::server::auth::client_addr::ClientAddrResolver;
+use crate::server::auth::password::{
+    generate_random_password, generate_token_key, get_stored_auth, hash_password,
+    set_password_hash_and_revoke_sessions, set_stored_auth,
+};
+use crate::server::auth::rate_limit::login_rate_limiter;
+use crate::server::auth::session::{cleanup_expired, paseto_key_from_bytes};
+use crate::server::{WebServer, WebServerOptions};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::{
-    RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
+    KOSHELF_DB_FILENAME, RuntimeDataPathOptions, RuntimeDataPolicy, resolve_runtime_data_policy,
 };
 use crate::store::memory::{ReadingDataStore, SiteStore, UpdateNotifier};
-use crate::store::sqlite::migrations::run_library_migrations;
-use crate::store::sqlite::pool::open_library_pool;
 use crate::store::sqlite::repo::LibraryRepository;
+use crate::store::sqlite::{
+    open_koshelf_pool, open_library_pool, run_koshelf_migrations, run_library_migrations,
+};
 use anyhow::{Context, Result};
-use log::info;
+use log::{info, warn};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tempfile::TempDir;
+use std::time::Duration;
 
 enum RunMode {
     StaticExport,
@@ -31,8 +40,6 @@ enum RunMode {
 
 struct OutputPlan {
     output_dir: PathBuf,
-    /// Keep alive for Serve mode so the temp directory is cleaned up on exit.
-    _temp_dir: Option<TempDir>,
     mode: RunMode,
 }
 
@@ -40,31 +47,22 @@ fn plan_output(cli: &Cli, runtime_data_policy: &RuntimeDataPolicy) -> Result<Out
     match (&cli.output, cli.watch) {
         (Some(dir), false) => Ok(OutputPlan {
             output_dir: dir.clone(),
-            _temp_dir: None,
             mode: RunMode::StaticExport,
         }),
         (Some(dir), true) => Ok(OutputPlan {
             output_dir: dir.clone(),
-            _temp_dir: None,
             mode: RunMode::WatchStatic,
         }),
-        (None, _) => match runtime_data_policy.persistent_data_dir() {
-            Some(data_dir) => Ok(OutputPlan {
+        (None, _) => {
+            let data_dir = runtime_data_policy
+                .persistent_data_dir()
+                .context("Serve mode requires a persistent data directory")?;
+
+            Ok(OutputPlan {
                 output_dir: data_dir.to_path_buf(),
-                _temp_dir: None,
                 mode: RunMode::Serve,
-            }),
-            None => {
-                // In ephemeral server mode, use a temp runtime-data directory cleaned up on exit.
-                let tmp =
-                    tempfile::tempdir().context("Failed to create temporary output directory")?;
-                Ok(OutputPlan {
-                    output_dir: tmp.path().to_path_buf(),
-                    _temp_dir: Some(tmp),
-                    mode: RunMode::Serve,
-                })
-            }
-        },
+            })
+        }
     }
 }
 
@@ -86,10 +84,126 @@ fn resolve_runtime_data_policy_for_run(cli: &Cli) -> RuntimeDataPolicy {
     resolve_runtime_data_policy(&cli_overrides)
 }
 
+async fn run_command(command: Command, fallback_data_path: Option<PathBuf>) -> Result<()> {
+    match command {
+        Command::ListLanguages => {
+            println!("{}", crate::i18n::list_supported_languages());
+            Ok(())
+        }
+        Command::Github => {
+            println!("https://github.com/paviro/KOShelf");
+            Ok(())
+        }
+        Command::SetPassword {
+            data_path,
+            password,
+            random,
+            overwrite,
+        } => {
+            let resolved_data_path = data_path.or(fallback_data_path).context(
+                "set-password requires a data path. Provide --data-path, set KOSHELF_DATA_PATH, or configure koshelf.data_path in your config file",
+            )?;
+            run_set_password_command(resolved_data_path, password, random, overwrite).await
+        }
+    }
+}
+
+async fn run_set_password_command(
+    data_path: PathBuf,
+    password_arg: Option<String>,
+    random: bool,
+    overwrite: bool,
+) -> Result<()> {
+    std::fs::create_dir_all(&data_path).with_context(|| {
+        format!(
+            "Failed to create data directory for set-password command at {}",
+            data_path.display()
+        )
+    })?;
+
+    let koshelf_db_path = data_path.join(KOSHELF_DB_FILENAME);
+
+    let koshelf_pool = open_koshelf_pool(&koshelf_db_path)
+        .await
+        .context("Failed to open KoShelf app DB")?;
+    run_koshelf_migrations(&koshelf_pool)
+        .await
+        .context("Failed to run KoShelf app DB migrations")?;
+
+    let stored_auth = get_stored_auth(&koshelf_pool).await?;
+    if stored_auth.is_some() && !overwrite {
+        info!(
+            "Authentication password is already initialized. Re-run with --overwrite to replace it."
+        );
+        return Ok(());
+    }
+
+    let (new_password, is_random_password) = if random {
+        (generate_random_password()?, true)
+    } else {
+        let password = match password_arg {
+            Some(value) => value,
+            None => {
+                let first = rpassword::prompt_password("New password: ")
+                    .context("Failed to read password from terminal")?;
+                let second = rpassword::prompt_password("Confirm new password: ")
+                    .context("Failed to read password confirmation from terminal")?;
+                if first != second {
+                    anyhow::bail!("Passwords do not match")
+                }
+                first
+            }
+        };
+        (password, false)
+    };
+
+    let new_hash = hash_password(&new_password)?;
+
+    match stored_auth {
+        Some((_stored_hash, _stored_token_key)) => {
+            set_password_hash_and_revoke_sessions(&koshelf_pool, &new_hash, None).await?;
+        }
+        None => {
+            let token_key = generate_token_key()?;
+            set_stored_auth(&koshelf_pool, &new_hash, &token_key).await?;
+        }
+    }
+
+    if is_random_password {
+        eprintln!();
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!("SET-PASSWORD");
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!("Generated authentication password: {}", new_password);
+        eprintln!("This password will not be shown again. Save it now.");
+        eprintln!(
+            "--------------------------------------------------------------------------------"
+        );
+        eprintln!();
+    }
+
+    info!(
+        "Authentication password updated successfully for data path {}",
+        data_path.display()
+    );
+
+    Ok(())
+}
+
 /// Run KoShelf with the provided CLI args.
 ///
 /// `src/main.rs` is responsible for logging init and Clap argument parsing.
 pub async fn run(cli: Cli) -> Result<()> {
+    let mut cli = cli;
+
+    if let Some(command) = cli.command.take() {
+        return run_command(command, cli.data_path.clone()).await;
+    }
+
     info!("Starting KOShelf...");
 
     cli.validate()?;
@@ -126,20 +240,12 @@ pub async fn run(cli: Cli) -> Result<()> {
     let plan = plan_output(&cli, &runtime_data_policy)?;
     let is_internal_server = matches!(plan.mode, RunMode::Serve);
 
-    // In ephemeral mode, determine where runtime data (library DB) lives.
+    // In ephemeral mode, use a separate temp directory for runtime data.
     let _runtime_temp_dir = if !runtime_data_policy.is_persistent() {
-        if is_internal_server {
-            // Serve mode: output_dir is already a temp dir; reuse it.
-            runtime_data_policy.set_resolved_data_dir(plan.output_dir.clone());
-            None
-        } else {
-            // Static export: use a separate temp dir so library.sqlite
-            // doesn't land in the user's output directory.
-            let tmp =
-                tempfile::tempdir().context("Failed to create temporary runtime data directory")?;
-            runtime_data_policy.set_resolved_data_dir(tmp.path().to_path_buf());
-            Some(tmp)
-        }
+        let tmp =
+            tempfile::tempdir().context("Failed to create temporary runtime data directory")?;
+        runtime_data_policy.set_resolved_data_dir(tmp.path().to_path_buf());
+        Some(tmp)
     } else {
         None
     };
@@ -163,8 +269,19 @@ pub async fn run(cli: Cli) -> Result<()> {
         is_internal_server,
         language: cli.language.clone(),
         use_stable_page_metadata: !cli.ignore_stable_page_metadata,
+        auth_enabled: cli.enable_auth,
         runtime_data_policy,
     };
+
+    if is_internal_server {
+        let data_dir = config
+            .runtime_data_policy
+            .persistent_data_dir()
+            .context("Serve mode requires --data-path")?;
+        std::fs::create_dir_all(data_dir).with_context(|| {
+            format!("Failed to create runtime data directory at {:?}", data_dir)
+        })?;
+    }
 
     // ── 1. Create DB (always) ──────────────────────────────────────────
     let db_path = config
@@ -224,6 +341,14 @@ pub async fn run(cli: Cli) -> Result<()> {
     // ── 7. Build site metadata from DB ─────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
     let (has_books, has_comics) = repo.query_content_type_flags().await?;
+    let password_policy = if config.auth_enabled {
+        Some(PasswordPolicy {
+            min_chars: crate::server::auth::password::MIN_PASSWORD_CHARS,
+        })
+    } else {
+        None
+    };
+
     let site_data = SiteData {
         title: config.site_title.clone(),
         language: config.language.clone(),
@@ -231,7 +356,10 @@ pub async fn run(cli: Cli) -> Result<()> {
             has_books,
             has_comics,
             has_reading_data,
+            auth_enabled: config.auth_enabled,
         },
+        authenticated: None,
+        password_policy,
     };
 
     // ── 8. Static data file export ─────────────────────────────────────
@@ -266,6 +394,91 @@ pub async fn run(cli: Cli) -> Result<()> {
         }
 
         RunMode::Serve => {
+            let koshelf_db_path = config
+                .runtime_data_policy
+                .koshelf_db_path()
+                .context("Failed to resolve KoShelf DB path")?;
+
+            let koshelf_pool = open_koshelf_pool(&koshelf_db_path)
+                .await
+                .context("Failed to open KoShelf app DB")?;
+
+            run_koshelf_migrations(&koshelf_pool)
+                .await
+                .context("Failed to run KoShelf app DB migrations")?;
+
+            let trusted_proxies = parse_trusted_proxy_nets(&cli.trusted_proxies)?;
+
+            let client_addr_resolver = Arc::new(ClientAddrResolver::new(trusted_proxies));
+
+            let auth_state = if cli.enable_auth {
+                let token_key_bytes = if let Some((_stored_hash, stored_token_key)) =
+                    get_stored_auth(&koshelf_pool).await?
+                {
+                    stored_token_key
+                } else {
+                    let generated_password = generate_random_password()?;
+                    let password_hash = hash_password(&generated_password)?;
+                    let token_key = generate_token_key()?;
+                    set_stored_auth(&koshelf_pool, &password_hash, &token_key).await?;
+
+                    let data_path_hint = config
+                        .runtime_data_policy
+                        .persistent_data_dir()
+                        .map(|path| path.display().to_string())
+                        .unwrap_or_else(|| "<data-path>".to_string());
+
+                    eprintln!();
+                    eprintln!(
+                        "--------------------------------------------------------------------------------"
+                    );
+                    eprintln!("AUTHENTICATION ENABLED (FIRST RUN)");
+                    eprintln!(
+                        "--------------------------------------------------------------------------------"
+                    );
+                    eprintln!("Generated authentication password: {}", generated_password);
+                    eprintln!("This password will not be shown again. Save it now.");
+                    eprintln!(
+                        "To set a new one later, run: koshelf set-password --data-path {} --overwrite",
+                        data_path_hint
+                    );
+                    eprintln!(
+                        "--------------------------------------------------------------------------------"
+                    );
+                    eprintln!();
+
+                    token_key
+                };
+
+                cleanup_expired(&koshelf_pool).await?;
+
+                let cleanup_pool = koshelf_pool.clone();
+                let cleanup_handle = tokio::spawn(async move {
+                    let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
+                    interval.tick().await;
+                    loop {
+                        interval.tick().await;
+                        if let Err(error) = cleanup_expired(&cleanup_pool).await {
+                            warn!("Failed to clean up expired sessions: {}", error);
+                        }
+                    }
+                });
+                if cleanup_handle.is_finished() {
+                    warn!("Session cleanup background task exited unexpectedly");
+                }
+
+                let paseto_key = paseto_key_from_bytes(&token_key_bytes)?;
+
+                Some(AuthState {
+                    pool: koshelf_pool.clone(),
+                    token_key: Arc::new(paseto_key),
+                    login_limiter: Arc::new(login_rate_limiter()),
+                    client_addr_resolver: client_addr_resolver.clone(),
+                })
+            } else {
+                None
+            };
+
             let revision_epoch = format!("serve_{}", &generated_at);
             let initial_generated_at = generated_at;
 
@@ -287,14 +500,16 @@ pub async fn run(cli: Cli) -> Result<()> {
                 Some(repo.clone()),
             );
 
-            let web_server = WebServer::new(
-                plan.output_dir,
-                cli.port,
+            let web_server = WebServer::new(WebServerOptions {
+                media_cache_dir: plan.output_dir,
+                port: cli.port,
                 site_store,
                 reading_data_store,
                 update_notifier,
-                repo,
-            );
+                library_repo: repo,
+                koshelf_pool,
+                auth_state,
+            });
 
             tokio::select! {
                 result = file_watcher.run() => {

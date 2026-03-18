@@ -8,6 +8,7 @@ import {
     CalendarRoute,
     LibraryDetailRoute,
     LibraryListRoute,
+    LoginRoute,
     RecapRoute,
     SettingsRoute,
     StatisticsRoute,
@@ -16,6 +17,9 @@ import { routePathPattern } from './route-registry';
 
 type AppRoutesProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
+    siteTitle: string;
+    authEnabled: boolean;
+    authenticated: boolean;
     siteLoaded: boolean;
 };
 
@@ -43,7 +47,13 @@ function RouteChunkFallback() {
     );
 }
 
-export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
+export function AppRoutes({
+    defaultRoute,
+    siteTitle,
+    authEnabled,
+    authenticated,
+    siteLoaded,
+}: AppRoutesProps) {
     return (
         <>
             <RouteScrollRestoration />
@@ -54,6 +64,18 @@ export function AppRoutes({ defaultRoute, siteLoaded }: AppRoutesProps) {
                         element={
                             <RootRedirect
                                 defaultRoute={defaultRoute}
+                                siteLoaded={siteLoaded}
+                            />
+                        }
+                    />
+                    <Route
+                        path={routePathPattern('login')}
+                        element={
+                            <LoginRoute
+                                defaultRoute={defaultRoute}
+                                siteTitle={siteTitle}
+                                authEnabled={authEnabled}
+                                authenticated={authenticated}
                                 siteLoaded={siteLoaded}
                             />
                         }

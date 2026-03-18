@@ -2,6 +2,7 @@ import { generatePath, matchPath } from 'react-router';
 
 export type RouteId =
     | 'root'
+    | 'login'
     | 'statistics'
     | 'calendar'
     | 'settings'
@@ -30,6 +31,7 @@ type RouteDefinition = {
 
 export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
     { id: 'root', path: '/', mainRouteId: null },
+    { id: 'login', path: '/login', mainRouteId: null },
     { id: 'statistics', path: '/statistics', mainRouteId: 'statistics' },
     { id: 'calendar', path: '/calendar', mainRouteId: 'calendar' },
     { id: 'settings', path: '/settings', mainRouteId: 'settings' },

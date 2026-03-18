@@ -1,0 +1,5 @@
+[advisories]
+ignore = [
+    # Pulled in transitively by sqlx's macro support; KoShelf only uses SQLite.
+    "RUSTSEC-2023-0071",
+]

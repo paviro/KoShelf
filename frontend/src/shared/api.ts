@@ -77,6 +77,12 @@ function getClient(): ApiClient {
 
 export const api: ApiClient = {
     getSite: () => getClient().getSite(),
+    login: (password: string) => getClient().login(password),
+    getSessions: () => getClient().getSessions(),
+    revokeSession: (sessionId: string) => getClient().revokeSession(sessionId),
+    changePassword: (currentPassword: string, newPassword: string) =>
+        getClient().changePassword(currentPassword, newPassword),
+    logout: () => getClient().logout(),
     getItems: (scope?: ScopeValue) => getClient().getItems(scope),
     getItem: (id: string) => getClient().getItem(id),
     getReadingSummary: (scope: ScopeValue, from?: string, to?: string) =>

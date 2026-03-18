@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 
 import { AppRoutes } from './app/routes/AppRoutes';
+import { matchRoute } from './app/routes/route-registry';
 import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
@@ -58,21 +59,41 @@ export function App() {
 
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);
+    const siteTitle = site?.title ?? 'KoShelf';
+    const authEnabled = site?.capabilities.auth_enabled === true;
+    const authenticated = site?.authenticated === true;
+    const routeMatch = matchRoute(location.pathname);
+    const isLoginRoute = routeMatch.routeId === 'login';
+
+    const routes = (
+        <div className="min-h-full">
+            <AppRoutes
+                defaultRoute={defaultRoute}
+                siteTitle={siteTitle}
+                authEnabled={authEnabled}
+                authenticated={authenticated}
+                siteLoaded={siteQuery.isSuccess || siteQuery.isError}
+            />
+        </div>
+    );
+
+    if (isLoginRoute) {
+        return (
+            <div className="min-h-full bg-gray-100 dark:bg-dark-925 text-gray-900 dark:text-white font-sans">
+                {routes}
+            </div>
+        );
+    }
 
     return (
         <AppShell
             navItems={navItems}
             currentPath={location.pathname}
-            siteTitle={site?.title ?? 'KoShelf'}
+            siteTitle={siteTitle}
             generatedAt={site?.generated_at}
             version={site?.version}
         >
-            <div className="min-h-full">
-                <AppRoutes
-                    defaultRoute={defaultRoute}
-                    siteLoaded={siteQuery.isSuccess || siteQuery.isError}
-                />
-            </div>
+            {routes}
         </AppShell>
     );
 }

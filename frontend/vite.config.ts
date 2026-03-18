@@ -18,6 +18,10 @@ export default defineConfig(({ mode }) => {
                     target: backendTarget,
                     changeOrigin: true,
                 },
+                '/core': {
+                    target: backendTarget,
+                    changeOrigin: true,
+                },
             },
         },
         build: {
@@ -26,13 +30,13 @@ export default defineConfig(({ mode }) => {
             emptyOutDir: true,
             rollupOptions: {
                 output: {
-                    entryFileNames: 'assets/js/[name]-[hash].js',
-                    chunkFileNames: 'assets/js/[name]-[hash].js',
+                    entryFileNames: 'core/js/[name]-[hash].js',
+                    chunkFileNames: 'core/js/[name]-[hash].js',
                     assetFileNames: (assetInfo) => {
                         if (assetInfo.name?.endsWith('.css')) {
-                            return 'assets/css/[name]-[hash][extname]';
+                            return 'core/css/[name]-[hash][extname]';
                         }
-                        return 'assets/[name]-[hash][extname]';
+                        return 'core/[name]-[hash][extname]';
                     },
                 },
             },

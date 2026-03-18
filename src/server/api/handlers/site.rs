@@ -1,28 +1,49 @@
 use axum::{
     Json,
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header::CACHE_CONTROL},
     response::{IntoResponse, Response},
 };
 
 use crate::server::ServerState;
 use crate::server::api::responses::common::ApiResponse;
-use crate::server::api::responses::site::{SiteCapabilities, SiteData};
+use crate::server::api::responses::site::SiteData;
+use crate::server::auth::SESSION_COOKIE_NAME;
+use crate::server::auth::client_addr::ClientContext;
+use crate::server::auth::middleware::cookie_value;
+use crate::server::auth::session::validate_token;
 
-fn empty_site_data() -> SiteData {
-    SiteData {
-        title: String::new(),
-        language: "en_US".to_string(),
-        capabilities: SiteCapabilities::default(),
-    }
-}
-
-pub(crate) async fn site(State(state): State<ServerState>) -> Response {
-    let data = state
+pub(crate) async fn site(
+    State(state): State<ServerState>,
+    client_context: ClientContext,
+    headers: HeaderMap,
+) -> Response {
+    let mut data = state
         .site_store
         .get()
         .map(|arc| (*arc).clone())
-        .unwrap_or_else(empty_site_data);
+        .unwrap_or_else(SiteData::default);
 
-    (StatusCode::OK, Json(ApiResponse::new(data))).into_response()
+    if let Some(auth_state) = state.auth_state.as_ref() {
+        let is_authenticated = match cookie_value(&headers, SESSION_COOKIE_NAME) {
+            Some(token) => validate_token(
+                auth_state.token_key.as_ref(),
+                &auth_state.pool,
+                &token,
+                client_context.client_ip,
+            )
+            .await
+            .unwrap_or(None)
+            .is_some(),
+            None => false,
+        };
+        data.authenticated = Some(is_authenticated);
+    }
+
+    (
+        StatusCode::OK,
+        [(CACHE_CONTROL, "private, no-store")],
+        Json(ApiResponse::new(data)),
+    )
+        .into_response()
 }

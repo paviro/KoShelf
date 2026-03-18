@@ -2,14 +2,32 @@ export interface SiteCapabilities {
     has_books: boolean;
     has_comics: boolean;
     has_reading_data: boolean;
+    auth_enabled: boolean;
+}
+
+export interface PasswordPolicy {
+    min_chars: number;
 }
 
 export interface SiteData {
     title: string;
     language: string;
     capabilities: SiteCapabilities;
+    authenticated?: boolean;
+    password_policy?: PasswordPolicy;
     version?: string;
     generated_at?: string;
+}
+
+export interface SessionInfo {
+    id: string;
+    user_agent?: string | null;
+    browser: string;
+    os: string;
+    last_seen_ip?: string | null;
+    created_at: string;
+    last_seen_at: string;
+    is_current: boolean;
 }
 
 // ── Response envelope ─────────────────────────────────────────────────────

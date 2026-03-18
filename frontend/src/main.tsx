@@ -6,6 +6,7 @@ import { HashRouter } from 'react-router';
 import './styles/app.css';
 import { App } from './App';
 import { api } from './shared/api';
+import { isLoginHashRoute, redirectToLogin } from './shared/api-fetch';
 import type { SiteData } from './shared/contracts';
 import { translation } from './shared/i18n';
 import { RuntimeUpdatesBridge } from './shared/runtime-updates';
@@ -45,6 +46,14 @@ async function bootstrap(): Promise<void> {
         queryClient.setQueryData(['site'], initialSite);
     } catch {
         initialSite = null;
+    }
+
+    if (
+        initialSite?.capabilities.auth_enabled === true &&
+        initialSite.authenticated !== true &&
+        !isLoginHashRoute()
+    ) {
+        redirectToLogin();
     }
 
     await translation.init(initialSite?.language);
