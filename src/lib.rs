@@ -11,8 +11,8 @@ pub mod shelf;
 pub mod source;
 pub mod store;
 
-pub use app::Cli;
-pub use app::run;
+pub use app::config::{Cli, CliCommand};
+pub use app::dispatch;
 
 #[cfg(test)]
 mod tests;
