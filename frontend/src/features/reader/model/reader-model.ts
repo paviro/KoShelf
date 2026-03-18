@@ -31,6 +31,7 @@ export type FoliateView = HTMLElement &
     ReaderTargetingView & {
         isFixedLayout?: boolean;
         renderer?: FoliateRenderer;
+        lastLocation?: { cfi?: string };
         open: (book: File | Blob | string) => Promise<void>;
         init: (opts: {
             lastLocation?: string;

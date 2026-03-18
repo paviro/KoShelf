@@ -16,6 +16,7 @@ import {
 } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
+import { StorageManager } from '../../../shared/storage-manager';
 import type { LibraryAnnotation } from '../../library/api/library-data';
 import { useLibraryDetailQuery } from '../../library/hooks/useLibraryQueries';
 import type { LibraryCollection } from '../../library/model/library-model';
@@ -33,6 +34,8 @@ import type {
     ReaderHighlightValue,
     ReaderLocation,
 } from '../model/reader-model';
+
+const READER_POSITION_KEY_PREFIX = 'reader_position_';
 
 export type ReaderActiveNote = {
     note: string;
@@ -313,6 +316,13 @@ export function useReaderView(
                         scrubSettlingRef.current = false;
                         setDragFraction(null);
                     }
+                    const cfi = view.lastLocation?.cfi;
+                    if (cfi && id) {
+                        StorageManager.setSessionByKey(
+                            `${READER_POSITION_KEY_PREFIX}${id}`,
+                            cfi,
+                        );
+                    }
                 }) as EventListener);
                 detachHighlightDrawListener = attachHighlightDrawListener(
                     view,
@@ -341,7 +351,21 @@ export function useReaderView(
 
                 await view.open(file);
                 applyReaderPresentation(view);
-                await view.init({ showTextStart: true });
+
+                const hasAnnotationTarget =
+                    highlightIndex !== null || bookmarkIndex !== null;
+                const savedCfi =
+                    !hasAnnotationTarget && id
+                        ? StorageManager.getSessionByKey<string>(
+                              `${READER_POSITION_KEY_PREFIX}${id}`,
+                          )
+                        : null;
+
+                if (savedCfi) {
+                    await view.init({ lastLocation: savedCfi });
+                } else {
+                    await view.init({ showTextStart: true });
+                }
 
                 if (cancelled) {
                     return;
@@ -453,6 +477,7 @@ export function useReaderView(
         hasItem,
         highlightIndex,
         highlights,
+        id,
         normalizedFormat,
         scrubSettlingRef,
         setDragFraction,
