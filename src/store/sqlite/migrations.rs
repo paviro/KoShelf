@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use log::warn;
 use sqlx::SqlitePool;
+use sqlx::migrate::MigrateError;
 
 use super::pool::LIBRARY_DB_REQUIRED_TABLES;
 
@@ -14,29 +15,30 @@ pub async fn run_library_migrations(pool: &SqlitePool) -> Result<()> {
 
     match migrator.run(pool).await {
         Ok(()) => Ok(()),
-        Err(_) => {
-            warn!("Library DB schema changed — resetting database");
+        Err(MigrateError::VersionMismatch(version)) => {
+            warn!("Library DB migration {version} was modified — resetting database");
             reset_library_db(pool).await?;
             migrator
                 .run(pool)
                 .await
                 .context("Failed to run library DB migrations after reset")
         }
+        Err(error) => Err(error).context("Failed to run library DB migrations"),
     }
 }
 
 /// Drop all library tables and the sqlx migration tracking table.
 async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
-    for table in LIBRARY_DB_REQUIRED_TABLES {
+    for table in LIBRARY_DB_REQUIRED_TABLES.iter().rev() {
         sqlx::query(&format!("DROP TABLE IF EXISTS {table}"))
             .execute(pool)
             .await
-            .ok();
+            .with_context(|| format!("Failed to drop table `{table}` during library DB reset"))?;
     }
     sqlx::query("DROP TABLE IF EXISTS _sqlx_migrations")
         .execute(pool)
         .await
-        .ok();
+        .context("Failed to drop `_sqlx_migrations` table during library DB reset")?;
     Ok(())
 }
 
@@ -85,6 +87,53 @@ mod tests {
         run_library_migrations(&pool)
             .await
             .expect("second migration run should succeed");
+    }
+
+    #[tokio::test]
+    async fn version_mismatch_resets_and_reapplies_schema() {
+        let pool = open_library_pool_in_memory()
+            .await
+            .expect("in-memory pool should open");
+
+        run_library_migrations(&pool)
+            .await
+            .expect("first migration run should succeed");
+
+        sqlx::query(
+            "INSERT INTO library_items (
+                id, file_path, format, content_type, title, status,
+                cover_url, search_base_path, created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        )
+        .bind("book-1")
+        .bind("/books/book-1.epub")
+        .bind("epub")
+        .bind("book")
+        .bind("Book 1")
+        .bind("reading")
+        .bind("/assets/covers/book-1.webp")
+        .bind("/books")
+        .bind("2026-01-01T00:00:00Z")
+        .bind("2026-01-01T00:00:00Z")
+        .execute(&pool)
+        .await
+        .expect("seed row should insert");
+
+        sqlx::query("UPDATE _sqlx_migrations SET checksum = X'00' WHERE version = 1")
+            .execute(&pool)
+            .await
+            .expect("should be able to tamper migration checksum");
+
+        run_library_migrations(&pool)
+            .await
+            .expect("version mismatch should trigger reset and re-apply");
+
+        let item_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM library_items")
+            .fetch_one(&pool)
+            .await
+            .expect("count query should succeed");
+
+        assert_eq!(item_count, 0, "reset should clear cached library rows");
     }
 
     async fn sqlite_object_exists(pool: &sqlx::SqlitePool, object_type: &str, name: &str) -> bool {
