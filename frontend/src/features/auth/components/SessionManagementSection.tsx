@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, isApiHttpError } from '../../../shared/api';
 import { redirectToLogin } from '../../../shared/api-fetch';
@@ -18,10 +18,7 @@ const RELATIVE_TIME_UNITS: ReadonlyArray<{
     { unit: 'second', seconds: 1 },
 ];
 
-function formatRelativeTimeFromNow(
-    timestamp: string,
-    locale: string,
-): string {
+function formatRelativeTimeFromNow(timestamp: string, locale: string): string {
     const parsedTime = Date.parse(timestamp);
     if (Number.isNaN(parsedTime)) {
         return '--';
@@ -51,9 +48,9 @@ function resolveGenericApiErrorMessage(error: unknown): string {
     return translation.get('error-state.connection-title');
 }
 
-function sortSessionsByLastSeenDesc<
-    Session extends { last_seen_at: string },
->(sessions: Session[]): Session[] {
+function sortSessionsByLastSeenDesc<Session extends { last_seen_at: string }>(
+    sessions: Session[],
+): Session[] {
     return [...sessions].sort((left, right) => {
         const leftTime = Date.parse(left.last_seen_at);
         const rightTime = Date.parse(right.last_seen_at);
@@ -81,6 +78,7 @@ type SessionManagementSectionProps = {
 export function SessionManagementSection({
     locale,
 }: SessionManagementSectionProps) {
+    const queryClient = useQueryClient();
     const sessionsQuery = useQuery({
         queryKey: ['auth', 'sessions'],
         queryFn: () => api.getSessions(),
@@ -89,16 +87,12 @@ export function SessionManagementSection({
         type: 'success' | 'error';
         message: string;
     } | null>(null);
-    const [revokePendingId, setRevokePendingId] = useState<string | null>(
-        null,
-    );
+    const [revokePendingId, setRevokePendingId] = useState<string | null>(null);
     const [logoutPending, setLogoutPending] = useState(false);
 
     const orderedSessions = useMemo(() => {
         const sessions = sessionsQuery.data ?? [];
-        const currentSession = sessions.find(
-            (session) => session.is_current,
-        );
+        const currentSession = sessions.find((session) => session.is_current);
         const otherSessions = sortSessionsByLastSeenDesc(
             sessions.filter((session) => !session.is_current),
         );
@@ -148,6 +142,7 @@ export function SessionManagementSection({
 
         try {
             await api.logout();
+            queryClient.clear();
             redirectToLogin();
         } catch (error) {
             setFeedback({
@@ -156,7 +151,7 @@ export function SessionManagementSection({
             });
             setLogoutPending(false);
         }
-    }, [logoutPending]);
+    }, [logoutPending, queryClient]);
 
     return (
         <>
@@ -199,20 +194,16 @@ export function SessionManagementSection({
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {session.browser} on{' '}
-                                            {session.os}
+                                            {session.browser} on {session.os}
                                         </p>
                                         {session.is_current ? (
                                             <span className="text-xs font-medium px-2 py-0.5 rounded-full border border-primary-300/70 dark:border-primary-600/70 text-primary-700 dark:text-primary-300 bg-primary-100/80 dark:bg-primary-900/40">
-                                                {translation.get(
-                                                    'this-device',
-                                                )}
+                                                {translation.get('this-device')}
                                             </span>
                                         ) : null}
                                     </div>
                                     <p className="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
-                                        {session.last_seen_ip ?? '--'}{' '}
-                                        ·{' '}
+                                        {session.last_seen_ip ?? '--'} ·{' '}
                                         {translation.get('last-active')}{' '}
                                         {formatRelativeTimeFromNow(
                                             session.last_seen_at,
@@ -226,9 +217,7 @@ export function SessionManagementSection({
                                         type="button"
                                         className="inline-flex items-center justify-center rounded-lg min-w-28 px-4 py-2.5 text-sm font-medium border border-gray-300/80 dark:border-dark-600 bg-gray-50 dark:bg-dark-800/70 text-gray-800 dark:text-dark-100 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                                         disabled={logoutPending}
-                                        onClick={() =>
-                                            void handleLogout()
-                                        }
+                                        onClick={() => void handleLogout()}
                                     >
                                         {translation.get('logout')}
                                     </button>
@@ -240,9 +229,7 @@ export function SessionManagementSection({
                                             revokePendingId === session.id
                                         }
                                         onClick={() =>
-                                            void handleRevokeSession(
-                                                session.id,
-                                            )
+                                            void handleRevokeSession(session.id)
                                         }
                                     >
                                         {translation.get('revoke-session')}
