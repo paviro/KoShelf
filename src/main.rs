@@ -38,14 +38,5 @@ async fn main() -> Result<()> {
         merge_with_file_config(&mut cli, fc, &matches);
     }
 
-    if cli.github {
-        println!("https://github.com/paviro/KOShelf");
-        return Ok(());
-    }
-
-    if cli.list_languages {
-        println!("{}", koshelf::i18n::list_supported_languages());
-        return Ok(());
-    }
     run(cli).await
 }

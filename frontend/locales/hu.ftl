@@ -42,6 +42,34 @@ preview-date = Dátum előnézet
 preview-number = Szám előnézet
 region-setting-majority-group = Leggyakoribb régiók
 region-setting-all-group = Minden támogatott régió
+login = Bejelentkezés
+login-title = Jelentkezz be: { $site }
+login-password = Jelszó
+login-submit = Bejelentkezés
+login-error = Érvénytelen jelszó
+login-rate-limited = Túl sok próbálkozás. Kérjük, próbáld újra hamarosan.
+password-setting = Jelszó
+change-password = Jelszó módosítása
+current-password = Jelenlegi jelszó
+new-password = Új jelszó
+confirm-password = Jelszó megerősítése
+password-changed = A jelszó sikeresen módosítva
+password-too-short = A jelszónak legalább { $min } karakter hosszúnak kell lennie
+password-mismatch = A jelszavak nem egyeznek
+incorrect-password = Hibás jelenlegi jelszó
+sessions-setting = Munkamenetek
+current-session = Jelenlegi munkamenet
+this-device = Ez az eszköz
+last-active = Utoljára aktív
+revoke-session = Visszavonás
+revoke-session-confirm = Visszavonod ezt a munkamenetet?
+session-revoked = Munkamenet visszavonva
+session-device-info = { $browser } – { $os }
+logout = Kijelentkezés
+current-password-placeholder = Jelenlegi jelszó megadása
+new-password-placeholder = Min. 8 karakter
+new-password-hint = Legalább 8 karakter hosszú legyen
+confirm-password-placeholder = Új jelszó újra
 
 # -----------------------------------
 #        Book List & Library

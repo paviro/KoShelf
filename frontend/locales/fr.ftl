@@ -49,6 +49,34 @@ preview-date = Aperçu Date
 preview-number = Aperçu Nombre
 region-setting-majority-group = Régions à majorité linguistique
 region-setting-all-group = Toutes les régions prises en charge
+login = Se connecter
+login-title = Connectez-vous à { $site }
+login-password = Mot de passe
+login-submit = Se connecter
+login-error = Mot de passe invalide
+login-rate-limited = Trop de tentatives. Veuillez réessayer bientôt.
+password-setting = Mot de passe
+change-password = Changer le mot de passe
+current-password = Mot de passe actuel
+new-password = Nouveau mot de passe
+confirm-password = Confirmer le mot de passe
+password-changed = Mot de passe modifié avec succès
+password-too-short = Le mot de passe doit comporter au moins { $min } caractères
+password-mismatch = Les mots de passe ne correspondent pas
+incorrect-password = Mot de passe actuel incorrect
+sessions-setting = Sessions
+current-session = Session actuelle
+this-device = Cet appareil
+last-active = Dernière activité
+revoke-session = Révoquer
+revoke-session-confirm = Révoquer cette session ?
+session-revoked = Session révoquée
+session-device-info = { $browser } sur { $os }
+logout = Se déconnecter
+current-password-placeholder = Saisir le mot de passe actuel
+new-password-placeholder = Min. 8 caractères
+new-password-hint = Doit comporter au moins 8 caractères
+confirm-password-placeholder = Ressaisir le nouveau mot de passe
 
 # -----------------------------------
 #        Book List & Library

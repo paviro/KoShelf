@@ -14,9 +14,7 @@ pub fn routes() -> Router {
         .route("/", get(react_shell_index_handler))
         .route("/index.html", get(react_shell_index_handler))
         .route("/manifest.json", get(react_shell_manifest_handler))
-        .route("/assets/icons/{*path}", get(react_shell_icon_handler))
-        .route("/assets/js/{*path}", get(react_shell_js_handler))
-        .route("/assets/css/{*path}", get(react_shell_css_handler))
+        .route("/core/{*path}", get(react_shell_core_asset_handler))
 }
 
 async fn react_shell_index_handler() -> Response {
@@ -27,18 +25,8 @@ async fn react_shell_manifest_handler() -> Response {
     serve_embedded_frontend_file("manifest.json")
 }
 
-async fn react_shell_icon_handler(Path(path): Path<String>) -> Response {
-    let full_path = format!("assets/icons/{}", path);
-    serve_embedded_frontend_file(&full_path)
-}
-
-async fn react_shell_js_handler(Path(path): Path<String>) -> Response {
-    let full_path = format!("assets/js/{}", path);
-    serve_embedded_frontend_file(&full_path)
-}
-
-async fn react_shell_css_handler(Path(path): Path<String>) -> Response {
-    let full_path = format!("assets/css/{}", path);
+async fn react_shell_core_asset_handler(Path(path): Path<String>) -> Response {
+    let full_path = format!("core/{}", path);
     serve_embedded_frontend_file(&full_path)
 }
 

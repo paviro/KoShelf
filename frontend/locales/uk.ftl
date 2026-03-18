@@ -49,6 +49,34 @@ preview-date = Попередній перегляд Дата
 preview-number = Попередній перегляд Число
 region-setting-majority-group = Регіони з мовною більшістю
 region-setting-all-group = Усі підтримувані регіони
+login = Увійти
+login-title = Увійдіть до { $site }
+login-password = Пароль
+login-submit = Увійти
+login-error = Неправильний пароль
+login-rate-limited = Забагато спроб. Спробуйте ще раз трохи згодом.
+password-setting = Пароль
+change-password = Змінити пароль
+current-password = Поточний пароль
+new-password = Новий пароль
+confirm-password = Підтвердьте пароль
+password-changed = Пароль успішно змінено
+password-too-short = Пароль має містити щонайменше { $min } символів
+password-mismatch = Паролі не збігаються
+incorrect-password = Неправильний поточний пароль
+sessions-setting = Сеанси
+current-session = Поточний сеанс
+this-device = Цей пристрій
+last-active = Остання активність
+revoke-session = Відкликати
+revoke-session-confirm = Відкликати цей сеанс?
+session-revoked = Сеанс відкликано
+session-device-info = { $browser } на { $os }
+logout = Вийти
+current-password-placeholder = Введіть поточний пароль
+new-password-placeholder = Мін. 8 символів
+new-password-hint = Має містити щонайменше 8 символів
+confirm-password-placeholder = Повторіть новий пароль
 
 # -----------------------------------
 #        Book List & Library
