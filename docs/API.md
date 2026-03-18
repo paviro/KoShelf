@@ -16,6 +16,8 @@ Every successful response is wrapped in an `ApiResponse<T>` envelope:
 }
 ```
 
+For readability, endpoint examples below show the inner `data` payload unless stated otherwise.
+
 Error responses use a separate shape:
 
 ```json
@@ -35,6 +37,10 @@ Error responses use a separate shape:
 | `invalid_week_key` | 400 | Week key is not a valid Monday date |
 | `invalid_month_key` | 400 | Month key is not in YYYY-MM format |
 | `invalid_year` | 400 | Year is not a valid 4-digit number |
+| `invalid_credentials` | 400 or 401 | Invalid login password or current password |
+| `password_too_short` | 400 | New password does not meet minimum length |
+| `unauthorized` | 401 | Missing, invalid, or expired session |
+| `rate_limited` | 429 | Too many authentication attempts |
 | `not_found` | 404 | Requested resource does not exist |
 | `internal_server_error` | 500 | Server-side error |
 
@@ -515,6 +521,124 @@ Each completion item:
 | `story_url` | string | URL to story-format share image |
 | `square_url` | string | URL to square-format share image |
 | `banner_url` | string | URL to banner-format share image |
+
+---
+
+### `POST /api/auth/login`
+
+Auth endpoints are available only when authentication is enabled in serve mode (`--enable-auth`).
+
+Authenticate and receive a session cookie. Not protected by auth middleware.
+
+**Request Body:**
+
+```json
+{
+  "password": "string"
+}
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+Sets a `koshelf_session` cookie (HttpOnly, SameSite=Strict, 30-day TTL). The `Secure` flag is set when served over HTTPS.
+
+**Status Codes:** 200, 401 (wrong password), 404 (auth not configured), 429 (rate limited — includes `Retry-After` header)
+
+---
+
+### `POST /api/auth/logout`
+
+End the current session and clear the session cookie. Requires authentication.
+
+**Request Body:** None
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Status Codes:** 200, 401 (not authenticated), 404 (auth not configured)
+
+---
+
+### `PUT /api/auth/password`
+
+Change the authentication password. Requires authentication. Rate limited.
+
+**Request Body:**
+
+```json
+{
+  "current_password": "string",
+  "new_password": "string"
+}
+```
+
+`new_password` must be 8–1024 characters.
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+Revokes all other sessions on success — only the current session is preserved.
+
+**Status Codes:** 200, 400 (wrong current password or invalid new password), 401, 429 (rate limited — includes `Retry-After` header)
+
+---
+
+### `GET /api/auth/sessions`
+
+List all active (non-expired) sessions. Requires authentication.
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid-v7",
+    "user_agent": "Mozilla/5.0 ...",
+    "browser": "Firefox 128",
+    "os": "Linux",
+    "last_seen_ip": "192.168.1.1",
+    "created_at": "2026-03-01T10:00:00Z",
+    "last_seen_at": "2026-03-18T14:30:00Z",
+    "is_current": true
+  }
+]
+```
+
+Ordered by `last_seen_at` descending. `browser` and `os` are parsed from the user agent string.
+
+**Status Codes:** 200, 401, 404 (auth not configured)
+
+---
+
+### `DELETE /api/auth/sessions/{session_id}`
+
+Revoke a specific session. Cannot revoke the current session (use logout instead). Requires authentication.
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Status Codes:** 200, 400 (cannot revoke current session), 401, 404 (session not found or auth not configured)
 
 ---
 
