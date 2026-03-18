@@ -48,10 +48,12 @@ function buildHighlightValue(
     value: string,
     color?: string,
     drawer?: string | null,
+    note?: string | null,
 ): ReaderHighlightValue {
     const highlight: ReaderHighlightValue = { value };
     if (color) highlight.color = color;
     if (drawer) highlight.drawer = drawer;
+    if (note) highlight.note = note;
     return highlight;
 }
 
@@ -61,8 +63,9 @@ function appendHighlightValue(
     value: string,
     color?: string,
     drawer?: string | null,
+    note?: string | null,
 ) {
-    const highlight = buildHighlightValue(value, color, drawer);
+    const highlight = buildHighlightValue(value, color, drawer, note);
     const existing = bySection.get(sectionIndex);
     if (existing) {
         existing.push(highlight);
@@ -170,7 +173,12 @@ export async function resolveHighlightsBySection(
                 if (cfi) {
                     const color = highlightColor(annotation.color, isDark);
                     sectionHighlights.push(
-                        buildHighlightValue(cfi, color, annotation.drawer),
+                        buildHighlightValue(
+                            cfi,
+                            color,
+                            annotation.drawer,
+                            annotation.note,
+                        ),
                     );
                 } else {
                     unresolvedHinted.push(annotation);
@@ -218,6 +226,7 @@ export async function resolveHighlightsBySection(
             cfi,
             color,
             annotation.drawer,
+            annotation.note,
         );
     });
 

@@ -34,6 +34,10 @@ import type {
     ReaderLocation,
 } from '../model/reader-model';
 
+export type ReaderActiveNote = {
+    note: string;
+};
+
 export type UseReaderViewResult = {
     containerRef: RefObject<HTMLDivElement | null>;
     loading: boolean;
@@ -41,6 +45,8 @@ export type UseReaderViewResult = {
     backHref: string;
     title: string;
     chapterLabel: string;
+    activeNote: ReaderActiveNote | null;
+    dismissNote: () => void;
     handleBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     handlePrev: () => void;
     handleNext: () => void;
@@ -76,6 +82,10 @@ export function useReaderView(
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [location, setLocationState] = useState<ReaderLocation | null>(null);
+    const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
+    const noteMapRef = useRef(new Map<string, ReaderActiveNote>());
+
+    const dismissNote = useCallback(() => setActiveNote(null), []);
 
     const supportsReader = isReaderFormatSupported(item?.format);
     const normalizedFormat = supportsReader
@@ -158,9 +168,12 @@ export function useReaderView(
         let cancelled = false;
         let currentView: FoliateView | null = null;
         let detachHighlightDrawListener: (() => void) | null = null;
+        let showAnnotationListener: EventListener | null = null;
 
         setLoading(true);
         setError(null);
+        setActiveNote(null);
+        noteMapRef.current.clear();
 
         const initReader = async () => {
             try {
@@ -216,6 +229,18 @@ export function useReaderView(
                     number,
                     Set<string>
                 >();
+
+                const registerNotes = (
+                    sectionHighlights: ReaderHighlightValue[],
+                ) => {
+                    for (const h of sectionHighlights) {
+                        if (h.note) {
+                            noteMapRef.current.set(h.value, {
+                                note: h.note,
+                            });
+                        }
+                    }
+                };
 
                 const addHighlightsForSection = async (
                     sectionIndex: number,
@@ -283,6 +308,7 @@ export function useReaderView(
                     };
                     setLocationState(loc);
                     setLocation(loc);
+                    setActiveNote(null);
                     if (scrubSettlingRef.current) {
                         scrubSettlingRef.current = false;
                         setDragFraction(null);
@@ -292,6 +318,21 @@ export function useReaderView(
                     view,
                     renderers,
                 );
+
+                showAnnotationListener = ((e: CustomEvent) => {
+                    const detail = e.detail as { value?: string } | undefined;
+                    if (!detail?.value) {
+                        setActiveNote(null);
+                        return;
+                    }
+
+                    setActiveNote(noteMapRef.current.get(detail.value) ?? null);
+                }) as EventListener;
+                view.addEventListener(
+                    'show-annotation',
+                    showAnnotationListener,
+                );
+
                 view.addEventListener('create-overlay', createOverlayListener);
 
                 container.appendChild(view);
@@ -331,6 +372,7 @@ export function useReaderView(
                                 return;
                             }
 
+                            registerNotes(sectionHighlights);
                             highlightsBySection.set(
                                 sectionIndex,
                                 sectionHighlights,
@@ -366,6 +408,7 @@ export function useReaderView(
                     sectionIndex,
                     sectionHighlights,
                 ] of resolvedHighlights) {
+                    registerNotes(sectionHighlights);
                     highlightsBySection.set(sectionIndex, sectionHighlights);
                 }
 
@@ -391,6 +434,12 @@ export function useReaderView(
         return () => {
             cancelled = true;
             detachHighlightDrawListener?.();
+            if (showAnnotationListener && currentView) {
+                currentView.removeEventListener(
+                    'show-annotation',
+                    showAnnotationListener,
+                );
+            }
             if (currentView === viewRef.current) {
                 closeReaderView();
             }
@@ -422,6 +471,8 @@ export function useReaderView(
         backHref,
         title,
         chapterLabel,
+        activeNote,
+        dismissNote,
         handleBackClick,
         handlePrev,
         handleNext,

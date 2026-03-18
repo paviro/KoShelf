@@ -4,6 +4,7 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { translation } from '../../../shared/i18n';
 import { ReaderErrorState } from '../components/ReaderErrorState';
 import { ReaderHeader } from '../components/ReaderHeader';
+import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
@@ -28,6 +29,8 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         backHref,
         title,
         chapterLabel,
+        activeNote,
+        dismissNote,
         handleBackClick,
         handlePrev,
         handleNext,
@@ -76,6 +79,12 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                     ref={containerRef}
                     className="w-full h-full bg-white dark:bg-dark-925"
                     style={{ visibility: loading ? 'hidden' : 'visible' }}
+                />
+
+                <ReaderNotePopover
+                    open={activeNote !== null}
+                    note={activeNote?.note ?? null}
+                    onDismiss={dismissNote}
                 />
             </main>
 

@@ -83,6 +83,7 @@ export type ReaderHighlightValue = {
     value: string;
     color?: string;
     drawer?: string;
+    note?: string;
 };
 
 export type ResolveHighlightsBySectionOptions = {

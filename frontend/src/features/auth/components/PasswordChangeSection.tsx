@@ -40,10 +40,7 @@ function resolvePasswordChangeError(
         error.code === 'password_too_short'
     ) {
         return translation.get('password-too-short', {
-            min: minPasswordCharsFromDetails(
-                error.details,
-                fallbackMinChars,
-            ),
+            min: minPasswordCharsFromDetails(error.details, fallbackMinChars),
         });
     }
 
