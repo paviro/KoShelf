@@ -46,6 +46,22 @@ pub async fn open_library_pool(path: &Path) -> Result<SqlitePool> {
         .with_context(|| format!("Failed to open library DB at {}", path.display()))
 }
 
+/// Open a SQLite connection pool for the KoShelf app DB at the given file path.
+pub async fn open_koshelf_pool(path: &Path) -> Result<SqlitePool> {
+    let url = format!("sqlite:{}?mode=rwc", path.display());
+    let options = SqliteConnectOptions::from_str(&url)
+        .with_context(|| format!("Invalid KoShelf DB path: {}", path.display()))?
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .foreign_keys(true);
+
+    SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(options)
+        .await
+        .with_context(|| format!("Failed to open KoShelf DB at {}", path.display()))
+}
+
 /// Open an in-memory SQLite pool for ephemeral / test usage.
 ///
 /// Uses a single connection so the in-memory database is shared across queries.

@@ -36,6 +36,8 @@ pub struct SiteConfig {
     pub language: String,
     /// Whether KOReader stable page metadata is used for page totals and scaling
     pub use_stable_page_metadata: bool,
+    /// Whether password authentication is enabled in serve mode
+    pub auth_enabled: bool,
     /// Resolved runtime lifecycle policy for shared runtime data storage
     pub runtime_data_policy: RuntimeDataPolicy,
 }

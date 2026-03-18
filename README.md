@@ -32,6 +32,9 @@
     - [Basic Usage](#basic-usage)
     - [Operation Modes](#operation-modes)
     - [Command Line Options](#command-line-options)
+    - [Subcommands](#subcommands)
+    - [Configuration Sources & Precedence](#configuration-sources--precedence)
+    - [Authentication in Serve Mode](#authentication-in-serve-mode)
     - [Stable Page Metadata & Scaling](#stable-page-metadata--scaling)
     - [Example](#example)
 - [KoReader Setup](#koreader-setup)
@@ -56,6 +59,7 @@
 - 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished items, hours read), and rich per-item details
 - 📈 **Per-Item Statistics**: Detailed statistics for each item including session count, average session duration, reading speed, and last read date
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
+- 🔐 **Optional Authentication**: Password-protect server mode with session-based auth and login rate limiting
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
 - 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
@@ -201,19 +205,23 @@ The binary will be available at `target/release/koshelf`.
 KoShelf can operate in several modes:
 
 1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
-2. **Web Server Mode**: Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified)
+2. **Web Server Mode**: Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified). Requires `--data-path`.
 3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
 
 ### Command Line Options
 
+- `-c, --config`: Path to a TOML configuration file (`koshelf.toml` is auto-loaded when present)
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
 - `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
 - `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided)
 - `-o, --output`: Output directory for the generated site
+- `--data-path`: Persistent runtime data directory for serve mode (required when `--output` is not set)
 - `-p, --port`: Port for web server mode (default: 3000)
 - `-w, --watch`: Enable file watching with static output (requires `--output`)
 - `-t, --title`: Site title (default: "KoShelf")
+- `--enable-auth`: Enable password authentication in serve mode
+- `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries used for forwarded client IP/proto resolution
 - `--include-unread`: Include unread items (files without KoReader metadata)
 - `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is `2h` (pass `auto` for automatic scaling)
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
@@ -223,9 +231,51 @@ KoShelf can operate in several modes:
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics. Since `--min-time-per-day` defaults to `30s`, it is active unless explicitly overridden. Use `--min-time-per-day off` to disable this filter.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
 - `--ignore-stable-page-metadata`: Ignore KOReader stable page metadata for page totals and page-based stats scaling. By default, stable metadata is used when available.
-- `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
-- `--list-languages`: List all supported languages and exit
-- `--github`: Print GitHub repository URL
+- `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US` (see `list-languages` subcommand)
+
+### Subcommands
+
+- `koshelf list-languages`: Print all supported UI locales
+- `koshelf github`: Print the repository URL
+- `koshelf set-password --data-path <PATH> [--password <VALUE>] [--overwrite]`: Set or rotate the serve-mode authentication password
+    - without `--password`, KoShelf prompts interactively
+    - `--data-path` can be omitted when provided by `KOSHELF_DATA_PATH` or `koshelf.toml`
+    - without `--overwrite`, command is idempotent (no-op if password already exists)
+
+### Configuration Sources & Precedence
+
+For main app runs (non-subcommand flow), settings are merged in this order:
+
+1. CLI arguments
+2. Environment variables
+3. Config file (`--config` or default `koshelf.toml`)
+4. Built-in defaults
+
+Common environment variables:
+
+- `KOSHELF_LIBRARY_PATH`
+- `KOSHELF_STATISTICS_DB`
+- `KOSHELF_OUTPUT`
+- `KOSHELF_DATA_PATH`
+- `KOSHELF_ENABLE_AUTH`
+- `KOSHELF_TRUSTED_PROXIES`
+- `KOSHELF_TITLE`
+- `KOSHELF_LANGUAGE`
+
+Use `koshelf --help` to see the full env mapping for every option.
+
+Subcommands use the same precedence model. For `set-password`, data path resolution is: command `--data-path` > top-level `--data-path` / `KOSHELF_DATA_PATH` > config file.
+
+### Authentication in Serve Mode
+
+Authentication is optional and only applies in serve mode.
+
+1. Start server with a persistent data path: `--data-path /path/to/runtime-data`
+2. Enable auth: `--enable-auth`
+3. On first run, KoShelf generates a password and prints it once
+4. Rotate password anytime via `koshelf set-password --data-path /path/to/runtime-data --overwrite`
+
+Protected routes include `/api/**` (except `GET /api/site` and `POST /api/auth/login`) and runtime assets under `/assets/**`. Shell assets under `/core/**` remain public.
 
 ### Stable Page Metadata & Scaling
 
@@ -262,7 +312,13 @@ Compatibility note:
 ./koshelf -i ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
 # Start web server with live file watching and statistics
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -p 8080
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data -p 8080
+
+# Start web server with authentication enabled (password generated on first run)
+./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data --enable-auth
+
+# Set/rotate auth password explicitly
+./koshelf set-password --data-path ~/koshelf-data --overwrite
 
 # Generate static site with file watching and statistics
 ./koshelf --library-path ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch

@@ -10,7 +10,7 @@ build = "build.rs"
 
 [dependencies]
 # CLI
-clap = { version = "4.5.40", features = ["derive"] }
+clap = { version = "4.5.40", features = ["derive", "env"] }
 # Error handling
 anyhow = "1.0.98"
 # Async
@@ -67,7 +67,7 @@ tower-http = { version = "0.6", features = [
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "derive", "json"] }
 chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"
@@ -81,6 +81,12 @@ icu_locid = "1.4"
 fluent = "0.17"
 fluent-bundle = "0.16"
 intl-memoizer = "0.5"
+argon2 = "0.5"
+rusty_paseto = "0.9"
+rpassword = "7.4"
+governor = "0.10.4"
+uuid = { version = "1", features = ["v7"] }
+ipnet = "2"
 
 [target.'cfg(not(windows))'.dependencies]
 # Memory allocator

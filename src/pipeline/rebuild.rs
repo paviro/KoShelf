@@ -141,6 +141,7 @@ pub async fn targeted_rebuild(
                     has_books,
                     has_comics,
                     has_reading_data,
+                    auth_enabled: config.auth_enabled,
                 },
             };
 
@@ -256,6 +257,7 @@ pub async fn full_rebuild(
             has_books,
             has_comics,
             has_reading_data,
+            auth_enabled: config.auth_enabled,
         },
     };
 

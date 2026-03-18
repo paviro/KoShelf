@@ -27,6 +27,15 @@ pub async fn run_library_migrations(pool: &SqlitePool) -> Result<()> {
     }
 }
 
+/// Run all pending KoShelf application DB migrations.
+pub async fn run_koshelf_migrations(pool: &SqlitePool) -> Result<()> {
+    let migrator = sqlx::migrate!("src/store/sqlite/migrations/koshelf");
+    migrator
+        .run(pool)
+        .await
+        .context("Failed to run KoShelf DB migrations")
+}
+
 /// Drop all library tables and the sqlx migration tracking table.
 async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
     for table in LIBRARY_DB_REQUIRED_TABLES.iter().rev() {
@@ -44,7 +53,7 @@ async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::run_library_migrations;
+    use super::{run_koshelf_migrations, run_library_migrations};
     use crate::store::sqlite::pool::{
         LIBRARY_DB_REQUIRED_INDEXES, LIBRARY_DB_REQUIRED_TABLES, open_library_pool_in_memory,
     };
@@ -144,5 +153,29 @@ mod tests {
             .await
             .expect("schema query should succeed")
             .is_some()
+    }
+
+    #[tokio::test]
+    async fn creates_koshelf_auth_schema() {
+        let pool = open_library_pool_in_memory()
+            .await
+            .expect("in-memory pool should open");
+
+        run_koshelf_migrations(&pool)
+            .await
+            .expect("migrations should succeed");
+
+        assert!(
+            sqlite_object_exists(&pool, "table", "auth").await,
+            "expected `auth` table to exist"
+        );
+        assert!(
+            sqlite_object_exists(&pool, "table", "sessions").await,
+            "expected `sessions` table to exist"
+        );
+        assert!(
+            sqlite_object_exists(&pool, "index", "idx_sessions_expires_at_unix").await,
+            "expected `idx_sessions_expires_at_unix` index to exist"
+        );
     }
 }

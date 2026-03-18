@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 pub const LIBRARY_DB_FILENAME: &str = "library.sqlite";
+pub const KOSHELF_DB_FILENAME: &str = "koshelf.sqlite";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RuntimeDataPathOptions {
@@ -73,6 +74,13 @@ impl RuntimeDataPolicy {
             .as_deref()
             .map(|dir| dir.join(LIBRARY_DB_FILENAME))
     }
+
+    /// Path to the KoShelf application DB inside the resolved data directory.
+    pub fn koshelf_db_path(&self) -> Option<PathBuf> {
+        self.resolved_data_dir
+            .as_deref()
+            .map(|dir| dir.join(KOSHELF_DB_FILENAME))
+    }
 }
 
 pub fn resolve_runtime_data_policy(cli: &RuntimeDataPathOptions) -> RuntimeDataPolicy {
@@ -107,8 +115,8 @@ fn ephemeral_policy() -> RuntimeDataPolicy {
 #[cfg(test)]
 mod tests {
     use super::{
-        LIBRARY_DB_FILENAME, RuntimeDataLifecycle, RuntimeDataPathOptions, RuntimeDataPolicySource,
-        resolve_runtime_data_policy,
+        KOSHELF_DB_FILENAME, LIBRARY_DB_FILENAME, RuntimeDataLifecycle, RuntimeDataPathOptions,
+        RuntimeDataPolicySource, resolve_runtime_data_policy,
     };
     use std::path::PathBuf;
 
@@ -187,5 +195,19 @@ mod tests {
         );
         // persistent_data_dir still returns None for ephemeral policies
         assert_eq!(policy.persistent_data_dir(), None);
+    }
+
+    #[test]
+    fn koshelf_db_path_is_derived_from_resolved_data_dir() {
+        let cli = options(Some("/runtime/data"));
+
+        let policy = resolve_runtime_data_policy(&cli);
+
+        assert_eq!(
+            policy.koshelf_db_path(),
+            Some(PathBuf::from(format!(
+                "/runtime/data/{KOSHELF_DB_FILENAME}"
+            )))
+        );
     }
 }

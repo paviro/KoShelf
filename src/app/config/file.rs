@@ -37,6 +37,8 @@ pub struct KoshelfSection {
 #[serde(deny_unknown_fields)]
 pub struct ServerSection {
     pub port: Option<u16>,
+    pub enable_auth: Option<bool>,
+    pub trusted_proxies: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Default, Debug)]

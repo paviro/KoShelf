@@ -7,6 +7,9 @@ pub enum ApiErrorCode {
     InvalidWeekKey,
     InvalidMonthKey,
     InvalidYear,
+    InvalidCredentials,
+    Unauthorized,
+    RateLimited,
     NotFound,
     InternalServerError,
 }
@@ -18,6 +21,9 @@ impl ApiErrorCode {
             Self::InvalidWeekKey => "week_key must be a valid Monday date in YYYY-MM-DD format",
             Self::InvalidMonthKey => "month_key must be in YYYY-MM format",
             Self::InvalidYear => "year must be a valid YYYY value",
+            Self::InvalidCredentials => "invalid credentials",
+            Self::Unauthorized => "unauthorized",
+            Self::RateLimited => "too many requests",
             Self::NotFound => "requested resource was not found",
             Self::InternalServerError => "internal server error",
         }

@@ -149,6 +149,7 @@ pub async fn export_data_files(
                 has_books,
                 has_comics,
                 has_reading_data,
+                auth_enabled: false,
             },
         },
     )?;
