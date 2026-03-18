@@ -48,6 +48,8 @@
 
 **Home Assistant** — [One-click install](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
 
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=5d189d71_koshelf&repository_url=https%3A%2F%2Fgithub.com%2Fpaviro%2Fhome-assistant-addons)
+
 **Docker Compose** — Community-maintained image via [koshelf-docker](https://github.com/DevTigro/koshelf-docker). See the [Installation Guide](docs/installation.md) for a sample `docker-compose.yml`.
 
 **Prebuilt binaries** — Download from the [releases page](https://github.com/paviro/koshelf/releases) (Windows x64, macOS, Linux x64/ARM64).
