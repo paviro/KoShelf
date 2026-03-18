@@ -13,6 +13,7 @@ type LoginRouteProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
     siteTitle: string;
     authEnabled: boolean;
+    authenticated: boolean;
     siteLoaded: boolean;
 };
 
@@ -36,6 +37,7 @@ export function LoginRoute({
     defaultRoute,
     siteTitle,
     authEnabled,
+    authenticated,
     siteLoaded,
 }: LoginRouteProps) {
     const navigate = useNavigate();
@@ -58,6 +60,11 @@ export function LoginRoute({
 
         if (!authEnabled) {
             setSessionCheckPending(false);
+            return;
+        }
+
+        if (authenticated) {
+            navigate(defaultRoute, { replace: true });
             return;
         }
 
@@ -91,7 +98,7 @@ export function LoginRoute({
         return () => {
             cancelled = true;
         };
-    }, [authEnabled, defaultRoute, navigate, siteLoaded]);
+    }, [authenticated, authEnabled, defaultRoute, navigate, siteLoaded]);
 
     if (!siteLoaded || sessionCheckPending) {
         return (

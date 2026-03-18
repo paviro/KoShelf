@@ -19,6 +19,7 @@ type AppRoutesProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
     siteTitle: string;
     authEnabled: boolean;
+    authenticated: boolean;
     siteLoaded: boolean;
 };
 
@@ -50,6 +51,7 @@ export function AppRoutes({
     defaultRoute,
     siteTitle,
     authEnabled,
+    authenticated,
     siteLoaded,
 }: AppRoutesProps) {
     return (
@@ -73,6 +75,7 @@ export function AppRoutes({
                                 defaultRoute={defaultRoute}
                                 siteTitle={siteTitle}
                                 authEnabled={authEnabled}
+                                authenticated={authenticated}
                                 siteLoaded={siteLoaded}
                             />
                         }

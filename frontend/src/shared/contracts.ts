@@ -9,6 +9,7 @@ export interface SiteData {
     title: string;
     language: string;
     capabilities: SiteCapabilities;
+    authenticated?: boolean;
     version?: string;
     generated_at?: string;
 }

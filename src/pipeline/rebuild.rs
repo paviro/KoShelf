@@ -143,6 +143,7 @@ pub async fn targeted_rebuild(
                     has_reading_data,
                     auth_enabled: config.auth_enabled,
                 },
+                authenticated: None,
             };
 
             if let Some(site_store) = site_store {
@@ -259,6 +260,7 @@ pub async fn full_rebuild(
             has_reading_data,
             auth_enabled: config.auth_enabled,
         },
+        authenticated: None,
     };
 
     if let Some(store) = site_store {

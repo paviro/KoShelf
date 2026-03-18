@@ -350,6 +350,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             has_reading_data,
             auth_enabled: config.auth_enabled,
         },
+        authenticated: None,
     };
 
     // ── 8. Static data file export ─────────────────────────────────────

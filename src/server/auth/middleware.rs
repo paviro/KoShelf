@@ -74,7 +74,7 @@ fn is_protected_path(method: &Method, path: &str) -> bool {
     path == "/assets" || path.starts_with("/assets/")
 }
 
-fn cookie_value(request: &Request, key: &str) -> Option<String> {
+pub(crate) fn cookie_value(request: &Request, key: &str) -> Option<String> {
     let raw = request.headers().get(COOKIE)?.to_str().ok()?;
 
     for part in raw.split(';') {

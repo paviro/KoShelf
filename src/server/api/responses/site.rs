@@ -15,6 +15,8 @@ pub struct SiteData {
     pub title: String,
     pub language: String,
     pub capabilities: SiteCapabilities,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authenticated: Option<bool>,
 }
 
 impl Default for SiteData {
@@ -23,6 +25,7 @@ impl Default for SiteData {
             title: String::new(),
             language: "en_US".to_string(),
             capabilities: SiteCapabilities::default(),
+            authenticated: None,
         }
     }
 }
@@ -43,6 +46,7 @@ impl SiteData {
                 has_reading_data,
                 auth_enabled: false,
             },
+            authenticated: None,
         }
     }
 }
