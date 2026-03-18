@@ -4,187 +4,34 @@ use ipnet::IpNet;
 use regex::Regex;
 use std::path::PathBuf;
 
-/// KoShelf CLI arguments.
+/// KoShelf — a reading companion powered by KOReader metadata.
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    #[command(subcommand)]
-    pub command: Option<Command>,
-
     /// Path to a TOML configuration file
-    #[arg(short = 'c', long, env = "KOSHELF_CONFIG", display_order = 0)]
+    #[arg(short = 'c', long, env = "KOSHELF_CONFIG", global = true)]
     pub config: Option<PathBuf>,
 
-    /// Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata.
-    /// Can be specified multiple times. (optional if statistics_db is provided)
-    #[arg(short = 'i', visible_short_alias = 'b', long, env = "KOSHELF_LIBRARY_PATH", alias = "books-path", display_order = 1, action = clap::ArgAction::Append)]
-    pub library_path: Vec<PathBuf>,
-
-    /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --books-path. Mutually exclusive with --hashdocsettings-path.
-    #[arg(long, env = "KOSHELF_DOCSETTINGS_PATH", display_order = 2)]
-    pub docsettings_path: Option<PathBuf>,
-
-    /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --books-path. Mutually exclusive with --docsettings-path.
-    #[arg(long, env = "KOSHELF_HASHDOCSETTINGS_PATH", display_order = 3)]
-    pub hashdocsettings_path: Option<PathBuf>,
-
-    /// Path to the statistics.sqlite3 file for additional reading stats (optional if books_path is provided)
-    #[arg(short, long, env = "KOSHELF_STATISTICS_DB", display_order = 4)]
-    pub statistics_db: Option<PathBuf>,
-
-    /// Output directory for the generated static site (if not provided, starts web server with file watching)
-    #[arg(short, long, env = "KOSHELF_OUTPUT", display_order = 5)]
-    pub output: Option<PathBuf>,
-
-    /// Port for web server mode (default: 3000)
-    #[arg(
-        short,
-        long,
-        env = "KOSHELF_PORT",
-        default_value = "3000",
-        display_order = 6
-    )]
-    pub port: u16,
-
-    /// Enable file watching with static output (requires --output)
-    #[arg(
-        short,
-        long,
-        env = "KOSHELF_WATCH",
-        default_value = "false",
-        display_order = 7
-    )]
-    pub watch: bool,
-
-    /// Site title
-    #[arg(
-        short,
-        long,
-        env = "KOSHELF_TITLE",
-        default_value = "KoShelf",
-        display_order = 8
-    )]
-    pub title: String,
-
-    /// Include unread books (EPUBs without KoReader metadata) in the generated site
-    #[arg(
-        long,
-        env = "KOSHELF_INCLUDE_UNREAD",
-        default_value = "false",
-        display_order = 9
-    )]
-    pub include_unread: bool,
-
-    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "2h".
-    #[arg(
-        long,
-        env = "KOSHELF_HEATMAP_SCALE_MAX",
-        default_value = "2h",
-        display_order = 10
-    )]
-    pub heatmap_scale_max: String,
-
-    /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
-    #[arg(long, env = "KOSHELF_TIMEZONE", display_order = 11)]
-    pub timezone: Option<String>,
-
-    /// Logical day start time (HH:MM). Defaults to 00:00.
-    #[arg(
-        long,
-        env = "KOSHELF_DAY_START_TIME",
-        value_name = "HH:MM",
-        display_order = 12
-    )]
-    pub day_start_time: Option<String>,
-
-    /// Minimum pages read per day to be counted in statistics (optional)
-    #[arg(long, env = "KOSHELF_MIN_PAGES_PER_DAY", display_order = 13)]
-    pub min_pages_per_day: Option<u32>,
-
-    /// Minimum reading time per day to be counted in statistics (e.g., "30s", "15m", "1h", "off").
-    /// Default is "30s". Use "off" to disable this filter.
-    #[arg(
-        long,
-        env = "KOSHELF_MIN_TIME_PER_DAY",
-        default_value = "30s",
-        display_order = 14
-    )]
-    pub min_time_per_day: Option<String>,
-
-    /// Include statistics for all books in the database, not just those in --books-path.
-    /// By default, when --books-path is provided, statistics are filtered to only include
-    /// books present in that directory. Use this flag to include all statistics.
-    #[arg(
-        long,
-        env = "KOSHELF_INCLUDE_ALL_STATS",
-        default_value = "false",
-        display_order = 15
-    )]
-    pub include_all_stats: bool,
-
-    /// Default server language for UI translations.
-    /// Frontend language/region settings can override this per browser.
-    /// Use full locale (e.g., en_US, de_DE) for correct date formatting. Use `list-languages` to see available options.
-    #[arg(
-        long,
-        short = 'l',
-        env = "KOSHELF_LANGUAGE",
-        default_value = "en_US",
-        display_order = 16
-    )]
-    pub language: String,
-
-    /// Ignore KOReader stable page metadata for page totals and page-based stats scaling.
-    /// By default, stable page metadata is used when available.
-    #[arg(
-        long,
-        env = "KOSHELF_IGNORE_STABLE_PAGE_METADATA",
-        default_value = "false",
-        display_order = 19
-    )]
-    pub ignore_stable_page_metadata: bool,
-
-    /// Persistent runtime data directory for cache files (for example library.sqlite).
-    /// Used for runtime library DB and media cache persistence in serve mode.
-    #[arg(
-        long,
-        env = "KOSHELF_DATA_PATH",
-        alias = "data-dir",
-        display_order = 20
-    )]
-    pub data_path: Option<PathBuf>,
-
-    /// Enable password authentication in serve mode.
-    /// On first run, generates a random password and prints it to stderr.
-    #[arg(
-        long,
-        env = "KOSHELF_ENABLE_AUTH",
-        default_value = "false",
-        display_order = 21
-    )]
-    pub enable_auth: bool,
-
-    /// Trusted reverse proxy IPs/CIDRs allowed to provide Forwarded/X-Forwarded-* headers.
-    /// Repeat the flag or pass comma-separated values.
-    #[arg(long, env = "KOSHELF_TRUSTED_PROXIES", value_delimiter = ',', action = clap::ArgAction::Append, display_order = 22)]
-    pub trusted_proxies: Vec<String>,
+    #[command(subcommand)]
+    pub command: CliCommand,
 }
 
 #[derive(clap::Subcommand, Debug, Clone)]
-pub enum Command {
-    /// List all supported UI languages and exit.
-    ListLanguages,
+pub enum CliCommand {
+    /// Start the web server (API + live data refresh).
+    Serve(ServeArgs),
 
-    /// Print the GitHub repository URL and exit.
-    Github,
+    /// Generate a static site.
+    Export(ExportArgs),
 
     /// Set the authentication password.
-    /// No-ops if a password is already set (use --overwrite to replace it).
-    /// If no password argument is provided, prompts interactively unless --random is used.
+    #[command(long_about = "Set the authentication password.\n\n\
+        No-ops if a password is already set (use --overwrite to replace it).\n\
+        If no password argument is provided, prompts interactively unless --random is used.")]
     SetPassword {
         /// Path to the data directory containing koshelf.sqlite.
-        /// Falls back to top-level --data-path / KOSHELF_DATA_PATH / koshelf.toml when omitted.
-        #[arg(long)]
+        /// Falls back to KOSHELF_DATA_PATH env var or koshelf.toml when omitted.
+        #[arg(long, env = "KOSHELF_DATA_PATH")]
         data_path: Option<PathBuf>,
 
         /// The password to set. If omitted, prompts interactively via terminal.
@@ -202,6 +49,127 @@ pub enum Command {
         #[arg(long, default_value = "false")]
         overwrite: bool,
     },
+
+    /// List all supported UI languages and exit.
+    ListLanguages,
+
+    /// Print the GitHub repository URL and exit.
+    Github,
+}
+
+/// Flags shared by `serve` and `export` subcommands.
+#[derive(clap::Args, Debug, Clone)]
+pub struct CommonArgs {
+    // ── Library source ──────────────────────────────────────────
+    /// Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata.
+    /// Can be specified multiple times. (optional if statistics_db is provided)
+    #[arg(short = 'i', visible_short_alias = 'b', long, env = "KOSHELF_LIBRARY_PATH", alias = "books-path", action = clap::ArgAction::Append)]
+    pub library_path: Vec<PathBuf>,
+
+    /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --library-path. Mutually exclusive with --hashdocsettings-path.
+    #[arg(long, env = "KOSHELF_DOCSETTINGS_PATH")]
+    pub docsettings_path: Option<PathBuf>,
+
+    /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --library-path. Mutually exclusive with --docsettings-path.
+    #[arg(long, env = "KOSHELF_HASHDOCSETTINGS_PATH")]
+    pub hashdocsettings_path: Option<PathBuf>,
+
+    /// Path to the statistics.sqlite3 file for additional reading stats (optional if library_path is provided)
+    #[arg(short, long, env = "KOSHELF_STATISTICS_DB")]
+    pub statistics_db: Option<PathBuf>,
+
+    /// Include unread books (EPUBs without KoReader metadata) in the generated site
+    #[arg(long, env = "KOSHELF_INCLUDE_UNREAD", default_value = "false")]
+    pub include_unread: bool,
+
+    // ── Data ────────────────────────────────────────────────────
+    /// Persistent runtime data directory for cache files (for example library.sqlite).
+    #[arg(long, env = "KOSHELF_DATA_PATH", alias = "data-dir")]
+    pub data_path: Option<PathBuf>,
+
+    // ── Site display ────────────────────────────────────────────
+    /// Site title
+    #[arg(short, long, env = "KOSHELF_TITLE", default_value = "KoShelf")]
+    pub title: String,
+
+    /// Default server language for UI translations.
+    /// Frontend language/region settings can override this per browser.
+    /// Use full locale (e.g., en_US, de_DE) for correct date formatting. Use `list-languages` to see available options.
+    #[arg(long, short = 'l', env = "KOSHELF_LANGUAGE", default_value = "en_US")]
+    pub language: String,
+
+    /// Timezone to interpret timestamps (IANA name, e.g., "Australia/Sydney"). Defaults to system local timezone.
+    #[arg(long, env = "KOSHELF_TIMEZONE")]
+    pub timezone: Option<String>,
+
+    // ── Statistics tuning ───────────────────────────────────────
+    /// Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is "2h".
+    #[arg(long, env = "KOSHELF_HEATMAP_SCALE_MAX", default_value = "2h")]
+    pub heatmap_scale_max: String,
+
+    /// Logical day start time (HH:MM). Defaults to 00:00.
+    #[arg(long, env = "KOSHELF_DAY_START_TIME", value_name = "HH:MM")]
+    pub day_start_time: Option<String>,
+
+    /// Minimum pages read per day to be counted in statistics (optional)
+    #[arg(long, env = "KOSHELF_MIN_PAGES_PER_DAY")]
+    pub min_pages_per_day: Option<u32>,
+
+    /// Minimum reading time per day to be counted in statistics (e.g., "30s", "15m", "1h", "off").
+    /// Default is "30s". Use "off" to disable this filter.
+    #[arg(long, env = "KOSHELF_MIN_TIME_PER_DAY", default_value = "30s")]
+    pub min_time_per_day: Option<String>,
+
+    /// Include statistics for all books in the database, not just those in --library-path.
+    /// By default, when --library-path is provided, statistics are filtered to only include
+    /// books present in that directory. Use this flag to include all statistics.
+    #[arg(long, env = "KOSHELF_INCLUDE_ALL_STATS", default_value = "false")]
+    pub include_all_stats: bool,
+
+    /// Ignore KOReader stable page metadata for page totals and page-based stats scaling.
+    /// By default, stable page metadata is used when available.
+    #[arg(
+        long,
+        env = "KOSHELF_IGNORE_STABLE_PAGE_METADATA",
+        default_value = "false"
+    )]
+    pub ignore_stable_page_metadata: bool,
+}
+
+/// Arguments for the `serve` subcommand.
+#[derive(clap::Args, Debug, Clone)]
+pub struct ServeArgs {
+    #[command(flatten)]
+    pub common: CommonArgs,
+
+    /// Port for web server (default: 3000)
+    #[arg(short, long, env = "KOSHELF_PORT", default_value = "3000")]
+    pub port: u16,
+
+    /// Enable password authentication.
+    /// On first run, generates a random password and prints it to stderr.
+    #[arg(long, env = "KOSHELF_ENABLE_AUTH", default_value = "false")]
+    pub enable_auth: bool,
+
+    /// Trusted reverse proxy IPs/CIDRs allowed to provide Forwarded/X-Forwarded-* headers.
+    /// Repeat the flag or pass comma-separated values.
+    #[arg(long, env = "KOSHELF_TRUSTED_PROXIES", value_delimiter = ',', action = clap::ArgAction::Append)]
+    pub trusted_proxies: Vec<String>,
+}
+
+/// Arguments for the `export` subcommand.
+#[derive(clap::Args, Debug, Clone)]
+pub struct ExportArgs {
+    #[command(flatten)]
+    pub common: CommonArgs,
+
+    /// Output directory for the generated static site.
+    #[arg(env = "KOSHELF_OUTPUT")]
+    pub output: Option<PathBuf>,
+
+    /// Re-export on library changes.
+    #[arg(short, long, env = "KOSHELF_WATCH", default_value = "false")]
+    pub watch: bool,
 }
 
 /// Parse time format strings like "1h", "1h30m", "45min", "30s" into seconds.
@@ -253,13 +221,8 @@ pub fn parse_trusted_proxy_nets(entries: &[String]) -> Result<Vec<IpNet>> {
         .collect()
 }
 
-impl Cli {
-    /// Validate CLI inputs that are independent of runtime mode.
+impl CommonArgs {
     pub fn validate(&self) -> Result<()> {
-        if self.command.is_some() {
-            return Ok(());
-        }
-
         if self.library_path.is_empty() && self.statistics_db.is_none() {
             anyhow::bail!("Either --library-path or --statistics-db (or both) must be provided");
         }
@@ -318,10 +281,6 @@ impl Cli {
             }
         }
 
-        if self.output.is_some() && self.port != 3000 {
-            anyhow::bail!("--port can only be used in web server mode (without --output)");
-        }
-
         if let Some(ref stats_path) = self.statistics_db
             && !stats_path.exists()
         {
@@ -334,23 +293,6 @@ impl Cli {
         {
             anyhow::bail!("Data directory path is not a directory: {:?}", data_path);
         }
-
-        if self.output.is_none() && self.data_path.is_none() {
-            anyhow::bail!(
-                "--data-path is required in serve mode for persistent data storage. \
-                 Provide a directory path where KoShelf can store its database and cache files."
-            );
-        }
-
-        if self.output.is_some() && self.enable_auth {
-            anyhow::bail!("--enable-auth can only be used in serve mode (without --output)");
-        }
-
-        if self.output.is_some() && !self.trusted_proxies.is_empty() {
-            anyhow::bail!("--trusted-proxies can only be used in serve mode (without --output)");
-        }
-
-        parse_trusted_proxy_nets(&self.trusted_proxies)?;
 
         parse_time_to_seconds(&self.heatmap_scale_max).with_context(|| {
             format!(
@@ -368,10 +310,43 @@ impl Cli {
     }
 }
 
+impl ServeArgs {
+    pub fn validate(&self) -> Result<()> {
+        self.common.validate()?;
+
+        if self.common.data_path.is_none() {
+            anyhow::bail!(
+                "--data-path is required in serve mode for persistent data storage. \
+                 Provide a directory path where KoShelf can store its database and cache files."
+            );
+        }
+
+        parse_trusted_proxy_nets(&self.trusted_proxies)?;
+
+        Ok(())
+    }
+}
+
+impl ExportArgs {
+    pub fn validate(&self) -> Result<()> {
+        self.common.validate()?;
+
+        if self.output.is_none() {
+            anyhow::bail!(
+                "Output directory is required. Provide it as a positional argument, \
+                 via KOSHELF_OUTPUT env var, or as [output].path in your config file."
+            );
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Cli, Command, parse_time_to_seconds};
+    use super::{Cli, CliCommand, parse_time_to_seconds};
     use clap::{CommandFactory, FromArgMatches};
+    use std::path::PathBuf;
 
     #[test]
     fn parse_time_off_alias_maps_to_none() {
@@ -407,12 +382,12 @@ mod tests {
 
         let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
 
-        let Some(Command::SetPassword {
+        let CliCommand::SetPassword {
             password,
             random,
             overwrite,
             ..
-        }) = cli.command
+        } = cli.command
         else {
             panic!("expected set-password command")
         };
@@ -420,5 +395,110 @@ mod tests {
         assert_eq!(password, None);
         assert!(random);
         assert!(!overwrite);
+    }
+
+    #[test]
+    fn bare_koshelf_shows_help_error() {
+        let result = Cli::command().try_get_matches_from(["koshelf"]);
+        assert!(
+            result.is_err(),
+            "bare koshelf without subcommand should fail"
+        );
+    }
+
+    #[test]
+    fn serve_parses_common_and_specific_flags() {
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "--library-path",
+                "/lib",
+                "--data-path",
+                "/data",
+                "--port",
+                "8080",
+            ])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+
+        let CliCommand::Serve(args) = cli.command else {
+            panic!("expected serve command")
+        };
+
+        assert_eq!(args.common.library_path, vec![PathBuf::from("/lib")]);
+        assert_eq!(args.common.data_path, Some(PathBuf::from("/data")));
+        assert_eq!(args.port, 8080);
+    }
+
+    #[test]
+    fn export_parses_positional_output() {
+        let matches = Cli::command()
+            .try_get_matches_from(["koshelf", "export", "/out", "--library-path", "/lib"])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+
+        let CliCommand::Export(args) = cli.command else {
+            panic!("expected export command")
+        };
+
+        assert_eq!(args.output, Some(PathBuf::from("/out")));
+        assert_eq!(args.common.library_path, vec![PathBuf::from("/lib")]);
+    }
+
+    #[test]
+    fn serve_rejects_export_flags() {
+        let result = Cli::command().try_get_matches_from([
+            "koshelf",
+            "serve",
+            "--library-path",
+            "/lib",
+            "--watch",
+        ]);
+
+        assert!(result.is_err(), "--watch should not be valid for serve");
+    }
+
+    #[test]
+    fn export_rejects_serve_flags() {
+        let result = Cli::command().try_get_matches_from([
+            "koshelf",
+            "export",
+            "/out",
+            "--library-path",
+            "/lib",
+            "--port",
+            "8080",
+        ]);
+
+        assert!(result.is_err(), "--port should not be valid for export");
+    }
+
+    #[test]
+    fn common_flags_work_in_both_subcommands() {
+        for subcmd in ["serve", "export"] {
+            let mut args = vec![
+                "koshelf",
+                subcmd,
+                "--library-path",
+                "/lib",
+                "--title",
+                "My Shelf",
+                "--language",
+                "de_DE",
+            ];
+            if subcmd == "serve" {
+                args.extend(["--data-path", "/data"]);
+            } else {
+                args.push("/out");
+            }
+            let result = Cli::command().try_get_matches_from(args);
+            assert!(
+                result.is_ok(),
+                "common flags should work with {subcmd} subcommand"
+            );
+        }
     }
 }
