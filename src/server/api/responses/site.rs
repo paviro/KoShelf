@@ -9,12 +9,19 @@ pub struct SiteCapabilities {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PasswordPolicy {
+    pub min_chars: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SiteData {
     pub title: String,
     pub language: String,
     pub capabilities: SiteCapabilities,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authenticated: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password_policy: Option<PasswordPolicy>,
 }
 
 impl Default for SiteData {
@@ -24,6 +31,7 @@ impl Default for SiteData {
             language: "en_US".to_string(),
             capabilities: SiteCapabilities::default(),
             authenticated: None,
+            password_policy: None,
         }
     }
 }

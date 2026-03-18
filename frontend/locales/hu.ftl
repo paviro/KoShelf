@@ -64,6 +64,7 @@ last-active = Utoljára aktív
 revoke-session = Visszavonás
 revoke-session-confirm = Visszavonod ezt a munkamenetet?
 session-revoked = Munkamenet visszavonva
+session-device-info = { $browser } – { $os }
 logout = Kijelentkezés
 current-password-placeholder = Jelenlegi jelszó megadása
 new-password-placeholder = Min. 8 karakter

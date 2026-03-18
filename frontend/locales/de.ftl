@@ -71,6 +71,7 @@ last-active = Zuletzt aktiv
 revoke-session = Widerrufen
 revoke-session-confirm = Diese Sitzung widerrufen?
 session-revoked = Sitzung widerrufen
+session-device-info = { $browser } auf { $os }
 logout = Abmelden
 current-password-placeholder = Aktuelles Passwort eingeben
 new-password-placeholder = Mind. 8 Zeichen

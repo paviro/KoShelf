@@ -1903,6 +1903,7 @@ dependencies = [
  "mlua",
  "notify",
  "quick-xml",
+ "rand 0.9.2",
  "rayon",
  "regex",
  "resvg",

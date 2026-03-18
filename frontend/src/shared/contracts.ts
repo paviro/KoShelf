@@ -5,11 +5,16 @@ export interface SiteCapabilities {
     auth_enabled: boolean;
 }
 
+export interface PasswordPolicy {
+    min_chars: number;
+}
+
 export interface SiteData {
     title: string;
     language: string;
     capabilities: SiteCapabilities;
     authenticated?: boolean;
+    password_policy?: PasswordPolicy;
     version?: string;
     generated_at?: string;
 }

@@ -383,7 +383,11 @@ export function SettingsRoute() {
                         accentClass="bg-linear-to-b from-rose-400 to-red-600"
                         title={translation.get('password-setting')}
                     >
-                        <PasswordChangeSection />
+                        <PasswordChangeSection
+                            minPasswordChars={
+                                siteQuery.data?.password_policy?.min_chars
+                            }
+                        />
                     </SettingsSection>
                 ) : null}
 

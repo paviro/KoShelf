@@ -5,7 +5,7 @@ use rusty_paseto::core::Key;
 use sqlx::{Row, SqlitePool};
 use std::fmt::{Display, Formatter};
 
-const MIN_PASSWORD_CHARS: usize = 8;
+pub const MIN_PASSWORD_CHARS: usize = 8;
 const MAX_PASSWORD_CHARS: usize = 1024;
 const AUTO_PASSWORD_CHARS: usize = 16;
 const TOKEN_KEY_BYTES: usize = 32;
@@ -75,14 +75,16 @@ pub fn verify_password(candidate: &str, hash_str: &str) -> bool {
 }
 
 pub fn generate_random_password() -> Result<String> {
-    let raw_bytes = Key::<AUTO_PASSWORD_CHARS>::try_new_random()
-        .map_err(|error| anyhow::anyhow!("Failed to generate random password bytes: {error}"))?;
+    use rand::Rng;
+    use rand::distr::Uniform;
 
-    let mut raw = String::with_capacity(AUTO_PASSWORD_CHARS);
-    for byte in raw_bytes.as_slice() {
-        let idx = usize::from(*byte) % ALPHANUMERIC.len();
-        raw.push(ALPHANUMERIC[idx] as char);
-    }
+    let mut rng = rand::rng();
+    let dist =
+        Uniform::new(0, ALPHANUMERIC.len()).map_err(|e| anyhow::anyhow!("Invalid range: {e}"))?;
+
+    let raw: String = (0..AUTO_PASSWORD_CHARS)
+        .map(|_| ALPHANUMERIC[rng.sample(dist)] as char)
+        .collect();
 
     Ok(format!(
         "{}-{}-{}-{}",

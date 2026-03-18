@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
 import { BRAND_ICON } from '../../../app/shell/shell-nav';
@@ -59,25 +59,28 @@ export function LoginRoute({
         return <Navigate to={defaultRoute} replace />;
     }
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = useCallback(
+        async (event: React.FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
 
-        if (submitPending) {
-            return;
-        }
+            if (submitPending) {
+                return;
+            }
 
-        setSubmitError(null);
-        setSubmitPending(true);
+            setSubmitError(null);
+            setSubmitPending(true);
 
-        try {
-            await api.login(password);
-            navigate(defaultRoute, { replace: true });
-        } catch (error) {
-            setSubmitError(resolveLoginErrorMessage(error));
-        } finally {
-            setSubmitPending(false);
-        }
-    };
+            try {
+                await api.login(password);
+                navigate(defaultRoute, { replace: true });
+            } catch (error) {
+                setSubmitError(resolveLoginErrorMessage(error));
+            } finally {
+                setSubmitPending(false);
+            }
+        },
+        [defaultRoute, navigate, password, submitPending],
+    );
 
     return (
         <main className="min-h-dvh bg-gray-100 dark:bg-dark-925">

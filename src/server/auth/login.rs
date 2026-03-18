@@ -3,6 +3,7 @@ use axum::extract::{Extension, Path, State};
 use axum::http::{HeaderMap, StatusCode, header::HOST, header::RETRY_AFTER, header::SET_COOKIE};
 use axum::response::{IntoResponse, Response};
 use governor::clock::{Clock, DefaultClock};
+use log::{error, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::IpAddr;
@@ -83,14 +84,22 @@ pub async fn login_submit(
 
     let auth_row = match get_stored_auth(&auth_state.pool).await {
         Ok(value) => value,
-        Err(_) => return internal_error_response(),
+        Err(err) => {
+            error!("Failed to read stored auth: {err}");
+            return internal_error_response();
+        }
     };
 
     let Some((stored_hash, _stored_key)) = auth_row else {
+        warn!(
+            "Login attempt but no auth credentials configured (ip={})",
+            client_context.client_ip
+        );
         return api_error_response(StatusCode::UNAUTHORIZED, ApiErrorCode::InvalidCredentials);
     };
 
     if !verify_password(&payload.password, &stored_hash) {
+        warn!("Failed login attempt (ip={})", client_context.client_ip);
         return api_error_response(StatusCode::UNAUTHORIZED, ApiErrorCode::InvalidCredentials);
     }
 
@@ -104,7 +113,10 @@ pub async fn login_submit(
     .await
     {
         Ok(token) => token,
-        Err(_) => return internal_error_response(),
+        Err(err) => {
+            error!("Failed to create session token: {err}");
+            return internal_error_response();
+        }
     };
 
     (
@@ -185,7 +197,10 @@ pub async fn change_password(
 
     let auth_row = match get_stored_auth(&auth_state.pool).await {
         Ok(value) => value,
-        Err(_) => return internal_error_response(),
+        Err(err) => {
+            error!("Failed to read stored auth for password change: {err}");
+            return internal_error_response();
+        }
     };
 
     let Some((stored_hash, _stored_key)) = auth_row else {
@@ -193,6 +208,10 @@ pub async fn change_password(
     };
 
     if !verify_password(&payload.current_password, &stored_hash) {
+        warn!(
+            "Failed password change attempt: incorrect current password (ip={})",
+            client_context.client_ip
+        );
         return api_error_response(StatusCode::BAD_REQUEST, ApiErrorCode::InvalidCredentials);
     }
 
@@ -207,10 +226,11 @@ pub async fn change_password(
         }
     };
 
-    if set_password_hash_and_revoke_sessions(&auth_state.pool, &new_hash, Some(&current_session.0))
-        .await
-        .is_err()
+    if let Err(err) =
+        set_password_hash_and_revoke_sessions(&auth_state.pool, &new_hash, Some(&current_session.0))
+            .await
     {
+        error!("Failed to update password and revoke sessions: {err}");
         return internal_error_response();
     }
 
@@ -227,7 +247,10 @@ pub async fn list_sessions_handler(
 
     let sessions = match list_sessions(&auth_state.pool).await {
         Ok(sessions) => sessions,
-        Err(_) => return internal_error_response(),
+        Err(err) => {
+            error!("Failed to list sessions: {err}");
+            return internal_error_response();
+        }
     };
 
     let payload: Vec<SessionInfoResponse> = sessions
@@ -258,7 +281,10 @@ pub async fn revoke_session(
     match delete_session(&auth_state.pool, &session_id).await {
         Ok(true) => (StatusCode::OK, Json(ApiResponse::new(AuthOk { ok: true }))).into_response(),
         Ok(false) => api_error_response(StatusCode::NOT_FOUND, ApiErrorCode::NotFound),
-        Err(_) => internal_error_response(),
+        Err(err) => {
+            error!("Failed to revoke session: {err}");
+            internal_error_response()
+        }
     }
 }
 
@@ -323,7 +349,25 @@ fn should_use_secure_cookie(
         return false;
     }
 
+    // Allow non-secure cookies over plain HTTP for private/LAN network access
+    if is_private_network_ip(peer_ip) {
+        return false;
+    }
+
     true
+}
+
+fn is_private_network_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => v4.is_private() || v4.is_link_local(),
+        IpAddr::V6(v6) => {
+            let segments = v6.segments();
+            // fc00::/7 — Unique Local Address
+            (segments[0] & 0xfe00) == 0xfc00
+            // fe80::/10 — Link-local
+            || (segments[0] & 0xffc0) == 0xfe80
+        }
+    }
 }
 
 fn is_localhost_host_header(raw_host: &str) -> bool {
@@ -385,10 +429,20 @@ mod tests {
     }
 
     #[test]
-    fn secure_cookie_is_forced_for_non_local_hosts() {
+    fn secure_cookie_is_disabled_for_private_network_http() {
         let should_secure = should_use_secure_cookie(
             false,
             IpAddr::V4(Ipv4Addr::new(192, 168, 1, 10)),
+            Some("books.example.com"),
+        );
+        assert!(!should_secure);
+    }
+
+    #[test]
+    fn secure_cookie_is_forced_for_public_ip_over_http() {
+        let should_secure = should_use_secure_cookie(
+            false,
+            IpAddr::V4(Ipv4Addr::new(203, 0, 113, 1)),
             Some("books.example.com"),
         );
         assert!(should_secure);

@@ -6,18 +6,26 @@ import { translation } from '../../../shared/i18n';
 import { SettingsField } from '../../settings/components/SettingsField';
 import { SettingsInput } from '../../settings/components/SettingsInput';
 
-const DEFAULT_MIN_PASSWORD_CHARS = 8;
+const FALLBACK_MIN_PASSWORD_CHARS = 8;
+
+type PasswordChangeSectionProps = {
+    minPasswordChars?: number;
+};
 
 function minPasswordCharsFromDetails(
     details: Record<string, unknown> | undefined,
+    fallback: number,
 ): number {
     const value = details?.min_chars;
     return typeof value === 'number' && value > 0
         ? Math.floor(value)
-        : DEFAULT_MIN_PASSWORD_CHARS;
+        : fallback;
 }
 
-function resolvePasswordChangeError(error: unknown): string {
+function resolvePasswordChangeError(
+    error: unknown,
+    fallbackMinChars: number,
+): string {
     if (
         isApiHttpError(error) &&
         error.status === 400 &&
@@ -32,7 +40,10 @@ function resolvePasswordChangeError(error: unknown): string {
         error.code === 'password_too_short'
     ) {
         return translation.get('password-too-short', {
-            min: minPasswordCharsFromDetails(error.details),
+            min: minPasswordCharsFromDetails(
+                error.details,
+                fallbackMinChars,
+            ),
         });
     }
 
@@ -43,8 +54,11 @@ function resolvePasswordChangeError(error: unknown): string {
     return translation.get('error-state.connection-title');
 }
 
-export function PasswordChangeSection() {
+export function PasswordChangeSection({
+    minPasswordChars,
+}: PasswordChangeSectionProps) {
     const queryClient = useQueryClient();
+    const effectiveMinChars = minPasswordChars ?? FALLBACK_MIN_PASSWORD_CHARS;
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,11 +76,11 @@ export function PasswordChangeSection() {
                 return;
             }
 
-            if (newPassword.length < DEFAULT_MIN_PASSWORD_CHARS) {
+            if (newPassword.length < effectiveMinChars) {
                 setFeedback({
                     type: 'error',
                     message: translation.get('password-too-short', {
-                        min: DEFAULT_MIN_PASSWORD_CHARS,
+                        min: effectiveMinChars,
                     }),
                 });
                 return;
@@ -98,13 +112,23 @@ export function PasswordChangeSection() {
             } catch (error) {
                 setFeedback({
                     type: 'error',
-                    message: resolvePasswordChangeError(error),
+                    message: resolvePasswordChangeError(
+                        error,
+                        effectiveMinChars,
+                    ),
                 });
             } finally {
                 setPending(false);
             }
         },
-        [confirmPassword, currentPassword, newPassword, pending, queryClient],
+        [
+            confirmPassword,
+            currentPassword,
+            effectiveMinChars,
+            newPassword,
+            pending,
+            queryClient,
+        ],
     );
 
     return (
@@ -173,6 +197,7 @@ export function PasswordChangeSection() {
 
             {feedback ? (
                 <p
+                    role="alert"
                     className={`text-sm px-3 py-2 rounded-lg border ${
                         feedback.type === 'success'
                             ? 'border-emerald-300/70 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'

@@ -5,7 +5,7 @@ use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::generate_recap_share_images;
 use crate::pipeline::watcher::FileWatcher;
-use crate::server::api::responses::site::{SiteCapabilities, SiteData};
+use crate::server::api::responses::site::{PasswordPolicy, SiteCapabilities, SiteData};
 use crate::server::auth::AuthState;
 use crate::server::auth::client_addr::ClientAddrResolver;
 use crate::server::auth::password::{
@@ -341,6 +341,14 @@ pub async fn run(cli: Cli) -> Result<()> {
     // ── 7. Build site metadata from DB ─────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
     let (has_books, has_comics) = repo.query_content_type_flags().await?;
+    let password_policy = if config.auth_enabled {
+        Some(PasswordPolicy {
+            min_chars: crate::server::auth::password::MIN_PASSWORD_CHARS,
+        })
+    } else {
+        None
+    };
+
     let site_data = SiteData {
         title: config.site_title.clone(),
         language: config.language.clone(),
@@ -351,6 +359,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             auth_enabled: config.auth_enabled,
         },
         authenticated: None,
+        password_policy,
     };
 
     // ── 8. Static data file export ─────────────────────────────────────
@@ -444,7 +453,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 cleanup_expired(&koshelf_pool).await?;
 
                 let cleanup_pool = koshelf_pool.clone();
-                tokio::spawn(async move {
+                let cleanup_handle = tokio::spawn(async move {
                     let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
                     interval.tick().await;
                     loop {
@@ -454,6 +463,9 @@ pub async fn run(cli: Cli) -> Result<()> {
                         }
                     }
                 });
+                if cleanup_handle.is_finished() {
+                    warn!("Session cleanup background task exited unexpectedly");
+                }
 
                 let paseto_key = paseto_key_from_bytes(&token_key_bytes)?;
 

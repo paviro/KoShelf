@@ -71,6 +71,7 @@ last-active = Остання активність
 revoke-session = Відкликати
 revoke-session-confirm = Відкликати цей сеанс?
 session-revoked = Сеанс відкликано
+session-device-info = { $browser } на { $os }
 logout = Вийти
 current-password-placeholder = Введіть поточний пароль
 new-password-placeholder = Мін. 8 символів

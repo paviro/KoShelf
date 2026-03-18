@@ -433,6 +433,7 @@ My actual setup:
 # My server command - runs continuously with file watching and statistics
 ./koshelf --library-path ~/syncthing/Books \
          --statistics-db ~/syncthing/KOReaderSettings/statistics.sqlite3 \
+         --data-path ~/koshelf-data \
          --port 3000
 ```
 

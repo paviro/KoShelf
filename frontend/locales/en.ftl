@@ -71,6 +71,7 @@ last-active = Last active
 revoke-session = Revoke
 revoke-session-confirm = Revoke this session?
 session-revoked = Session revoked
+session-device-info = { $browser } on { $os }
 logout = Log Out
 current-password-placeholder = Enter current password
 new-password-placeholder = Min. 8 characters
