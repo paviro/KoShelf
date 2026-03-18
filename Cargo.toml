@@ -1,6 +1,6 @@
 [package]
 name = "koshelf"
-version = "2026.3.0"
+version = "2026.4.0"
 description = "KoShelf — a reading companion powered by KOReader metadata."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
