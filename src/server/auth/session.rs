@@ -197,23 +197,6 @@ pub async fn delete_session(pool: &SqlitePool, session_id: &str) -> Result<bool>
     Ok(result.rows_affected() > 0)
 }
 
-pub async fn delete_all_sessions(pool: &SqlitePool) -> Result<()> {
-    sqlx::query("DELETE FROM sessions")
-        .execute(pool)
-        .await
-        .context("Failed to delete all sessions")?;
-    Ok(())
-}
-
-pub async fn delete_other_sessions(pool: &SqlitePool, keep_session_id: &str) -> Result<()> {
-    sqlx::query("DELETE FROM sessions WHERE id != ?1")
-        .bind(keep_session_id)
-        .execute(pool)
-        .await
-        .context("Failed to delete other sessions")?;
-    Ok(())
-}
-
 pub async fn cleanup_expired(pool: &SqlitePool) -> Result<()> {
     sqlx::query("DELETE FROM sessions WHERE expires_at_unix <= ?1")
         .bind(Utc::now().timestamp())
