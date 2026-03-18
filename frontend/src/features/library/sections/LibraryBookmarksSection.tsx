@@ -2,17 +2,20 @@ import { translation } from '../../../shared/i18n';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import { LibraryAnnotationCard } from '../components/LibraryAnnotationCard';
 import type { LibraryAnnotation } from '../api/library-data';
+import { annotationReaderHref } from '../lib/library-reader-links';
 
 type LibraryBookmarksSectionProps = {
     annotations: LibraryAnnotation[];
     visible: boolean;
     onToggle: () => void;
+    readerBaseHref?: string | null;
 };
 
 export function LibraryBookmarksSection({
     annotations,
     visible,
     onToggle,
+    readerBaseHref,
 }: LibraryBookmarksSectionProps) {
     return (
         <CollapsibleSection
@@ -35,6 +38,11 @@ export function LibraryBookmarksSection({
                         key={`${annotation.datetime ?? ''}-${annotation.pageno ?? ''}-${index}`}
                         annotation={annotation}
                         variant="bookmark"
+                        readerHref={annotationReaderHref(
+                            readerBaseHref,
+                            'bookmark',
+                            index,
+                        )}
                     />
                 ))}
             </div>

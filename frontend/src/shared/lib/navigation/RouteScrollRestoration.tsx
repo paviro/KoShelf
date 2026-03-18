@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation } from 'react-router';
 import {
-    isMainRouteId,
+    isScrollableRouteId,
     matchRoute,
-    type MainRouteId,
+    type ScrollableRouteId,
 } from '../../../app/routes/route-registry';
 import { patchRouteState, readRouteState } from '../state/route-state-storage';
 import { beginScrollRestore, endScrollRestore } from './scroll-restore-state';
@@ -15,9 +15,9 @@ const MAX_RESTORE_ATTEMPTS = Math.ceil(
 );
 const PERSIST_DEBOUNCE_MS = 150;
 
-function resolveMainRouteId(pathname: string): MainRouteId | null {
+function resolveScrollableRouteId(pathname: string): ScrollableRouteId | null {
     const matched = matchRoute(pathname);
-    return isMainRouteId(matched.routeId) ? matched.routeId : null;
+    return isScrollableRouteId(matched.routeId) ? matched.routeId : null;
 }
 
 function normalizeScrollSnapshot(value: unknown): number {
@@ -28,12 +28,15 @@ function normalizeScrollSnapshot(value: unknown): number {
     return Math.max(0, Math.floor(value));
 }
 
-function readScrollSnapshot(routeId: MainRouteId): number {
+function readScrollSnapshot(routeId: ScrollableRouteId): number {
     const persisted = readRouteState(routeId, 'session');
     return normalizeScrollSnapshot(persisted.scrollSnapshot);
 }
 
-function persistScrollSnapshot(routeId: MainRouteId, scrollY: number): void {
+function persistScrollSnapshot(
+    routeId: ScrollableRouteId,
+    scrollY: number,
+): void {
     patchRouteState(routeId, 'session', {
         scrollSnapshot: normalizeScrollSnapshot(scrollY),
     });
@@ -131,16 +134,16 @@ function restoreScrollPosition(targetY: number): () => void {
  */
 export function RouteScrollRestoration(): null {
     const { pathname } = useLocation();
-    const currentRouteId = resolveMainRouteId(pathname);
-    const activeRouteIdRef = useRef<MainRouteId | null>(currentRouteId);
+    const currentRouteId = resolveScrollableRouteId(pathname);
+    const activeRouteIdRef = useRef<ScrollableRouteId | null>(currentRouteId);
     const activeRouteScrollYRef = useRef(window.scrollY);
     const hasHydratedInitialRouteRef = useRef(false);
     const persistTimeoutIdRef = useRef<number | null>(null);
-    const pendingPersistRouteIdRef = useRef<MainRouteId | null>(null);
+    const pendingPersistRouteIdRef = useRef<ScrollableRouteId | null>(null);
     const pendingPersistScrollYRef = useRef<number>(0);
 
     const captureScrollSnapshot = useCallback(
-        (routeId: MainRouteId | null, scrollY: number) => {
+        (routeId: ScrollableRouteId | null, scrollY: number) => {
             if (!routeId) {
                 return;
             }
@@ -165,7 +168,7 @@ export function RouteScrollRestoration(): null {
     }, []);
 
     const schedulePersist = useCallback(
-        (routeId: MainRouteId | null, scrollY: number) => {
+        (routeId: ScrollableRouteId | null, scrollY: number) => {
             if (!routeId) {
                 return;
             }

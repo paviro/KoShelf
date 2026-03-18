@@ -19,9 +19,11 @@ function resolveFallbackTitle(pathname: string, siteTitle: string): string {
             return translation.get('settings');
         case 'books-list':
         case 'books-detail':
+        case 'books-read':
             return translation.get('books');
         case 'comics-list':
         case 'comics-detail':
+        case 'comics-read':
             return translation.get('comics');
         case 'recap':
             return translation.get('recap');

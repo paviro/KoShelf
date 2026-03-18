@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
-import { isServeMode } from '../../../shared/api';
 
 import {
     buildRoutePath,
     detailRouteIdForCollection,
     listRouteIdForCollection,
+    readerRouteIdForCollection,
 } from '../../../app/routes/route-registry';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
@@ -18,6 +18,7 @@ import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
+import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import {
     LIBRARY_DETAIL_SECTION_KEYS,
     defaultLibraryDetailSectionState,
@@ -119,6 +120,14 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const backHref =
         returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
 
+    const resolvedFormat = siteQuery.data?.capabilities.has_files
+        ? item?.format
+        : undefined;
+    const readerBaseHref =
+        resolvedFormat && id && isReaderFormatSupported(resolvedFormat)
+            ? buildRoutePath(readerRouteIdForCollection(collection), { id })
+            : null;
+
     return (
         <>
             <LibraryDetailHeader
@@ -127,13 +136,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                 collection={collection}
                 itemId={id}
                 backHref={backHref}
-                format={
-                    isServeMode()
-                        ? item?.format
-                        : siteQuery.data?.capabilities.has_files
-                          ? item?.format
-                          : undefined
-                }
+                format={resolvedFormat}
             />
 
             <PageContent className="space-y-6 md:space-y-8">
@@ -207,6 +210,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     annotations={highlightAnnotations}
                                     visible={sectionState.highlights}
                                     onToggle={() => toggle('highlights')}
+                                    readerBaseHref={readerBaseHref}
                                 />
                             )}
 
@@ -216,6 +220,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     annotations={bookmarkAnnotations}
                                     visible={sectionState.bookmarks}
                                     onToggle={() => toggle('bookmarks')}
+                                    readerBaseHref={readerBaseHref}
                                 />
                             )}
 

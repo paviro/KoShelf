@@ -88,6 +88,10 @@ pub(crate) mod tests {
             pageno: Some(42),
             text: Some("highlighted text".to_string()),
             note: None,
+            pos0: None,
+            pos1: None,
+            color: None,
+            drawer: None,
         }
     }
 

@@ -106,6 +106,14 @@ pub struct LibraryAnnotation {
     pub text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pos0: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pos1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub drawer: Option<String>,
 }
 
 // ── Response wrappers ─────────────────────────────────────────────────

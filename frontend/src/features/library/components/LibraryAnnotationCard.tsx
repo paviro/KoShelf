@@ -1,5 +1,12 @@
 import { BsBookmarkFill } from 'react-icons/bs';
-import { LuClock3, LuFileText, LuHash, LuNotebookPen } from 'react-icons/lu';
+import {
+    LuBookOpen,
+    LuClock3,
+    LuFileText,
+    LuHash,
+    LuNotebookPen,
+} from 'react-icons/lu';
+import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
 import { formatAnnotationDatetime } from '../lib/library-detail-formatters';
@@ -10,6 +17,7 @@ type LibraryAnnotationCardVariant = 'highlight' | 'bookmark';
 type LibraryAnnotationCardProps = {
     annotation: LibraryAnnotation;
     variant: LibraryAnnotationCardVariant;
+    readerHref?: string | null;
 };
 
 const VARIANT_STYLES: Record<
@@ -35,6 +43,7 @@ const VARIANT_STYLES: Record<
 export function LibraryAnnotationCard({
     annotation,
     variant,
+    readerHref,
 }: LibraryAnnotationCardProps) {
     const styles = VARIANT_STYLES[variant];
     const formattedDate = formatAnnotationDatetime(annotation.datetime);
@@ -91,13 +100,30 @@ export function LibraryAnnotationCard({
                     )}
 
                     {formattedDate && (
-                        <span className="hidden sm:inline-flex items-center">
+                        <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-gray-200/50 dark:bg-dark-700/50 text-gray-500 dark:text-dark-400">
                             <LuClock3
-                                className="w-4 h-4 mr-1 text-primary-400"
+                                className="w-3.5 h-3.5"
                                 aria-hidden="true"
                             />
                             {formattedDate}
                         </span>
+                    )}
+
+                    {readerHref && (
+                        <Link
+                            to={readerHref}
+                            title={translation.get('open-at-annotation')}
+                            aria-label={translation.get('open-at-annotation')}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-primary-600 dark:text-primary-300 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/20 hover:border-primary-500/30 transition-colors"
+                        >
+                            <LuBookOpen
+                                className="w-3.5 h-3.5"
+                                aria-hidden="true"
+                            />
+                            <span className="hidden sm:inline">
+                                {translation.get('open-in-reader')}
+                            </span>
+                        </Link>
                     )}
                 </div>
             </header>

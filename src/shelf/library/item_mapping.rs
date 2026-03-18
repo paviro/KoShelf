@@ -123,6 +123,10 @@ pub fn map_annotations_to_rows(
             pageno: annotation.pageno.map(|p| p as i32),
             text: annotation.text.clone(),
             note: annotation.note.clone(),
+            pos0: annotation.pos0.clone(),
+            pos1: annotation.pos1.clone(),
+            color: annotation.color.clone(),
+            drawer: annotation.drawer.clone(),
         });
     }
 

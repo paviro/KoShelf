@@ -74,7 +74,7 @@ impl LibraryRepository {
         kind: Option<&str>,
     ) -> Result<Vec<LibraryAnnotation>> {
         sqlx::query_as::<_, LibraryAnnotation>(
-            "SELECT chapter, datetime, pageno, text, note
+            "SELECT chapter, datetime, pageno, text, note, pos0, pos1, color, drawer
              FROM library_annotations
              WHERE item_id = ?1 AND (?2 IS NULL OR annotation_kind = ?2)
              ORDER BY ordinal ASC",

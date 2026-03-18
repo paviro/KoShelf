@@ -249,6 +249,10 @@ export interface LibraryAnnotation {
     pageno?: number | null;
     text?: string | null;
     note?: string | null;
+    pos0?: string | null;
+    pos1?: string | null;
+    color?: string | null;
+    drawer?: string | null;
 }
 
 export interface LibraryCompletionEntry {
