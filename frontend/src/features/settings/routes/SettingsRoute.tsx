@@ -80,6 +80,29 @@ function resolveGenericApiErrorMessage(error: unknown): string {
     return translation.get('error-state.connection-title');
 }
 
+function sortSessionsByLastSeenDesc<Session extends { last_seen_at: string }>(
+    sessions: Session[],
+): Session[] {
+    return [...sessions].sort((left, right) => {
+        const leftTime = Date.parse(left.last_seen_at);
+        const rightTime = Date.parse(right.last_seen_at);
+
+        if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) {
+            return 0;
+        }
+
+        if (Number.isNaN(leftTime)) {
+            return 1;
+        }
+
+        if (Number.isNaN(rightTime)) {
+            return -1;
+        }
+
+        return rightTime - leftTime;
+    });
+}
+
 type SettingsSectionProps = {
     accentClass: string;
     title: string;
@@ -213,6 +236,19 @@ export function SettingsRoute() {
         queryFn: () => api.getSessions(),
         enabled: authEnabled,
     });
+    const orderedSessions = useMemo(() => {
+        const sessions = sessionsQuery.data ?? [];
+        const currentSession = sessions.find((session) => session.is_current);
+        const otherSessions = sortSessionsByLastSeenDesc(
+            sessions.filter((session) => !session.is_current),
+        );
+
+        if (!currentSession) {
+            return otherSessions;
+        }
+
+        return [currentSession, ...otherSessions];
+    }, [sessionsQuery.data]);
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);
@@ -787,9 +823,9 @@ export function SettingsRoute() {
                         ) : null}
 
                         {sessionsQuery.isSuccess &&
-                        sessionsQuery.data.length > 0 ? (
+                        orderedSessions.length > 0 ? (
                             <ul className="space-y-4">
-                                {sessionsQuery.data.map((session) => (
+                                {orderedSessions.map((session) => (
                                     <li
                                         key={session.id}
                                         className={`rounded-lg border px-4 py-3 ${

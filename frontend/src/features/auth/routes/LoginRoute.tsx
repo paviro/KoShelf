@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 
 type LoginRouteProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
+    siteTitle: string;
     authEnabled: boolean;
     siteLoaded: boolean;
 };
@@ -30,19 +31,20 @@ function resolveLoginErrorMessage(error: unknown): string {
 
 export function LoginRoute({
     defaultRoute,
+    siteTitle,
     authEnabled,
     siteLoaded,
 }: LoginRouteProps) {
     const navigate = useNavigate();
-    const currentUiLocale = translation.getLanguage();
     const [password, setPassword] = useState('');
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitPending, setSubmitPending] = useState(false);
     const [sessionCheckPending, setSessionCheckPending] = useState(true);
+    const loginTitle = translation.get('login-title', { site: siteTitle });
 
     useEffect(() => {
-        document.title = translation.get('login-title');
-    }, [currentUiLocale]);
+        document.title = loginTitle;
+    }, [loginTitle]);
 
     useEffect(() => {
         if (!siteLoaded) {
@@ -132,7 +134,7 @@ export function LoginRoute({
                             {translation.get('login')}
                         </p>
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
-                            {translation.get('login-title')}
+                            {loginTitle}
                         </h1>
                     </header>
 

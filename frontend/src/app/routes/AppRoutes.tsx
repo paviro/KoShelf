@@ -17,6 +17,7 @@ import { routePathPattern } from './route-registry';
 
 type AppRoutesProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
+    siteTitle: string;
     authEnabled: boolean;
     siteLoaded: boolean;
 };
@@ -47,6 +48,7 @@ function RouteChunkFallback() {
 
 export function AppRoutes({
     defaultRoute,
+    siteTitle,
     authEnabled,
     siteLoaded,
 }: AppRoutesProps) {
@@ -69,6 +71,7 @@ export function AppRoutes({
                         element={
                             <LoginRoute
                                 defaultRoute={defaultRoute}
+                                siteTitle={siteTitle}
                                 authEnabled={authEnabled}
                                 siteLoaded={siteLoaded}
                             />

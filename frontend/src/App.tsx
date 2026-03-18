@@ -59,6 +59,7 @@ export function App() {
 
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);
+    const siteTitle = site?.title ?? 'KoShelf';
     const authEnabled = site?.capabilities.auth_enabled === true;
     const routeMatch = matchRoute(location.pathname);
     const isLoginRoute = routeMatch.routeId === 'login';
@@ -67,6 +68,7 @@ export function App() {
         <div className="min-h-full">
             <AppRoutes
                 defaultRoute={defaultRoute}
+                siteTitle={siteTitle}
                 authEnabled={authEnabled}
                 siteLoaded={siteQuery.isSuccess || siteQuery.isError}
             />
@@ -85,7 +87,7 @@ export function App() {
         <AppShell
             navItems={navItems}
             currentPath={location.pathname}
-            siteTitle={site?.title ?? 'KoShelf'}
+            siteTitle={siteTitle}
             generatedAt={site?.generated_at}
             version={site?.version}
         >
