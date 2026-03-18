@@ -4,8 +4,11 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use anyhow::{Context, Result};
 use clap::{CommandFactory, FromArgMatches};
-use koshelf::app::config::{FileConfig, merge_with_file_config};
-use koshelf::{Cli, run};
+use koshelf::app::config::{
+    CliCommand, FileConfig, merge_export_with_file_config, merge_serve_with_file_config,
+    merge_set_password_data_path,
+};
+use koshelf::{Cli, dispatch};
 use std::path::Path;
 
 #[tokio::main]
@@ -34,9 +37,24 @@ async fn main() -> Result<()> {
         None => None,
     };
 
-    if let Some(ref fc) = file_config {
-        merge_with_file_config(&mut cli, fc, &matches);
+    if let Some(ref fc) = file_config
+        && let Some((_, sub_matches)) = matches.subcommand()
+    {
+        match cli.command {
+            CliCommand::Serve(ref mut args) => {
+                merge_serve_with_file_config(args, fc, sub_matches);
+            }
+            CliCommand::Export(ref mut args) => {
+                merge_export_with_file_config(args, fc, sub_matches);
+            }
+            CliCommand::SetPassword {
+                ref mut data_path, ..
+            } => {
+                merge_set_password_data_path(data_path, fc, sub_matches);
+            }
+            _ => {}
+        }
     }
 
-    run(cli).await
+    dispatch(cli.command).await
 }

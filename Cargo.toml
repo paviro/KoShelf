@@ -1,7 +1,7 @@
 [package]
 name = "koshelf"
 version = "2026.3.0"
-description = "Transform your KOReader library into a beautiful reading dashboard with statistics."
+description = "KoShelf — a reading companion powered by KOReader metadata."
 repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2 license"
 authors = ["Paul-Vincent Roll"]

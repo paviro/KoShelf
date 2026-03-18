@@ -16,7 +16,7 @@
 
 ![Statistics dashboard](https://github.com/user-attachments/assets/94a094d2-298b-412c-80b3-b3b2e2cfc6de)
 
-###### A Rust CLI tool that generates a beautiful website from your KoReader library, showcasing your ebook collection with highlights, annotations, and reading progress.
+###### A reading companion powered by KOReader metadata — browse your library, highlights, annotations, and reading statistics from a beautiful web dashboard.
 
 </div>
 
@@ -29,14 +29,13 @@
     - [Prebuilt Binaries](#prebuilt-binaries)
     - [From Source](#from-source)
 - [Usage](#usage)
-    - [Basic Usage](#basic-usage)
-    - [Operation Modes](#operation-modes)
-    - [Command Line Options](#command-line-options)
+    - [Quick Start](#quick-start)
     - [Subcommands](#subcommands)
+    - [Common Options](#common-options)
     - [Configuration Sources & Precedence](#configuration-sources--precedence)
     - [Authentication in Serve Mode](#authentication-in-serve-mode)
     - [Stable Page Metadata & Scaling](#stable-page-metadata--scaling)
-    - [Example](#example)
+    - [Examples](#examples)
 - [KoReader Setup](#koreader-setup)
     - [Metadata Storage Options](#metadata-storage-options)
     - [Typical Deployment Setup](#typical-deployment-setup)
@@ -154,7 +153,7 @@ cd ~/Downloads  # macOS/Linux
 cd C:\Users\YourName\Downloads  # Windows
 
 # Run KoShelf with your books folder
-./koshelf --library-path /path/to/your/library --output ./my-library-site
+./koshelf export ./my-library-site --library-path /path/to/your/library
 ```
 
 **Pro tip:** On most terminals, you can drag and drop the downloaded binary file directly into the terminal window. This will automatically insert the full file path, allowing you to immediately add your arguments and run the command.
@@ -166,7 +165,7 @@ If you plan to use KoShelf frequently and use Linux or macOS, you can move the b
 sudo mv koshelf /usr/local/bin/
 
 # Now you can run it from anywhere
-koshelf --library-path ~/Books --output ~/my-library-site
+koshelf export ~/my-library-site --library-path ~/Books
 ```
 
 ### From Source
@@ -194,59 +193,103 @@ The binary will be available at `target/release/koshelf`.
 
 ## Usage
 
-### Basic Usage
+### Quick Start
 
 ```bash
-./koshelf --library-path /path/to/your/library --output ./my-library-site
+# Start a web server (live file watching, requires --data-path)
+koshelf serve -i ~/Library --data-path ~/koshelf-data
+
+# Generate a static site
+koshelf export ~/my-reading-site -i ~/Library
 ```
 
-### Operation Modes
+### Subcommands
 
-KoShelf can operate in several modes:
+KoShelf uses explicit subcommands — run `koshelf <command> --help` for full flag details.
 
-1. **Static Site Generation**: Generate a static site once and exit (default when `--output` is specified without `--watch`)
-2. **Web Server Mode**: Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes (default when `--output` is not specified). Requires `--data-path`.
-3. **Watch Mode**: Generate a static site, rebuilding when book files change (when both `--output` and `--watch` are specified)
+#### `koshelf serve`
 
-### Command Line Options
+Start the web server. Serves the embedded React app at `/` with API endpoints under `/api/**`, and automatically refreshes data on library changes.
+
+**Serve-specific options:**
+
+- `-p, --port`: Port for web server (default: 3000)
+- `--enable-auth`: Enable password authentication
+- `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries for forwarded client IP/proto resolution
+
+Requires `--data-path` for persistent data storage.
+
+#### `koshelf export <output-dir>`
+
+Generate a static site to the given directory.
+
+**Export-specific options:**
+
+- `-w, --watch`: Re-export on library changes
+
+The output directory can also be provided via the `KOSHELF_OUTPUT` env var or `[output].path` in the TOML config.
+
+#### `koshelf set-password`
+
+Set or rotate the serve-mode authentication password.
+
+```
+koshelf set-password [--data-path <PATH>] [--password <VALUE> | --random] [--overwrite]
+```
+
+- Without `--password`, KoShelf prompts interactively
+- With `--random`, KoShelf generates a random password and prints it once
+- `--password` and `--random` are mutually exclusive
+- `--data-path` can be omitted when provided by `KOSHELF_DATA_PATH` or `koshelf.toml`
+- Without `--overwrite`, command is idempotent (no-op if password already exists)
+
+#### `koshelf list-languages`
+
+Print all supported UI locales and exit.
+
+#### `koshelf github`
+
+Print the repository URL and exit.
+
+### Common Options
+
+These flags are shared by both `serve` and `export`:
+
+**Global (before subcommand):**
 
 - `-c, --config`: Path to a TOML configuration file (`koshelf.toml` is auto-loaded when present)
+
+**Library source:**
+
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
 - `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
 - `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided)
-- `-o, --output`: Output directory for the generated site
-- `--data-path`: Persistent runtime data directory for serve mode (required when `--output` is not set)
-- `-p, --port`: Port for web server mode (default: 3000)
-- `-w, --watch`: Enable file watching with static output (requires `--output`)
-- `-t, --title`: Site title (default: "KoShelf")
-- `--enable-auth`: Enable password authentication in serve mode
-- `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries used for forwarded client IP/proto resolution
 - `--include-unread`: Include unread items (files without KoReader metadata)
-- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is `2h` (pass `auto` for automatic scaling)
+
+**Data:**
+
+- `--data-path`: Persistent runtime data directory. Required for `serve`, optional for `export` (uses a temp dir when omitted).
+
+**Site display:**
+
+- `-t, --title`: Site title (default: "KoShelf")
+- `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US`
 - `--timezone`: Timezone to interpret timestamps (IANA name, e.g., `Australia/Sydney`); defaults to system local
+
+**Statistics tuning:**
+
+- `--heatmap-scale-max`: Maximum value for heatmap color intensity scaling (e.g., "auto", "1h", "1h30m", "45min"). Values above this will still be shown but use the highest color intensity. Default is `2h` (pass `auto` for automatic scaling)
 - `--day-start-time`: Logical day start time as `HH:MM` (default: `00:00`)
 - `--min-pages-per-day`: Minimum pages read per book per day to be counted in statistics (optional)
 - `--min-time-per-day`: Minimum reading time per book per day to be counted in statistics (e.g., "30s", "15m", "1h", `off`). Default is `30s`.
     > **Note:** If both `--min-pages-per-day` and `--min-time-per-day` are provided, a book's data for a day is counted if **either** condition is met for that book on that day. These filters apply **per book per day**, meaning each book must individually meet the threshold for each day to be included in statistics. Since `--min-time-per-day` defaults to `30s`, it is active unless explicitly overridden. Use `--min-time-per-day off` to disable this filter.
 - `--include-all-stats`: By default, statistics are filtered to only include books present in your `--library-path` directories. This prevents deleted books or external files (like Wallabag articles) from skewing your recap and statistics. Use this flag to include statistics for all books in the database, regardless of whether they exist in your library.
 - `--ignore-stable-page-metadata`: Ignore KOReader stable page metadata for page totals and page-based stats scaling. By default, stable metadata is used when available.
-- `-l, --language`: Default server language for UI translations. Frontend language/region settings can override this per browser. Use full locale code (e.g., `en_US`, `de_DE`, `pt_BR`) for correct date formatting. Default: `en_US` (see `list-languages` subcommand)
-
-### Subcommands
-
-- `koshelf list-languages`: Print all supported UI locales
-- `koshelf github`: Print the repository URL
-- `koshelf set-password --data-path <PATH> [--password <VALUE> | --random] [--overwrite]`: Set or rotate the serve-mode authentication password
-    - without `--password`, KoShelf prompts interactively
-    - with `--random`, KoShelf generates a random password and prints it once
-    - `--password` and `--random` are mutually exclusive
-    - `--data-path` can be omitted when provided by `KOSHELF_DATA_PATH` or `koshelf.toml`
-    - without `--overwrite`, command is idempotent (no-op if password already exists)
 
 ### Configuration Sources & Precedence
 
-For main app runs (non-subcommand flow), settings are merged in this order:
+Settings are merged in this order (highest priority first):
 
 1. CLI arguments
 2. Environment variables
@@ -264,18 +307,17 @@ Common environment variables:
 - `KOSHELF_TITLE`
 - `KOSHELF_LANGUAGE`
 
-Use `koshelf --help` to see the full env mapping for every option.
+Run `koshelf serve --help` or `koshelf export --help` to see the full env mapping for every option.
 
-Subcommands use the same precedence model. For `set-password`, data path resolution is: command `--data-path` > top-level `--data-path` / `KOSHELF_DATA_PATH` > config file.
+For `set-password`, data path resolution is: `--data-path` > `KOSHELF_DATA_PATH` > config file.
 
 ### Authentication in Serve Mode
 
 Authentication is optional and only applies in serve mode.
 
-1. Start server with a persistent data path: `--data-path /path/to/runtime-data`
-2. Enable auth: `--enable-auth`
-3. On first run, KoShelf generates a password and prints it once
-4. Rotate password anytime via `koshelf set-password --data-path /path/to/runtime-data --overwrite`
+1. Start server with auth enabled: `koshelf serve -i ~/Library --data-path /path/to/runtime-data --enable-auth`
+2. On first run, KoShelf generates a password and prints it once
+3. Rotate password anytime via `koshelf set-password --data-path /path/to/runtime-data --overwrite`
 
 Protected routes include `/api/**` (except `GET /api/site` and `POST /api/auth/login`) and runtime assets under `/assets/**`. Shell assets under `/core/**` remain public.
 
@@ -301,53 +343,56 @@ Compatibility note:
 - KOReader `2025.10 "Ghost"` does not write the required `pagemap_*` metadata fields, so KoShelf uses its standard unscaled page behavior.
 - After updating to a KOReader build newer than `2025.10 "Ghost"`, you can use [KoReader-PopulateStablePageKOReader](https://github.com/paviro/KoReader-PopulateStablePageKOReader) to backfill stable page metadata for already finished books.
 
-### Example
+### Examples
 
 ```bash
-# Generate site from a library folder
-./koshelf -i ~/Library -o ~/my-reading-site -t "My Reading Journey"
-
-# Generate site from multiple folders (e.g., books + comics)
-./koshelf -i ~/Books -i ~/Comics -o ~/my-reading-site
-
-# Generate site with statistics and unread items included
-./koshelf -i ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --include-unread
+# ── Serve mode ────────────────────────────────────────────────
 
 # Start web server with live file watching and statistics
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data -p 8080
+koshelf serve -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data -p 8080
 
 # Start web server with authentication enabled (password generated on first run)
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data --enable-auth
+koshelf serve -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data --enable-auth
 
-# Set/rotate auth password explicitly
-./koshelf set-password --data-path ~/koshelf-data --overwrite
+# ── Export mode ───────────────────────────────────────────────
 
-# Rotate to a generated random password
-./koshelf set-password --data-path ~/koshelf-data --overwrite --random
+# Generate site from a library folder
+koshelf export ~/my-reading-site -i ~/Library -t "My Reading Journey"
+
+# Generate site from multiple folders (e.g., books + comics)
+koshelf export ~/my-reading-site -i ~/Books -i ~/Comics
+
+# Generate site with statistics and unread items included
+koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --include-unread
 
 # Generate static site with file watching and statistics
-./koshelf --library-path ~/Library -o ~/my-reading-site --statistics-db ~/KOReaderSettings/statistics.sqlite3 --watch
+koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --watch
 
 # Generate site with custom heatmap color scaling (3 hours = highest intensity)
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 3h
-
-# Generate site with custom heatmap color scaling (1.5 hours = highest intensity)
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --heatmap-scale-max 1h30m
+koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --heatmap-scale-max 3h
 
 # Generate site with explicit timezone and non-midnight day start (good for night owls)
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --timezone Australia/Sydney --day-start-time 03:00
+koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --timezone Australia/Sydney --day-start-time 03:00
 
 # Using hashdocsettings (metadata stored by content hash)
-./koshelf -i ~/Books -o ~/my-reading-site --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+koshelf export ~/my-reading-site -i ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
 
 # Using docsettings (metadata stored in central folder by path)
-./koshelf -i ~/Books -o ~/my-reading-site --docsettings-path ~/KOReaderSettings/docsettings
+koshelf export ~/my-reading-site -i ~/Books --docsettings-path ~/KOReaderSettings/docsettings
 
 # Generate site with German UI language
-./koshelf -i ~/Library -o ~/my-reading-site --language de_DE
+koshelf export ~/my-reading-site -i ~/Library --language de_DE
 
 # Ignore stable metadata page totals and synthetic scaling
-./koshelf -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 -o ~/my-reading-site --ignore-stable-page-metadata
+koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --ignore-stable-page-metadata
+
+# ── Password management ──────────────────────────────────────
+
+# Set/rotate auth password explicitly
+koshelf set-password --data-path ~/koshelf-data --overwrite
+
+# Rotate to a generated random password
+koshelf set-password --data-path ~/koshelf-data --overwrite --random
 ```
 
 ## KoReader Setup
@@ -391,7 +436,7 @@ KOReaderSettings/
 **Usage:**
 
 ```bash
-./koshelf --library-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings
+koshelf serve --library-path ~/Books --hashdocsettings-path ~/KOReaderSettings/hashdocsettings --data-path ~/koshelf-data
 ```
 
 #### 3. Docsettings
@@ -415,7 +460,7 @@ KOReaderSettings/
 **Usage:**
 
 ```bash
-./koshelf --library-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings
+koshelf serve --library-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings --data-path ~/koshelf-data
 ```
 
 ### Typical Deployment Setup
@@ -424,17 +469,17 @@ Although there are many ways to use this tool here is how I use it:
 
 1. **Syncthing Sync**: I use [Syncthing](https://syncthing.net/) to sync both my books folder and KoReader settings folder from my e-reader to my server
 2. **Books and Statistics**: I point to the synced books folder with `--library-path` and to `statistics.sqlite3` in the synced KoReader settings folder with `--statistics-db`
-3. **Web Server Mode**: I then run KoShelf in web server mode (without `--output`) - it will automatically rebuild when files change
+3. **Web Server Mode**: I then run KoShelf with `koshelf serve` - it will automatically rebuild when files change
 4. **Nginx Reverse Proxy**: I use an nginx reverse proxy for HTTPS and to restrict access
 
 My actual setup:
 
 ```bash
 # My server command - runs continuously with file watching and statistics
-./koshelf --library-path ~/syncthing/Books \
-         --statistics-db ~/syncthing/KOReaderSettings/statistics.sqlite3 \
-         --data-path ~/koshelf-data \
-         --port 3000
+koshelf serve --library-path ~/syncthing/Books \
+              --statistics-db ~/syncthing/KOReaderSettings/statistics.sqlite3 \
+              --data-path ~/koshelf-data \
+              --port 3000
 ```
 
 This way, every time Syncthing pulls updates from my e-reader, the website automatically updates with my latest reading progress, new highlights, and updated statistics.
