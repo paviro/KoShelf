@@ -36,6 +36,11 @@ const importSettingsRoute = async () => {
     return { default: module.SettingsRoute };
 };
 
+const importLoginRoute = async () => {
+    const module = await import('../../features/auth/routes/LoginRoute');
+    return { default: module.LoginRoute };
+};
+
 const importLibraryListRoute = async () => {
     const module =
         await import('../../features/library/routes/LibraryListRoute');
@@ -56,6 +61,7 @@ const importRecapRoute = async () => {
 export const StatisticsRoute = lazyWithPreload(importStatisticsRoute);
 export const CalendarRoute = lazyWithPreload(importCalendarRoute);
 export const SettingsRoute = lazyWithPreload(importSettingsRoute);
+export const LoginRoute = lazyWithPreload(importLoginRoute);
 export const LibraryListRoute = lazyWithPreload<{
     collection: LibraryCollectionRoute;
 }>(importLibraryListRoute);
@@ -67,6 +73,7 @@ export const RecapRoute = lazyWithPreload(importRecapRoute);
 const preloadedRoutePromises = new Map<RouteId, Promise<void>>();
 const PRELOADERS_BY_ROUTE: Record<RouteId, Array<() => Promise<void>>> = {
     root: [],
+    login: [LoginRoute.preload],
     statistics: [StatisticsRoute.preload],
     calendar: [CalendarRoute.preload],
     settings: [SettingsRoute.preload],

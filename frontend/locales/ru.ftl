@@ -49,6 +49,33 @@ preview-date = Предпросмотр Дата
 preview-number = Предпросмотр Число
 region-setting-majority-group = Регионы с языковым большинством
 region-setting-all-group = Все поддерживаемые регионы
+login = Войти
+login-title = Войдите в KoShelf
+login-password = Пароль
+login-submit = Войти
+login-error = Неверный пароль
+login-rate-limited = Слишком много попыток. Попробуйте снова чуть позже.
+password-setting = Пароль
+change-password = Сменить пароль
+current-password = Текущий пароль
+new-password = Новый пароль
+confirm-password = Подтвердите пароль
+password-changed = Пароль успешно изменен
+password-too-short = Пароль должен содержать не менее 8 символов
+password-mismatch = Пароли не совпадают
+incorrect-password = Неверный текущий пароль
+sessions-setting = Сеансы
+current-session = Текущий сеанс
+this-device = Это устройство
+last-active = Последняя активность
+revoke-session = Отозвать
+revoke-session-confirm = Отозвать этот сеанс?
+session-revoked = Сеанс отозван
+logout = Выйти
+current-password-placeholder = Введите текущий пароль
+new-password-placeholder = Мин. 8 символов
+new-password-hint = Должен содержать не менее 8 символов
+confirm-password-placeholder = Повторите новый пароль
 
 # -----------------------------------
 #        Book List & Library

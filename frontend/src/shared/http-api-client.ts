@@ -10,6 +10,7 @@ import type {
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
+    SessionInfo,
     SiteData,
 } from './contracts';
 
@@ -37,6 +38,52 @@ export class HttpApiClient implements ApiClient {
             version: response.meta.version,
             generated_at: response.meta.generated_at,
         };
+    }
+
+    async login(password: string): Promise<void> {
+        await fetchJson('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password }),
+            redirectOnUnauthorized: false,
+        });
+    }
+
+    async getSessions(): Promise<SessionInfo[]> {
+        const response = (await fetchJson('/api/auth/sessions')) as ApiResponse<
+            SessionInfo[]
+        >;
+        return response.data;
+    }
+
+    async revokeSession(sessionId: string): Promise<void> {
+        await fetchJson(`/api/auth/sessions/${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async changePassword(
+        currentPassword: string,
+        newPassword: string,
+    ): Promise<void> {
+        await fetchJson('/api/auth/password', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword,
+            }),
+        });
+    }
+
+    async logout(): Promise<void> {
+        await fetchJson('/api/auth/logout', {
+            method: 'POST',
+        });
     }
 
     async getItems(scope?: ScopeValue): Promise<LibraryListData> {

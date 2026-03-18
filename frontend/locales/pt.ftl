@@ -49,6 +49,33 @@ preview-date = Pré-visualização Data
 preview-number = Pré-visualização Número
 region-setting-majority-group = Regiões de maioria linguística
 region-setting-all-group = Todas as regiões compatíveis
+login = Iniciar sessão
+login-title = Entre no KoShelf
+login-password = Palavra-passe
+login-submit = Entrar
+login-error = Palavra-passe inválida
+login-rate-limited = Muitas tentativas. Tente novamente em breve.
+password-setting = Palavra-passe
+change-password = Alterar palavra-passe
+current-password = Palavra-passe atual
+new-password = Nova palavra-passe
+confirm-password = Confirmar palavra-passe
+password-changed = Palavra-passe alterada com sucesso
+password-too-short = A palavra-passe deve ter pelo menos 8 caracteres
+password-mismatch = As palavras-passe não coincidem
+incorrect-password = Palavra-passe atual incorreta
+sessions-setting = Sessões
+current-session = Sessão atual
+this-device = Este dispositivo
+last-active = Última atividade
+revoke-session = Revogar
+revoke-session-confirm = Revogar esta sessão?
+session-revoked = Sessão revogada
+logout = Terminar sessão
+current-password-placeholder = Insira a palavra-passe atual
+new-password-placeholder = Mín. 8 caracteres
+new-password-hint = Deve ter pelo menos 8 caracteres
+confirm-password-placeholder = Reinsira a nova palavra-passe
 
 # -----------------------------------
 #        Book List & Library

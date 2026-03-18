@@ -6,6 +6,7 @@ import type {
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
+    SessionInfo,
     SiteData,
 } from './contracts';
 
@@ -21,6 +22,11 @@ export interface CompletionsParams {
 
 export interface ApiClient {
     getSite(): Promise<SiteData>;
+    login(password: string): Promise<void>;
+    getSessions(): Promise<SessionInfo[]>;
+    revokeSession(sessionId: string): Promise<void>;
+    changePassword(currentPassword: string, newPassword: string): Promise<void>;
+    logout(): Promise<void>;
     getItems(scope?: ScopeValue): Promise<LibraryListData>;
     getItem(id: string): Promise<LibraryDetailData>;
     getReadingSummary(

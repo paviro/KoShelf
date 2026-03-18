@@ -17,8 +17,13 @@ import type {
     ReadingCompletionsData,
     ReadingMetricsData,
     ReadingSummaryData,
+    SessionInfo,
     SiteData,
 } from './contracts';
+
+function authUnavailableError(): Error {
+    return new Error('Authentication is unavailable in static mode.');
+}
 
 function pickScope<T>(
     byScope: { all: T; books: T; comics: T },
@@ -97,6 +102,33 @@ export class StaticApiClient implements ApiClient {
             version: exported.version,
             generated_at: exported.generated_at,
         };
+    }
+
+    async login(password: string): Promise<void> {
+        void password;
+        throw authUnavailableError();
+    }
+
+    async getSessions(): Promise<SessionInfo[]> {
+        throw authUnavailableError();
+    }
+
+    async revokeSession(sessionId: string): Promise<void> {
+        void sessionId;
+        throw authUnavailableError();
+    }
+
+    async changePassword(
+        currentPassword: string,
+        newPassword: string,
+    ): Promise<void> {
+        void currentPassword;
+        void newPassword;
+        throw authUnavailableError();
+    }
+
+    async logout(): Promise<void> {
+        throw authUnavailableError();
     }
 
     async getItems(scope?: ScopeValue): Promise<LibraryListData> {

@@ -2,6 +2,7 @@ export interface SiteCapabilities {
     has_books: boolean;
     has_comics: boolean;
     has_reading_data: boolean;
+    auth_enabled: boolean;
 }
 
 export interface SiteData {
@@ -10,6 +11,17 @@ export interface SiteData {
     capabilities: SiteCapabilities;
     version?: string;
     generated_at?: string;
+}
+
+export interface SessionInfo {
+    id: string;
+    user_agent?: string | null;
+    browser: string;
+    os: string;
+    last_seen_ip?: string | null;
+    created_at: string;
+    last_seen_at: string;
+    is_current: boolean;
 }
 
 // ── Response envelope ─────────────────────────────────────────────────────
