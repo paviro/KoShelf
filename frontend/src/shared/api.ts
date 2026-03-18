@@ -101,5 +101,7 @@ export const api: ApiClient = {
     getReadingCompletions: (scope: ScopeValue, params: CompletionsParams) =>
         getClient().getReadingCompletions(scope, params),
     getItemDownloadHref: (id: string) => getClient().getItemDownloadHref(id),
+    getItemFileHref: (id: string, format?: string | null) =>
+        getClient().getItemFileHref(id, format),
     clearCache: () => getClient().clearCache(),
 };

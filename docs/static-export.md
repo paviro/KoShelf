@@ -10,6 +10,10 @@ site/
 │   ├── covers/             # Optimized cover images
 │   │   ├── <item-id>.webp
 │   │   └── ...
+│   ├── files/              # Optional original item files (only with --include-files)
+│   │   ├── <item-id>.epub
+│   │   ├── <item-id>.cbz
+│   │   └── ...
 │   ├── recap/              # Social media share images (generated per year)
 │   │   ├── 2024_share_story.webp
 │   │   ├── 2024_share_story.svg
@@ -45,3 +49,9 @@ site/
             ├── 2024.json       # Per-year completions with summary + share assets
             └── ...
 ```
+
+`assets/files/` is generated only when `--include-files` (or `[output].include_files = true`) is enabled. Because it copies original item files, export size can grow substantially.
+
+In `serve` mode, the equivalent `/assets/files/**` path is a runtime asset route. If authentication is enabled, it is protected by the auth middleware like other `/assets/**` routes.
+
+Static exports do not provide built-in authentication. If you export files, use host-level protection (for example: reverse-proxy auth, private bucket/CDN rules, or password-gated hosting) when those downloads should not be publicly accessible.

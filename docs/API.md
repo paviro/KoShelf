@@ -87,10 +87,22 @@ Returns site metadata and capabilities.
   "capabilities": {
     "has_books": true,
     "has_comics": false,
-    "has_reading_data": true
+    "has_reading_data": true,
+    "has_files": false,
+    "auth_enabled": true
   }
 }
 ```
+
+Capability flags:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `has_books` | boolean | At least one book is available |
+| `has_comics` | boolean | At least one comic is available |
+| `has_reading_data` | boolean | Reading statistics data is available |
+| `has_files` | boolean | Original item files are available at `/assets/files/{id}.{format}` |
+| `auth_enabled` | boolean | Serve-mode authentication is enabled |
 
 ---
 
@@ -192,6 +204,7 @@ The `item` object extends the list item with additional fields:
 | `publisher` | string? | Publisher name |
 | `description` | string? | Book description (sanitized HTML) |
 | `review_note` | string? | User's review / summary note |
+| `format` | string | Source file format (e.g. `epub`, `cbz`) |
 | `pages` | number? | Total page count |
 | `search_base_path` | string | Base path for external search links |
 | `subjects` | string[] | Genres / subjects |

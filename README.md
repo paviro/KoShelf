@@ -64,6 +64,9 @@ koshelf serve -i ~/Library --data-path ~/koshelf-data
 
 # Generate a static site
 koshelf export ~/my-reading-site -i ~/Library
+
+# Generate a static site with downloadable original files
+koshelf export ~/my-reading-site -i ~/Library --include-files
 ```
 
 For all subcommands, options, environment variables, and examples, see the [Configuration Guide](docs/configuration.md).

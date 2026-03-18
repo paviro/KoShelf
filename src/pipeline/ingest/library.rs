@@ -360,6 +360,7 @@ async fn process_single_item(
     config: &SiteConfig,
     repo: &LibraryRepository,
     covers_dir: &Path,
+    files_dir: &Path,
 ) -> IngestStats {
     let mut stats = IngestStats {
         processed: 1,
@@ -452,6 +453,12 @@ async fn process_single_item(
         }
     }
 
+    if config.is_internal_server
+        && let Err(e) = media::sync_item_file_symlink(&item_id, format.extension(), path, files_dir)
+    {
+        warn!("Failed to create file symlink for {:?}: {}", path, e);
+    }
+
     stats
 }
 
@@ -470,6 +477,7 @@ pub async fn ingest_paths(
     config: &SiteConfig,
     repo: &LibraryRepository,
     covers_dir: &Path,
+    files_dir: &Path,
 ) -> Result<IngestStats> {
     if paths.is_empty() {
         return Ok(IngestStats::default());
@@ -498,6 +506,7 @@ pub async fn ingest_paths(
         let repo = repo.clone();
         let config = config.clone();
         let covers_dir = covers_dir.to_path_buf();
+        let files_dir = files_dir.to_path_buf();
         let metadata_indices = metadata_indices.clone();
         let pb = pb.clone();
 
@@ -515,7 +524,8 @@ pub async fn ingest_paths(
                 };
 
                 let item_stats =
-                    process_single_item(&path, &processor, &config, &repo, &covers_dir).await;
+                    process_single_item(&path, &processor, &config, &repo, &covers_dir, &files_dir)
+                        .await;
                 stats.merge(item_stats);
                 pb.inc(1);
             }
@@ -576,6 +586,7 @@ pub async fn update_library(
     config: &SiteConfig,
     repo: &LibraryRepository,
     covers_dir: &Path,
+    files_dir: &Path,
 ) -> Result<UpdateResult> {
     let start = Instant::now();
     let fs_paths = collect_paths(&config.library_paths);
@@ -677,6 +688,14 @@ pub async fn update_library(
                     ingest_paths_list.push(book_path.to_path_buf());
                     result.changed += 1;
                 } else {
+                    // Ensure file symlink exists for unchanged items
+                    if config.is_internal_server
+                        && let Some(ext) = book_path.extension().and_then(|e| e.to_str())
+                        && let Err(e) =
+                            media::sync_item_file_symlink(&fp.item_id, ext, book_path, files_dir)
+                    {
+                        warn!("Failed to create file symlink for {}: {}", fp.item_id, e);
+                    }
                     result.unchanged += 1;
                 }
             }
@@ -711,14 +730,26 @@ pub async fn update_library(
         if let Err(e) = repo.delete_item(item_id).await {
             warn!("Failed to delete removed item {}: {}", item_id, e);
         } else {
-            let cover_path = covers_dir.join(format!("{}.webp", item_id));
-            let _ = fs::remove_file(&cover_path);
+            if media::is_canonical_item_id(item_id) {
+                let cover_path = covers_dir.join(format!("{}.webp", item_id));
+                let _ = fs::remove_file(&cover_path);
+            } else {
+                warn!(
+                    "Skipping cover cleanup for non-canonical item id: {}",
+                    item_id
+                );
+            }
+            if config.is_internal_server
+                && let Err(e) = media::remove_item_files_by_id(item_id, files_dir)
+            {
+                warn!("Failed to clean file symlinks for {}: {}", item_id, e);
+            }
             info!("Deleted item {} (book removed from disk)", item_id);
         }
     }
 
     if !ingest_paths_list.is_empty() {
-        let stats = ingest_paths(&ingest_paths_list, config, repo, covers_dir).await?;
+        let stats = ingest_paths(&ingest_paths_list, config, repo, covers_dir, files_dir).await?;
         result.ingest_stats = Some(stats);
     }
 

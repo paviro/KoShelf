@@ -38,6 +38,8 @@ pub struct SiteConfig {
     pub use_stable_page_metadata: bool,
     /// Whether password authentication is enabled in serve mode
     pub auth_enabled: bool,
+    /// Whether to include item files in static export output
+    pub include_files: bool,
     /// Resolved runtime lifecycle policy for shared runtime data storage
     pub runtime_data_policy: RuntimeDataPolicy,
 }

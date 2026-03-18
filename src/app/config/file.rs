@@ -45,6 +45,7 @@ pub struct ServerSection {
 #[serde(deny_unknown_fields)]
 pub struct OutputSection {
     pub path: Option<PathBuf>,
+    pub include_files: Option<bool>,
     pub watch: Option<bool>,
 }
 

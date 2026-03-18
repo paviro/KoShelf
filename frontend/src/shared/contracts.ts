@@ -2,6 +2,7 @@ export interface SiteCapabilities {
     has_books: boolean;
     has_comics: boolean;
     has_reading_data: boolean;
+    has_files?: boolean;
     auth_enabled: boolean;
 }
 
@@ -231,6 +232,7 @@ export interface LibraryDetailItem {
     rating?: number | null;
     cover_url: string;
     content_type: LibraryContentType;
+    format: string;
     language?: string | null;
     publisher?: string | null;
     description?: string | null;
