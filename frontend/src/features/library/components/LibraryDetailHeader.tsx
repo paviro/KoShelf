@@ -14,6 +14,7 @@ type LibraryDetailHeaderProps = {
     collection: LibraryCollection;
     itemId: string;
     backHref: string;
+    format?: string | null;
 };
 
 export function LibraryDetailHeader({
@@ -22,6 +23,7 @@ export function LibraryDetailHeader({
     collection,
     itemId,
     backHref,
+    format,
 }: LibraryDetailHeaderProps) {
     const [shareOpen, setShareOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,11 @@ export function LibraryDetailHeader({
 
     const jsonHref = api.getItemDownloadHref(itemId);
     const jsonDownloadName = `${collection}-${itemId}.json`;
+    const fileHref = api.getItemFileHref(itemId, format);
+    const fileDownloadName = format
+        ? `${primaryAuthor ? `${primaryAuthor} - ` : ''}${title}.${format}`
+        : undefined;
+    const fileLabel = format?.toUpperCase() ?? null;
 
     const header = useMemo(
         () => ({
@@ -119,6 +126,16 @@ export function LibraryDetailHeader({
                             className={`dropdown-menu-right absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden ${shareOpen ? '' : 'hidden'}`}
                             role="menu"
                         >
+                            {fileHref && fileLabel && (
+                                <a
+                                    href={fileHref}
+                                    download={fileDownloadName}
+                                    className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200"
+                                    onClick={() => setShareOpen(false)}
+                                >
+                                    {fileLabel}
+                                </a>
+                            )}
                             <a
                                 href={jsonHref}
                                 download={jsonDownloadName}
@@ -132,7 +149,7 @@ export function LibraryDetailHeader({
                 </div>
             ),
         }),
-        [backHref, jsonDownloadName, jsonHref, primaryAuthor, shareOpen, title],
+        [backHref, fileDownloadName, fileHref, fileLabel, jsonDownloadName, jsonHref, primaryAuthor, shareOpen, title],
     );
 
     useRouteHeader(header);

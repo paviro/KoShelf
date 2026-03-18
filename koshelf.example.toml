@@ -22,6 +22,7 @@ port = 3000
 
 [output]
 # path = "/path/to/output"
+# include_files = false
 # watch = false
 
 [statistics]

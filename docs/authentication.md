@@ -44,4 +44,6 @@ koshelf set-password --data-path ~/koshelf-data --random --overwrite
 
 ## Protected Routes
 
-Protected routes include `/api/**` (except `GET /api/site` and `POST /api/auth/login`) and runtime assets under `/assets/**`. Shell assets under `/core/**` remain public.
+Protected routes include `/api/**` (except `GET /api/site` and `POST /api/auth/login`) and runtime assets under `/assets/**` (including `/assets/covers/**`, `/assets/files/**`, and `/assets/recap/**`). Shell assets under `/core/**` remain public.
+
+Authentication is not available in static export mode (`koshelf export`), so any hosted static files are governed by your hosting setup.

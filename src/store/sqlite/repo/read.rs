@@ -50,7 +50,7 @@ impl LibraryRepository {
         let sql = format!(
             "SELECT
                 id, title, authors_json, series_json, status,
-                progress_percentage, rating, cover_url, content_type,
+                progress_percentage, rating, cover_url, content_type, format,
                 language, publisher, description, review_note,
                 {pages_expr} as pages,
                 search_base_path, subjects_json, identifiers_json,
@@ -181,6 +181,18 @@ impl LibraryRepository {
             .into_iter()
             .map(|(id, pagemap, doc)| (id, (pagemap, doc)))
             .collect())
+    }
+
+    /// Load `(id, file_path, format)` for every library item.
+    ///
+    /// Used by the static export pipeline to copy item files into the output.
+    pub async fn load_all_item_file_info(&self) -> Result<Vec<(String, String, String)>> {
+        let rows: Vec<(String, String, String)> =
+            sqlx::query_as("SELECT id, file_path, format FROM library_items")
+                .fetch_all(&self.pool)
+                .await
+                .context("Failed to load item file info")?;
+        Ok(rows)
     }
 
     pub async fn count_items(&self) -> Result<i64> {

@@ -55,6 +55,7 @@ export interface ApiClient {
         params: CompletionsParams,
     ): Promise<ReadingCompletionsData>;
     getItemDownloadHref(id: string): string;
+    getItemFileHref(id: string, format?: string | null): string | null;
     clearCache(): void;
 }
 

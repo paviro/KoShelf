@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
+import { isServeMode } from '../../../shared/api';
 
 import {
     buildRoutePath,
@@ -126,6 +127,13 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                 collection={collection}
                 itemId={id}
                 backHref={backHref}
+                format={
+                    isServeMode()
+                        ? item?.format
+                        : siteQuery.data?.capabilities.has_files
+                          ? item?.format
+                          : undefined
+                }
             />
 
             <PageContent className="space-y-6 md:space-y-8">

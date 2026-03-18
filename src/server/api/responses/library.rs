@@ -73,6 +73,7 @@ pub struct LibraryDetailItem {
     pub rating: Option<i32>,
     pub cover_url: String,
     pub content_type: LibraryContentType,
+    pub format: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
