@@ -87,8 +87,21 @@ pub async fn targeted_rebuild(
                 if let Err(e) = repo.delete_item(&fp.item_id).await {
                     warn!("Failed to delete item {}: {}", fp.item_id, e);
                 } else {
-                    let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
-                    let _ = fs::remove_file(&cover_path);
+                    if media::is_canonical_item_id(&fp.item_id) {
+                        let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
+                        let _ = fs::remove_file(&cover_path);
+                    } else {
+                        warn!(
+                            "Skipping cover cleanup for non-canonical item id: {}",
+                            fp.item_id
+                        );
+                    }
+                    if config.is_internal_server
+                        && let Err(e) =
+                            media::remove_item_files_by_id(&fp.item_id, &media_dirs.files_dir)
+                    {
+                        warn!("Failed to clean file symlinks for {}: {}", fp.item_id, e);
+                    }
                     info!(
                         "Deleted item {} (book removed: {})",
                         fp.item_id, book_path_str
@@ -107,7 +120,14 @@ pub async fn targeted_rebuild(
 
     // ── 3. Ingest changed/new paths ──────────────────────────────────
     let parse_list: Vec<PathBuf> = parse_paths.into_iter().collect();
-    let ingest_stats = ingest_paths(&parse_list, config, repo, &media_dirs.covers_dir).await?;
+    let ingest_stats = ingest_paths(
+        &parse_list,
+        config,
+        repo,
+        &media_dirs.covers_dir,
+        &media_dirs.files_dir,
+    )
+    .await?;
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
@@ -141,6 +161,7 @@ pub async fn targeted_rebuild(
                     has_books,
                     has_comics,
                     has_reading_data,
+                    has_files: config.is_internal_server || config.include_files,
                     auth_enabled: config.auth_enabled,
                 },
                 authenticated: None,
@@ -171,9 +192,11 @@ pub async fn targeted_rebuild(
         let export_config = ExportConfig {
             site_title: config.site_title.clone(),
             language: config.language.clone(),
+            include_files: config.include_files,
         };
         if let Err(e) = export_data_files(
             &config.output_dir.join("data"),
+            &config.output_dir,
             repo,
             rd_ref,
             &export_config,
@@ -215,13 +238,25 @@ pub async fn full_rebuild(
     repo.clear_all().await?;
 
     let paths = collect_paths(&config.library_paths);
-    let ingest_stats = ingest_paths(&paths, config, repo, &media_dirs.covers_dir).await?;
+    let ingest_stats = ingest_paths(
+        &paths,
+        config,
+        repo,
+        &media_dirs.covers_dir,
+        &media_dirs.files_dir,
+    )
+    .await?;
 
     match repo.load_all_item_ids().await {
         Ok(ids) => {
             let id_set: HashSet<String> = ids.into_iter().collect();
             if let Err(e) = media::cleanup_stale_covers_by_ids(&id_set, &media_dirs.covers_dir) {
                 warn!("Failed to cleanup stale covers: {}", e);
+            }
+            if config.is_internal_server
+                && let Err(e) = media::cleanup_stale_files_by_ids(&id_set, &media_dirs.files_dir)
+            {
+                warn!("Failed to cleanup stale file symlinks: {}", e);
             }
         }
         Err(e) => warn!("Failed to load item IDs for cover cleanup: {}", e),
@@ -259,6 +294,7 @@ pub async fn full_rebuild(
             has_books,
             has_comics,
             has_reading_data,
+            has_files: config.is_internal_server || config.include_files,
             auth_enabled: config.auth_enabled,
         },
         authenticated: None,
@@ -281,9 +317,11 @@ pub async fn full_rebuild(
         let export_config = ExportConfig {
             site_title: config.site_title.clone(),
             language: config.language.clone(),
+            include_files: config.include_files,
         };
         if let Err(e) = export_data_files(
             &config.output_dir.join("data"),
+            &config.output_dir,
             repo,
             reading_data.as_ref(),
             &export_config,

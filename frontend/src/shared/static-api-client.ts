@@ -232,6 +232,11 @@ export class StaticApiClient implements ApiClient {
         return `/data/items/${id}.json`;
     }
 
+    getItemFileHref(id: string, format?: string | null): string | null {
+        if (!format) return null;
+        return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
     clearCache(): void {
         this.cache.clear();
     }

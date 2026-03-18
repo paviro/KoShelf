@@ -1,6 +1,6 @@
 //! Media asset management: directory creation, cover generation/cleanup.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use log::info;
 use std::collections::HashSet;
 use std::fs;
@@ -14,6 +14,7 @@ pub struct MediaDirs {
     pub output_dir: PathBuf,
     pub assets_dir: PathBuf,
     pub covers_dir: PathBuf,
+    pub files_dir: PathBuf,
     pub recap_dir: PathBuf,
 }
 
@@ -28,11 +29,13 @@ pub fn resolve_media_dirs(output_dir: &Path, is_internal_server: bool) -> MediaD
         output_dir.join("assets")
     };
     let covers_dir = assets_dir.join("covers");
+    let files_dir = assets_dir.join("files");
     let recap_dir = assets_dir.join("recap");
     MediaDirs {
         output_dir: output_dir.to_path_buf(),
         assets_dir,
         covers_dir,
+        files_dir,
         recap_dir,
     }
 }
@@ -42,6 +45,7 @@ pub fn create_media_directories(dirs: &MediaDirs) -> Result<()> {
     fs::create_dir_all(&dirs.output_dir)?;
     fs::create_dir_all(&dirs.assets_dir)?;
     fs::create_dir_all(&dirs.covers_dir)?;
+    fs::create_dir_all(&dirs.files_dir)?;
     Ok(())
 }
 
@@ -107,6 +111,8 @@ pub fn cleanup_stale_covers_by_ids(current_ids: &HashSet<String>, covers_dir: &P
         return Ok(());
     }
 
+    ensure_plain_directory(covers_dir)?;
+
     let entries = fs::read_dir(covers_dir)?;
     for entry in entries.flatten() {
         let path = entry.path();
@@ -124,4 +130,185 @@ pub fn cleanup_stale_covers_by_ids(current_ids: &HashSet<String>, covers_dir: &P
     }
 
     Ok(())
+}
+
+// ── Item file symlinks ──────────────────────────────────────────────────
+
+/// Build a safe `{id}.{format}` basename for item files.
+///
+/// Returns `None` when the inputs are not canonical/supported.
+pub fn item_file_basename(item_id: &str, format: &str) -> Option<String> {
+    if !is_canonical_item_id(item_id) {
+        return None;
+    }
+
+    let normalized_format = format.trim().to_ascii_lowercase();
+    if !matches!(
+        normalized_format.as_str(),
+        "epub" | "fb2" | "mobi" | "cbz" | "cbr"
+    ) {
+        return None;
+    }
+
+    Some(format!("{}.{}", item_id, normalized_format))
+}
+
+/// Refuse to operate on symlinked media directories to avoid accidental
+/// writes/deletes outside the configured output path.
+pub fn ensure_plain_directory(path: &Path) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    // Guard against symlinked ancestors like `output/assets -> /some/other/path`.
+    // In that case, operating on `output/assets/files` would escape the intended tree.
+    for ancestor in path.ancestors().skip(1) {
+        if ancestor.as_os_str().is_empty() || !ancestor.exists() {
+            continue;
+        }
+
+        let meta = fs::symlink_metadata(ancestor).with_context(|| {
+            format!("Failed to inspect media directory ancestor {:?}", ancestor)
+        })?;
+
+        if meta.file_type().is_symlink() {
+            bail!(
+                "Refusing to operate under symlinked media directory ancestor {:?}",
+                ancestor
+            );
+        }
+    }
+
+    let meta = fs::symlink_metadata(path)
+        .with_context(|| format!("Failed to inspect media directory {:?}", path))?;
+
+    if meta.file_type().is_symlink() {
+        bail!(
+            "Refusing to operate on symlinked media directory {:?}",
+            path
+        );
+    }
+
+    if !meta.is_dir() {
+        bail!(
+            "Expected media directory but found non-directory {:?}",
+            path
+        );
+    }
+
+    Ok(())
+}
+
+/// Create or update a symlink `files_dir/{id}.{format}` → `source_path`.
+///
+/// If a symlink already exists but points to a different target, it is replaced.
+pub fn sync_item_file_symlink(
+    item_id: &str,
+    format: &str,
+    source_path: &Path,
+    files_dir: &Path,
+) -> Result<()> {
+    ensure_plain_directory(files_dir)?;
+
+    let basename = item_file_basename(item_id, format).with_context(|| {
+        format!(
+            "Invalid item file target for id '{}' and format '{}'",
+            item_id, format
+        )
+    })?;
+
+    let link_path = files_dir.join(basename);
+
+    if link_path.exists() {
+        if link_path.is_symlink() {
+            match fs::read_link(&link_path) {
+                Ok(existing_target) if existing_target == source_path => return Ok(()),
+                _ => {
+                    fs::remove_file(&link_path).with_context(|| {
+                        format!("Failed to remove stale file symlink {:?}", link_path)
+                    })?;
+                }
+            }
+        } else {
+            fs::remove_file(&link_path)
+                .with_context(|| format!("Failed to remove existing file {:?}", link_path))?;
+        }
+    }
+
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(source_path, &link_path)
+        .with_context(|| format!("Failed to create file symlink {:?}", link_path))?;
+
+    #[cfg(not(unix))]
+    {
+        // On non-Unix platforms, fall back to a hard copy.
+        fs::copy(source_path, &link_path)
+            .with_context(|| format!("Failed to copy item file to {:?}", link_path))?;
+    }
+
+    Ok(())
+}
+
+/// Remove all item file entries for a given item ID from `files_dir`.
+///
+/// This removes any `{id}.*` file/symlink variants regardless of extension.
+pub fn remove_item_files_by_id(item_id: &str, files_dir: &Path) -> Result<()> {
+    if !files_dir.exists() {
+        return Ok(());
+    }
+
+    ensure_plain_directory(files_dir)?;
+
+    if !is_canonical_item_id(item_id) {
+        log::warn!(
+            "Skipping file cleanup for non-canonical item id: {}",
+            item_id
+        );
+        return Ok(());
+    }
+
+    for entry in fs::read_dir(files_dir)?.flatten() {
+        let path = entry.path();
+        if !path.is_file() && !path.is_symlink() {
+            continue;
+        }
+        if path.file_stem().and_then(|n| n.to_str()) == Some(item_id)
+            && let Err(e) = fs::remove_file(&path)
+        {
+            log::warn!("Failed to remove item file {:?}: {}", path, e);
+        }
+    }
+
+    Ok(())
+}
+
+/// Remove file symlinks whose stem (ID) is not in the given set.
+pub fn cleanup_stale_files_by_ids(current_ids: &HashSet<String>, files_dir: &Path) -> Result<()> {
+    if !files_dir.exists() {
+        return Ok(());
+    }
+
+    ensure_plain_directory(files_dir)?;
+
+    let entries = fs::read_dir(files_dir)?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() && !path.is_symlink() {
+            continue;
+        }
+        if let Some(file_stem) = path.file_stem().and_then(|n| n.to_str())
+            && !current_ids.contains(file_stem)
+        {
+            info!("Removing stale file symlink: {:?}", path);
+            if let Err(e) = fs::remove_file(&path) {
+                log::warn!("Failed to remove stale file symlink {:?}: {}", path, e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn is_canonical_item_id(item_id: &str) -> bool {
+    item_id.len() == 32 && item_id.bytes().all(|b| b.is_ascii_hexdigit())
 }

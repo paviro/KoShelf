@@ -87,6 +87,7 @@ impl WebServer {
             auth_state: self.auth_state,
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
+        let files_cache_dir = self.media_cache_dir.join("files");
         let recap_cache_dir = self.media_cache_dir.join("recap");
 
         let mut app = api::routes()
@@ -94,6 +95,7 @@ impl WebServer {
             .merge(frontend::routes())
             // Runtime-generated media cache directories are mounted under public /assets URLs.
             .nest_service("/assets/covers", ServeDir::new(covers_cache_dir))
+            .nest_service("/assets/files", ServeDir::new(files_cache_dir))
             .nest_service("/assets/recap", ServeDir::new(recap_cache_dir));
 
         if state.auth_state.is_some() {

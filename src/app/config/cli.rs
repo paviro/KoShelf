@@ -167,6 +167,10 @@ pub struct ExportArgs {
     #[arg(env = "KOSHELF_OUTPUT")]
     pub output: Option<PathBuf>,
 
+    /// Include item files (epub, cbz, etc.) in the exported output.
+    #[arg(long, env = "KOSHELF_INCLUDE_FILES", default_value = "false")]
+    pub include_files: bool,
+
     /// Re-export on library changes.
     #[arg(short, long, env = "KOSHELF_WATCH", default_value = "false")]
     pub watch: bool,

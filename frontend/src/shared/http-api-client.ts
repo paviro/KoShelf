@@ -194,6 +194,11 @@ export class HttpApiClient implements ApiClient {
         return `/api/items/${id}`;
     }
 
+    getItemFileHref(id: string, format?: string | null): string | null {
+        if (!format) return null;
+        return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
     clearCache(): void {
         // No client-side cache in HTTP mode.
     }

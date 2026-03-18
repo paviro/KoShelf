@@ -13,6 +13,7 @@ use anyhow::{Context, Result};
 use log::info;
 use serde::Serialize;
 
+use crate::pipeline::media;
 use crate::server::api::responses::common::ContentTypeFilter;
 use crate::server::api::responses::library::LibraryContentType;
 use crate::server::api::responses::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
@@ -106,6 +107,7 @@ struct ExportDayMetrics {
 pub struct ExportConfig {
     pub site_title: String,
     pub language: String,
+    pub include_files: bool,
 }
 
 // ── Public entry point ──────────────────────────────────────────────────
@@ -116,6 +118,7 @@ pub struct ExportConfig {
 /// The `library_repo` must already be populated via the shared ingest pipeline.
 pub async fn export_data_files(
     data_dir: &Path,
+    output_dir: &Path,
     library_repo: &LibraryRepository,
     reading_data: Option<&ReadingData>,
     config: &ExportConfig,
@@ -149,6 +152,7 @@ pub async fn export_data_files(
                 has_books,
                 has_comics,
                 has_reading_data,
+                has_files: config.include_files,
                 auth_enabled: false,
             },
         },
@@ -179,6 +183,15 @@ pub async fn export_data_files(
         items.len()
     );
 
+    // ── Item files ─────────────────────────────────────────────────────
+    if config.include_files {
+        export_item_files(output_dir, library_repo).await?;
+    } else {
+        let files_dir = output_dir.join("assets").join("files");
+        let keep: HashSet<String> = HashSet::new();
+        cleanup_stale_item_files(&files_dir, &keep)?;
+    }
+
     // ── Reading domain ──────────────────────────────────────────────────
     if let Some(rd) = reading_data
         && has_reading_data
@@ -207,6 +220,14 @@ async fn export_item_details(
     let mut exported_ids = HashSet::new();
 
     for item in items {
+        if !media::is_canonical_item_id(&item.id) {
+            log::warn!(
+                "Skipping detail export for non-canonical item id: {}",
+                item.id
+            );
+            continue;
+        }
+
         let query = LibraryDetailQuery::new(&item.id, IncludeSet::all());
         if let Some(detail) = library::detail(library_repo, &query, reading_data).await? {
             write_json(&items_dir.join(format!("{}.json", item.id)), &detail)?;
@@ -516,6 +537,84 @@ async fn export_reading_completions(
     Ok(())
 }
 
+// ── Item file export ─────────────────────────────────────────────────
+
+/// Copy item files to `output_dir/assets/files/{id}.{ext}` for static hosting.
+async fn export_item_files(output_dir: &Path, library_repo: &LibraryRepository) -> Result<()> {
+    let files_dir = output_dir.join("assets").join("files");
+    fs::create_dir_all(&files_dir)?;
+    media::ensure_plain_directory(&files_dir)?;
+
+    let file_infos = library_repo.load_all_item_file_info().await?;
+    let mut expected_file_names = HashSet::new();
+    let mut copied_count = 0usize;
+
+    for (id, file_path, format) in &file_infos {
+        let Some(file_name) = media::item_file_basename(id, format) else {
+            log::warn!(
+                "Skipping invalid item file export target for id='{}', format='{}'",
+                id,
+                format
+            );
+            continue;
+        };
+        expected_file_names.insert(file_name.clone());
+
+        let source = Path::new(file_path);
+        if !source.is_file() {
+            log::warn!("Item file missing, skipping export: {:?}", source);
+            continue;
+        }
+        let dest = files_dir.join(file_name);
+
+        if dest.exists() {
+            if !dest.is_file() && !dest.is_symlink() {
+                log::warn!("Invalid export destination (not a file): {:?}", dest);
+                continue;
+            }
+            if let Err(e) = fs::remove_file(&dest) {
+                log::warn!("Failed to reset export destination {:?}: {}", dest, e);
+                continue;
+            }
+        }
+
+        if let Err(e) = fs::copy(source, &dest) {
+            log::warn!("Failed to copy item file {:?} → {:?}: {}", source, dest, e);
+        } else {
+            copied_count += 1;
+        }
+    }
+
+    // Clean up stale files
+    cleanup_stale_item_files(&files_dir, &expected_file_names)?;
+
+    info!("Exported {} item files", copied_count);
+    Ok(())
+}
+
+/// Remove item files whose basename is not in the given set.
+fn cleanup_stale_item_files(files_dir: &Path, valid_file_names: &HashSet<String>) -> Result<()> {
+    if !files_dir.exists() {
+        return Ok(());
+    }
+
+    media::ensure_plain_directory(files_dir)?;
+
+    for entry in fs::read_dir(files_dir)?.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        if let Some(file_name) = path.file_name().and_then(|s| s.to_str())
+            && !valid_file_names.contains(file_name)
+        {
+            fs::remove_file(&path)?;
+        }
+    }
+
+    Ok(())
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
@@ -536,6 +635,8 @@ fn cleanup_stale_json(
     if !directory.exists() {
         return Ok(());
     }
+
+    media::ensure_plain_directory(directory)?;
 
     for entry in fs::read_dir(directory)?.flatten() {
         let path = entry.path();

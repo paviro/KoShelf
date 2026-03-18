@@ -173,6 +173,11 @@ pub fn merge_export_with_file_config(
         {
             args.output = Some(p.clone());
         }
+        if let Some(v) = out.include_files
+            && not_explicit(matches, "include_files")
+        {
+            args.include_files = v;
+        }
         if let Some(v) = out.watch
             && not_explicit(matches, "watch")
         {
@@ -276,6 +281,7 @@ mod tests {
         let file_config = FileConfig {
             output: Some(crate::app::config::file::OutputSection {
                 path: Some(PathBuf::from("/output/from-config")),
+                include_files: None,
                 watch: None,
             }),
             ..FileConfig::default()

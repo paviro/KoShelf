@@ -71,6 +71,7 @@ fn build_site_config(
     output_dir: PathBuf,
     is_internal_server: bool,
     auth_enabled: bool,
+    include_files: bool,
     runtime_data_policy: RuntimeDataPolicy,
 ) -> Result<SiteConfig> {
     let heatmap_scale_max =
@@ -104,6 +105,7 @@ fn build_site_config(
         language: common.language.clone(),
         use_stable_page_metadata: !common.ignore_stable_page_metadata,
         auth_enabled,
+        include_files,
         runtime_data_policy,
     })
 }
@@ -125,6 +127,7 @@ async fn initialize_pipeline(
     output_dir: PathBuf,
     is_internal_server: bool,
     auth_enabled: bool,
+    include_files: bool,
 ) -> Result<PipelineState> {
     let mut runtime_data_policy = resolve_data_policy(common);
     match runtime_data_policy.persistent_data_dir() {
@@ -154,6 +157,7 @@ async fn initialize_pipeline(
         output_dir,
         is_internal_server,
         auth_enabled,
+        include_files,
         runtime_data_policy,
     )?;
 
@@ -190,12 +194,21 @@ async fn initialize_pipeline(
 
     // ── 3. Update library ────────────────────────────────────────────
     if !config.library_paths.is_empty() {
-        update_library(&config, &repo, &media_dirs.covers_dir).await?;
+        update_library(
+            &config,
+            &repo,
+            &media_dirs.covers_dir,
+            &media_dirs.files_dir,
+        )
+        .await?;
 
         match repo.load_all_item_ids().await {
             Ok(ids) => {
                 let id_set: HashSet<String> = ids.into_iter().collect();
                 media::cleanup_stale_covers_by_ids(&id_set, &media_dirs.covers_dir)?;
+                if config.is_internal_server {
+                    media::cleanup_stale_files_by_ids(&id_set, &media_dirs.files_dir)?;
+                }
             }
             Err(e) => log::warn!("Failed to load item IDs for cover cleanup: {}", e),
         }
@@ -238,6 +251,7 @@ async fn initialize_pipeline(
             has_books,
             has_comics,
             has_reading_data,
+            has_files: is_internal_server || config.include_files,
             auth_enabled: config.auth_enabled,
         },
         authenticated: None,
@@ -352,8 +366,14 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         .clone()
         .context("Serve mode requires --data-path")?;
 
-    let state =
-        initialize_pipeline(&args.common, output_dir.clone(), true, args.enable_auth).await?;
+    let state = initialize_pipeline(
+        &args.common,
+        output_dir.clone(),
+        true,
+        args.enable_auth,
+        false,
+    )
+    .await?;
 
     // ── Auth setup ───────────────────────────────────────────────────
     let koshelf_db_path = state
@@ -501,7 +521,14 @@ async fn run_export(args: ExportArgs) -> Result<()> {
         .clone()
         .context("Output directory is required for export")?;
 
-    let state = initialize_pipeline(&args.common, output_dir.clone(), false, false).await?;
+    let state = initialize_pipeline(
+        &args.common,
+        output_dir.clone(),
+        false,
+        false,
+        args.include_files,
+    )
+    .await?;
 
     // ── Sync static frontend ─────────────────────────────────────────
     frontend::sync_static_frontend(&state.config.output_dir, state.has_reading_data)?;
@@ -510,9 +537,11 @@ async fn run_export(args: ExportArgs) -> Result<()> {
     let export_config = ExportConfig {
         site_title: state.config.site_title.clone(),
         language: state.config.language.clone(),
+        include_files: state.config.include_files,
     };
     export_data_files(
         &output_dir.join("data"),
+        &output_dir,
         &state.repo,
         state.reading_data.as_ref(),
         &export_config,
