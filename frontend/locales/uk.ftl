@@ -307,6 +307,7 @@ reader-error = Не вдалося завантажити книгу
 reader-previous-page = Попередня сторінка
 reader-next-page = Наступна сторінка
 open-at-annotation = Відкрити на анотації
+open-in-reader = Відкрити
 select-month = Вибрати місяць
 
 # -----------------------------------

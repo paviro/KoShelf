@@ -260,6 +260,7 @@ reader-error = A könyv betöltése sikertelen
 reader-previous-page = Előző oldal
 reader-next-page = Következő oldal
 open-at-annotation = Megnyitás a jelölésnél
+open-in-reader = Megnyitás
 select-month = Hónap kiválasztása
 
 # -----------------------------------

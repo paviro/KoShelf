@@ -281,6 +281,7 @@ reader-error = Buch konnte nicht geladen werden
 reader-previous-page = Vorherige Seite
 reader-next-page = Nächste Seite
 open-at-annotation = An Markierung öffnen
+open-in-reader = Öffnen
 select-month = Monat auswählen
 
 # -----------------------------------

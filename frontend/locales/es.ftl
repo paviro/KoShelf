@@ -280,6 +280,7 @@ reader-error = Error al cargar el libro
 reader-previous-page = Página anterior
 reader-next-page = Página siguiente
 open-at-annotation = Abrir en la anotación
+open-in-reader = Abrir
 select-month = Seleccionar mes
 
 # -----------------------------------
