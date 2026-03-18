@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 
+import { BRAND_ICON } from '../../../app/shell/shell-nav';
 import { api, isApiHttpError } from '../../../shared/api';
 import { fetchJson } from '../../../shared/api-fetch';
 import { translation } from '../../../shared/i18n';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { LoginPasswordField } from '../components/LoginPasswordField';
+import { LoginSubmitButton } from '../components/LoginSubmitButton';
 
 type LoginRouteProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
@@ -40,6 +43,7 @@ export function LoginRoute({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitPending, setSubmitPending] = useState(false);
     const [sessionCheckPending, setSessionCheckPending] = useState(true);
+    const BrandIcon = BRAND_ICON;
     const loginTitle = translation.get('login-title', { site: siteTitle });
 
     useEffect(() => {
@@ -91,7 +95,7 @@ export function LoginRoute({
 
     if (!siteLoaded || sessionCheckPending) {
         return (
-            <main className="min-h-dvh flex items-center justify-center px-6 py-10">
+            <main className="min-h-dvh flex items-center justify-center px-6 py-10 bg-gray-100 dark:bg-dark-925">
                 <LoadingSpinner
                     size="lg"
                     srLabel="Loading login"
@@ -126,61 +130,72 @@ export function LoginRoute({
     };
 
     return (
-        <main className="min-h-dvh flex items-center justify-center px-4 py-10 bg-linear-to-br from-sky-100 via-white to-emerald-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-850">
-            <section className="w-full max-w-md">
-                <div className="rounded-2xl border border-gray-200/70 dark:border-dark-700/70 bg-white/90 dark:bg-dark-900/85 backdrop-blur-sm shadow-xl p-6 md:p-8">
-                    <header className="mb-6 space-y-2">
-                        <p className="text-xs uppercase tracking-[0.22em] text-primary-700 dark:text-primary-300 font-semibold">
-                            {translation.get('login')}
-                        </p>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
-                            {loginTitle}
-                        </h1>
-                    </header>
-
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        <div className="space-y-2">
-                            <label
-                                htmlFor="login-password"
-                                className="block text-sm font-medium text-gray-900 dark:text-white"
-                            >
-                                {translation.get('login-password')}
-                            </label>
-                            <input
-                                id="login-password"
-                                type="password"
-                                autoComplete="current-password"
-                                value={password}
-                                onChange={(event) =>
-                                    setPassword(event.target.value)
-                                }
-                                className="w-full bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/60"
-                                disabled={submitPending}
-                                required
+        <main className="min-h-dvh bg-gray-100 dark:bg-dark-925">
+            <div className="mx-auto flex min-h-dvh w-full max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
+                <section className="grid w-full overflow-hidden rounded-3xl border border-gray-200/70 dark:border-dark-700/70 bg-white/95 dark:bg-dark-900/90 shadow-2xl md:grid-cols-5">
+                    <aside className="relative flex flex-col gap-8 overflow-hidden bg-linear-to-br from-primary-700 via-primary-600 to-primary-500 p-6 text-white sm:p-8 md:col-span-2 md:justify-between">
+                        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/20 via-transparent to-transparent" />
+                        <div className="pointer-events-none absolute -right-8 -bottom-8 md:-right-10 md:-bottom-10">
+                            <BrandIcon
+                                className="h-24 w-24 text-white/10 md:h-36 md:w-36"
+                                aria-hidden="true"
                             />
                         </div>
 
-                        {submitError ? (
-                            <p
-                                role="alert"
-                                className="text-sm rounded-lg border border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2"
-                            >
-                                {submitError}
-                            </p>
-                        ) : null}
+                        <div className="relative inline-flex items-center gap-3 rounded-2xl border border-white/25 bg-white/10 px-3 py-3 shadow-lg shadow-primary-900/20">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                                <BrandIcon
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
+                            </span>
+                            <div>
+                                <p className="text-lg font-semibold leading-tight">
+                                    {siteTitle}
+                                </p>
+                            </div>
+                        </div>
 
-                        <button
-                            type="submit"
-                            className="w-full inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                            disabled={
-                                submitPending || password.trim().length === 0
-                            }
-                        >
-                            {translation.get('login-submit')}
-                        </button>
-                    </form>
-                </div>
-            </section>
+                        <div className="relative">
+                            <p className="text-3xl font-semibold leading-tight text-white md:text-4xl">
+                                {translation.get('reading-companion')}
+                            </p>
+                        </div>
+                    </aside>
+
+                    <div className="md:col-span-3 p-6 pb-8 sm:p-8 sm:pb-10 md:p-10 md:pb-12">
+                        <header className="mb-6 space-y-3">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
+                                {translation.get('login')}
+                            </h1>
+                        </header>
+
+                        <form className="space-y-5" onSubmit={handleSubmit}>
+                            <LoginPasswordField
+                                password={password}
+                                disabled={submitPending}
+                                onPasswordChange={setPassword}
+                            />
+
+                            {submitError ? (
+                                <p
+                                    role="alert"
+                                    className="text-sm rounded-lg border border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2"
+                                >
+                                    {submitError}
+                                </p>
+                            ) : null}
+
+                            <LoginSubmitButton
+                                disabled={
+                                    submitPending ||
+                                    password.trim().length === 0
+                                }
+                            />
+                        </form>
+                    </div>
+                </section>
+            </div>
         </main>
     );
 }
