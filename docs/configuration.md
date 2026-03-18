@@ -32,9 +32,12 @@ Generate a static site to the given directory.
 
 **Export-specific options:**
 
+- `--include-files`: Copy original item files into `assets/files/` (default: `false`)
 - `-w, --watch`: Re-export on library changes
 
 The output directory can also be provided via the `KOSHELF_OUTPUT` env var or `[output].path` in the TOML config.
+
+> **Note:** `--include-files` is useful for static hosting when you want direct downloads, but it can significantly increase export size because full source files are copied. In `serve` mode, file assets are served from runtime media storage; with auth enabled, `/assets/**` (including `/assets/files/**`) requires login. Static exports have no built-in authentication, so protect hosted exports with your web server/CDN auth layer when file downloads should not be public.
 
 ### `koshelf set-password`
 
@@ -106,6 +109,7 @@ Common environment variables:
 - `KOSHELF_LIBRARY_PATH`
 - `KOSHELF_STATISTICS_DB`
 - `KOSHELF_OUTPUT`
+- `KOSHELF_INCLUDE_FILES`
 - `KOSHELF_DATA_PATH`
 - `KOSHELF_ENABLE_AUTH`
 - `KOSHELF_TRUSTED_PROXIES`
@@ -159,6 +163,9 @@ koshelf export ~/my-reading-site -i ~/Books --docsettings-path ~/KOReaderSetting
 
 # Generate site with German UI language
 koshelf export ~/my-reading-site -i ~/Library --language de_DE
+
+# Generate site with downloadable original item files
+koshelf export ~/my-reading-site -i ~/Library --include-files
 
 # Ignore stable metadata page totals and synthetic scaling
 koshelf export ~/my-reading-site -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --ignore-stable-page-metadata
