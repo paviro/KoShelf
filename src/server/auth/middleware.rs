@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use axum::Json;
 use axum::extract::{ConnectInfo, Request, State};
-use axum::http::{Method, StatusCode, header::COOKIE};
+use axum::http::{HeaderMap, Method, StatusCode, header::COOKIE};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
@@ -28,7 +28,7 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
-    let Some(token) = cookie_value(&request, SESSION_COOKIE_NAME) else {
+    let Some(token) = cookie_value(request.headers(), SESSION_COOKIE_NAME) else {
         return unauthorized_response();
     };
 
@@ -46,7 +46,7 @@ pub async fn auth_middleware(
         auth_state.token_key.as_ref(),
         &auth_state.pool,
         &token,
-        Some(client_context.client_ip),
+        client_context.client_ip,
     )
     .await
     {
@@ -74,8 +74,8 @@ fn is_protected_path(method: &Method, path: &str) -> bool {
     path == "/assets" || path.starts_with("/assets/")
 }
 
-pub(crate) fn cookie_value(request: &Request, key: &str) -> Option<String> {
-    let raw = request.headers().get(COOKIE)?.to_str().ok()?;
+pub(crate) fn cookie_value(headers: &HeaderMap, key: &str) -> Option<String> {
+    let raw = headers.get(COOKIE)?.to_str().ok()?;
 
     for part in raw.split(';') {
         let trimmed = part.trim();

@@ -1,10 +1,12 @@
 use axum::Json;
-use axum::extract::{ConnectInfo, Extension, Path, State};
+use axum::extract::{Extension, Path, State};
 use axum::http::{HeaderMap, StatusCode, header::HOST, header::RETRY_AFTER, header::SET_COOKIE};
 use axum::response::{IntoResponse, Response};
 use governor::clock::{Clock, DefaultClock};
 use serde::{Deserialize, Serialize};
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
+
+use super::client_addr::ClientContext;
 
 use crate::server::ServerState;
 use crate::server::api::responses::common::ApiResponse;
@@ -47,7 +49,7 @@ pub struct SessionInfoResponse {
 
 pub async fn login_submit(
     State(state): State<ServerState>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    client_context: ClientContext,
     headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Response {
@@ -55,10 +57,9 @@ pub async fn login_submit(
         return auth_not_configured_response();
     };
 
-    let client_context = auth_state.client_addr_resolver.resolve(&headers, addr.ip());
     let secure_cookie = should_use_secure_cookie(
         client_context.is_https,
-        addr.ip(),
+        client_context.peer_ip,
         headers.get(HOST).and_then(|value| value.to_str().ok()),
     );
 
@@ -116,7 +117,7 @@ pub async fn login_submit(
 pub async fn logout(
     State(state): State<ServerState>,
     Extension(current_session): Extension<CurrentSessionId>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    client_context: ClientContext,
     headers: HeaderMap,
 ) -> Response {
     let Some(auth_state) = state.auth_state.as_ref() else {
@@ -125,10 +126,9 @@ pub async fn logout(
 
     let _ = delete_session(&auth_state.pool, &current_session.0).await;
 
-    let client_context = auth_state.client_addr_resolver.resolve(&headers, addr.ip());
     let secure_cookie = should_use_secure_cookie(
         client_context.is_https,
-        addr.ip(),
+        client_context.peer_ip,
         headers.get(HOST).and_then(|value| value.to_str().ok()),
     );
 
@@ -143,15 +143,13 @@ pub async fn logout(
 pub async fn change_password(
     State(state): State<ServerState>,
     Extension(current_session): Extension<CurrentSessionId>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
+    client_context: ClientContext,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Response {
     let Some(auth_state) = state.auth_state.as_ref() else {
         return auth_not_configured_response();
     };
 
-    let client_context = auth_state.client_addr_resolver.resolve(&headers, addr.ip());
     if let Err(not_until) = auth_state
         .login_limiter
         .check_key(&client_context.client_ip)

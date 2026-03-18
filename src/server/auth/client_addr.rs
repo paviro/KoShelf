@@ -1,12 +1,49 @@
+use std::convert::Infallible;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+use axum::extract::ConnectInfo;
 use axum::http::HeaderMap;
+use axum::http::request::Parts;
 use ipnet::IpNet;
 use log::{debug, warn};
-use std::net::{IpAddr, SocketAddr};
+
+use crate::server::ServerState;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ClientContext {
     pub client_ip: IpAddr,
+    pub peer_ip: IpAddr,
     pub is_https: bool,
+}
+
+impl axum::extract::FromRequestParts<ServerState> for ClientContext {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &ServerState,
+    ) -> Result<Self, Self::Rejection> {
+        let peer_ip = parts
+            .extensions
+            .get::<ConnectInfo<SocketAddr>>()
+            .map(|ci| ci.0.ip())
+            .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+
+        let context = match state.auth_state.as_ref() {
+            Some(auth_state) => {
+                auth_state
+                    .client_addr_resolver
+                    .resolve(&parts.headers, peer_ip)
+            }
+            None => ClientContext {
+                client_ip: peer_ip,
+                peer_ip,
+                is_https: false,
+            },
+        };
+
+        Ok(context)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -23,6 +60,7 @@ impl ClientAddrResolver {
         if !self.is_trusted_proxy(connect_info_ip) {
             return ClientContext {
                 client_ip: connect_info_ip,
+                peer_ip: connect_info_ip,
                 is_https: false,
             };
         }
@@ -33,6 +71,7 @@ impl ClientAddrResolver {
                 warn!("Ignoring forwarded headers due to parse error: {}", error);
                 return ClientContext {
                     client_ip: connect_info_ip,
+                    peer_ip: connect_info_ip,
                     is_https: false,
                 };
             }
@@ -59,6 +98,7 @@ impl ClientAddrResolver {
 
         ClientContext {
             client_ip,
+            peer_ip: connect_info_ip,
             is_https,
         }
     }
