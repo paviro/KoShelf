@@ -61,6 +61,20 @@ export const MAIN_ROUTE_IDS = [
     'recap',
 ] as const;
 
+export type ScrollableRouteId = MainRouteId | DetailRouteId;
+
+const SCROLLABLE_ROUTE_IDS: ReadonlySet<string> = new Set<string>([
+    ...MAIN_ROUTE_IDS,
+    'books-detail',
+    'comics-detail',
+]);
+
+export function isScrollableRouteId(
+    routeId: RouteId | null,
+): routeId is ScrollableRouteId {
+    return routeId !== null && SCROLLABLE_ROUTE_IDS.has(routeId);
+}
+
 export type RouteMatch = {
     routeId: RouteId | null;
     mainRouteId: MainRouteId | null;
