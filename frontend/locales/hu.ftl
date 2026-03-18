@@ -254,6 +254,12 @@ close-search =
     .aria-label = Keresés bezárása
 go-back =
     .aria-label = Vissza
+open-reader-aria = Megnyitás az olvasóban
+reader-loading = Könyv betöltése…
+reader-error = A könyv betöltése sikertelen
+reader-previous-page = Előző oldal
+reader-next-page = Következő oldal
+open-at-annotation = Megnyitás a jelölésnél
 select-month = Hónap kiválasztása
 
 # -----------------------------------

@@ -92,14 +92,21 @@ export function AppShell({
                 return;
             }
 
-            if (routeId === 'books-detail' || routeId === 'comics-detail') {
+            if (
+                routeId === 'books-detail' ||
+                routeId === 'comics-detail' ||
+                routeId === 'books-read' ||
+                routeId === 'comics-read'
+            ) {
                 const itemId = matchedRoute.params.id;
                 if (!itemId) {
                     return;
                 }
 
                 const collection =
-                    routeId === 'comics-detail' ? 'comics' : 'books';
+                    routeId === 'comics-detail' || routeId === 'comics-read'
+                        ? 'comics'
+                        : 'books';
                 const detailKey = libraryDetailCacheKey(collection, itemId);
                 if (inFlightDetailPrefetches.has(detailKey)) {
                     return;

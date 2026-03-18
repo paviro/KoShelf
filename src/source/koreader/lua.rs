@@ -106,6 +106,8 @@ impl LuaParser {
             pos1: self.get_optional_string(&table, "pos1")?,
             text: self.get_optional_string(&table, "text")?,
             note: self.get_optional_string(&table, "note")?,
+            color: self.get_optional_string(&table, "color")?,
+            drawer: self.get_optional_string(&table, "drawer")?,
         })
     }
 

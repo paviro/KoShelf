@@ -48,6 +48,10 @@ pub struct AnnotationRow {
     pub pageno: Option<i32>,
     pub text: Option<String>,
     pub note: Option<String>,
+    pub pos0: Option<String>,
+    pub pos1: Option<String>,
+    pub color: Option<String>,
+    pub drawer: Option<String>,
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]

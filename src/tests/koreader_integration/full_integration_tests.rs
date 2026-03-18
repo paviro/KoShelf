@@ -31,6 +31,9 @@ fn test_parse_koreader_generated_metadata() {
                     pos0 = "/body/section[1]/p[3]/text().0",
                     pos1 = "/body/section[1]/p[3]/text().50",
                     text = "This is an important passage that was highlighted.",
+                    note = "Remember this section for later",
+                    color = "yellow",
+                    drawer = "underscore",
                 },
             },
             doc_pages = 250,
@@ -120,5 +123,11 @@ fn test_parse_koreader_generated_metadata() {
         annotation.chapter.as_deref(),
         Some("Chapter 1: Introduction")
     );
+    assert_eq!(
+        annotation.note.as_deref(),
+        Some("Remember this section for later")
+    );
+    assert_eq!(annotation.color.as_deref(), Some("yellow"));
+    assert_eq!(annotation.drawer.as_deref(), Some("underscore"));
     assert!(annotation.is_highlight());
 }

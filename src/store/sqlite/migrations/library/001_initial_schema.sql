@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS library_annotations (
     pageno INTEGER CHECK (pageno IS NULL OR pageno >= 0),
     text TEXT,
     note TEXT,
+    pos0 TEXT,
+    pos1 TEXT,
+    color TEXT,
+    drawer TEXT,
     PRIMARY KEY (item_id, annotation_kind, ordinal),
     FOREIGN KEY (item_id) REFERENCES library_items(id) ON DELETE CASCADE
 );

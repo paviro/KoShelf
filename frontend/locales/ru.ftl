@@ -301,6 +301,12 @@ close-search =
     .aria-label = Закрыть
 go-back =
     .aria-label = Назад
+open-reader-aria = Открыть в читалке
+reader-loading = Загрузка книги…
+reader-error = Не удалось загрузить книгу
+reader-previous-page = Предыдущая страница
+reader-next-page = Следующая страница
+open-at-annotation = Открыть на аннотации
 select-month = Выбрать месяц
 
 # -----------------------------------

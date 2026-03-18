@@ -8,8 +8,10 @@ export type RouteId =
     | 'settings'
     | 'books-list'
     | 'books-detail'
+    | 'books-read'
     | 'comics-list'
     | 'comics-detail'
+    | 'comics-read'
     | 'recap';
 
 export type MainRouteId =
@@ -20,6 +22,7 @@ export type MainRouteId =
     | 'comics-list'
     | 'recap';
 export type DetailRouteId = 'books-detail' | 'comics-detail';
+export type ReaderRouteId = 'books-read' | 'comics-read';
 export type LibraryCollectionRoute = 'books' | 'comics';
 export type LibraryContentTypeRoute = 'book' | 'comic';
 
@@ -37,8 +40,10 @@ export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
     { id: 'settings', path: '/settings', mainRouteId: 'settings' },
     { id: 'books-list', path: '/books', mainRouteId: 'books-list' },
     { id: 'books-detail', path: '/books/:id', mainRouteId: 'books-list' },
+    { id: 'books-read', path: '/books/:id/read', mainRouteId: 'books-list' },
     { id: 'comics-list', path: '/comics', mainRouteId: 'comics-list' },
     { id: 'comics-detail', path: '/comics/:id', mainRouteId: 'comics-list' },
+    { id: 'comics-read', path: '/comics/:id/read', mainRouteId: 'comics-list' },
     { id: 'recap', path: '/recap', mainRouteId: 'recap' },
 ] as const;
 
@@ -151,6 +156,12 @@ export function detailRouteIdForCollection(
     collection: LibraryCollectionRoute,
 ): DetailRouteId {
     return collection === 'comics' ? 'comics-detail' : 'books-detail';
+}
+
+export function readerRouteIdForCollection(
+    collection: LibraryCollectionRoute,
+): ReaderRouteId {
+    return collection === 'comics' ? 'comics-read' : 'books-read';
 }
 
 export function detailRouteIdForContentType(

@@ -55,10 +55,6 @@ export function LoginRoute({
         }
     }, [authenticated, authEnabled, defaultRoute, navigate, siteLoaded]);
 
-    if (!authEnabled) {
-        return <Navigate to={defaultRoute} replace />;
-    }
-
     const handleSubmit = useCallback(
         async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
@@ -81,6 +77,10 @@ export function LoginRoute({
         },
         [defaultRoute, navigate, password, submitPending],
     );
+
+    if (!authEnabled) {
+        return <Navigate to={defaultRoute} replace />;
+    }
 
     return (
         <main className="min-h-dvh bg-gray-100 dark:bg-dark-925">
