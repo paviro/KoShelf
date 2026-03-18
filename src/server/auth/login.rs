@@ -143,11 +143,31 @@ pub async fn logout(
 pub async fn change_password(
     State(state): State<ServerState>,
     Extension(current_session): Extension<CurrentSessionId>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Response {
     let Some(auth_state) = state.auth_state.as_ref() else {
         return auth_not_configured_response();
     };
+
+    let client_context = auth_state.client_addr_resolver.resolve(&headers, addr.ip());
+    if let Err(not_until) = auth_state
+        .login_limiter
+        .check_key(&client_context.client_ip)
+    {
+        let retry_after = not_until
+            .wait_time_from(DefaultClock::default().now())
+            .as_secs()
+            .max(1);
+
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            [(RETRY_AFTER, retry_after.to_string())],
+            Json(ApiErrorResponse::from_code(ApiErrorCode::RateLimited)),
+        )
+            .into_response();
+    }
 
     if let Err(error) = validate_password_length(&payload.new_password) {
         return api_error_message_response(

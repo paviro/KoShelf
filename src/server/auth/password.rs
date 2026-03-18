@@ -5,17 +5,18 @@ use rusty_paseto::core::Key;
 use sqlx::{Row, SqlitePool};
 
 const MIN_PASSWORD_CHARS: usize = 8;
+const MAX_PASSWORD_CHARS: usize = 1024;
 const AUTO_PASSWORD_CHARS: usize = 16;
 const TOKEN_KEY_BYTES: usize = 32;
 const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-pub fn is_argon2_hash(value: &str) -> bool {
-    value.starts_with("$argon2id$")
-}
-
 pub fn validate_password_length(raw: &str) -> Result<()> {
-    if raw.chars().count() < MIN_PASSWORD_CHARS {
+    let char_count = raw.chars().count();
+    if char_count < MIN_PASSWORD_CHARS {
         anyhow::bail!("Password must be at least {MIN_PASSWORD_CHARS} characters long");
+    }
+    if char_count > MAX_PASSWORD_CHARS {
+        anyhow::bail!("Password must be at most {MAX_PASSWORD_CHARS} characters long");
     }
     Ok(())
 }
