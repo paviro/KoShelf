@@ -1,5 +1,3 @@
-use std::net::{IpAddr, Ipv4Addr};
-
 use axum::{
     Json,
     extract::{Request, State},
@@ -27,7 +25,7 @@ pub(crate) async fn site(State(state): State<ServerState>, request: Request) -> 
                 auth_state.token_key.as_ref(),
                 &auth_state.pool,
                 &token,
-                IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                None,
             )
             .await
             .unwrap_or(None)

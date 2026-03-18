@@ -46,7 +46,7 @@ pub async fn auth_middleware(
         auth_state.token_key.as_ref(),
         &auth_state.pool,
         &token,
-        client_context.client_ip,
+        Some(client_context.client_ip),
     )
     .await
     {

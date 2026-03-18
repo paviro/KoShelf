@@ -81,7 +81,7 @@ pub async fn validate_token(
     key: &PasetoSymmetricKey<V4, Local>,
     pool: &SqlitePool,
     token_str: &str,
-    ip: IpAddr,
+    ip: Option<IpAddr>,
 ) -> Result<Option<String>> {
     let claims = {
         let mut parser = PasetoParser::<V4, Local>::default();
@@ -107,33 +107,40 @@ pub async fn validate_token(
         return Ok(None);
     };
 
-    let row = sqlx::query("SELECT last_seen_ip, last_seen_at FROM sessions WHERE id = ?1")
-        .bind(&session_id)
-        .fetch_optional(pool)
-        .await
-        .context("Failed to query session row")?;
+    let now_unix = Utc::now().timestamp();
+
+    let row = sqlx::query(
+        "SELECT last_seen_ip, last_seen_at FROM sessions WHERE id = ?1 AND expires_at_unix > ?2",
+    )
+    .bind(&session_id)
+    .bind(now_unix)
+    .fetch_optional(pool)
+    .await
+    .context("Failed to query session row")?;
 
     let Some(row) = row else {
         return Ok(None);
     };
 
-    let stored_ip: Option<String> = row.try_get("last_seen_ip").unwrap_or(None);
-    let last_seen_at: String = row
-        .try_get("last_seen_at")
-        .context("Failed to decode session last_seen_at")?;
+    if let Some(client_ip) = ip {
+        let stored_ip: Option<String> = row.try_get("last_seen_ip").unwrap_or(None);
+        let last_seen_at: String = row
+            .try_get("last_seen_at")
+            .context("Failed to decode session last_seen_at")?;
 
-    if should_update_last_seen(stored_ip.as_deref(), ip, &last_seen_at) {
-        sqlx::query(
-            "UPDATE sessions
-             SET last_seen_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
-                 last_seen_ip = ?1
-             WHERE id = ?2",
-        )
-        .bind(ip.to_string())
-        .bind(&session_id)
-        .execute(pool)
-        .await
-        .context("Failed to update session activity")?;
+        if should_update_last_seen(stored_ip.as_deref(), client_ip, &last_seen_at) {
+            sqlx::query(
+                "UPDATE sessions
+                 SET last_seen_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+                     last_seen_ip = ?1
+                 WHERE id = ?2",
+            )
+            .bind(client_ip.to_string())
+            .bind(&session_id)
+            .execute(pool)
+            .await
+            .context("Failed to update session activity")?;
+        }
     }
 
     Ok(Some(session_id))
