@@ -1,4 +1,4 @@
-import { LuArrowLeft } from 'react-icons/lu';
+import { LuArrowLeft, LuList } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
@@ -8,6 +8,7 @@ type ReaderHeaderProps = {
     chapterLabel: string;
     backHref: string;
     onBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+    onDrawerOpen: () => void;
 };
 
 export function ReaderHeader({
@@ -15,6 +16,7 @@ export function ReaderHeader({
     chapterLabel,
     backHref,
     onBackClick,
+    onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
         <header className="flex items-center justify-between h-[70px] md:h-[80px] px-4 md:px-6 border-b border-gray-200/50 dark:border-dark-700/50 bg-white/90 dark:bg-dark-950/75 backdrop-blur-xs shrink-0">
@@ -41,6 +43,15 @@ export function ReaderHeader({
                     )}
                 </div>
             </div>
+
+            <button
+                type="button"
+                onClick={onDrawerOpen}
+                className="flex items-center text-primary-400 hover:text-primary-300 transition-colors cursor-pointer shrink-0 ml-3"
+                aria-label={translation.get('reader-drawer-aria')}
+            >
+                <LuList className="w-6 h-6" aria-hidden="true" />
+            </button>
         </header>
     );
 }

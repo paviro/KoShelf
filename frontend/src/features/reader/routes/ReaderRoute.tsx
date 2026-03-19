@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { translation } from '../../../shared/i18n';
+import type { LibraryAnnotation } from '../../library/api/library-data';
+import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
 import { ReaderErrorState } from '../components/ReaderErrorState';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
@@ -10,6 +12,7 @@ import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
 import { useReaderThemeObserver } from '../hooks/useReaderThemeObserver';
 import { useReaderView } from '../hooks/useReaderView';
+import { resolveAnnotationTarget } from '../lib/reader-navigation-resolution';
 import type {
     FoliateView,
     ReaderLocation,
@@ -19,6 +22,7 @@ import type {
 export function ReaderRoute({ collection }: ReaderRouteProps) {
     const viewRef = useRef<FoliateView | null>(null);
     const [location, setLocation] = useState<ReaderLocation | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const scrubber = useReaderScrubber(viewRef);
 
@@ -29,8 +33,14 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         backHref,
         title,
         chapterLabel,
+        chapterHref,
+        currentSectionIndex,
+        toc,
+        highlights,
+        bookmarks,
         activeNote,
         dismissNote,
+        goTo,
         handleBackClick,
         handlePrev,
         handleNext,
@@ -45,6 +55,29 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     useReaderKeyboardNav(handlePrev, handleNext);
     useReaderThemeObserver(viewRef);
 
+    const handleTocSelect = useCallback(
+        (href: string) => {
+            setDrawerOpen(false);
+            goTo(href);
+        },
+        [goTo],
+    );
+
+    const handleAnnotationSelect = useCallback(
+        async (annotation: LibraryAnnotation) => {
+            setDrawerOpen(false);
+            const view = viewRef.current;
+            if (!view) {
+                return;
+            }
+            const target = await resolveAnnotationTarget(view, annotation);
+            if (target !== null) {
+                goTo(target);
+            }
+        },
+        [goTo, viewRef],
+    );
+
     const displayFraction = scrubber.dragFraction ?? location?.fraction ?? 0;
     const progressPercent = Math.round(displayFraction * 100);
 
@@ -55,6 +88,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
+                onDrawerOpen={() => setDrawerOpen(true)}
             />
 
             <main className="flex-1 relative overflow-hidden bg-white dark:bg-dark-925">
@@ -97,6 +131,20 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 onScrubStart={scrubber.handleScrubStart}
                 onScrubMove={scrubber.handleScrubMove}
                 onScrubEnd={scrubber.handleScrubEnd}
+            />
+
+            <ReaderDrawerPanel
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                toc={toc}
+                highlights={highlights}
+                bookmarks={bookmarks}
+                currentChapter={chapterLabel}
+                currentChapterHref={chapterHref}
+                currentSectionIndex={currentSectionIndex}
+                onTocSelect={handleTocSelect}
+                onHighlightSelect={handleAnnotationSelect}
+                onBookmarkSelect={handleAnnotationSelect}
             />
         </div>
     );

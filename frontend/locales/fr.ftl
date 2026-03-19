@@ -282,6 +282,14 @@ reader-error = Échec du chargement du livre
 reader-previous-page = Page précédente
 reader-next-page = Page suivante
 open-at-annotation = Ouvrir à l'annotation
+reader-contents = Sommaire
+reader-drawer-aria = Panneau de navigation du livre
+reader-no-toc = Aucun sommaire disponible
+reader-no-toc-description = Ce fichier n'inclut pas de repères de chapitre.
+reader-no-highlights = Aucun surlignement pour le moment
+reader-no-highlights-description = Les surlignements que vous ajoutez dans KoReader s'afficheront ici.
+reader-no-bookmarks = Aucun signet pour le moment
+reader-no-bookmarks-description = Les signets que vous ajoutez dans KoReader s'afficheront ici.
 open-in-reader = Ouvrir
 select-month = Sélectionner le mois
 

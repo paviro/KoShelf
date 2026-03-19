@@ -281,6 +281,14 @@ reader-error = Failed to load book
 reader-previous-page = Previous page
 reader-next-page = Next page
 open-at-annotation = Open at annotation
+reader-contents = Contents
+reader-drawer-aria = Book navigation panel
+reader-no-toc = No table of contents available
+reader-no-toc-description = This file does not include chapter markers.
+reader-no-highlights = No highlights yet
+reader-no-highlights-description = Highlights you add in KoReader will show up here.
+reader-no-bookmarks = No bookmarks yet
+reader-no-bookmarks-description = Bookmarks you add in KoReader will show up here.
 open-in-reader = Open
 select-month = Select Month
 

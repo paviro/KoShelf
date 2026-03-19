@@ -281,6 +281,14 @@ reader-error = Buch konnte nicht geladen werden
 reader-previous-page = Vorherige Seite
 reader-next-page = Nächste Seite
 open-at-annotation = An Markierung öffnen
+reader-contents = Inhalt
+reader-drawer-aria = Buch-Navigationsbereich
+reader-no-toc = Kein Inhaltsverzeichnis verfügbar
+reader-no-toc-description = Diese Datei enthält keine Kapitelmarken.
+reader-no-highlights = Noch keine Hervorhebungen
+reader-no-highlights-description = Hervorhebungen, die du in KoReader anlegst, werden hier angezeigt.
+reader-no-bookmarks = Noch keine Lesezeichen
+reader-no-bookmarks-description = Lesezeichen, die du in KoReader anlegst, werden hier angezeigt.
 open-in-reader = Öffnen
 select-month = Monat auswählen
 

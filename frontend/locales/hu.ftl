@@ -260,6 +260,14 @@ reader-error = A könyv betöltése sikertelen
 reader-previous-page = Előző oldal
 reader-next-page = Következő oldal
 open-at-annotation = Megnyitás a jelölésnél
+reader-contents = Tartalom
+reader-drawer-aria = Könyvnavigációs panel
+reader-no-toc = Nem érhető el tartalomjegyzék
+reader-no-toc-description = Ez a fájl nem tartalmaz fejezetjelölőket.
+reader-no-highlights = Még nincsenek kiemelések
+reader-no-highlights-description = A KoReaderben hozzáadott kiemelések itt fognak megjelenni.
+reader-no-bookmarks = Még nincsenek könyvjelzők
+reader-no-bookmarks-description = A KoReaderben hozzáadott könyvjelzők itt fognak megjelenni.
 open-in-reader = Megnyitás
 select-month = Hónap kiválasztása
 

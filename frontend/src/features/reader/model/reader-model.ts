@@ -6,7 +6,7 @@ export type ReaderRouteProps = {
 
 export type ReaderLocation = {
     fraction: number;
-    tocItem?: { label?: string } | null;
+    tocItem?: { label?: string; href?: string } | null;
     section?: { current: number; total: number } | null;
 };
 
@@ -51,15 +51,23 @@ type ReaderSection = {
     createDocument?: (() => Promise<Document> | Document) | null;
 };
 
-type TocEntry = {
+export type TocEntry = {
     href: string;
     label: string;
+    sectionIndex?: number;
+    depth: number;
+};
+
+type ReaderBookTocEntry = {
+    href?: string | null;
+    label?: string | null;
+    subitems?: ReaderBookTocEntry[] | null;
 };
 
 type ReaderBook = {
     sections?: ReaderSection[];
-    toc?: TocEntry[];
-    pageList?: TocEntry[];
+    toc?: ReaderBookTocEntry[];
+    pageList?: ReaderBookTocEntry[];
 };
 
 type ResolvedNavigation = {

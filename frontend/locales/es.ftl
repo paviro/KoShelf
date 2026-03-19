@@ -280,6 +280,14 @@ reader-error = Error al cargar el libro
 reader-previous-page = Página anterior
 reader-next-page = Página siguiente
 open-at-annotation = Abrir en la anotación
+reader-contents = Contenido
+reader-drawer-aria = Panel de navegación del libro
+reader-no-toc = No hay tabla de contenido disponible
+reader-no-toc-description = Este archivo no incluye marcadores de capítulo.
+reader-no-highlights = Aún no hay resaltados
+reader-no-highlights-description = Los resaltados que agregues en KoReader aparecerán aquí.
+reader-no-bookmarks = Aún no hay marcadores
+reader-no-bookmarks-description = Los marcadores que agregues en KoReader aparecerán aquí.
 open-in-reader = Abrir
 select-month = Seleccionar mes
 
