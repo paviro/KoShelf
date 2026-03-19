@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useParams } from 'react-router';
 
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { translation } from '../../../shared/i18n';
@@ -8,6 +9,7 @@ import { ReaderErrorState } from '../components/ReaderErrorState';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
+import { useReaderFontSize } from '../hooks/useReaderFontSize';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
 import { useReaderThemeObserver } from '../hooks/useReaderThemeObserver';
@@ -20,10 +22,16 @@ import type {
 } from '../model/reader-model';
 
 export function ReaderRoute({ collection }: ReaderRouteProps) {
+    const { id } = useParams();
     const viewRef = useRef<FoliateView | null>(null);
     const [location, setLocation] = useState<ReaderLocation | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
 
+    const {
+        fontSize,
+        increase: increaseFontSize,
+        decrease: decreaseFontSize,
+    } = useReaderFontSize(id);
     const scrubber = useReaderScrubber(viewRef);
 
     const {
@@ -50,10 +58,11 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         setLocation,
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
+        fontSize,
     );
 
     useReaderKeyboardNav(handlePrev, handleNext);
-    useReaderThemeObserver(viewRef);
+    useReaderThemeObserver(viewRef, fontSize);
 
     const handleTocSelect = useCallback(
         (href: string) => {
@@ -88,6 +97,8 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
+                onFontDecrease={decreaseFontSize}
+                onFontIncrease={increaseFontSize}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 

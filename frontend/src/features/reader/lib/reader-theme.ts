@@ -7,6 +7,8 @@ export const READER_LAYOUT_SETTINGS = {
     topInset: '8px',
 } as const;
 
+export const DEFAULT_READER_FONT_SIZE = 112.5;
+
 const READER_THEME_COLORS = {
     light: {
         background: '#ffffff',
@@ -20,11 +22,12 @@ const READER_THEME_COLORS = {
     },
 } as const;
 
-const READER_BASE_STYLES = `
+function buildReaderBaseStyles(fontSize: number): string {
+    return `
 @namespace epub "http://www.idpf.org/2007/ops";
 
 html {
-    font-size: 112.5% !important;
+    font-size: ${fontSize}% !important;
 }
 
 html,
@@ -33,6 +36,7 @@ body {
     padding: 0 !important;
 }
 `;
+}
 
 export function buildReaderThemeStyles(isDarkMode: boolean): string {
     const colors = isDarkMode
@@ -70,7 +74,10 @@ a:visited {
 ${darkModeOverrides}`;
 }
 
-export function applyReaderPresentation(view: FoliateView): void {
+export function applyReaderPresentation(
+    view: FoliateView,
+    fontSize = DEFAULT_READER_FONT_SIZE,
+): void {
     const renderer = view.renderer;
     if (!renderer) {
         return;
@@ -88,7 +95,7 @@ export function applyReaderPresentation(view: FoliateView): void {
         renderer.style.paddingTop = READER_LAYOUT_SETTINGS.topInset;
 
         renderer.setStyles?.([
-            READER_BASE_STYLES,
+            buildReaderBaseStyles(fontSize),
             buildReaderThemeStyles(
                 document.documentElement.classList.contains('dark'),
             ),
