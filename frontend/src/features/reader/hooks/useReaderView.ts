@@ -68,6 +68,7 @@ export function useReaderView(
     setLocation: Dispatch<SetStateAction<ReaderLocation | null>>,
     scrubSettlingRef: RefObject<boolean>,
     setDragFraction: (value: number | null) => void,
+    fontSize: number,
 ): UseReaderViewResult {
     const navigate = useNavigate();
     const params = useParams();
@@ -87,6 +88,9 @@ export function useReaderView(
         () => detailQuery.data?.bookmarks ?? [],
         [detailQuery.data?.bookmarks],
     );
+
+    const fontSizeRef = useRef(fontSize);
+    fontSizeRef.current = fontSize;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
@@ -367,7 +371,7 @@ export function useReaderView(
 
                 await view.open(file);
                 setToc(resolveTocEntries(view));
-                applyReaderPresentation(view);
+                applyReaderPresentation(view, fontSizeRef.current);
 
                 const hasAnnotationTarget =
                     highlightIndex !== null || bookmarkIndex !== null;

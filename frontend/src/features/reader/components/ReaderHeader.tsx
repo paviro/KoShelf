@@ -1,4 +1,4 @@
-import { LuArrowLeft, LuList } from 'react-icons/lu';
+import { LuArrowLeft, LuList, LuMinus, LuPlus } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
@@ -8,6 +8,8 @@ type ReaderHeaderProps = {
     chapterLabel: string;
     backHref: string;
     onBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+    onFontDecrease: () => void;
+    onFontIncrease: () => void;
     onDrawerOpen: () => void;
 };
 
@@ -16,6 +18,8 @@ export function ReaderHeader({
     chapterLabel,
     backHref,
     onBackClick,
+    onFontDecrease,
+    onFontIncrease,
     onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
@@ -44,14 +48,33 @@ export function ReaderHeader({
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={onDrawerOpen}
-                className="flex items-center text-primary-400 hover:text-primary-300 transition-colors cursor-pointer shrink-0 ml-3"
-                aria-label={translation.get('reader-drawer-aria')}
-            >
-                <LuList className="w-6 h-6" aria-hidden="true" />
-            </button>
+            <div className="flex items-center space-x-1 shrink-0 ml-3">
+                <button
+                    type="button"
+                    onClick={onFontDecrease}
+                    className="flex items-center justify-center w-9 h-9 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer"
+                    aria-label="Decrease font size"
+                >
+                    <LuMinus className="w-5 h-5" aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    onClick={onFontIncrease}
+                    className="flex items-center justify-center w-9 h-9 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer"
+                    aria-label="Increase font size"
+                >
+                    <LuPlus className="w-5 h-5" aria-hidden="true" />
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onDrawerOpen}
+                    className="flex items-center text-primary-400 hover:text-primary-300 transition-colors cursor-pointer"
+                    aria-label={translation.get('reader-drawer-aria')}
+                >
+                    <LuList className="w-6 h-6" aria-hidden="true" />
+                </button>
+            </div>
         </header>
     );
 }
