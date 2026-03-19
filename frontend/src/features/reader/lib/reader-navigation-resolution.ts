@@ -15,16 +15,48 @@ function normalizeText(value: string): string {
     return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+type TocLookupEntry = {
+    href?: string | null;
+    label?: string | null;
+    subitems?: TocLookupEntry[] | null;
+};
+
+function flattenTocEntries(
+    entries: TocLookupEntry[],
+): { href: string; label: string }[] {
+    const result: { href: string; label: string }[] = [];
+
+    const visit = (items: TocLookupEntry[]) => {
+        for (const item of items) {
+            const href = typeof item.href === 'string' ? item.href : '';
+            if (href !== '') {
+                result.push({
+                    href,
+                    label: typeof item.label === 'string' ? item.label : '',
+                });
+            }
+
+            if (Array.isArray(item.subitems) && item.subitems.length > 0) {
+                visit(item.subitems);
+            }
+        }
+    };
+
+    visit(entries);
+    return result;
+}
+
 export function resolveChapterHref(
-    toc: { href: string; label: string }[],
+    toc: TocLookupEntry[],
     chapter: string,
 ): string | null {
+    const flattenedToc = flattenTocEntries(toc);
     const normalizedChapter = normalizeText(chapter);
     if (!normalizedChapter) {
         return null;
     }
 
-    const exact = toc.find(
+    const exact = flattenedToc.find(
         (entry) => normalizeText(entry.label) === normalizedChapter,
     );
     if (exact?.href) {
@@ -39,7 +71,7 @@ export function resolveChapterHref(
         return null;
     }
 
-    const fuzzy = toc.find((entry) => {
+    const fuzzy = flattenedToc.find((entry) => {
         const normalizedLabel = normalizeText(entry.label);
         return Boolean(
             normalizedLabel &&
@@ -52,11 +84,14 @@ export function resolveChapterHref(
 }
 
 export function resolvePageHref(
-    pageList: { href: string; label: string }[],
+    pageList: TocLookupEntry[],
     pageno: number,
 ): string | null {
     const expectedLabel = String(pageno);
-    const match = pageList.find((entry) => entry.label === expectedLabel);
+    const flattenedPageList = flattenTocEntries(pageList);
+    const match = flattenedPageList.find(
+        (entry) => entry.label === expectedLabel,
+    );
     return match?.href ?? null;
 }
 

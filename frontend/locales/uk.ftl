@@ -307,6 +307,14 @@ reader-error = Не вдалося завантажити книгу
 reader-previous-page = Попередня сторінка
 reader-next-page = Наступна сторінка
 open-at-annotation = Відкрити на анотації
+reader-contents = Зміст
+reader-drawer-aria = Панель навігації книгою
+reader-no-toc = Зміст недоступний
+reader-no-toc-description = У цьому файлі немає позначок розділів.
+reader-no-highlights = Ще немає виділень
+reader-no-highlights-description = Виділення, які ви додасте в KoReader, з'являться тут.
+reader-no-bookmarks = Ще немає закладок
+reader-no-bookmarks-description = Закладки, які ви додасте в KoReader, з'являться тут.
 open-in-reader = Відкрити
 select-month = Вибрати місяць
 

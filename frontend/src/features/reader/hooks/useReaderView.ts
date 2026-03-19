@@ -33,6 +33,7 @@ import type {
     FoliateView,
     ReaderHighlightValue,
     ReaderLocation,
+    TocEntry,
 } from '../model/reader-model';
 
 const READER_POSITION_KEY_PREFIX = 'reader_position_';
@@ -48,8 +49,14 @@ export type UseReaderViewResult = {
     backHref: string;
     title: string;
     chapterLabel: string;
+    chapterHref: string | null;
+    currentSectionIndex: number | null;
+    toc: TocEntry[];
+    highlights: LibraryAnnotation[];
+    bookmarks: LibraryAnnotation[];
     activeNote: ReaderActiveNote | null;
     dismissNote: () => void;
+    goTo: (target: string | number) => void;
     handleBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     handlePrev: () => void;
     handleNext: () => void;
@@ -86,6 +93,7 @@ export function useReaderView(
     const [error, setError] = useState<string | null>(null);
     const [location, setLocationState] = useState<ReaderLocation | null>(null);
     const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
+    const [toc, setToc] = useState<TocEntry[]>([]);
     const noteMapRef = useRef(new Map<string, ReaderActiveNote>());
 
     const dismissNote = useCallback(() => setActiveNote(null), []);
@@ -136,6 +144,13 @@ export function useReaderView(
         viewRef.current?.next();
     }, [viewRef]);
 
+    const goTo = useCallback(
+        (target: string | number) => {
+            viewRef.current?.goTo(target);
+        },
+        [viewRef],
+    );
+
     useEffect(() => {
         const container = containerRef.current;
         if (!container) {
@@ -176,6 +191,7 @@ export function useReaderView(
         setLoading(true);
         setError(null);
         setActiveNote(null);
+        setToc([]);
         noteMapRef.current.clear();
 
         const initReader = async () => {
@@ -350,6 +366,7 @@ export function useReaderView(
                 viewRef.current = view;
 
                 await view.open(file);
+                setToc(resolveTocEntries(view));
                 applyReaderPresentation(view);
 
                 const hasAnnotationTarget =
@@ -488,6 +505,11 @@ export function useReaderView(
 
     const title = item?.title ?? translation.get('reader-loading');
     const chapterLabel = location?.tocItem?.label ?? '';
+    const chapterHref = location?.tocItem?.href ?? null;
+    const currentSectionIndex =
+        typeof location?.section?.current === 'number'
+            ? location.section.current
+            : null;
 
     return {
         containerRef,
@@ -496,8 +518,14 @@ export function useReaderView(
         backHref,
         title,
         chapterLabel,
+        chapterHref,
+        currentSectionIndex,
+        toc,
+        highlights,
+        bookmarks,
         activeNote,
         dismissNote,
+        goTo,
         handleBackClick,
         handlePrev,
         handleNext,
@@ -527,6 +555,46 @@ function resolveTargetAnnotation(
     }
 
     return { annotation: annotations[parsedIndex], index: parsedIndex };
+}
+
+function resolveTocEntries(view: FoliateView): TocEntry[] {
+    const result: TocEntry[] = [];
+
+    const visit = (
+        entries: NonNullable<NonNullable<FoliateView['book']>['toc']>,
+        depth: number,
+    ) => {
+        for (const entry of entries) {
+            const href =
+                typeof entry.href === 'string' ? entry.href.trim() : '';
+
+            if (href !== '') {
+                const label =
+                    typeof entry.label === 'string' && entry.label.trim() !== ''
+                        ? entry.label.trim()
+                        : href;
+                const sectionIndex = view.resolveNavigation(href)?.index;
+
+                result.push(
+                    typeof sectionIndex === 'number'
+                        ? { href, label, sectionIndex, depth }
+                        : { href, label, depth },
+                );
+            }
+
+            const subitems = entry.subitems;
+            if (Array.isArray(subitems) && subitems.length > 0) {
+                visit(subitems, depth + 1);
+            }
+        }
+    };
+
+    const toc = view.book?.toc;
+    if (Array.isArray(toc) && toc.length > 0) {
+        visit(toc, 0);
+    }
+
+    return result;
 }
 
 async function navigateToAnnotation(
