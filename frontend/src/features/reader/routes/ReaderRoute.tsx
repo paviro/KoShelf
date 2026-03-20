@@ -2,10 +2,10 @@ import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { translation } from '../../../shared/i18n';
 import type { LibraryAnnotation } from '../../library/api/library-data';
 import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
-import { ReaderErrorState } from '../components/ReaderErrorState';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
@@ -89,6 +89,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
 
     const displayFraction = scrubber.dragFraction ?? location?.fraction ?? 0;
     const progressPercent = Math.round(displayFraction * 100);
+    const hasError = error !== null;
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-dark-925">
@@ -112,13 +113,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                     </div>
                 )}
 
-                {error && (
-                    <ReaderErrorState
-                        error={error}
-                        backHref={backHref}
-                        onBackClick={handleBackClick}
-                    />
-                )}
+                {hasError && <PageErrorState error={error} layout="overlay" />}
 
                 <div
                     ref={containerRef}
@@ -133,30 +128,34 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 />
             </main>
 
-            <ReaderScrubber
-                trackRef={scrubber.trackRef}
-                dragging={scrubber.dragging}
-                progressPercent={progressPercent}
-                onPrev={handlePrev}
-                onNext={handleNext}
-                onScrubStart={scrubber.handleScrubStart}
-                onScrubMove={scrubber.handleScrubMove}
-                onScrubEnd={scrubber.handleScrubEnd}
-            />
+            {!hasError && (
+                <ReaderScrubber
+                    trackRef={scrubber.trackRef}
+                    dragging={scrubber.dragging}
+                    progressPercent={progressPercent}
+                    onPrev={handlePrev}
+                    onNext={handleNext}
+                    onScrubStart={scrubber.handleScrubStart}
+                    onScrubMove={scrubber.handleScrubMove}
+                    onScrubEnd={scrubber.handleScrubEnd}
+                />
+            )}
 
-            <ReaderDrawerPanel
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                toc={toc}
-                highlights={highlights}
-                bookmarks={bookmarks}
-                currentChapter={chapterLabel}
-                currentChapterHref={chapterHref}
-                currentSectionIndex={currentSectionIndex}
-                onTocSelect={handleTocSelect}
-                onHighlightSelect={handleAnnotationSelect}
-                onBookmarkSelect={handleAnnotationSelect}
-            />
+            {!hasError && (
+                <ReaderDrawerPanel
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    toc={toc}
+                    highlights={highlights}
+                    bookmarks={bookmarks}
+                    currentChapter={chapterLabel}
+                    currentChapterHref={chapterHref}
+                    currentSectionIndex={currentSectionIndex}
+                    onTocSelect={handleTocSelect}
+                    onHighlightSelect={handleAnnotationSelect}
+                    onBookmarkSelect={handleAnnotationSelect}
+                />
+            )}
         </div>
     );
 }

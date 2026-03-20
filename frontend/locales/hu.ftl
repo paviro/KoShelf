@@ -237,6 +237,8 @@ error-state =
     .connection-description =
         Nem sikerült elérni a szervert.
         Ellenőrizd az internetkapcsolatot, és próbáld újra.
+    .file-unavailable-title = A könyvfájl nem érhető el
+    .file-unavailable-description = A könyv adatai megvannak, de a könyvfájl hiányzik.
     .retry = Újrapróbálkozás
 
 # Navigation and sorting
@@ -255,8 +257,8 @@ close-search =
 go-back =
     .aria-label = Vissza
 open-reader-aria = Megnyitás az olvasóban
+reader-title = Olvasó
 reader-loading = Könyv betöltése…
-reader-error = A könyv betöltése sikertelen
 reader-previous-page = Előző oldal
 reader-next-page = Következő oldal
 open-at-annotation = Megnyitás a jelölésnél

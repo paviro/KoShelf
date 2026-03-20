@@ -283,6 +283,8 @@ error-state =
     .connection-description =
         Не удалось связаться с сервером.
         Проверьте подключение и попробуйте снова.
+    .file-unavailable-title = Файл книги недоступен
+    .file-unavailable-description = Данные книги найдены, но файл книги отсутствует.
     .retry = Попробовать снова
 
 # Navigation and sorting
@@ -302,8 +304,8 @@ close-search =
 go-back =
     .aria-label = Назад
 open-reader-aria = Открыть в читалке
+reader-title = Читалка
 reader-loading = Загрузка книги…
-reader-error = Не удалось загрузить книгу
 reader-previous-page = Предыдущая страница
 reader-next-page = Следующая страница
 open-at-annotation = Открыть на аннотации

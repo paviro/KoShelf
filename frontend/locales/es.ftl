@@ -256,6 +256,8 @@ error-state =
     .connection-description =
         No se pudo contactar con el servidor.
         Comprueba tu conexión e inténtalo de nuevo.
+    .file-unavailable-title = Archivo del libro no disponible
+    .file-unavailable-description = Se encontraron los detalles del libro, pero falta el archivo del libro.
     .retry = Reintentar
 
 # Navigation and sorting
@@ -275,8 +277,8 @@ close-search =
 go-back =
     .aria-label = Volver
 open-reader-aria = Abrir en el lector
+reader-title = Lector
 reader-loading = Cargando libro…
-reader-error = Error al cargar el libro
 reader-previous-page = Página anterior
 reader-next-page = Página siguiente
 open-at-annotation = Abrir en la anotación

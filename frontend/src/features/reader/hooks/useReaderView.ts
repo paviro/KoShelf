@@ -14,7 +14,7 @@ import {
     buildRoutePath,
     detailRouteIdForCollection,
 } from '../../../app/routes/route-registry';
-import { api } from '../../../shared/api';
+import { ApiHttpError, api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { StorageManager } from '../../../shared/storage-manager';
 import type { LibraryAnnotation } from '../../library/api/library-data';
@@ -45,7 +45,7 @@ export type ReaderActiveNote = {
 export type UseReaderViewResult = {
     containerRef: RefObject<HTMLDivElement | null>;
     loading: boolean;
-    error: string | null;
+    error: unknown | null;
     backHref: string;
     title: string;
     chapterLabel: string;
@@ -94,7 +94,7 @@ export function useReaderView(
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown | null>(null);
     const [location, setLocationState] = useState<ReaderLocation | null>(null);
     const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
     const [toc, setToc] = useState<TocEntry[]>([]);
@@ -162,23 +162,31 @@ export function useReaderView(
         }
 
         if (detailQuery.isError) {
-            setError('Failed to load book details.');
+            setError(
+                detailQuery.error ?? new Error('Failed to load book details.'),
+            );
             setLoading(false);
             return;
         }
 
         if (hasItem && !supportsReader) {
             setError(
-                normalizedFormat
-                    ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
-                    : 'Unsupported format for in-app reader.',
+                new Error(
+                    normalizedFormat
+                        ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
+                        : 'Unsupported format for in-app reader.',
+                ),
             );
             setLoading(false);
             return;
         }
 
         if (hasItem && !fileHref) {
-            setError('Book file is unavailable.');
+            setError(
+                new ApiHttpError('/assets/files', 404, {
+                    code: 'book_file_unavailable',
+                }),
+            );
             setLoading(false);
             return;
         }
@@ -215,9 +223,13 @@ export function useReaderView(
 
                 const response = await fetch(fileHref);
                 if (!response.ok) {
-                    throw new Error(
-                        `Failed to fetch book: ${response.statusText}`,
-                    );
+                    throw new ApiHttpError(fileHref, response.status, {
+                        code:
+                            response.status === 404
+                                ? 'book_file_unavailable'
+                                : undefined,
+                        apiMessage: response.statusText.trim() || undefined,
+                    });
                 }
 
                 if (cancelled) {
@@ -466,8 +478,8 @@ export function useReaderView(
                 if (!cancelled) {
                     setError(
                         err instanceof Error
-                            ? err.message
-                            : 'Failed to load book',
+                            ? err
+                            : new Error('Failed to load book'),
                     );
                     setLoading(false);
                 }
@@ -491,6 +503,7 @@ export function useReaderView(
         };
     }, [
         closeReaderView,
+        detailQuery.error,
         bookmarks,
         bookmarkIndex,
         detailQuery.isError,
@@ -507,7 +520,7 @@ export function useReaderView(
         viewRef,
     ]);
 
-    const title = item?.title ?? translation.get('reader-loading');
+    const title = item?.title ?? translation.get('reader-title');
     const chapterLabel = location?.tocItem?.label ?? '';
     const chapterHref = location?.tocItem?.href ?? null;
     const currentSectionIndex =

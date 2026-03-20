@@ -257,6 +257,8 @@ error-state =
     .connection-description =
         Der Server konnte nicht erreicht werden.
         Überprüfe deine Verbindung und versuche es erneut.
+    .file-unavailable-title = Buchdatei nicht verfügbar
+    .file-unavailable-description = Die Buchdetails wurden gefunden, aber die Buchdatei fehlt.
     .retry = Erneut versuchen
 
 # Navigation and sorting
@@ -275,9 +277,9 @@ close-search =
     .aria-label = Schließen
 go-back =
     .aria-label = Zurück
-open-reader-aria = Im Reader öffnen
+open-reader-aria = In der Leseansicht öffnen
+reader-title = Leseansicht
 reader-loading = Buch wird geladen…
-reader-error = Buch konnte nicht geladen werden
 reader-previous-page = Vorherige Seite
 reader-next-page = Nächste Seite
 open-at-annotation = An Markierung öffnen

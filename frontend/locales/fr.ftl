@@ -258,6 +258,8 @@ error-state =
     .connection-description =
         Impossible de joindre le serveur.
         Vérifiez votre connexion et réessayez.
+    .file-unavailable-title = Fichier du livre indisponible
+    .file-unavailable-description = Les détails du livre ont été trouvés, mais le fichier du livre est manquant.
     .retry = Réessayer
 
 # Navigation and sorting
@@ -277,8 +279,8 @@ close-search =
 go-back =
     .aria-label = Retour
 open-reader-aria = Ouvrir dans le lecteur
+reader-title = Lecteur
 reader-loading = Chargement du livre…
-reader-error = Échec du chargement du livre
 reader-previous-page = Page précédente
 reader-next-page = Page suivante
 open-at-annotation = Ouvrir à l'annotation
