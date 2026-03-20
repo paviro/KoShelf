@@ -98,6 +98,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
+                fontSize={fontSize}
                 onFontDecrease={decreaseFontSize}
                 onFontIncrease={increaseFontSize}
                 onDrawerOpen={() => setDrawerOpen(true)}

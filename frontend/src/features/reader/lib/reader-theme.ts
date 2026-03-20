@@ -7,7 +7,7 @@ export const READER_LAYOUT_SETTINGS = {
     topInset: '8px',
 } as const;
 
-export const DEFAULT_READER_FONT_SIZE = 112.5;
+export const DEFAULT_READER_FONT_SIZE = 112;
 
 const READER_THEME_COLORS = {
     light: {
