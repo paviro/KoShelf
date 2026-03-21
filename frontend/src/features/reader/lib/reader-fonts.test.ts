@@ -13,17 +13,7 @@ describe('resolveReaderFontOverride', () => {
         expect(resolved.requestedFamily).toBe('Noto Serif');
         expect(resolved.fallbackFamily).toBe('Noto Serif');
         expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Serif');
-        expectFontStackContains(
-            resolved.fontFamilyCssValue,
-            'Noto Sans Arabic',
-        );
-        expectFontStackContains(
-            resolved.fontFamilyCssValue,
-            'Noto Sans Hebrew',
-        );
-        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans Thai');
-        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans JP');
-        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans KR');
+        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans');
         expect(typeof resolved.fontFaceCss).toBe('string');
         expect(resolved.fontFamilyCssValue.endsWith(', serif')).toBe(true);
     });
@@ -39,26 +29,17 @@ describe('resolveReaderFontOverride', () => {
             resolved.fontFamilyCssValue.startsWith("'Minion Pro Cond'"),
         ).toBe(true);
         expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Serif');
-        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans JP');
+        expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Sans');
     });
 
-    it('normalizes known aliases to packaged fonts', async () => {
-        const resolved = await resolveReaderFontOverride('Noto Sans Arabic UI');
+    it('treats unknown fonts as unpackaged and uses full fallback chain', async () => {
+        const resolved = await resolveReaderFontOverride('Some Custom Font');
 
-        expect(resolved.requestedFamily).toBe('Noto Sans Arabic');
+        expect(resolved.requestedFamily).toBe('Some Custom Font');
         expect(resolved.fallbackFamily).toBe('Noto Serif');
         expect(
-            resolved.fontFamilyCssValue.startsWith("'Noto Sans Arabic'"),
+            resolved.fontFamilyCssValue.startsWith("'Some Custom Font'"),
         ).toBe(true);
         expectFontStackContains(resolved.fontFamilyCssValue, 'Noto Serif');
-    });
-
-    it('maps CJK aliases to bundled families', async () => {
-        const resolved = await resolveReaderFontOverride('Noto Sans CJKjp');
-
-        expect(resolved.requestedFamily).toBe('Noto Sans JP');
-        expect(resolved.fontFamilyCssValue.startsWith("'Noto Sans JP'")).toBe(
-            true,
-        );
     });
 });

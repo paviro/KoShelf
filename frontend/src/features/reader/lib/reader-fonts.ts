@@ -31,6 +31,11 @@ function createCssLoader(
     };
 }
 
+// Reader fonts are scoped to scripts that have matching UI translations.
+// To add support for a new script:
+//   1. Add the @fontsource package to package.json
+//   2. Add a FontDefinition entry below with the correct import
+//   3. Update the fallback-stack assertions in reader-fonts.test.ts
 const FONT_DEFINITIONS: readonly FontDefinition[] = [
     {
         family: 'Noto Serif',
@@ -39,56 +44,6 @@ const FONT_DEFINITIONS: readonly FontDefinition[] = [
     {
         family: 'Noto Sans',
         importCss: () => import('@fontsource/noto-sans/400.css?inline'),
-    },
-    {
-        family: 'Noto Naskh Arabic',
-        importCss: () => import('@fontsource/noto-naskh-arabic/400.css?inline'),
-    },
-    {
-        family: 'Noto Sans Arabic',
-        importCss: () => import('@fontsource/noto-sans-arabic/400.css?inline'),
-        aliases: ['Noto Sans Arabic UI'],
-    },
-    {
-        family: 'Noto Sans Hebrew',
-        importCss: () => import('@fontsource/noto-sans-hebrew/400.css?inline'),
-        aliases: ['Noto Sans Hebrew UI'],
-    },
-    {
-        family: 'Noto Sans Devanagari',
-        importCss: () =>
-            import('@fontsource/noto-sans-devanagari/400.css?inline'),
-        aliases: ['Noto Sans Devanagari UI'],
-    },
-    {
-        family: 'Noto Sans Bengali',
-        importCss: () => import('@fontsource/noto-sans-bengali/400.css?inline'),
-        aliases: ['Noto Sans Bengali UI'],
-    },
-    {
-        family: 'Noto Sans Thai',
-        importCss: () => import('@fontsource/noto-sans-thai/400.css?inline'),
-        aliases: ['Noto Sans Thai UI'],
-    },
-    {
-        family: 'Noto Sans JP',
-        importCss: () => import('@fontsource/noto-sans-jp/400.css?inline'),
-        aliases: ['Noto Sans CJKjp'],
-    },
-    {
-        family: 'Noto Sans KR',
-        importCss: () => import('@fontsource/noto-sans-kr/400.css?inline'),
-        aliases: ['Noto Sans CJKkr'],
-    },
-    {
-        family: 'Noto Sans SC',
-        importCss: () => import('@fontsource/noto-sans-sc/400.css?inline'),
-        aliases: ['Noto Sans CJKsc'],
-    },
-    {
-        family: 'Noto Sans TC',
-        importCss: () => import('@fontsource/noto-sans-tc/400.css?inline'),
-        aliases: ['Noto Sans CJKtc'],
     },
 ];
 
