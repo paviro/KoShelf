@@ -241,16 +241,15 @@ export interface LibraryDetailItem {
     search_base_path: string;
     subjects: string[];
     identifiers: ExternalIdentifier[];
-    reader_presentation?: LibraryReaderPresentation | null;
 }
 
 export interface LibraryReaderPresentation {
     font_face?: string | null;
     font_size_pt?: number | null;
-    line_spacing_percent?: number | null;
-    h_page_margins?: [number, number] | null;
-    t_page_margin?: number | null;
-    b_page_margin?: number | null;
+    line_spacing_percentage?: number | null;
+    horizontal_margins?: [number, number] | null;
+    top_margin?: number | null;
+    bottom_margin?: number | null;
     embedded_fonts?: boolean | null;
     hyphenation?: boolean | null;
     floating_punctuation?: boolean | null;
@@ -314,6 +313,7 @@ export interface LibraryDetailData {
     bookmarks?: LibraryAnnotation[] | null;
     statistics?: LibraryDetailStatistics | null;
     completions?: LibraryCompletions | null;
+    reader_presentation?: LibraryReaderPresentation | null;
 }
 
 // ── Static export aggregate types (for client-side scope extraction) ────

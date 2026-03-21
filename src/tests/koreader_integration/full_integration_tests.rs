@@ -118,10 +118,10 @@ fn test_parse_koreader_generated_metadata() {
         .expect("reader_presentation should be present");
     assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
     assert_eq!(presentation.font_size_pt, Some(24.0));
-    assert_eq!(presentation.line_spacing_percent, Some(110));
-    assert_eq!(presentation.h_page_margins, Some([30, 30]));
-    assert_eq!(presentation.t_page_margin, Some(30));
-    assert_eq!(presentation.b_page_margin, Some(15));
+    assert_eq!(presentation.line_spacing_percentage, Some(110));
+    assert_eq!(presentation.horizontal_margins, Some([30, 30]));
+    assert_eq!(presentation.top_margin, Some(30));
+    assert_eq!(presentation.bottom_margin, Some(15));
     assert_eq!(presentation.embedded_fonts, Some(false));
     assert_eq!(presentation.hyphenation, Some(true));
     assert_eq!(presentation.floating_punctuation, Some(false));

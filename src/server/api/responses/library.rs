@@ -91,7 +91,9 @@ pub struct LibraryDetailItem {
     pub subjects: Json<Vec<String>>,
     #[sqlx(rename = "identifiers_json")]
     pub identifiers: Json<Vec<ExternalIdentifier>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Populated from DB but not serialized directly; moved to `LibraryDetailData`
+    /// when the `reader_presentation` include token is present.
+    #[serde(skip)]
     pub reader_presentation: Option<Json<LibraryReaderPresentation>>,
     /// Used internally for statistics lookup; not exposed in API responses.
     #[serde(skip)]
@@ -138,6 +140,8 @@ pub struct LibraryDetailData {
     pub statistics: Option<LibraryDetailStatistics>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub completions: Option<LibraryCompletions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reader_presentation: Option<Json<LibraryReaderPresentation>>,
 }
 
 // ── Statistics (non-DB, mapped in service layer) ──────────────────────

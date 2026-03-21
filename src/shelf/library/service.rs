@@ -26,11 +26,17 @@ pub async fn detail(
     query: &LibraryDetailQuery,
     reading_data: Option<&ReadingData>,
 ) -> Result<Option<LibraryDetailData>> {
-    let Some(item) = repo.get_item(&query.id).await? else {
+    let Some(mut item) = repo.get_item(&query.id).await? else {
         return Ok(None);
     };
 
     let includes = &query.includes;
+
+    let reader_presentation = if includes.has(IncludeToken::ReaderPresentation) {
+        item.reader_presentation.take()
+    } else {
+        None
+    };
 
     let highlights = if includes.has(IncludeToken::Highlights) {
         Some(repo.get_annotations(&query.id, Some("highlight")).await?)
@@ -81,6 +87,7 @@ pub async fn detail(
         bookmarks,
         statistics,
         completions,
+        reader_presentation,
     }))
 }
 

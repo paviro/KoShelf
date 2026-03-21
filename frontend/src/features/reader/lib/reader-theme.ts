@@ -96,7 +96,7 @@ export function mapKoReaderLineSpacingPercentToCssLineHeight(
 export function resolveHorizontalMarginsPx(
     presentation: LibraryReaderPresentation | null | undefined,
 ): [number, number] {
-    const margins = presentation?.h_page_margins;
+    const margins = presentation?.horizontal_margins;
     if (!Array.isArray(margins) || margins.length !== 2) {
         return [DEFAULT_READER_LEFT_MARGIN, DEFAULT_READER_RIGHT_MARGIN];
     }
