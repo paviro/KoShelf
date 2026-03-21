@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
@@ -10,6 +10,7 @@ import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
+import type { ReaderSettingsPanelProps } from '../components/ReaderSettingsPanel';
 import { useReaderStyle } from '../hooks/useReaderStyle';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
@@ -72,6 +73,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     } = useReaderView(
         collection,
         viewRef,
+        location,
         setLocation,
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
@@ -116,6 +118,43 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         [goTo, viewRef],
     );
 
+    const settingsProps = useMemo<ReaderSettingsPanelProps>(
+        () => ({
+            fontSize,
+            lineSpacing,
+            wordSpacing,
+            leftMargin,
+            rightMargin,
+            topMargin,
+            bottomMargin,
+            hyphenation,
+            floatingPunctuation,
+            embeddedFonts,
+            onResetBookDefaults: resetToBookDefaults,
+            canResetBookDefaults: hasBookOverrides,
+            onResetKoShelfDefaults: resetToKoShelfDefaults,
+            canResetKoShelfDefaults: hasKoShelfOverrides,
+            hasDistinctBookDefaults,
+        }),
+        [
+            fontSize,
+            lineSpacing,
+            wordSpacing,
+            leftMargin,
+            rightMargin,
+            topMargin,
+            bottomMargin,
+            hyphenation,
+            floatingPunctuation,
+            embeddedFonts,
+            resetToBookDefaults,
+            hasBookOverrides,
+            resetToKoShelfDefaults,
+            hasKoShelfOverrides,
+            hasDistinctBookDefaults,
+        ],
+    );
+
     const displayFraction = scrubber.dragFraction ?? location?.fraction ?? 0;
     const progressPercent = Math.round(displayFraction * 100);
     const hasError = error !== null;
@@ -127,21 +166,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
-                fontSize={fontSize}
-                lineSpacing={lineSpacing}
-                wordSpacing={wordSpacing}
-                leftMargin={leftMargin}
-                rightMargin={rightMargin}
-                topMargin={topMargin}
-                bottomMargin={bottomMargin}
-                hyphenation={hyphenation}
-                floatingPunctuation={floatingPunctuation}
-                embeddedFonts={embeddedFonts}
-                onResetBookDefaults={resetToBookDefaults}
-                canResetBookDefaults={hasBookOverrides}
-                onResetKoShelfDefaults={resetToKoShelfDefaults}
-                canResetKoShelfDefaults={hasKoShelfOverrides}
-                hasDistinctBookDefaults={hasDistinctBookDefaults}
+                settingsProps={settingsProps}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 

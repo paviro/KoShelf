@@ -2,33 +2,18 @@ import { LuArrowLeft, LuList } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
-import type {
-    ReaderModeControl,
-    ReaderStyleControl,
-    ReaderToggleControl,
-} from '../hooks/useReaderStyle';
-import { ReaderSettingsPanel } from './ReaderSettingsPanel';
+import {
+    HEADER_ICON_BUTTON_CLASS,
+    ReaderSettingsPanel,
+    type ReaderSettingsPanelProps,
+} from './ReaderSettingsPanel';
 
 type ReaderHeaderProps = {
     title: string;
     chapterLabel: string;
     backHref: string;
     onBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
-    fontSize: ReaderStyleControl;
-    lineSpacing: ReaderStyleControl;
-    wordSpacing: ReaderStyleControl;
-    leftMargin: ReaderStyleControl;
-    rightMargin: ReaderStyleControl;
-    topMargin: ReaderStyleControl;
-    bottomMargin: ReaderStyleControl;
-    hyphenation: ReaderModeControl;
-    floatingPunctuation: ReaderModeControl;
-    embeddedFonts: ReaderToggleControl;
-    onResetBookDefaults: () => void;
-    canResetBookDefaults: boolean;
-    onResetKoShelfDefaults: () => void;
-    canResetKoShelfDefaults: boolean;
-    hasDistinctBookDefaults: boolean;
+    settingsProps: ReaderSettingsPanelProps;
     onDrawerOpen: () => void;
 };
 
@@ -37,21 +22,7 @@ export function ReaderHeader({
     chapterLabel,
     backHref,
     onBackClick,
-    fontSize,
-    lineSpacing,
-    wordSpacing,
-    leftMargin,
-    rightMargin,
-    topMargin,
-    bottomMargin,
-    hyphenation,
-    floatingPunctuation,
-    embeddedFonts,
-    onResetBookDefaults,
-    canResetBookDefaults,
-    onResetKoShelfDefaults,
-    canResetKoShelfDefaults,
-    hasDistinctBookDefaults,
+    settingsProps,
     onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
@@ -81,28 +52,12 @@ export function ReaderHeader({
             </div>
 
             <div className="flex items-center space-x-2 shrink-0 ml-3">
-                <ReaderSettingsPanel
-                    fontSize={fontSize}
-                    lineSpacing={lineSpacing}
-                    wordSpacing={wordSpacing}
-                    leftMargin={leftMargin}
-                    rightMargin={rightMargin}
-                    topMargin={topMargin}
-                    bottomMargin={bottomMargin}
-                    hyphenation={hyphenation}
-                    floatingPunctuation={floatingPunctuation}
-                    embeddedFonts={embeddedFonts}
-                    onResetBookDefaults={onResetBookDefaults}
-                    canResetBookDefaults={canResetBookDefaults}
-                    onResetKoShelfDefaults={onResetKoShelfDefaults}
-                    canResetKoShelfDefaults={canResetKoShelfDefaults}
-                    hasDistinctBookDefaults={hasDistinctBookDefaults}
-                />
+                <ReaderSettingsPanel {...settingsProps} />
 
                 <button
                     type="button"
                     onClick={onDrawerOpen}
-                    className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                    className={HEADER_ICON_BUTTON_CLASS}
                     aria-label={translation.get('reader-drawer.aria-label')}
                 >
                     <LuList className="w-5 h-5" aria-hidden="true" />

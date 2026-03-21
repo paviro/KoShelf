@@ -1,19 +1,15 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { BsBookmarkFill } from 'react-icons/bs';
 
 import { translation } from '../../../shared/i18n';
 import type { LibraryAnnotation } from '../../library/api/library-data';
+import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
 import {
+    groupAnnotationsByChapter,
     normalizeReaderText,
-    resolveAnnotationSectionIndex,
-    resolveSectionCandidates,
+    resolveCurrentGroupIndex,
 } from '../lib/reader-drawer-utils';
 import { ReaderDrawerEmptyState } from './ReaderDrawerEmptyState';
-
-type ChapterGroup = {
-    chapter: string;
-    bookmarks: LibraryAnnotation[];
-};
 
 type ReaderBookmarkListProps = {
     bookmarks: LibraryAnnotation[];
@@ -22,102 +18,30 @@ type ReaderBookmarkListProps = {
     onSelect: (annotation: LibraryAnnotation) => void;
 };
 
-function groupByChapter(bookmarks: LibraryAnnotation[]): ChapterGroup[] {
-    const groups: ChapterGroup[] = [];
-    let current: ChapterGroup | null = null;
-
-    for (const bookmark of bookmarks) {
-        const chapter = bookmark.chapter ?? '';
-        if (!current || current.chapter !== chapter) {
-            current = { chapter, bookmarks: [] };
-            groups.push(current);
-        }
-        current.bookmarks.push(bookmark);
-    }
-
-    return groups;
-}
 export function ReaderBookmarkList({
     bookmarks,
     currentChapter,
     currentSectionIndex,
     onSelect,
 }: ReaderBookmarkListProps) {
-    const groups = useMemo(() => groupByChapter(bookmarks), [bookmarks]);
+    const groups = useMemo(
+        () => groupAnnotationsByChapter(bookmarks),
+        [bookmarks],
+    );
     const listRef = useRef<HTMLDivElement>(null);
 
     const normalizedCurrent = normalizeReaderText(currentChapter);
-    const currentGroupIndex = useMemo(() => {
-        const matchedByChapter = groups.findIndex(
-            (group) =>
-                group.chapter &&
-                normalizeReaderText(group.chapter) === normalizedCurrent,
-        );
-        if (matchedByChapter >= 0) {
-            return matchedByChapter;
-        }
+    const currentGroupIndex = useMemo(
+        () =>
+            resolveCurrentGroupIndex(
+                groups,
+                normalizedCurrent,
+                currentSectionIndex,
+            ),
+        [currentSectionIndex, groups, normalizedCurrent],
+    );
 
-        const candidateSectionIndexes =
-            resolveSectionCandidates(currentSectionIndex);
-
-        for (const sectionIndex of candidateSectionIndexes) {
-            const matchedBySection = groups.findIndex((group) =>
-                group.bookmarks.some(
-                    (bookmark) =>
-                        resolveAnnotationSectionIndex(bookmark) ===
-                        sectionIndex,
-                ),
-            );
-            if (matchedBySection >= 0) {
-                return matchedBySection;
-            }
-        }
-
-        return -1;
-    }, [currentSectionIndex, groups, normalizedCurrent]);
-
-    useEffect(() => {
-        if (currentGroupIndex < 0 || !listRef.current) {
-            return;
-        }
-
-        const scrollContainer = listRef.current.closest<HTMLElement>(
-            '[data-tabbed-drawer-scroll-container]',
-        );
-        if (scrollContainer) {
-            scrollContainer.style.overflowY = 'hidden';
-        }
-
-        const restoreOverflow = () => {
-            if (scrollContainer) {
-                scrollContainer.style.overflowY = '';
-            }
-        };
-
-        const scroll = () => {
-            const el = listRef.current?.querySelector<HTMLElement>(
-                '[data-current-chapter]',
-            );
-            if (!el) {
-                return;
-            }
-
-            el.scrollIntoView({
-                block: 'center',
-                inline: 'nearest',
-            });
-        };
-
-        const frameId = requestAnimationFrame(scroll);
-        const timeoutId = setTimeout(scroll, 350);
-        const restoreOverflowId = window.setTimeout(restoreOverflow, 425);
-        return () => {
-            cancelAnimationFrame(frameId);
-            clearTimeout(timeoutId);
-            window.clearTimeout(restoreOverflowId);
-            restoreOverflow();
-        };
-    }, [currentGroupIndex]);
+    useDrawerListScroll(listRef, currentGroupIndex, 'data-current-chapter');
 
     if (bookmarks.length === 0) {
         return (
@@ -152,7 +76,7 @@ export function ReaderBookmarkList({
                             </p>
                         )}
                         <div className="flex flex-col gap-0.5">
-                            {group.bookmarks.map((annotation, index) => (
+                            {group.annotations.map((annotation, index) => (
                                 <button
                                     key={index}
                                     type="button"

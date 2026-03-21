@@ -31,3 +31,58 @@ export function resolveAnnotationSectionIndex(
     const parsedPosition = parseKoReaderPosition(annotation.pos0);
     return parsedPosition?.spineIndex ?? null;
 }
+
+export type AnnotationChapterGroup = {
+    chapter: string;
+    annotations: LibraryAnnotation[];
+};
+
+export function groupAnnotationsByChapter(
+    annotations: LibraryAnnotation[],
+): AnnotationChapterGroup[] {
+    const groups: AnnotationChapterGroup[] = [];
+    let current: AnnotationChapterGroup | null = null;
+
+    for (const annotation of annotations) {
+        const chapter = annotation.chapter ?? '';
+        if (!current || current.chapter !== chapter) {
+            current = { chapter, annotations: [] };
+            groups.push(current);
+        }
+        current.annotations.push(annotation);
+    }
+
+    return groups;
+}
+
+export function resolveCurrentGroupIndex(
+    groups: AnnotationChapterGroup[],
+    normalizedChapter: string,
+    currentSectionIndex: number | null,
+): number {
+    const matchedByChapter = groups.findIndex(
+        (group) =>
+            group.chapter &&
+            normalizeReaderText(group.chapter) === normalizedChapter,
+    );
+    if (matchedByChapter >= 0) {
+        return matchedByChapter;
+    }
+
+    const candidateSectionIndexes =
+        resolveSectionCandidates(currentSectionIndex);
+
+    for (const sectionIndex of candidateSectionIndexes) {
+        const matchedBySection = groups.findIndex((group) =>
+            group.annotations.some(
+                (annotation) =>
+                    resolveAnnotationSectionIndex(annotation) === sectionIndex,
+            ),
+        );
+        if (matchedBySection >= 0) {
+            return matchedBySection;
+        }
+    }
+
+    return -1;
+}

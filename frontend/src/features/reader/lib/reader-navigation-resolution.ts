@@ -5,15 +5,12 @@ import type {
     SectionDocumentCache,
 } from '../model/reader-model';
 import { resolveCfiFromKoReaderPositions } from './reader-cfi-resolution';
+import { normalizeReaderText } from './reader-drawer-utils';
 import { parseKoReaderPosition } from './reader-position-parser';
 import {
     resolveCfiByTextAcrossSections,
     resolveCfiByTextInSection,
 } from './reader-text-search';
-
-function normalizeText(value: string): string {
-    return value.trim().replace(/\s+/g, ' ').toLowerCase();
-}
 
 type TocLookupEntry = {
     href?: string | null;
@@ -51,13 +48,13 @@ export function resolveChapterHref(
     chapter: string,
 ): string | null {
     const flattenedToc = flattenTocEntries(toc);
-    const normalizedChapter = normalizeText(chapter);
+    const normalizedChapter = normalizeReaderText(chapter);
     if (!normalizedChapter) {
         return null;
     }
 
     const exact = flattenedToc.find(
-        (entry) => normalizeText(entry.label) === normalizedChapter,
+        (entry) => normalizeReaderText(entry.label) === normalizedChapter,
     );
     if (exact?.href) {
         return exact.href;
@@ -72,7 +69,7 @@ export function resolveChapterHref(
     }
 
     const fuzzy = flattenedToc.find((entry) => {
-        const normalizedLabel = normalizeText(entry.label);
+        const normalizedLabel = normalizeReaderText(entry.label);
         return Boolean(
             normalizedLabel &&
             (normalizedLabel.includes(withoutPrefix) ||

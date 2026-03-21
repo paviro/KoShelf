@@ -30,7 +30,7 @@ import type {
     ReaderToggleControl,
 } from '../hooks/useReaderStyle';
 
-const HEADER_ICON_BUTTON_CLASS =
+export const HEADER_ICON_BUTTON_CLASS =
     'flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
 
 const PANEL_CONTROL_BUTTON_CLASS =
@@ -125,7 +125,7 @@ function EditableValue({
     );
 }
 
-type ReaderSettingsPanelProps = {
+export type ReaderSettingsPanelProps = {
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
     wordSpacing: ReaderStyleControl;
