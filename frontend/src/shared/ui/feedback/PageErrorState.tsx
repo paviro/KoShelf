@@ -9,21 +9,31 @@ import type { ReactNode } from 'react';
 import { isApiHttpError } from '../../api';
 import { translation } from '../../i18n';
 
-type ErrorVariant = 'generic' | 'not-found' | 'connection';
+type ErrorVariant = 'generic' | 'not-found' | 'connection' | 'file-unavailable';
+type ErrorLayout = 'page' | 'overlay';
 
 type PageErrorStateProps = {
     error?: unknown;
     onRetry?: () => void;
     children?: ReactNode;
+    layout?: ErrorLayout;
 };
 
 function resolveVariant(error: unknown): ErrorVariant {
-    if (!isApiHttpError(error)) {
+    if (isApiHttpError(error)) {
+        if (error.code === 'book_file_unavailable') {
+            return 'file-unavailable';
+        }
+        if (error.status === 404) {
+            return 'not-found';
+        }
+        return 'generic';
+    }
+
+    if (error instanceof TypeError) {
         return 'connection';
     }
-    if (error.status === 404) {
-        return 'not-found';
-    }
+
     return 'generic';
 }
 
@@ -66,20 +76,39 @@ const VARIANT_CONFIG: Record<
         titleKey: 'error-state.connection-title',
         descriptionKey: 'error-state.connection-description',
     },
+    'file-unavailable': {
+        icon: LuTriangleAlert,
+        gradientFrom: 'from-amber-500',
+        gradientTo: 'to-yellow-500',
+        glowFrom: 'from-amber-500/20',
+        glowTo: 'to-yellow-500/20',
+        titleKey: 'error-state.file-unavailable-title',
+        descriptionKey: 'error-state.file-unavailable-description',
+    },
 };
 
 export function PageErrorState({
     error,
     onRetry,
     children,
+    layout = 'page',
 }: PageErrorStateProps) {
     const variant = resolveVariant(error);
     const config = VARIANT_CONFIG[variant];
     const Icon = config.icon;
+    const hasActions = Boolean(onRetry || children);
+    const containerClassName =
+        layout === 'overlay'
+            ? 'absolute inset-0 z-20 flex items-center justify-center p-6 md:p-8 text-center'
+            : 'page-centered-state flex-col text-center';
+    const contentClassName =
+        layout === 'overlay'
+            ? 'w-full max-w-3xl flex flex-col items-center justify-center'
+            : 'flex flex-col items-center justify-center';
 
     return (
-        <section className="page-centered-state flex-col text-center">
-            <div className="flex flex-col items-center justify-center">
+        <section className={containerClassName}>
+            <div className={contentClassName}>
                 <div className="relative mb-8">
                     <div
                         className={`absolute inset-0 w-32 h-32 bg-linear-to-br ${config.glowFrom} ${config.glowTo} rounded-full blur-2xl`}
@@ -96,19 +125,21 @@ export function PageErrorState({
                 <p className="text-lg text-gray-600 dark:text-dark-300 max-w-2xl leading-relaxed whitespace-pre-line">
                     {translation.get(config.descriptionKey)}
                 </p>
-                <div className="flex flex-col sm:flex-row items-center gap-3 mt-6">
-                    {onRetry && (
-                        <button
-                            type="button"
-                            onClick={onRetry}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-dark-700 transition-colors"
-                        >
-                            <LuRotateCw className="w-4 h-4" aria-hidden />
-                            {translation.get('error-state.retry')}
-                        </button>
-                    )}
-                    {children}
-                </div>
+                {hasActions && (
+                    <div className="flex flex-col sm:flex-row items-center gap-3 mt-6">
+                        {onRetry && (
+                            <button
+                                type="button"
+                                onClick={onRetry}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-dark-700 transition-colors"
+                            >
+                                <LuRotateCw className="w-4 h-4" aria-hidden />
+                                {translation.get('error-state.retry')}
+                            </button>
+                        )}
+                        {children}
+                    </div>
+                )}
             </div>
         </section>
     );

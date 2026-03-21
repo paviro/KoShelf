@@ -36,6 +36,18 @@ fn test_parse_koreader_generated_metadata() {
                     drawer = "underscore",
                 },
             },
+            font_face = "Noto Serif",
+            copt_font_size = 24,
+            copt_line_spacing = 110,
+            copt_h_page_margins = { 30, 30 },
+            copt_t_page_margin = 30,
+            copt_b_page_margin = 15,
+            copt_embedded_css = 1,
+            copt_embedded_fonts = 0,
+            copt_word_spacing = { 100, 90 },
+            copt_word_expansion = 15,
+            floating_punctuation = 0,
+            hyphenation = true,
             doc_pages = 250,
             doc_path = "/storage/Books/My Book.epub",
             pagemap_use_page_labels = true,
@@ -100,6 +112,20 @@ fn test_parse_koreader_generated_metadata() {
     assert_eq!(metadata.pagemap_doc_pages, Some(320));
     assert_eq!(metadata.pagemap_current_page_label.as_deref(), Some("12"));
     assert_eq!(metadata.pagemap_last_page_label.as_deref(), Some("320"));
+
+    let presentation = metadata
+        .reader_presentation
+        .expect("reader_presentation should be present");
+    assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
+    assert_eq!(presentation.font_size_pt, Some(24.0));
+    assert_eq!(presentation.line_spacing_percent, Some(110));
+    assert_eq!(presentation.h_page_margins, Some([30, 30]));
+    assert_eq!(presentation.t_page_margin, Some(30));
+    assert_eq!(presentation.b_page_margin, Some(15));
+    assert_eq!(presentation.embedded_fonts, Some(false));
+    assert_eq!(presentation.hyphenation, Some(true));
+    assert_eq!(presentation.floating_punctuation, Some(false));
+    assert_eq!(presentation.word_spacing, Some([100, 90]));
 
     // Verify doc_props
     let doc_props = metadata.doc_props.expect("doc_props should be present");

@@ -160,9 +160,6 @@ pages-label = { $count ->
 # -----------------------------------
 #       Statistics & Progress
 # -----------------------------------
-# -----------------------------------
-#        Statistics & Progress
-# -----------------------------------
 reading-statistics = Estadísticas de lectura
 overall-statistics = Estadísticas generales
 weekly-statistics = Estadísticas semanales
@@ -256,6 +253,8 @@ error-state =
     .connection-description =
         No se pudo contactar con el servidor.
         Comprueba tu conexión e inténtalo de nuevo.
+    .file-unavailable-title = Archivo del libro no disponible
+    .file-unavailable-description = Se encontraron los detalles del libro, pero falta el archivo del libro.
     .retry = Reintentar
 
 # Navigation and sorting
@@ -271,21 +270,54 @@ search =
     .aria-label = Buscar
 close-search =
     .aria-label = Cerrar búsqueda
-    .aria-label = Cerrar
 go-back =
     .aria-label = Volver
 open-reader-aria = Abrir en el lector
+reader-title = Lector
 reader-loading = Cargando libro…
-reader-error = Error al cargar el libro
 reader-previous-page = Página anterior
 reader-next-page = Página siguiente
 open-at-annotation = Abrir en la anotación
 reader-contents = Contenido
+reader-settings-aria = Ajustes de visualización
+reader-section-typography = Tipografía
+reader-section-margins = Márgenes
+reader-font-size = Tamaño de fuente
+reader-font-size-decrease-aria = Disminuir tamaño de fuente
+reader-font-size-increase-aria = Aumentar tamaño de fuente
+reader-line-spacing = Interlineado
+reader-line-spacing-decrease-aria = Disminuir interlineado
+reader-line-spacing-increase-aria = Aumentar interlineado
+reader-word-spacing = Espaciado de palabras
+reader-word-spacing-decrease-aria = Disminuir espaciado de palabras
+reader-word-spacing-increase-aria = Aumentar espaciado de palabras
+reader-hyphenation = Guionado
+reader-floating-punctuation = Puntuación flotante
+reader-embedded-fonts = Fuentes incrustadas
+reader-left-margin = Margen izquierdo
+reader-left-margin-decrease-aria = Disminuir margen izquierdo
+reader-left-margin-increase-aria = Aumentar margen izquierdo
+reader-right-margin = Margen derecho
+reader-right-margin-decrease-aria = Disminuir margen derecho
+reader-right-margin-increase-aria = Aumentar margen derecho
+reader-top-margin = Margen superior
+reader-top-margin-decrease-aria = Disminuir margen superior
+reader-top-margin-increase-aria = Aumentar margen superior
+reader-bottom-margin = Margen inferior
+reader-bottom-margin-decrease-aria = Disminuir margen inferior
+reader-bottom-margin-increase-aria = Aumentar margen inferior
+reader-mode-auto = Libro
+reader-mode-on = Activado
+reader-mode-off = Desactivado
+reader-reset-book = Usar ajustes del libro
+reader-reset-book-aria = Restablecer a los ajustes de visualización sincronizados del libro
+reader-reset-defaults = Restablecer valores predeterminados
+reader-reset-defaults-aria = Restablecer la configuración de visualización del lector a los valores predeterminados
 reader-drawer-aria = Panel de navegación del libro
 reader-no-toc = No hay tabla de contenido disponible
 reader-no-toc-description = Este archivo no incluye marcadores de capítulo.
-reader-no-highlights = Aún no hay resaltados
-reader-no-highlights-description = Los resaltados que agregues en KoReader aparecerán aquí.
+reader-no-highlights = Aún no hay subrayados
+reader-no-highlights-description = Los subrayados que agregues en KoReader aparecerán aquí.
 reader-no-bookmarks = Aún no hay marcadores
 reader-no-bookmarks-description = Los marcadores que agregues en KoReader aparecerán aquí.
 open-in-reader = Abrir

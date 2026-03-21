@@ -23,6 +23,14 @@ pub async fn run_library_migrations(pool: &SqlitePool) -> Result<()> {
                 .await
                 .context("Failed to run library DB migrations after reset")
         }
+        Err(MigrateError::VersionMissing(version)) => {
+            warn!("Library DB migration {version} was removed — resetting database");
+            reset_library_db(pool).await?;
+            migrator
+                .run(pool)
+                .await
+                .context("Failed to run library DB migrations after reset")
+        }
         Err(error) => Err(error).context("Failed to run library DB migrations"),
     }
 }
@@ -136,6 +144,57 @@ mod tests {
         run_library_migrations(&pool)
             .await
             .expect("version mismatch should trigger reset and re-apply");
+
+        let item_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM library_items")
+            .fetch_one(&pool)
+            .await
+            .expect("count query should succeed");
+
+        assert_eq!(item_count, 0, "reset should clear cached library rows");
+    }
+
+    #[tokio::test]
+    async fn version_missing_resets_and_reapplies_schema() {
+        let pool = open_library_pool_in_memory()
+            .await
+            .expect("in-memory pool should open");
+
+        run_library_migrations(&pool)
+            .await
+            .expect("first migration run should succeed");
+
+        sqlx::query(
+            "INSERT INTO library_items (
+                id, file_path, format, content_type, title, status,
+                cover_url, search_base_path, created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        )
+        .bind("book-1")
+        .bind("/books/book-1.epub")
+        .bind("epub")
+        .bind("book")
+        .bind("Book 1")
+        .bind("reading")
+        .bind("/assets/covers/book-1.webp")
+        .bind("/books")
+        .bind("2026-01-01T00:00:00Z")
+        .bind("2026-01-01T00:00:00Z")
+        .execute(&pool)
+        .await
+        .expect("seed row should insert");
+
+        // Simulate a removed migration by inserting a phantom migration record
+        sqlx::query(
+            "INSERT INTO _sqlx_migrations (version, description, installed_on, success, checksum, execution_time)
+             VALUES (999, 'phantom', CURRENT_TIMESTAMP, TRUE, X'AA', 0)",
+        )
+        .execute(&pool)
+        .await
+        .expect("should be able to insert phantom migration");
+
+        run_library_migrations(&pool)
+            .await
+            .expect("version missing should trigger reset and re-apply");
 
         let item_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM library_items")
             .fetch_one(&pool)

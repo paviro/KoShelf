@@ -1,4 +1,6 @@
-use crate::shelf::models::{Annotation, BookStatus, DocProps, KoReaderMetadata, Stats, Summary};
+use crate::shelf::models::{
+    Annotation, BookStatus, DocProps, KoReaderMetadata, ReaderPresentation, Stats, Summary,
+};
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use mlua::{ChunkMode, Lua, LuaOptions, StdLib, Table, Value};
@@ -46,6 +48,7 @@ impl LuaParser {
 
     fn parse_metadata_table(&self, table: Table) -> Result<KoReaderMetadata> {
         let annotations = self.parse_annotations(&table)?;
+        let reader_presentation = self.parse_reader_presentation(&table)?;
         let doc_pages = self.get_optional_u32(&table, "doc_pages")?;
         let doc_path = self.get_optional_string(&table, "doc_path")?;
         let doc_props = self.parse_doc_props(&table)?;
@@ -65,6 +68,7 @@ impl LuaParser {
 
         Ok(KoReaderMetadata {
             annotations,
+            reader_presentation,
             doc_pages,
             doc_path,
             doc_props,
@@ -79,6 +83,23 @@ impl LuaParser {
             summary,
             text_lang,
         })
+    }
+
+    fn parse_reader_presentation(&self, table: &Table) -> Result<Option<ReaderPresentation>> {
+        let reader_presentation = ReaderPresentation {
+            font_face: self.get_optional_string(table, "font_face")?,
+            font_size_pt: self.get_optional_f64(table, "copt_font_size")?,
+            line_spacing_percent: self.get_optional_u32(table, "copt_line_spacing")?,
+            h_page_margins: self.get_optional_u32_pair(table, "copt_h_page_margins")?,
+            t_page_margin: self.get_optional_u32(table, "copt_t_page_margin")?,
+            b_page_margin: self.get_optional_u32(table, "copt_b_page_margin")?,
+            embedded_fonts: self.get_optional_bool_or_flag(table, "copt_embedded_fonts")?,
+            hyphenation: self.get_optional_bool_or_flag(table, "hyphenation")?,
+            floating_punctuation: self.get_optional_bool_or_flag(table, "floating_punctuation")?,
+            word_spacing: self.get_optional_u32_pair(table, "copt_word_spacing")?,
+        };
+
+        Ok((!reader_presentation.is_empty()).then_some(reader_presentation))
     }
 
     fn parse_annotations(&self, table: &Table) -> Result<Vec<Annotation>> {
@@ -195,19 +216,7 @@ impl LuaParser {
                     Ok(None)
                 }
             },
-            Ok(Value::Number(n)) => {
-                if !n.is_finite() {
-                    warn!("Ignoring non-finite number for key '{}': {}", key, n);
-                    return Ok(None);
-                }
-
-                if n < 0.0 || n > u32::MAX as f64 {
-                    warn!("Ignoring out-of-range number for key '{}': {}", key, n);
-                    return Ok(None);
-                }
-
-                Ok(Some(n as u32))
-            }
+            Ok(Value::Number(n)) => Ok(self.parse_u32_number(n, &format!("key '{}'", key))),
             Ok(Value::Nil) => Ok(None),
             Ok(_) => {
                 warn!("Expected number for key '{}', got different type", key);
@@ -229,6 +238,130 @@ impl LuaParser {
         }
     }
 
+    fn get_optional_bool_or_flag(&self, table: &Table, key: &str) -> Result<Option<bool>> {
+        match table.get(key) {
+            Ok(Value::Boolean(value)) => Ok(Some(value)),
+            Ok(Value::Integer(i)) => {
+                if i == 0 {
+                    Ok(Some(false))
+                } else if i == 1 {
+                    Ok(Some(true))
+                } else {
+                    warn!(
+                        "Ignoring integer flag other than 0/1 for key '{}': {}",
+                        key, i
+                    );
+                    Ok(None)
+                }
+            }
+            Ok(Value::Number(n)) => {
+                if !n.is_finite() {
+                    warn!("Ignoring non-finite number for key '{}': {}", key, n);
+                    return Ok(None);
+                }
+
+                if (n - 0.0).abs() < f64::EPSILON {
+                    Ok(Some(false))
+                } else if (n - 1.0).abs() < f64::EPSILON {
+                    Ok(Some(true))
+                } else {
+                    warn!(
+                        "Ignoring numeric flag other than 0/1 for key '{}': {}",
+                        key, n
+                    );
+                    Ok(None)
+                }
+            }
+            Ok(Value::Nil) => Ok(None),
+            Ok(_) => {
+                warn!(
+                    "Expected bool/int flag for key '{}', got different type",
+                    key
+                );
+                Ok(None)
+            }
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_optional_u32_pair(&self, table: &Table, key: &str) -> Result<Option<[u32; 2]>> {
+        let values_table = match table.get(key) {
+            Ok(Value::Table(values)) => values,
+            Ok(Value::Nil) => return Ok(None),
+            Ok(_) => {
+                warn!("Expected table for key '{}', got different type", key);
+                return Ok(None);
+            }
+            Err(_) => return Ok(None),
+        };
+
+        let first = self.get_u32_from_table_index(&values_table, key, 1)?;
+        let second = self.get_u32_from_table_index(&values_table, key, 2)?;
+
+        match (first, second) {
+            (Some(a), Some(b)) => Ok(Some([a, b])),
+            (None, None) => Ok(None),
+            _ => {
+                warn!(
+                    "Ignoring partially defined two-value table for key '{}'",
+                    key
+                );
+                Ok(None)
+            }
+        }
+    }
+
+    fn get_u32_from_table_index(
+        &self,
+        table: &Table,
+        key: &str,
+        index: i64,
+    ) -> Result<Option<u32>> {
+        match table.get(index) {
+            Ok(Value::Integer(i)) => match u32::try_from(i) {
+                Ok(value) => Ok(Some(value)),
+                Err(_) => {
+                    warn!(
+                        "Ignoring out-of-range integer for key '{}' at index {}: {}",
+                        key, index, i
+                    );
+                    Ok(None)
+                }
+            },
+            Ok(Value::Number(n)) => {
+                Ok(self.parse_u32_number(n, &format!("key '{}' at index {}", key, index)))
+            }
+            Ok(Value::Nil) => Ok(None),
+            Ok(_) => {
+                warn!(
+                    "Expected number in table for key '{}' at index {}, got different type",
+                    key, index
+                );
+                Ok(None)
+            }
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn parse_u32_number(&self, value: f64, context: &str) -> Option<u32> {
+        if !value.is_finite() {
+            warn!("Ignoring non-finite number for {}: {}", context, value);
+            return None;
+        }
+
+        if value < 0.0 || value > u32::MAX as f64 {
+            warn!("Ignoring out-of-range number for {}: {}", context, value);
+            return None;
+        }
+
+        if value.trunc() != value {
+            warn!("Ignoring non-integer number for {}: {}", context, value);
+            return None;
+        }
+
+        Some(value as u32)
+    }
+
     fn get_optional_f64(&self, table: &Table, key: &str) -> Result<Option<f64>> {
         match table.get(key) {
             Ok(Value::Integer(i)) => Ok(Some(i as f64)),
@@ -240,5 +373,44 @@ impl LuaParser {
             }
             Err(_) => Ok(None),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use tempfile::TempDir;
+
+    use super::LuaParser;
+
+    #[test]
+    fn ignores_fractional_numbers_for_u32_fields() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let lua_path = temp_dir.path().join("metadata.epub.lua");
+        fs::write(
+            &lua_path,
+            r#"return {
+                font_face = "Noto Serif",
+                copt_line_spacing = 110.5,
+                copt_h_page_margins = { 20.5, 20 },
+                copt_t_page_margin = 10.2,
+            }"#,
+        )
+        .expect("lua fixture should be written");
+
+        let parser = LuaParser::new();
+        let metadata = parser
+            .parse(&lua_path)
+            .expect("metadata should parse successfully");
+
+        let presentation = metadata
+            .reader_presentation
+            .expect("reader presentation should still be present");
+
+        assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
+        assert_eq!(presentation.line_spacing_percent, None);
+        assert_eq!(presentation.h_page_margins, None);
+        assert_eq!(presentation.t_page_margin, None);
     }
 }

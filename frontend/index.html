@@ -8,7 +8,7 @@
         <meta name="theme-color" content="#6366f1" />
         <meta
             http-equiv="Content-Security-Policy"
-            content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self' data:; worker-src 'self' blob:; frame-src blob:; object-src 'none'; form-action 'none';"
+            content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' blob:; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self' data: blob:; worker-src 'self' blob:; frame-src blob:; object-src 'none'; form-action 'none';"
         />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -16,36 +16,7 @@
             name="apple-mobile-web-app-status-bar-style"
             content="black-translucent"
         />
-        <script>
-            (() => {
-                const STORAGE_KEY = 'koshelf_theme_preference';
-                const DARK_QUERY = '(prefers-color-scheme: dark)';
-
-                try {
-                    const rawValue = localStorage.getItem(STORAGE_KEY);
-                    const parsedValue =
-                        rawValue === null ? null : JSON.parse(rawValue);
-                    const preference =
-                        parsedValue === 'light' ||
-                        parsedValue === 'dark' ||
-                        parsedValue === 'auto'
-                            ? parsedValue
-                            : 'auto';
-                    const useDark =
-                        preference === 'dark' ||
-                        (preference === 'auto' &&
-                            window.matchMedia &&
-                            window.matchMedia(DARK_QUERY).matches);
-
-                    document.documentElement.classList.toggle('dark', useDark);
-                    document.documentElement.style.colorScheme = useDark
-                        ? 'dark'
-                        : 'light';
-                } catch {
-                    // Ignore storage and media query failures.
-                }
-            })();
-        </script>
+        <script src="/theme-bootstrap.js"></script>
     </head>
     <body
         class="min-h-full bg-gray-100 dark:bg-dark-925 text-gray-900 dark:text-white font-sans"
