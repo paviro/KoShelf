@@ -10,6 +10,7 @@ import {
     DEFAULT_READER_LINE_SPACING,
     DEFAULT_READER_RIGHT_MARGIN,
     DEFAULT_READER_TOP_MARGIN,
+    DEFAULT_READER_WORD_SPACING_PERCENT,
     mapKoReaderFontSizePtToCssPercent,
     mapKoReaderLineSpacingPercentToCssLineHeight,
 } from '../lib/reader-theme';
@@ -59,6 +60,7 @@ export type ReaderToggleControl = {
 export type UseReaderStyleResult = {
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
+    wordSpacing: ReaderStyleControl;
     leftMargin: ReaderStyleControl;
     rightMargin: ReaderStyleControl;
     topMargin: ReaderStyleControl;
@@ -77,6 +79,7 @@ export type UseReaderStyleResult = {
 type ReaderStyleState = {
     fontSize: number;
     lineSpacing: number;
+    wordSpacing: number;
     leftMargin: number;
     rightMargin: number;
     topMargin: number;
@@ -89,6 +92,7 @@ type ReaderStyleState = {
 type NumericStyleKey =
     | 'fontSize'
     | 'lineSpacing'
+    | 'wordSpacing'
     | 'leftMargin'
     | 'rightMargin'
     | 'topMargin'
@@ -99,6 +103,7 @@ type ModeStyleKey = 'hyphenation' | 'floatingPunctuation';
 const NUMERIC_STYLE_KEYS: readonly NumericStyleKey[] = [
     'fontSize',
     'lineSpacing',
+    'wordSpacing',
     'leftMargin',
     'rightMargin',
     'topMargin',
@@ -152,10 +157,18 @@ const BOTTOM_MARGIN_CONFIG: NumericReaderStyleConfig = {
     precision: 0,
 };
 
+const WORD_SPACING_CONFIG: NumericReaderStyleConfig = {
+    min: 50,
+    max: 200,
+    step: 5,
+    precision: 0,
+};
+
 const NUMERIC_STYLE_CONFIGS: Record<NumericStyleKey, NumericReaderStyleConfig> =
     {
         fontSize: FONT_SIZE_CONFIG,
         lineSpacing: LINE_SPACING_CONFIG,
+        wordSpacing: WORD_SPACING_CONFIG,
         leftMargin: LEFT_MARGIN_CONFIG,
         rightMargin: RIGHT_MARGIN_CONFIG,
         topMargin: TOP_MARGIN_CONFIG,
@@ -247,6 +260,24 @@ function resolveHorizontalMargins(
     return [left, right];
 }
 
+function resolveWordSpacing(
+    presentation: LibraryReaderPresentation | null | undefined,
+): number {
+    const ws = presentation?.word_spacing;
+    if (!Array.isArray(ws) || ws.length !== 2) {
+        return DEFAULT_READER_WORD_SPACING_PERCENT;
+    }
+
+    // word_spacing[0] is the space-width scaling percentage (100 = normal).
+    // word_spacing[1] is the justification condensing limit (browser-managed).
+    const scaling = toFiniteNonNegativeNumber(ws[0]);
+    if (scaling === null) {
+        return DEFAULT_READER_WORD_SPACING_PERCENT;
+    }
+
+    return Math.round(scaling);
+}
+
 function resolveDefaultReaderStyleState(
     presentation: LibraryReaderPresentation | null | undefined,
 ): ReaderStyleState {
@@ -271,6 +302,10 @@ function resolveDefaultReaderStyleState(
     return {
         fontSize: normalizeValue(fontSize, FONT_SIZE_CONFIG),
         lineSpacing: normalizeValue(lineSpacing, LINE_SPACING_CONFIG),
+        wordSpacing: normalizeValue(
+            resolveWordSpacing(presentation),
+            WORD_SPACING_CONFIG,
+        ),
         leftMargin: normalizeValue(leftMargin, LEFT_MARGIN_CONFIG),
         rightMargin: normalizeValue(rightMargin, RIGHT_MARGIN_CONFIG),
         topMargin: normalizeValue(
@@ -341,6 +376,11 @@ function loadStoredReaderStyle(
                 LINE_SPACING_CONFIG,
                 defaults.lineSpacing,
             ),
+            wordSpacing: readNumericStoredValue(
+                stored.wordSpacing,
+                WORD_SPACING_CONFIG,
+                defaults.wordSpacing,
+            ),
             leftMargin: readNumericStoredValue(
                 stored.leftMargin,
                 LEFT_MARGIN_CONFIG,
@@ -385,6 +425,11 @@ function areReaderStyleStatesEqual(
             a.lineSpacing,
             b.lineSpacing,
             LINE_SPACING_CONFIG.precision,
+        ) &&
+        areValuesEqual(
+            a.wordSpacing,
+            b.wordSpacing,
+            WORD_SPACING_CONFIG.precision,
         ) &&
         areValuesEqual(
             a.leftMargin,
@@ -654,6 +699,7 @@ export function useReaderStyle(
         return {
             fontSize: makeNumericControl('fontSize'),
             lineSpacing: makeNumericControl('lineSpacing'),
+            wordSpacing: makeNumericControl('wordSpacing'),
             leftMargin: makeNumericControl('leftMargin'),
             rightMargin: makeNumericControl('rightMargin'),
             topMargin: makeNumericControl('topMargin', marginLineStepPx),
@@ -726,6 +772,10 @@ export function useReaderStyle(
                 styleState.floatingPunctuation,
             ),
             embedded_fonts: styleState.embeddedFonts,
+            word_spacing: [
+                styleState.wordSpacing,
+                presentation?.word_spacing?.[1] ?? styleState.wordSpacing,
+            ],
         }),
         [
             presentation,
@@ -734,6 +784,7 @@ export function useReaderStyle(
             styleState.hyphenation,
             styleState.leftMargin,
             styleState.rightMargin,
+            styleState.wordSpacing,
         ],
     );
 
@@ -763,6 +814,7 @@ export function useReaderStyle(
     return {
         fontSize: numericControls.fontSize,
         lineSpacing: numericControls.lineSpacing,
+        wordSpacing: numericControls.wordSpacing,
         leftMargin: numericControls.leftMargin,
         rightMargin: numericControls.rightMargin,
         topMargin: numericControls.topMargin,

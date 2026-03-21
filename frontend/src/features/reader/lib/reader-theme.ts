@@ -14,6 +14,7 @@ export const DEFAULT_READER_LEFT_MARGIN = 12;
 export const DEFAULT_READER_RIGHT_MARGIN = 12;
 export const DEFAULT_READER_TOP_MARGIN = 20;
 export const DEFAULT_READER_BOTTOM_MARGIN = 20;
+export const DEFAULT_READER_WORD_SPACING_PERCENT = 100;
 
 const CSS_ROOT_FONT_SIZE_PX = 16;
 const KOREADER_TO_BROWSER_FONT_SCALE = 0.95;
@@ -41,6 +42,7 @@ type ResolvedReaderLayout = {
     contentPaddingRight: string;
     hyphenation: ReaderHyphenationMode;
     floatingPunctuation: ReaderFloatingPunctuationMode;
+    wordSpacingPercent: number;
 };
 
 const READER_THEME_COLORS = {
@@ -129,6 +131,24 @@ function resolveFloatingPunctuationMode(
     return null;
 }
 
+function resolveWordSpacingPercent(
+    presentation: LibraryReaderPresentation | null | undefined,
+): number {
+    const ws = presentation?.word_spacing;
+    if (!Array.isArray(ws) || ws.length !== 2) {
+        return DEFAULT_READER_WORD_SPACING_PERCENT;
+    }
+
+    // word_spacing[0] is the space-width scaling percentage (100 = normal).
+    // word_spacing[1] is the justification condensing limit (browser-managed).
+    const scaling = toFiniteNonNegativeNumber(ws[0]);
+    if (scaling === null) {
+        return DEFAULT_READER_WORD_SPACING_PERCENT;
+    }
+
+    return Math.round(scaling);
+}
+
 function resolveReaderLayout(
     presentation: LibraryReaderPresentation | null | undefined,
 ): ResolvedReaderLayout {
@@ -143,6 +163,7 @@ function resolveReaderLayout(
         contentPaddingRight: `${Math.max(0, rightMarginPx)}px`,
         hyphenation: resolveHyphenationMode(presentation),
         floatingPunctuation: resolveFloatingPunctuationMode(presentation),
+        wordSpacingPercent: resolveWordSpacingPercent(presentation),
     };
 }
 
@@ -192,6 +213,21 @@ blockquote {
 }
 `;
 
+    const wordSpacingStyles =
+        layout.wordSpacingPercent !== DEFAULT_READER_WORD_SPACING_PERCENT
+            ? `
+html,
+body,
+p,
+li,
+dd,
+dt,
+blockquote {
+    word-spacing: ${((layout.wordSpacingPercent - 100) / 400).toFixed(3)}em !important;
+}
+`
+            : '';
+
     const fontOverrideStyles = fontOverride
         ? `
 ${fontOverride.fontFaceCss}
@@ -234,6 +270,7 @@ body {
 
 ${hyphenationStyles}
 ${floatingPunctuationStyles}
+${wordSpacingStyles}
 ${fontOverrideStyles}
 `;
 }

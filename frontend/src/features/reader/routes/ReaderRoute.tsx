@@ -34,6 +34,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     const {
         fontSize,
         lineSpacing,
+        wordSpacing,
         leftMargin,
         rightMargin,
         topMargin,
@@ -128,6 +129,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 onBackClick={handleBackClick}
                 fontSize={fontSize}
                 lineSpacing={lineSpacing}
+                wordSpacing={wordSpacing}
                 leftMargin={leftMargin}
                 rightMargin={rightMargin}
                 topMargin={topMargin}

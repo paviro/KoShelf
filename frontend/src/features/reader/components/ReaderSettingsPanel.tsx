@@ -17,6 +17,7 @@ import {
     LuQuote,
     LuSettings,
     LuType,
+    LuUnfoldHorizontal,
     LuWrapText,
 } from 'react-icons/lu';
 
@@ -52,6 +53,7 @@ const PANEL_OFFSET_PX = 8;
 type ReaderSettingsPanelProps = {
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
+    wordSpacing: ReaderStyleControl;
     leftMargin: ReaderStyleControl;
     rightMargin: ReaderStyleControl;
     topMargin: ReaderStyleControl;
@@ -303,6 +305,7 @@ function ReaderCompactControl({
 export function ReaderSettingsPanel({
     fontSize,
     lineSpacing,
+    wordSpacing,
     leftMargin,
     rightMargin,
     topMargin,
@@ -420,6 +423,7 @@ export function ReaderSettingsPanel({
 
     const displayFontSize = formatPointSettingValue(fontSize.value);
     const displayLineSpacing = formatPercentSettingValue(lineSpacing.value);
+    const displayWordSpacing = `${Math.round(wordSpacing.value)}%`;
     const displayLeftMargin = formatPixelSettingValue(leftMargin.value);
     const displayRightMargin = formatPixelSettingValue(rightMargin.value);
     const displayTopMargin = formatPixelSettingValue(topMargin.value);
@@ -487,7 +491,10 @@ export function ReaderSettingsPanel({
         },
     ];
 
-    const hasTextOverrides = fontSize.isOverridden || lineSpacing.isOverridden;
+    const hasTextOverrides =
+        fontSize.isOverridden ||
+        lineSpacing.isOverridden ||
+        wordSpacing.isOverridden;
     const hasTypographyOverrides =
         hyphenation.isOverridden ||
         floatingPunctuation.isOverridden ||
@@ -569,6 +576,26 @@ export function ReaderSettingsPanel({
                                         'reader-line-spacing-increase-aria',
                                     )}
                                     control={lineSpacing}
+                                />
+
+                                <ReaderSettingControl
+                                    icon={
+                                        <LuUnfoldHorizontal
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-word-spacing',
+                                    )}
+                                    value={displayWordSpacing}
+                                    decreaseAriaLabel={translation.get(
+                                        'reader-word-spacing-decrease-aria',
+                                    )}
+                                    increaseAriaLabel={translation.get(
+                                        'reader-word-spacing-increase-aria',
+                                    )}
+                                    control={wordSpacing}
                                 />
                             </ReaderSettingsSection>
 

@@ -16,6 +16,7 @@ type ReaderHeaderProps = {
     onBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
+    wordSpacing: ReaderStyleControl;
     leftMargin: ReaderStyleControl;
     rightMargin: ReaderStyleControl;
     topMargin: ReaderStyleControl;
@@ -38,6 +39,7 @@ export function ReaderHeader({
     onBackClick,
     fontSize,
     lineSpacing,
+    wordSpacing,
     leftMargin,
     rightMargin,
     topMargin,
@@ -82,6 +84,7 @@ export function ReaderHeader({
                 <ReaderSettingsPanel
                     fontSize={fontSize}
                     lineSpacing={lineSpacing}
+                    wordSpacing={wordSpacing}
                     leftMargin={leftMargin}
                     rightMargin={rightMargin}
                     topMargin={topMargin}
