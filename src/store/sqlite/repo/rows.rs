@@ -32,6 +32,7 @@ pub struct LibraryItemRow {
     pub bookmark_count: i32,
     pub highlight_count: i32,
     pub partial_md5_checksum: Option<String>,
+    pub hidden_flow_pages: Option<i32>,
     pub reader_presentation: Option<String>,
     pub last_open_at: Option<String>,
     pub total_reading_time_sec: Option<i64>,

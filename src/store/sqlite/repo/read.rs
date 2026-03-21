@@ -183,6 +183,22 @@ impl LibraryRepository {
             .collect())
     }
 
+    /// Load hidden flow page counts keyed by item ID (MD5).
+    ///
+    /// Only returns entries where `hidden_flow_pages` is set (i.e., the user has
+    /// enabled handmade flows in KOReader with hidden sections).
+    pub async fn load_hidden_flow_pages(&self) -> Result<HashMap<String, i32>> {
+        let rows: Vec<(String, i32)> = sqlx::query_as(
+            "SELECT id, hidden_flow_pages
+             FROM library_items
+             WHERE hidden_flow_pages IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to load hidden flow pages")?;
+        Ok(rows.into_iter().collect())
+    }
+
     /// Load `(id, file_path, format)` for every library item.
     ///
     /// Used by the static export pipeline to copy item files into the output.

@@ -166,6 +166,37 @@ impl StatisticsData {
         }
     }
 
+    /// Subtract hidden flow pages from book page counts.
+    ///
+    /// When a user has enabled KOReader's handmade flows and marked sections
+    /// (e.g. appendices) as hidden, those pages are skipped during reading and
+    /// excluded from KOReader's own progress calculation.  This method applies
+    /// the same adjustment to `StatBook.pages` so that completion detection
+    /// uses the effective (linear) page count.
+    pub fn apply_hidden_flow_adjustments(&mut self, hidden_pages_by_md5: &HashMap<String, i32>) {
+        if hidden_pages_by_md5.is_empty() {
+            return;
+        }
+        for book in &mut self.books {
+            Self::adjust_book_pages(book, hidden_pages_by_md5);
+        }
+        for book in self.stats_by_md5.values_mut() {
+            Self::adjust_book_pages(book, hidden_pages_by_md5);
+        }
+    }
+
+    fn adjust_book_pages(book: &mut StatBook, hidden_pages_by_md5: &HashMap<String, i32>) {
+        if let Some((&hidden, pages)) = hidden_pages_by_md5
+            .get(&book.md5)
+            .zip(book.pages.as_mut())
+        {
+            let adjusted = (*pages).saturating_sub(hidden as i64);
+            if adjusted > 0 {
+                *pages = adjusted;
+            }
+        }
+    }
+
     /// Return a cloned `StatisticsData` containing only entries of the given content type.
     ///
     /// This filters:

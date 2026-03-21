@@ -71,6 +71,7 @@ pub(crate) mod tests {
             bookmark_count: 0,
             highlight_count: 0,
             partial_md5_checksum: Some(id.to_string()),
+            hidden_flow_pages: None,
             reader_presentation: None,
             last_open_at: None,
             total_reading_time_sec: None,

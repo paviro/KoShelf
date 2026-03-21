@@ -78,6 +78,11 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
             .koreader_metadata
             .as_ref()
             .and_then(|m| m.partial_md5_checksum.clone()),
+        hidden_flow_pages: item
+            .koreader_metadata
+            .as_ref()
+            .and_then(|m| m.hidden_flow_pages())
+            .map(|p| p as i32),
         reader_presentation: item
             .koreader_metadata
             .as_ref()
