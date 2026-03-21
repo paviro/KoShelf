@@ -11,9 +11,13 @@ import { createPortal } from 'react-dom';
 import {
     LuALargeSmall,
     LuAlignJustify,
+    LuChevronDown,
     LuMinus,
     LuPlus,
+    LuQuote,
     LuSettings,
+    LuType,
+    LuWrapText,
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
@@ -31,6 +35,9 @@ const HEADER_ICON_BUTTON_CLASS =
 
 const PANEL_CONTROL_BUTTON_CLASS =
     'flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300/60 dark:border-dark-700/60 bg-white/80 dark:bg-dark-900/60 text-gray-600 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
+
+const COMPACT_CONTROL_BUTTON_CLASS =
+    'flex items-center justify-center w-7 h-7 rounded-md border border-gray-300/60 dark:border-dark-700/60 bg-white/80 dark:bg-dark-900/60 text-gray-600 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
 
 const SEGMENTED_OPTION_BASE_CLASS =
     'h-9 rounded-lg border text-xs font-semibold transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
@@ -93,35 +100,54 @@ function formatPixelSettingValue(value: number): string {
     return `${Math.round(value)}px`;
 }
 
-function ReaderControlBadge({ text }: { text: string }) {
-    return (
-        <span className="inline-flex min-w-6 h-6 px-1.5 items-center justify-center rounded-md border border-primary-200/70 dark:border-primary-400/40 bg-primary-50/80 dark:bg-primary-400/10 text-[10px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-200">
-            {text}
-        </span>
-    );
-}
-
-type ReaderSettingControlProps = {
-    icon: ReactNode;
-    label: string;
-    value: string;
-    decreaseAriaLabel: string;
-    increaseAriaLabel: string;
-    control: ReaderStyleControl;
-};
-
 type ReaderChoiceOption<T extends string | boolean> = {
     value: T;
     label: string;
 };
 
-type ReaderChoiceControlProps<T extends string | boolean> = {
-    icon: ReactNode;
-    label: string;
-    value: T;
-    options: readonly ReaderChoiceOption<T>[];
-    onSelect: (nextValue: T) => void;
-};
+function ReaderSettingsSection({
+    title,
+    hasOverrides,
+    defaultOpen,
+    children,
+}: {
+    title: string;
+    hasOverrides: boolean;
+    defaultOpen?: boolean;
+    children: ReactNode;
+}) {
+    const [expanded, setExpanded] = useState(defaultOpen ?? false);
+
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={() => setExpanded((prev) => !prev)}
+                className="flex items-center justify-between w-full py-1.5 group"
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-400 group-hover:text-gray-700 dark:group-hover:text-dark-200 transition-colors">
+                        {title}
+                    </span>
+                    {hasOverrides && !expanded && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-300" />
+                    )}
+                </div>
+                <LuChevronDown
+                    className={`w-3.5 h-3.5 text-gray-400 dark:text-dark-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                />
+            </button>
+            <div
+                className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+            >
+                <div className="overflow-hidden">
+                    <div className="space-y-3 pt-2 pb-1">{children}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function ReaderSettingControl({
     icon,
@@ -130,7 +156,14 @@ function ReaderSettingControl({
     decreaseAriaLabel,
     increaseAriaLabel,
     control,
-}: ReaderSettingControlProps) {
+}: {
+    icon: ReactNode;
+    label: string;
+    value: string;
+    decreaseAriaLabel: string;
+    increaseAriaLabel: string;
+    control: ReaderStyleControl;
+}) {
     return (
         <div className="space-y-3">
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
@@ -173,9 +206,15 @@ function ReaderChoiceControl<T extends string | boolean>({
     value,
     options,
     onSelect,
-}: ReaderChoiceControlProps<T>) {
+}: {
+    icon?: ReactNode;
+    label: string;
+    value: T;
+    options: readonly ReaderChoiceOption<T>[];
+    onSelect: (nextValue: T) => void;
+}) {
     return (
-        <div className="space-y-3">
+        <div className="space-y-2">
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
                 {icon}
                 <span className="text-sm font-semibold">{label}</span>
@@ -204,6 +243,49 @@ function ReaderChoiceControl<T extends string | boolean>({
                         </button>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+function ReaderCompactControl({
+    label,
+    value,
+    decreaseAriaLabel,
+    increaseAriaLabel,
+    control,
+}: {
+    label: string;
+    value: string;
+    decreaseAriaLabel: string;
+    increaseAriaLabel: string;
+    control: ReaderStyleControl;
+}) {
+    return (
+        <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700 dark:text-dark-200">
+                {label}
+            </span>
+            <div className="flex items-center gap-1.5">
+                <button
+                    type="button"
+                    onClick={control.decrease}
+                    className={COMPACT_CONTROL_BUTTON_CLASS}
+                    aria-label={decreaseAriaLabel}
+                >
+                    <LuMinus className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+                <span className="w-11 text-center text-xs font-medium text-gray-700 dark:text-dark-200 tabular-nums">
+                    {value}
+                </span>
+                <button
+                    type="button"
+                    onClick={control.increase}
+                    className={COMPACT_CONTROL_BUTTON_CLASS}
+                    aria-label={increaseAriaLabel}
+                >
+                    <LuPlus className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
             </div>
         </div>
     );
@@ -345,16 +427,9 @@ export function ReaderSettingsPanel({
         { value: false, label: translation.get('reader-mode-off') },
     ];
 
-    const marginSettings: Array<{
-        badge: string;
-        label: string;
-        value: string;
-        decreaseAriaLabel: string;
-        increaseAriaLabel: string;
-        control: ReaderStyleControl;
-    }> = [
+    const marginSettings = [
         {
-            badge: 'Lm',
+            key: 'left',
             label: translation.get('reader-left-margin'),
             value: displayLeftMargin,
             decreaseAriaLabel: translation.get(
@@ -366,7 +441,7 @@ export function ReaderSettingsPanel({
             control: leftMargin,
         },
         {
-            badge: 'Rm',
+            key: 'right',
             label: translation.get('reader-right-margin'),
             value: displayRightMargin,
             decreaseAriaLabel: translation.get(
@@ -378,7 +453,7 @@ export function ReaderSettingsPanel({
             control: rightMargin,
         },
         {
-            badge: 'Tm',
+            key: 'top',
             label: translation.get('reader-top-margin'),
             value: displayTopMargin,
             decreaseAriaLabel: translation.get(
@@ -390,7 +465,7 @@ export function ReaderSettingsPanel({
             control: topMargin,
         },
         {
-            badge: 'Bm',
+            key: 'bottom',
             label: translation.get('reader-bottom-margin'),
             value: displayBottomMargin,
             decreaseAriaLabel: translation.get(
@@ -402,6 +477,17 @@ export function ReaderSettingsPanel({
             control: bottomMargin,
         },
     ];
+
+    const hasTextOverrides = fontSize.isOverridden || lineSpacing.isOverridden;
+    const hasTypographyOverrides =
+        hyphenation.isOverridden ||
+        floatingPunctuation.isOverridden ||
+        embeddedFonts.isOverridden;
+    const hasMarginOverrides =
+        leftMargin.isOverridden ||
+        rightMargin.isOverridden ||
+        topMargin.isOverridden ||
+        bottomMargin.isOverridden;
 
     return (
         <>
@@ -432,88 +518,130 @@ export function ReaderSettingsPanel({
                         role="dialog"
                         aria-label={translation.get('reader-settings-aria')}
                     >
-                        <div className="space-y-4">
-                            <ReaderSettingControl
-                                icon={
-                                    <LuALargeSmall
-                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                        aria-hidden="true"
-                                    />
-                                }
-                                label={translation.get('reader-font-size')}
-                                value={displayFontSize}
-                                decreaseAriaLabel={translation.get(
-                                    'reader-font-size-decrease-aria',
-                                )}
-                                increaseAriaLabel={translation.get(
-                                    'reader-font-size-increase-aria',
-                                )}
-                                control={fontSize}
-                            />
-
-                            <ReaderSettingControl
-                                icon={
-                                    <LuAlignJustify
-                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                        aria-hidden="true"
-                                    />
-                                }
-                                label={translation.get('reader-line-spacing')}
-                                value={displayLineSpacing}
-                                decreaseAriaLabel={translation.get(
-                                    'reader-line-spacing-decrease-aria',
-                                )}
-                                increaseAriaLabel={translation.get(
-                                    'reader-line-spacing-increase-aria',
-                                )}
-                                control={lineSpacing}
-                            />
-
-                            <ReaderChoiceControl
-                                icon={<ReaderControlBadge text="Hy" />}
-                                label={translation.get('reader-hyphenation')}
-                                value={hyphenation.value}
-                                options={readerModeOptions}
-                                onSelect={hyphenation.setValue}
-                            />
-
-                            <ReaderChoiceControl
-                                icon={<ReaderControlBadge text="Fp" />}
-                                label={translation.get(
-                                    'reader-floating-punctuation',
-                                )}
-                                value={floatingPunctuation.value}
-                                options={readerModeOptions}
-                                onSelect={floatingPunctuation.setValue}
-                            />
-
-                            <ReaderChoiceControl
-                                icon={<ReaderControlBadge text="Ef" />}
-                                label={translation.get('reader-embedded-fonts')}
-                                value={embeddedFonts.value}
-                                options={embeddedFontOptions}
-                                onSelect={embeddedFonts.setValue}
-                            />
-
-                            {marginSettings.map((setting) => (
+                        <div className="space-y-2">
+                            <ReaderSettingsSection
+                                title={translation.get('reader-section-text')}
+                                hasOverrides={hasTextOverrides}
+                                defaultOpen
+                            >
                                 <ReaderSettingControl
-                                    key={setting.badge}
                                     icon={
-                                        <ReaderControlBadge
-                                            text={setting.badge}
+                                        <LuALargeSmall
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
                                         />
                                     }
-                                    label={setting.label}
-                                    value={setting.value}
-                                    decreaseAriaLabel={
-                                        setting.decreaseAriaLabel
-                                    }
-                                    increaseAriaLabel={
-                                        setting.increaseAriaLabel
-                                    }
-                                    control={setting.control}
+                                    label={translation.get('reader-font-size')}
+                                    value={displayFontSize}
+                                    decreaseAriaLabel={translation.get(
+                                        'reader-font-size-decrease-aria',
+                                    )}
+                                    increaseAriaLabel={translation.get(
+                                        'reader-font-size-increase-aria',
+                                    )}
+                                    control={fontSize}
                                 />
-                            ))}
+
+                                <ReaderSettingControl
+                                    icon={
+                                        <LuAlignJustify
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-line-spacing',
+                                    )}
+                                    value={displayLineSpacing}
+                                    decreaseAriaLabel={translation.get(
+                                        'reader-line-spacing-decrease-aria',
+                                    )}
+                                    increaseAriaLabel={translation.get(
+                                        'reader-line-spacing-increase-aria',
+                                    )}
+                                    control={lineSpacing}
+                                />
+                            </ReaderSettingsSection>
+
+                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
+
+                            <ReaderSettingsSection
+                                title={translation.get(
+                                    'reader-section-typography',
+                                )}
+                                hasOverrides={hasTypographyOverrides}
+                            >
+                                <ReaderChoiceControl
+                                    icon={
+                                        <LuWrapText
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-hyphenation',
+                                    )}
+                                    value={hyphenation.value}
+                                    options={readerModeOptions}
+                                    onSelect={hyphenation.setValue}
+                                />
+
+                                <ReaderChoiceControl
+                                    icon={
+                                        <LuQuote
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-floating-punctuation',
+                                    )}
+                                    value={floatingPunctuation.value}
+                                    options={readerModeOptions}
+                                    onSelect={floatingPunctuation.setValue}
+                                />
+
+                                <ReaderChoiceControl
+                                    icon={
+                                        <LuType
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-embedded-fonts',
+                                    )}
+                                    value={embeddedFonts.value}
+                                    options={embeddedFontOptions}
+                                    onSelect={embeddedFonts.setValue}
+                                />
+                            </ReaderSettingsSection>
+
+                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
+
+                            <ReaderSettingsSection
+                                title={translation.get(
+                                    'reader-section-margins',
+                                )}
+                                hasOverrides={hasMarginOverrides}
+                            >
+                                {marginSettings.map((setting) => (
+                                    <ReaderCompactControl
+                                        key={setting.key}
+                                        label={setting.label}
+                                        value={setting.value}
+                                        decreaseAriaLabel={
+                                            setting.decreaseAriaLabel
+                                        }
+                                        increaseAriaLabel={
+                                            setting.increaseAriaLabel
+                                        }
+                                        control={setting.control}
+                                    />
+                                ))}
+                            </ReaderSettingsSection>
+
+                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
 
                             <button
                                 type="button"
