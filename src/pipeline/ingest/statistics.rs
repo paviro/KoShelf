@@ -47,6 +47,9 @@ pub async fn load_reading_data(
         }
     }
 
+    let hidden_flow_pages = repo.load_hidden_flow_pages().await?;
+    data.apply_hidden_flow_adjustments(&hidden_flow_pages);
+
     StatisticsCalculator::populate_completions(&mut data, &config.time_config);
 
     let content_type_map = repo.load_content_types_by_id().await?;

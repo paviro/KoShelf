@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     pagemap_doc_pages INTEGER CHECK (pagemap_doc_pages IS NULL OR pagemap_doc_pages > 0),
     has_synthetic_pagination INTEGER NOT NULL DEFAULT 0,
     parser_pages INTEGER CHECK (parser_pages IS NULL OR parser_pages > 0),
+    hidden_flow_pages INTEGER CHECK (hidden_flow_pages IS NULL OR hidden_flow_pages > 0),
     cover_url TEXT NOT NULL,
     search_base_path TEXT NOT NULL,
     annotation_count INTEGER NOT NULL DEFAULT 0 CHECK (annotation_count >= 0),

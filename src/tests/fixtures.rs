@@ -40,6 +40,8 @@ pub(crate) fn koreader_metadata_for_pages(
         doc_pages: Some(200),
         doc_path: None,
         doc_props: None,
+        handmade_flows_enabled: None,
+        handmade_flow_points: Vec::new(),
         pagemap_use_page_labels: Some(use_labels),
         pagemap_chars_per_synthetic_page: synthetic.then_some(1500),
         pagemap_doc_pages: Some(stable_total),

@@ -1,5 +1,6 @@
 use crate::shelf::models::{
-    Annotation, BookStatus, DocProps, KoReaderMetadata, ReaderPresentation, Stats, Summary,
+    Annotation, BookStatus, DocProps, FlowPoint, KoReaderMetadata, ReaderPresentation, Stats,
+    Summary,
 };
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
@@ -52,6 +53,8 @@ impl LuaParser {
         let doc_pages = self.get_optional_u32(&table, "doc_pages")?;
         let doc_path = self.get_optional_string(&table, "doc_path")?;
         let doc_props = self.parse_doc_props(&table)?;
+        let handmade_flows_enabled = self.get_optional_bool(&table, "handmade_flows_enabled")?;
+        let handmade_flow_points = self.parse_flow_points(&table)?;
         let pagemap_use_page_labels = self.get_optional_bool(&table, "pagemap_use_page_labels")?;
         let pagemap_chars_per_synthetic_page =
             self.get_optional_u32(&table, "pagemap_chars_per_synthetic_page")?;
@@ -72,6 +75,8 @@ impl LuaParser {
             doc_pages,
             doc_path,
             doc_props,
+            handmade_flows_enabled,
+            handmade_flow_points,
             pagemap_use_page_labels,
             pagemap_chars_per_synthetic_page,
             pagemap_doc_pages,
@@ -100,6 +105,26 @@ impl LuaParser {
         };
 
         Ok((!reader_presentation.is_empty()).then_some(reader_presentation))
+    }
+
+    fn parse_flow_points(&self, table: &Table) -> Result<Vec<FlowPoint>> {
+        let mut flow_points = Vec::new();
+
+        if let Ok(Value::Table(points_table)) = table.get("handmade_flow_points") {
+            let mut index = 1;
+            while let Ok(Value::Table(point_table)) = points_table.get(index) {
+                let hidden = self
+                    .get_optional_bool(&point_table, "hidden")?
+                    .unwrap_or(false);
+                let page = self.get_optional_u32(&point_table, "page")?;
+                if let Some(page) = page {
+                    flow_points.push(FlowPoint { hidden, page });
+                }
+                index += 1;
+            }
+        }
+
+        Ok(flow_points)
     }
 
     fn parse_annotations(&self, table: &Table) -> Result<Vec<Annotation>> {
@@ -412,5 +437,89 @@ mod tests {
         assert_eq!(presentation.line_spacing_percentage, None);
         assert_eq!(presentation.horizontal_margins, None);
         assert_eq!(presentation.top_margin, None);
+    }
+
+    #[test]
+    fn parses_handmade_flow_points() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let lua_path = temp_dir.path().join("metadata.epub.lua");
+        fs::write(
+            &lua_path,
+            r#"return {
+                doc_pages = 1000,
+                handmade_flows_enabled = true,
+                handmade_flow_points = {
+                    [1] = {
+                        hidden = true,
+                        page = 540,
+                        xpointer = "/body/DocFragment[23]/body/div/p[183]/span/text().206",
+                    },
+                },
+            }"#,
+        )
+        .expect("lua fixture should be written");
+
+        let parser = LuaParser::new();
+        let metadata = parser
+            .parse(&lua_path)
+            .expect("metadata should parse successfully");
+
+        assert_eq!(metadata.handmade_flows_enabled, Some(true));
+        assert_eq!(metadata.handmade_flow_points.len(), 1);
+        assert!(metadata.handmade_flow_points[0].hidden);
+        assert_eq!(metadata.handmade_flow_points[0].page, 540);
+
+        // 1000 - 540 + 1 = 461 hidden pages (from page 540 to end)
+        assert_eq!(metadata.hidden_flow_pages(), Some(461));
+    }
+
+    #[test]
+    fn parses_multiple_flow_points() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let lua_path = temp_dir.path().join("metadata.epub.lua");
+        fs::write(
+            &lua_path,
+            r#"return {
+                doc_pages = 800,
+                handmade_flows_enabled = true,
+                handmade_flow_points = {
+                    [1] = { hidden = true, page = 100 },
+                    [2] = { hidden = false, page = 150 },
+                    [3] = { hidden = true, page = 700 },
+                },
+            }"#,
+        )
+        .expect("lua fixture should be written");
+
+        let parser = LuaParser::new();
+        let metadata = parser
+            .parse(&lua_path)
+            .expect("metadata should parse successfully");
+
+        assert_eq!(metadata.handmade_flow_points.len(), 3);
+        // 50 hidden (100..150) + 101 hidden (700..800 inclusive) = 151
+        assert_eq!(metadata.hidden_flow_pages(), Some(151));
+    }
+
+    #[test]
+    fn no_flow_points_returns_empty_vec() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let lua_path = temp_dir.path().join("metadata.epub.lua");
+        fs::write(
+            &lua_path,
+            r#"return {
+                doc_pages = 500,
+            }"#,
+        )
+        .expect("lua fixture should be written");
+
+        let parser = LuaParser::new();
+        let metadata = parser
+            .parse(&lua_path)
+            .expect("metadata should parse successfully");
+
+        assert_eq!(metadata.handmade_flows_enabled, None);
+        assert!(metadata.handmade_flow_points.is_empty());
+        assert_eq!(metadata.hidden_flow_pages(), None);
     }
 }
