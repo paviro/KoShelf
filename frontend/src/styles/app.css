@@ -31,6 +31,8 @@
 
     --font-size-2xs: 0.65rem;
     --font-size-2xs--line-height: 1rem;
+
+    --font-sans: 'Quicksand', sans-serif;
 }
 
 @utility aspect-book {
@@ -484,21 +486,7 @@
 
 @layer base {
     html {
-        font-family:
-            ui-sans-serif,
-            system-ui,
-            -apple-system,
-            BlinkMacSystemFont,
-            'Segoe UI',
-            Roboto,
-            'Helvetica Neue',
-            Arial,
-            'Noto Sans',
-            sans-serif,
-            'Apple Color Emoji',
-            'Segoe UI Emoji',
-            'Segoe UI Symbol',
-            'Noto Color Emoji';
+        font-family: 'Quicksand', sans-serif;
         @apply bg-gray-100;
         min-height: 100%;
     }
