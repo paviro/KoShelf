@@ -313,18 +313,18 @@ function loadStoredReaderStyle(
     koshelfDefaultState: ReaderStyleState,
 ): LoadedReaderStyle {
     if (!bookId) {
-        return { basis: 'book', style: bookDefaultState };
+        return { basis: 'koshelf', style: koshelfDefaultState };
     }
 
     const stored = StorageManager.getByKey<unknown>(
         `${READER_STYLE_KEY_PREFIX}${bookId}`,
     );
     if (!isRecord(stored)) {
-        return { basis: 'book', style: bookDefaultState };
+        return { basis: 'koshelf', style: koshelfDefaultState };
     }
 
     const basis: ReaderStyleBasis =
-        stored.basis === 'koshelf' ? 'koshelf' : 'book';
+        stored.basis === 'book' ? 'book' : 'koshelf';
     const defaults = basis === 'book' ? bookDefaultState : koshelfDefaultState;
 
     return {
