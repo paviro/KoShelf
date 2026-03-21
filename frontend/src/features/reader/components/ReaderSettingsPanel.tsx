@@ -50,6 +50,81 @@ const SEGMENTED_OPTION_INACTIVE_CLASS =
 
 const PANEL_OFFSET_PX = 8;
 
+function formatLineSpacingForEdit(value: number): string {
+    return String(Math.round(value * 100));
+}
+
+function parseLineSpacingInput(input: number): number {
+    return input / 100;
+}
+
+function EditableValue({
+    value,
+    displayValue,
+    onCommit,
+    className,
+    formatForEdit,
+    parseInput,
+}: {
+    value: number;
+    displayValue: string;
+    onCommit: (raw: number) => void;
+    className?: string;
+    formatForEdit?: (value: number) => string;
+    parseInput?: (input: number) => number;
+}) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const startEditing = useCallback(() => {
+        setDraft(formatForEdit ? formatForEdit(value) : String(value));
+        setEditing(true);
+    }, [formatForEdit, value]);
+
+    const commit = useCallback(() => {
+        setEditing(false);
+        const parsed = parseFloat(draft);
+        if (Number.isFinite(parsed)) {
+            onCommit(parseInput ? parseInput(parsed) : parsed);
+        }
+    }, [draft, onCommit, parseInput]);
+
+    useEffect(() => {
+        if (editing) {
+            inputRef.current?.select();
+        }
+    }, [editing]);
+
+    if (editing) {
+        return (
+            <input
+                ref={inputRef}
+                type="text"
+                inputMode="decimal"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        commit();
+                    } else if (e.key === 'Escape') {
+                        setEditing(false);
+                    }
+                }}
+                className={className}
+                autoFocus
+            />
+        );
+    }
+
+    return (
+        <button type="button" onClick={startEditing} className={className}>
+            {displayValue}
+        </button>
+    );
+}
+
 type ReaderSettingsPanelProps = {
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
@@ -154,6 +229,8 @@ function ReaderSettingControl({
     decreaseAriaLabel,
     increaseAriaLabel,
     control,
+    formatForEdit,
+    parseInput,
 }: {
     icon: ReactNode;
     label: string;
@@ -161,7 +238,14 @@ function ReaderSettingControl({
     decreaseAriaLabel: string;
     increaseAriaLabel: string;
     control: ReaderStyleControl;
+    formatForEdit?: (value: number) => string;
+    parseInput?: (input: number) => number;
 }) {
+    const commitValue = useCallback(
+        (raw: number) => control.stepBy(raw - control.value),
+        [control],
+    );
+
     return (
         <div className="space-y-3">
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
@@ -182,11 +266,14 @@ function ReaderSettingControl({
                     <LuMinus className="w-4 h-4" aria-hidden="true" />
                 </button>
 
-                <div className="flex-1 px-3 py-2 rounded-lg border border-gray-200/80 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-center">
-                    <span className="text-sm font-medium text-gray-700 dark:text-dark-200 tabular-nums">
-                        {value}
-                    </span>
-                </div>
+                <EditableValue
+                    value={control.value}
+                    displayValue={value}
+                    onCommit={commitValue}
+                    formatForEdit={formatForEdit}
+                    parseInput={parseInput}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200/80 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-center text-sm font-medium text-gray-700 dark:text-dark-200 tabular-nums focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                />
 
                 <button
                     type="button"
@@ -267,6 +354,11 @@ function ReaderCompactControl({
     increaseAriaLabel: string;
     control: ReaderStyleControl;
 }) {
+    const commitValue = useCallback(
+        (raw: number) => control.stepBy(raw - control.value),
+        [control],
+    );
+
     return (
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -286,9 +378,12 @@ function ReaderCompactControl({
                 >
                     <LuMinus className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
-                <span className="w-11 text-center text-xs font-medium text-gray-700 dark:text-dark-200 tabular-nums">
-                    {value}
-                </span>
+                <EditableValue
+                    value={control.value}
+                    displayValue={value}
+                    onCommit={commitValue}
+                    className="w-11 text-center text-xs font-medium text-gray-700 dark:text-dark-200 tabular-nums rounded-md bg-transparent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                />
                 <button
                     type="button"
                     onClick={control.increase}
@@ -491,11 +586,9 @@ export function ReaderSettingsPanel({
         },
     ];
 
-    const hasTextOverrides =
-        fontSize.isOverridden ||
-        lineSpacing.isOverridden ||
-        wordSpacing.isOverridden;
     const hasTypographyOverrides =
+        lineSpacing.isOverridden ||
+        wordSpacing.isOverridden ||
         hyphenation.isOverridden ||
         floatingPunctuation.isOverridden ||
         embeddedFonts.isOverridden;
@@ -535,29 +628,32 @@ export function ReaderSettingsPanel({
                         aria-label={translation.get('reader-settings-aria')}
                     >
                         <div className="space-y-2">
-                            <ReaderSettingsSection
-                                title={translation.get('reader-section-text')}
-                                hasOverrides={hasTextOverrides}
-                                defaultOpen
-                            >
-                                <ReaderSettingControl
-                                    icon={
-                                        <LuALargeSmall
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get('reader-font-size')}
-                                    value={displayFontSize}
-                                    decreaseAriaLabel={translation.get(
-                                        'reader-font-size-decrease-aria',
-                                    )}
-                                    increaseAriaLabel={translation.get(
-                                        'reader-font-size-increase-aria',
-                                    )}
-                                    control={fontSize}
-                                />
+                            <ReaderSettingControl
+                                icon={
+                                    <LuALargeSmall
+                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                        aria-hidden="true"
+                                    />
+                                }
+                                label={translation.get('reader-font-size')}
+                                value={displayFontSize}
+                                decreaseAriaLabel={translation.get(
+                                    'reader-font-size-decrease-aria',
+                                )}
+                                increaseAriaLabel={translation.get(
+                                    'reader-font-size-increase-aria',
+                                )}
+                                control={fontSize}
+                            />
 
+                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
+
+                            <ReaderSettingsSection
+                                title={translation.get(
+                                    'reader-section-typography',
+                                )}
+                                hasOverrides={hasTypographyOverrides}
+                            >
                                 <ReaderSettingControl
                                     icon={
                                         <LuAlignJustify
@@ -576,6 +672,8 @@ export function ReaderSettingsPanel({
                                         'reader-line-spacing-increase-aria',
                                     )}
                                     control={lineSpacing}
+                                    formatForEdit={formatLineSpacingForEdit}
+                                    parseInput={parseLineSpacingInput}
                                 />
 
                                 <ReaderSettingControl
@@ -597,16 +695,23 @@ export function ReaderSettingsPanel({
                                     )}
                                     control={wordSpacing}
                                 />
-                            </ReaderSettingsSection>
 
-                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
+                                <ReaderChoiceControl
+                                    icon={
+                                        <LuType
+                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                            aria-hidden="true"
+                                        />
+                                    }
+                                    label={translation.get(
+                                        'reader-embedded-fonts',
+                                    )}
+                                    value={embeddedFonts.value}
+                                    options={embeddedFontOptions}
+                                    onSelect={embeddedFonts.setValue}
+                                    isOverridden={embeddedFonts.isOverridden}
+                                />
 
-                            <ReaderSettingsSection
-                                title={translation.get(
-                                    'reader-section-typography',
-                                )}
-                                hasOverrides={hasTypographyOverrides}
-                            >
                                 <ReaderChoiceControl
                                     icon={
                                         <LuWrapText
@@ -639,22 +744,6 @@ export function ReaderSettingsPanel({
                                     isOverridden={
                                         floatingPunctuation.isOverridden
                                     }
-                                />
-
-                                <ReaderChoiceControl
-                                    icon={
-                                        <LuType
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-embedded-fonts',
-                                    )}
-                                    value={embeddedFonts.value}
-                                    options={embeddedFontOptions}
-                                    onSelect={embeddedFonts.setValue}
-                                    isOverridden={embeddedFonts.isOverridden}
                                 />
                             </ReaderSettingsSection>
 

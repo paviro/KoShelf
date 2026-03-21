@@ -264,7 +264,6 @@ reader-next-page = Következő oldal
 open-at-annotation = Megnyitás a jelölésnél
 reader-contents = Tartalom
 reader-settings-aria = Megjelenítési beállítások
-reader-section-text = Szöveg
 reader-section-typography = Tipográfia
 reader-section-margins = Margók
 reader-font-size = Betűméret

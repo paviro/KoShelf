@@ -280,7 +280,6 @@ reader-next-page = Página siguiente
 open-at-annotation = Abrir en la anotación
 reader-contents = Contenido
 reader-settings-aria = Ajustes de visualización
-reader-section-text = Texto
 reader-section-typography = Tipografía
 reader-section-margins = Márgenes
 reader-font-size = Tamaño de fuente

@@ -310,7 +310,6 @@ reader-next-page = Следующая страница
 open-at-annotation = Открыть на аннотации
 reader-contents = Содержание
 reader-settings-aria = Настройки отображения
-reader-section-text = Текст
 reader-section-typography = Типографика
 reader-section-margins = Отступы
 reader-font-size = Размер шрифта

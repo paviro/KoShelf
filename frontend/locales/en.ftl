@@ -284,7 +284,6 @@ reader-next-page = Next page
 open-at-annotation = Open at annotation
 reader-contents = Contents
 reader-settings-aria = Display settings
-reader-section-text = Text
 reader-section-typography = Typography
 reader-section-margins = Margins
 reader-font-size = Font size
