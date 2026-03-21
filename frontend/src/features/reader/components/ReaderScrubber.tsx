@@ -30,7 +30,7 @@ export function ReaderScrubber({
                 type="button"
                 onClick={onPrev}
                 className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors"
-                aria-label={translation.get('reader-previous-page')}
+                aria-label={translation.get('reader.previous-page')}
             >
                 <LuChevronLeft className="w-5 h-5 text-gray-600 dark:text-dark-300" />
             </button>
@@ -68,7 +68,7 @@ export function ReaderScrubber({
                 type="button"
                 onClick={onNext}
                 className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors"
-                aria-label={translation.get('reader-next-page')}
+                aria-label={translation.get('reader.next-page')}
             >
                 <LuChevronRight className="w-5 h-5 text-gray-600 dark:text-dark-300" />
             </button>

@@ -19,7 +19,7 @@ export function LoginPasswordField({
                 htmlFor="login-password"
                 className="block text-sm font-medium text-gray-900 dark:text-white"
             >
-                {translation.get('login-password')}
+                {translation.get('login.password')}
             </label>
             <div className="relative">
                 <LuLock

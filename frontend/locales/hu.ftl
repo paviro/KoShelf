@@ -6,7 +6,7 @@
 
 # Machine-readable metadata (used by --list-languages)
 -lang-code = hu
--lang-name = Magyar
+-lang-name = Magyar (Magyarország)
 -lang-dialect = hu_HU
 
 # -----------------------------------
@@ -23,53 +23,61 @@ reading-companion = Olvasónapló
 # Used in footer/sidebar for update time
 last-updated = Utoljára frissítve:
 view-details = Részletek
+# -----------------------------------
+#             Settings
+# -----------------------------------
 appearance-setting = Megjelenés
 theme-setting = Téma
-theme-setting-description = Válaszd ki a KoShelf megjelenését. Az "Automatikus" a rendszered beállítását követi.
-theme-option-auto = Automatikus
-theme-option-light = Világos
-theme-option-dark = Sötét
+    .description = Válaszd ki a KoShelf megjelenését. Az "Automatikus" a rendszered beállítását követi.
+    .option-auto = Automatikus
+    .option-light = Világos
+    .option-dark = Sötét
 prefetch-setting = Linkek előtöltése
-prefetch-setting-description = Oldalak előtöltése, amikor a linkekre viszed az egeret vagy ráböksz, a gyorsabb navigáció érdekében.
-prefetch-option-enabled = Engedélyezve
-prefetch-option-disabled = Letiltva
-prefetch-setting-connection-note = Megjegyzés: Az előtöltés automatikusan kikapcsol, ha a kapcsolatod korlátozott (pl. adatforgalom-csökkentő mód vagy lassú mobilhálózat).
+    .description = Oldalak előtöltése, amikor a linkekre viszed az egeret vagy ráböksz, a gyorsabb navigáció érdekében.
+    .option-enabled = Engedélyezve
+    .option-disabled = Letiltva
+    .connection-note = Megjegyzés: Az előtöltés automatikusan kikapcsol, ha a kapcsolatod korlátozott (pl. adatforgalom-csökkentő mód vagy lassú mobilhálózat).
 language-setting = Nyelv
+    .hint = A felület fordításának nyelvét állítja be.
 region-setting = Régió
-language-setting-hint = A felület fordításának nyelvét állítja be.
-region-setting-hint = Befolyásolja a dátumok és számok formázását.
-preview-date = Dátum előnézet
-preview-number = Szám előnézet
-region-setting-majority-group = Leggyakoribb régiók
-region-setting-all-group = Minden támogatott régió
+    .hint = Befolyásolja a dátumok és számok formázását.
+    .preview-date = Dátum előnézet
+    .preview-number = Szám előnézet
+    .majority-group = Leggyakoribb régiók
+    .all-group = Minden támogatott régió
+
+# -----------------------------------
+#         Authentication
+# -----------------------------------
 login = Bejelentkezés
-login-title = Jelentkezz be: { $site }
-login-password = Jelszó
-login-submit = Bejelentkezés
-login-error = Érvénytelen jelszó
-login-rate-limited = Túl sok próbálkozás. Kérjük, próbáld újra hamarosan.
-password-setting = Jelszó
+    .title = Jelentkezz be: { $site }
+    .password = Jelszó
+    .submit = Bejelentkezés
+    .error = Érvénytelen jelszó
+    .rate-limited = Túl sok próbálkozás. Kérjük, próbáld újra hamarosan.
 change-password = Jelszó módosítása
-current-password = Jelenlegi jelszó
-new-password = Új jelszó
-confirm-password = Jelszó megerősítése
-password-changed = A jelszó sikeresen módosítva
-password-too-short = A jelszónak legalább { $min } karakter hosszúnak kell lennie
-password-mismatch = A jelszavak nem egyeznek
-incorrect-password = Hibás jelenlegi jelszó
-sessions-setting = Munkamenetek
-current-session = Jelenlegi munkamenet
-this-device = Ez az eszköz
-last-active = Utoljára aktív
-revoke-session = Visszavonás
-revoke-session-confirm = Visszavonod ezt a munkamenetet?
-session-revoked = Munkamenet visszavonva
-session-device-info = { $browser } – { $os }
-logout = Kijelentkezés
-current-password-placeholder = Jelenlegi jelszó megadása
-new-password-placeholder = Min. 8 karakter
-new-password-hint = Legalább 8 karakter hosszú legyen
-confirm-password-placeholder = Új jelszó újra
+    .setting = Jelszó
+    .current = Jelenlegi jelszó
+    .new = Új jelszó
+    .confirm = Jelszó megerősítése
+    .changed = A jelszó sikeresen módosítva
+    .too-short = A jelszónak legalább { $min } karakter hosszúnak kell lennie
+    .mismatch = A jelszavak nem egyeznek
+    .incorrect = Hibás jelenlegi jelszó
+    .current-placeholder = Jelenlegi jelszó megadása
+    .new-placeholder = Min. 8 karakter
+    .new-hint = Legalább 8 karakter hosszú legyen
+    .confirm-placeholder = Új jelszó újra
+session-management =
+    .setting = Munkamenetek
+    .current = Jelenlegi munkamenet
+    .this-device = Ez az eszköz
+    .last-active = Utoljára aktív
+    .revoke = Visszavonás
+    .revoke-confirm = Visszavonod ezt a munkamenetet?
+    .revoked = Munkamenet visszavonva
+    .device-info = { $browser } – { $os }
+    .logout = Kijelentkezés
 
 # -----------------------------------
 #        Book List & Library
@@ -256,55 +264,64 @@ close-search =
     .aria-label = Keresés bezárása
 go-back =
     .aria-label = Vissza
-open-reader-aria = Megnyitás az olvasóban
-reader-title = Olvasó
-reader-loading = Könyv betöltése…
-reader-previous-page = Előző oldal
-reader-next-page = Következő oldal
+
+# -----------------------------------
+#              Reader
+# -----------------------------------
+reader =
+    .title = Olvasó
+    .loading = Könyv betöltése…
+    .previous-page = Előző oldal
+    .next-page = Következő oldal
+    .contents = Tartalom
 open-at-annotation = Megnyitás a jelölésnél
-reader-contents = Tartalom
-reader-settings-aria = Megjelenítési beállítások
-reader-section-typography = Tipográfia
-reader-section-margins = Margók
+open-in-reader = Megnyitás
+    .aria-label = Megnyitás az olvasóban
+reader-settings =
+    .aria-label = Megjelenítési beállítások
+    .typography = Tipográfia
+    .margins = Margók
 reader-font-size = Betűméret
-reader-font-size-decrease-aria = Betűméret csökkentése
-reader-font-size-increase-aria = Betűméret növelése
+    .decrease-aria = Betűméret csökkentése
+    .increase-aria = Betűméret növelése
 reader-line-spacing = Sortávolság
-reader-line-spacing-decrease-aria = Sortávolság csökkentése
-reader-line-spacing-increase-aria = Sortávolság növelése
+    .decrease-aria = Sortávolság csökkentése
+    .increase-aria = Sortávolság növelése
 reader-word-spacing = Szóköz
-reader-word-spacing-decrease-aria = Szóköz csökkentése
-reader-word-spacing-increase-aria = Szóköz növelése
+    .decrease-aria = Szóköz csökkentése
+    .increase-aria = Szóköz növelése
 reader-hyphenation = Elválasztás
 reader-floating-punctuation = Lebegő írásjelek
 reader-embedded-fonts = Beágyazott betűtípusok
 reader-left-margin = Bal margó
-reader-left-margin-decrease-aria = Bal margó csökkentése
-reader-left-margin-increase-aria = Bal margó növelése
+    .decrease-aria = Bal margó csökkentése
+    .increase-aria = Bal margó növelése
 reader-right-margin = Jobb margó
-reader-right-margin-decrease-aria = Jobb margó csökkentése
-reader-right-margin-increase-aria = Jobb margó növelése
+    .decrease-aria = Jobb margó csökkentése
+    .increase-aria = Jobb margó növelése
 reader-top-margin = Felső margó
-reader-top-margin-decrease-aria = Felső margó csökkentése
-reader-top-margin-increase-aria = Felső margó növelése
+    .decrease-aria = Felső margó csökkentése
+    .increase-aria = Felső margó növelése
 reader-bottom-margin = Alsó margó
-reader-bottom-margin-decrease-aria = Alsó margó csökkentése
-reader-bottom-margin-increase-aria = Alsó margó növelése
-reader-mode-auto = Könyv
-reader-mode-on = Be
-reader-mode-off = Ki
-reader-reset-book = Könyvbeállítások használata
-reader-reset-book-aria = Visszaállítás a könyv szinkronizált megjelenítési beállításaira
-reader-reset-defaults = Visszaállítás alapértékekre
-reader-reset-defaults-aria = Olvasó megjelenítési beállításainak visszaállítása alapértékekre
-reader-drawer-aria = Könyvnavigációs panel
+    .decrease-aria = Alsó margó csökkentése
+    .increase-aria = Alsó margó növelése
+reader-mode =
+    .auto = Könyv
+    .on = Be
+    .off = Ki
+reader-reset =
+    .book = Könyvbeállítások használata
+    .book-aria = Visszaállítás a könyv szinkronizált megjelenítési beállításaira
+    .defaults = Visszaállítás alapértékekre
+    .defaults-aria = Olvasó megjelenítési beállításainak visszaállítása alapértékekre
+reader-drawer =
+    .aria-label = Könyvnavigációs panel
 reader-no-toc = Nem érhető el tartalomjegyzék
-reader-no-toc-description = Ez a fájl nem tartalmaz fejezetjelölőket.
+    .description = Ez a fájl nem tartalmaz fejezetjelölőket.
 reader-no-highlights = Még nincsenek kiemelések
-reader-no-highlights-description = A KoReaderben hozzáadott kiemelések itt fognak megjelenni.
+    .description = A KoReaderben hozzáadott kiemelések itt fognak megjelenni.
 reader-no-bookmarks = Még nincsenek könyvjelzők
-reader-no-bookmarks-description = A KoReaderben hozzáadott könyvjelzők itt fognak megjelenni.
-open-in-reader = Megnyitás
+    .description = A KoReaderben hozzáadott könyvjelzők itt fognak megjelenni.
 select-month = Hónap kiválasztása
 
 # -----------------------------------

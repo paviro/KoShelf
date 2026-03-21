@@ -150,7 +150,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                     <div className="absolute inset-0 flex items-center justify-center">
                         <LoadingSpinner
                             size="lg"
-                            srLabel={translation.get('reader-loading')}
+                            srLabel={translation.get('reader.loading')}
                         />
                     </div>
                 )}
