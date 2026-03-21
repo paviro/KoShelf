@@ -24,8 +24,6 @@ pub struct ReaderPresentation {
     pub floating_punctuation: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub word_spacing: Option<[u32; 2]>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub word_expansion: Option<u32>,
 }
 
 impl ReaderPresentation {
@@ -41,6 +39,5 @@ impl ReaderPresentation {
             && self.hyphenation.is_none()
             && self.floating_punctuation.is_none()
             && self.word_spacing.is_none()
-            && self.word_expansion.is_none()
     }
 }

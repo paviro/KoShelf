@@ -127,7 +127,6 @@ fn test_parse_koreader_generated_metadata() {
     assert_eq!(presentation.hyphenation, Some(true));
     assert_eq!(presentation.floating_punctuation, Some(false));
     assert_eq!(presentation.word_spacing, Some([100, 90]));
-    assert_eq!(presentation.word_expansion, Some(15));
 
     // Verify doc_props
     let doc_props = metadata.doc_props.expect("doc_props should be present");

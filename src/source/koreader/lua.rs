@@ -98,7 +98,6 @@ impl LuaParser {
             hyphenation: self.get_optional_bool_or_flag(table, "hyphenation")?,
             floating_punctuation: self.get_optional_bool_or_flag(table, "floating_punctuation")?,
             word_spacing: self.get_optional_u32_pair(table, "copt_word_spacing")?,
-            word_expansion: self.get_optional_u32(table, "copt_word_expansion")?,
         };
 
         Ok((!reader_presentation.is_empty()).then_some(reader_presentation))
@@ -396,7 +395,7 @@ mod tests {
                 font_face = "Noto Serif",
                 copt_line_spacing = 110.5,
                 copt_h_page_margins = { 20.5, 20 },
-                copt_word_expansion = 10.2,
+                copt_t_page_margin = 10.2,
             }"#,
         )
         .expect("lua fixture should be written");
@@ -413,6 +412,6 @@ mod tests {
         assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
         assert_eq!(presentation.line_spacing_percent, None);
         assert_eq!(presentation.h_page_margins, None);
-        assert_eq!(presentation.word_expansion, None);
+        assert_eq!(presentation.t_page_margin, None);
     }
 }

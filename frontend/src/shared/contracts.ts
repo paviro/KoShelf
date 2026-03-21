@@ -256,7 +256,6 @@ export interface LibraryReaderPresentation {
     hyphenation?: boolean | null;
     floating_punctuation?: boolean | null;
     word_spacing?: [number, number] | null;
-    word_expansion?: number | null;
 }
 
 export interface LibraryAnnotation {
