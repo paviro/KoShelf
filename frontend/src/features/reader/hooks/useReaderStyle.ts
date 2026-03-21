@@ -2,17 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { LibraryReaderPresentation } from '../../../shared/contracts';
 import { StorageManager } from '../../../shared/storage-manager';
-import { toFiniteNonNegativeNumber } from '../lib/reader-presentation';
 import {
+    toFiniteNonNegativeNumber,
     DEFAULT_READER_BOTTOM_MARGIN,
     DEFAULT_READER_FONT_SIZE_PT,
-    DEFAULT_READER_LEFT_MARGIN,
     DEFAULT_READER_LINE_SPACING,
-    DEFAULT_READER_RIGHT_MARGIN,
     DEFAULT_READER_TOP_MARGIN,
-    DEFAULT_READER_WORD_SPACING_PERCENT,
     mapKoReaderFontSizePtToCssPercent,
     mapKoReaderLineSpacingPercentToCssLineHeight,
+    resolveHorizontalMarginsPx,
+    resolveWordSpacingPercent,
 } from '../lib/reader-theme';
 
 const READER_STYLE_KEY_PREFIX = 'reader_style_';
@@ -243,45 +242,10 @@ function resolveBoolFromMode(mode: ReaderModeValue): boolean | null {
     return null;
 }
 
-function resolveHorizontalMargins(
-    presentation: LibraryReaderPresentation | null | undefined,
-): [number, number] {
-    const margins = presentation?.h_page_margins;
-    if (!Array.isArray(margins) || margins.length !== 2) {
-        return [DEFAULT_READER_LEFT_MARGIN, DEFAULT_READER_RIGHT_MARGIN];
-    }
-
-    const left = toFiniteNonNegativeNumber(margins[0]);
-    const right = toFiniteNonNegativeNumber(margins[1]);
-    if (left === null || right === null) {
-        return [DEFAULT_READER_LEFT_MARGIN, DEFAULT_READER_RIGHT_MARGIN];
-    }
-
-    return [left, right];
-}
-
-function resolveWordSpacing(
-    presentation: LibraryReaderPresentation | null | undefined,
-): number {
-    const ws = presentation?.word_spacing;
-    if (!Array.isArray(ws) || ws.length !== 2) {
-        return DEFAULT_READER_WORD_SPACING_PERCENT;
-    }
-
-    // word_spacing[0] is the space-width scaling percentage (100 = normal).
-    // word_spacing[1] is the justification condensing limit (browser-managed).
-    const scaling = toFiniteNonNegativeNumber(ws[0]);
-    if (scaling === null) {
-        return DEFAULT_READER_WORD_SPACING_PERCENT;
-    }
-
-    return Math.round(scaling);
-}
-
 function resolveDefaultReaderStyleState(
     presentation: LibraryReaderPresentation | null | undefined,
 ): ReaderStyleState {
-    const [leftMargin, rightMargin] = resolveHorizontalMargins(presentation);
+    const [leftMargin, rightMargin] = resolveHorizontalMarginsPx(presentation);
 
     const fontSize =
         typeof presentation?.font_size_pt === 'number' &&
@@ -303,7 +267,7 @@ function resolveDefaultReaderStyleState(
         fontSize: normalizeValue(fontSize, FONT_SIZE_CONFIG),
         lineSpacing: normalizeValue(lineSpacing, LINE_SPACING_CONFIG),
         wordSpacing: normalizeValue(
-            resolveWordSpacing(presentation),
+            resolveWordSpacingPercent(presentation),
             WORD_SPACING_CONFIG,
         ),
         leftMargin: normalizeValue(leftMargin, LEFT_MARGIN_CONFIG),

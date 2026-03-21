@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { LuNotebookPen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import type { LibraryAnnotation } from '../../library/api/library-data';
+import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
 import {
+    groupAnnotationsByChapter,
     normalizeReaderText,
-    resolveAnnotationSectionIndex,
-    resolveSectionCandidates,
+    resolveCurrentGroupIndex,
 } from '../lib/reader-drawer-utils';
 import { highlightColor } from '../lib/reader-highlight-colors';
 import { ReaderDrawerEmptyState } from './ReaderDrawerEmptyState';
-
-type ChapterGroup = {
-    chapter: string;
-    highlights: LibraryAnnotation[];
-};
 
 type ReaderHighlightListProps = {
     highlights: LibraryAnnotation[];
@@ -23,104 +19,30 @@ type ReaderHighlightListProps = {
     onSelect: (annotation: LibraryAnnotation) => void;
 };
 
-function groupByChapter(highlights: LibraryAnnotation[]): ChapterGroup[] {
-    const groups: ChapterGroup[] = [];
-    let current: ChapterGroup | null = null;
-
-    for (const h of highlights) {
-        const chapter = h.chapter ?? '';
-        if (!current || current.chapter !== chapter) {
-            current = { chapter, highlights: [] };
-            groups.push(current);
-        }
-        current.highlights.push(h);
-    }
-
-    return groups;
-}
 export function ReaderHighlightList({
     highlights,
     currentChapter,
     currentSectionIndex,
     onSelect,
 }: ReaderHighlightListProps) {
-    const groups = useMemo(() => groupByChapter(highlights), [highlights]);
+    const groups = useMemo(
+        () => groupAnnotationsByChapter(highlights),
+        [highlights],
+    );
     const listRef = useRef<HTMLDivElement>(null);
 
     const normalizedCurrent = normalizeReaderText(currentChapter);
-    const currentGroupIndex = useMemo(() => {
-        const matchedByChapter = groups.findIndex(
-            (group) =>
-                group.chapter &&
-                normalizeReaderText(group.chapter) === normalizedCurrent,
-        );
-        if (matchedByChapter >= 0) {
-            return matchedByChapter;
-        }
+    const currentGroupIndex = useMemo(
+        () =>
+            resolveCurrentGroupIndex(
+                groups,
+                normalizedCurrent,
+                currentSectionIndex,
+            ),
+        [currentSectionIndex, groups, normalizedCurrent],
+    );
 
-        const candidateSectionIndexes =
-            resolveSectionCandidates(currentSectionIndex);
-
-        for (const sectionIndex of candidateSectionIndexes) {
-            const matchedBySection = groups.findIndex((group) =>
-                group.highlights.some(
-                    (highlight) =>
-                        resolveAnnotationSectionIndex(highlight) ===
-                        sectionIndex,
-                ),
-            );
-            if (matchedBySection >= 0) {
-                return matchedBySection;
-            }
-        }
-
-        return -1;
-    }, [currentSectionIndex, groups, normalizedCurrent]);
-
-    useEffect(() => {
-        if (currentGroupIndex < 0 || !listRef.current) {
-            return;
-        }
-
-        const scrollContainer = listRef.current.closest<HTMLElement>(
-            '[data-tabbed-drawer-scroll-container]',
-        );
-        if (scrollContainer) {
-            scrollContainer.style.overflowY = 'hidden';
-        }
-
-        const restoreOverflow = () => {
-            if (scrollContainer) {
-                scrollContainer.style.overflowY = '';
-            }
-        };
-
-        const scroll = () => {
-            const el = listRef.current?.querySelector<HTMLElement>(
-                '[data-current-chapter]',
-            );
-            if (!el) {
-                return;
-            }
-
-            el.scrollIntoView({
-                block: 'center',
-                inline: 'nearest',
-            });
-        };
-
-        // Use rAF to wait for paint after mount, plus a fallback timeout
-        // for when the drawer is still animating on first open.
-        const frameId = requestAnimationFrame(scroll);
-        const timeoutId = setTimeout(scroll, 350);
-        const restoreOverflowId = window.setTimeout(restoreOverflow, 425);
-        return () => {
-            cancelAnimationFrame(frameId);
-            clearTimeout(timeoutId);
-            window.clearTimeout(restoreOverflowId);
-            restoreOverflow();
-        };
-    }, [currentGroupIndex]);
+    useDrawerListScroll(listRef, currentGroupIndex, 'data-current-chapter');
 
     if (highlights.length === 0) {
         return (
@@ -159,7 +81,7 @@ export function ReaderHighlightList({
                             </p>
                         )}
                         <div className="flex flex-col gap-0.5">
-                            {group.highlights.map((annotation, index) => (
+                            {group.annotations.map((annotation, index) => (
                                 <button
                                     key={index}
                                     type="button"

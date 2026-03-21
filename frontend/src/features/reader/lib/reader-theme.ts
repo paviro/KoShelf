@@ -1,7 +1,14 @@
 import type { LibraryReaderPresentation } from '../../library/api/library-data';
 import { resolveReaderFontOverride } from './reader-fonts';
-import { toFiniteNonNegativeNumber } from './reader-presentation';
 import type { FoliateView } from '../model/reader-model';
+
+export function toFiniteNonNegativeNumber(value: unknown): number | null {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        return null;
+    }
+
+    return value;
+}
 
 export const READER_LAYOUT_SETTINGS = {
     gap: '4.5%',
@@ -86,7 +93,7 @@ export function mapKoReaderLineSpacingPercentToCssLineHeight(
     return Number((lineSpacingPercent / 100).toFixed(2));
 }
 
-function resolveHorizontalMarginsPx(
+export function resolveHorizontalMarginsPx(
     presentation: LibraryReaderPresentation | null | undefined,
 ): [number, number] {
     const margins = presentation?.h_page_margins;
@@ -131,7 +138,7 @@ function resolveFloatingPunctuationMode(
     return null;
 }
 
-function resolveWordSpacingPercent(
+export function resolveWordSpacingPercent(
     presentation: LibraryReaderPresentation | null | undefined,
 ): number {
     const ws = presentation?.word_spacing;

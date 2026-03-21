@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { LuFileText } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
 import {
     normalizeReaderText,
     resolveSectionCandidates,
@@ -115,49 +116,7 @@ export function ReaderTocList({
     const currentIndex =
         resolvedCurrentIndex >= 0 ? resolvedCurrentIndex : sectionFallbackIndex;
 
-    useEffect(() => {
-        if (toc.length === 0 || currentIndex < 0 || !listRef.current) {
-            return;
-        }
-
-        const scrollContainer = listRef.current.closest<HTMLElement>(
-            '[data-tabbed-drawer-scroll-container]',
-        );
-        if (scrollContainer) {
-            scrollContainer.style.overflowY = 'hidden';
-        }
-
-        const restoreOverflow = () => {
-            if (scrollContainer) {
-                scrollContainer.style.overflowY = '';
-            }
-        };
-
-        const scroll = () => {
-            const currentItem = listRef.current?.querySelector<HTMLElement>(
-                '[data-current-toc-item]',
-            );
-            if (!currentItem) {
-                return;
-            }
-
-            currentItem.scrollIntoView({
-                block: 'center',
-                inline: 'nearest',
-            });
-        };
-
-        const frameId = requestAnimationFrame(scroll);
-        const timeoutId = window.setTimeout(scroll, 350);
-        const restoreOverflowId = window.setTimeout(restoreOverflow, 425);
-
-        return () => {
-            cancelAnimationFrame(frameId);
-            window.clearTimeout(timeoutId);
-            window.clearTimeout(restoreOverflowId);
-            restoreOverflow();
-        };
-    }, [currentIndex, toc.length]);
+    useDrawerListScroll(listRef, currentIndex, 'data-current-toc-item');
 
     if (toc.length === 0) {
         return (

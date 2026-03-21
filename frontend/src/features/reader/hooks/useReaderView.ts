@@ -74,6 +74,7 @@ type ReaderDetailState = {
 export function useReaderView(
     collection: LibraryCollection,
     viewRef: RefObject<FoliateView | null>,
+    location: ReaderLocation | null,
     setLocation: Dispatch<SetStateAction<ReaderLocation | null>>,
     scrubSettlingRef: RefObject<boolean>,
     setDragFraction: (value: number | null) => void,
@@ -116,7 +117,6 @@ export function useReaderView(
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<unknown | null>(null);
-    const [location, setLocationState] = useState<ReaderLocation | null>(null);
     const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
     const [toc, setToc] = useState<TocEntry[]>([]);
     const noteMapRef = useRef(new Map<string, ReaderActiveNote>());
@@ -361,7 +361,6 @@ export function useReaderView(
                         tocItem: detail.tocItem ?? null,
                         section: detail.section ?? null,
                     };
-                    setLocationState(loc);
                     setLocation(loc);
                     setActiveNote(null);
                     if (scrubSettlingRef.current) {
