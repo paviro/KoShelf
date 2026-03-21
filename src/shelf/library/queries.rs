@@ -80,6 +80,7 @@ pub enum IncludeToken {
     Bookmarks,
     Statistics,
     Completions,
+    ReaderPresentation,
 }
 
 impl IncludeToken {
@@ -88,6 +89,7 @@ impl IncludeToken {
         IncludeToken::Bookmarks,
         IncludeToken::Statistics,
         IncludeToken::Completions,
+        IncludeToken::ReaderPresentation,
     ];
 
     fn parse(value: &str) -> Option<Self> {
@@ -96,6 +98,7 @@ impl IncludeToken {
             "bookmarks" => Some(Self::Bookmarks),
             "statistics" => Some(Self::Statistics),
             "completions" => Some(Self::Completions),
+            "reader_presentation" => Some(Self::ReaderPresentation),
             _ => None,
         }
     }
@@ -143,7 +146,7 @@ impl IncludeSet {
                         ApiErrorCode::InvalidQuery,
                         format!(
                             "unknown include token '{token}'; \
-                             valid tokens are: highlights, bookmarks, statistics, completions, all"
+                             valid tokens are: highlights, bookmarks, statistics, completions, reader_presentation, all"
                         ),
                     ));
                 }
@@ -199,6 +202,7 @@ mod tests {
         assert!(!set.has(IncludeToken::Bookmarks));
         assert!(!set.has(IncludeToken::Statistics));
         assert!(!set.has(IncludeToken::Completions));
+        assert!(!set.has(IncludeToken::ReaderPresentation));
     }
 
     #[test]
@@ -229,6 +233,7 @@ mod tests {
         assert!(set.has(IncludeToken::Bookmarks));
         assert!(set.has(IncludeToken::Statistics));
         assert!(set.has(IncludeToken::Completions));
+        assert!(set.has(IncludeToken::ReaderPresentation));
     }
 
     #[test]
@@ -238,6 +243,7 @@ mod tests {
         assert!(set.has(IncludeToken::Bookmarks));
         assert!(set.has(IncludeToken::Statistics));
         assert!(set.has(IncludeToken::Completions));
+        assert!(set.has(IncludeToken::ReaderPresentation));
     }
 
     #[test]

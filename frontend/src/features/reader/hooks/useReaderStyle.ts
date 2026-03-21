@@ -255,11 +255,11 @@ function resolveDefaultReaderStyleState(
             : DEFAULT_READER_FONT_SIZE_PT;
 
     const lineSpacing =
-        typeof presentation?.line_spacing_percent === 'number' &&
-        Number.isFinite(presentation.line_spacing_percent) &&
-        presentation.line_spacing_percent > 0
+        typeof presentation?.line_spacing_percentage === 'number' &&
+        Number.isFinite(presentation.line_spacing_percentage) &&
+        presentation.line_spacing_percentage > 0
             ? mapKoReaderLineSpacingPercentToCssLineHeight(
-                  presentation.line_spacing_percent,
+                  presentation.line_spacing_percentage,
               )
             : DEFAULT_READER_LINE_SPACING;
 
@@ -273,12 +273,12 @@ function resolveDefaultReaderStyleState(
         leftMargin: normalizeValue(leftMargin, LEFT_MARGIN_CONFIG),
         rightMargin: normalizeValue(rightMargin, RIGHT_MARGIN_CONFIG),
         topMargin: normalizeValue(
-            toFiniteNonNegativeNumber(presentation?.t_page_margin) ??
+            toFiniteNonNegativeNumber(presentation?.top_margin) ??
                 DEFAULT_READER_TOP_MARGIN,
             TOP_MARGIN_CONFIG,
         ),
         bottomMargin: normalizeValue(
-            toFiniteNonNegativeNumber(presentation?.b_page_margin) ??
+            toFiniteNonNegativeNumber(presentation?.bottom_margin) ??
                 DEFAULT_READER_BOTTOM_MARGIN,
             BOTTOM_MARGIN_CONFIG,
         ),
@@ -728,9 +728,9 @@ export function useReaderStyle(
     const effectivePresentation = useMemo<LibraryReaderPresentation>(
         () => ({
             ...(presentation ?? {}),
-            h_page_margins: [styleState.leftMargin, styleState.rightMargin],
-            t_page_margin: undefined,
-            b_page_margin: undefined,
+            horizontal_margins: [styleState.leftMargin, styleState.rightMargin],
+            top_margin: undefined,
+            bottom_margin: undefined,
             hyphenation: resolveBoolFromMode(styleState.hyphenation),
             floating_punctuation: resolveBoolFromMode(
                 styleState.floatingPunctuation,

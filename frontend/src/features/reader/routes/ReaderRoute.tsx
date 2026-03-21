@@ -30,7 +30,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     const detailQuery = useLibraryDetailQuery(collection, id);
-    const readerPresentation = detailQuery.data?.item.reader_presentation;
+    const readerPresentation = detailQuery.data?.reader_presentation;
 
     const {
         fontSize,

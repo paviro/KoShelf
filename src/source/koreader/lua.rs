@@ -89,10 +89,10 @@ impl LuaParser {
         let reader_presentation = ReaderPresentation {
             font_face: self.get_optional_string(table, "font_face")?,
             font_size_pt: self.get_optional_f64(table, "copt_font_size")?,
-            line_spacing_percent: self.get_optional_u32(table, "copt_line_spacing")?,
-            h_page_margins: self.get_optional_u32_pair(table, "copt_h_page_margins")?,
-            t_page_margin: self.get_optional_u32(table, "copt_t_page_margin")?,
-            b_page_margin: self.get_optional_u32(table, "copt_b_page_margin")?,
+            line_spacing_percentage: self.get_optional_u32(table, "copt_line_spacing")?,
+            horizontal_margins: self.get_optional_u32_pair(table, "copt_h_page_margins")?,
+            top_margin: self.get_optional_u32(table, "copt_t_page_margin")?,
+            bottom_margin: self.get_optional_u32(table, "copt_b_page_margin")?,
             embedded_fonts: self.get_optional_bool_or_flag(table, "copt_embedded_fonts")?,
             hyphenation: self.get_optional_bool_or_flag(table, "hyphenation")?,
             floating_punctuation: self.get_optional_bool_or_flag(table, "floating_punctuation")?,
@@ -409,8 +409,8 @@ mod tests {
             .expect("reader presentation should still be present");
 
         assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
-        assert_eq!(presentation.line_spacing_percent, None);
-        assert_eq!(presentation.h_page_margins, None);
-        assert_eq!(presentation.t_page_margin, None);
+        assert_eq!(presentation.line_spacing_percentage, None);
+        assert_eq!(presentation.horizontal_margins, None);
+        assert_eq!(presentation.top_margin, None);
     }
 }
