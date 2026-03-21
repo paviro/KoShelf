@@ -28,7 +28,6 @@ import type {
     ReaderStyleControl,
     ReaderToggleControl,
 } from '../hooks/useReaderStyle';
-import { DEFAULT_READER_LINE_SPACING } from '../lib/reader-theme';
 
 const HEADER_ICON_BUTTON_CLASS =
     'flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
@@ -85,14 +84,8 @@ function getReaderViews(): FoliateViewLike[] {
     ) as FoliateViewLike[];
 }
 
-function formatRelativeSettingValue(value: number, baseline: number): string {
-    const normalized = Math.round((value / baseline) * 10) / 10;
-    const isDefaultValue = Math.abs(normalized - 1) < 0.001;
-
-    return `${normalized.toLocaleString(undefined, {
-        minimumFractionDigits: isDefaultValue ? 0 : 1,
-        maximumFractionDigits: 1,
-    })}x`;
+function formatPercentSettingValue(value: number): string {
+    return `${Math.round(value * 100)}%`;
 }
 
 function formatPointSettingValue(value: number): string {
@@ -426,10 +419,7 @@ export function ReaderSettingsPanel({
     }, [close, open]);
 
     const displayFontSize = formatPointSettingValue(fontSize.value);
-    const displayLineSpacing = formatRelativeSettingValue(
-        lineSpacing.value,
-        DEFAULT_READER_LINE_SPACING,
-    );
+    const displayLineSpacing = formatPercentSettingValue(lineSpacing.value);
     const displayLeftMargin = formatPixelSettingValue(leftMargin.value);
     const displayRightMargin = formatPixelSettingValue(rightMargin.value);
     const displayTopMargin = formatPixelSettingValue(topMargin.value);

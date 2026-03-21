@@ -9,7 +9,7 @@ export const READER_LAYOUT_SETTINGS = {
 } as const;
 
 export const DEFAULT_READER_FONT_SIZE_PT = 22;
-export const DEFAULT_READER_LINE_SPACING = 1.5;
+export const DEFAULT_READER_LINE_SPACING = 1.3;
 export const DEFAULT_READER_LEFT_MARGIN = 12;
 export const DEFAULT_READER_RIGHT_MARGIN = 12;
 export const DEFAULT_READER_TOP_MARGIN = 20;
