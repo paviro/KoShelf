@@ -8,6 +8,7 @@ export const READER_LAYOUT_SETTINGS = {
 } as const;
 
 export const DEFAULT_READER_FONT_SIZE = 112;
+export const DEFAULT_READER_LINE_SPACING = 1.5;
 
 const READER_THEME_COLORS = {
     light: {
@@ -22,12 +23,17 @@ const READER_THEME_COLORS = {
     },
 } as const;
 
-function buildReaderBaseStyles(fontSize: number): string {
+function buildReaderBaseStyles(fontSize: number, lineSpacing: number): string {
     return `
 @namespace epub "http://www.idpf.org/2007/ops";
 
 html {
     font-size: ${fontSize}% !important;
+    line-height: ${lineSpacing} !important;
+}
+
+p {
+    line-height: ${lineSpacing} !important;
 }
 
 html,
@@ -77,6 +83,7 @@ ${darkModeOverrides}`;
 export function applyReaderPresentation(
     view: FoliateView,
     fontSize = DEFAULT_READER_FONT_SIZE,
+    lineSpacing = DEFAULT_READER_LINE_SPACING,
 ): void {
     const renderer = view.renderer;
     if (!renderer) {
@@ -95,7 +102,7 @@ export function applyReaderPresentation(
         renderer.style.paddingTop = READER_LAYOUT_SETTINGS.topInset;
 
         renderer.setStyles?.([
-            buildReaderBaseStyles(fontSize),
+            buildReaderBaseStyles(fontSize, lineSpacing),
             buildReaderThemeStyles(
                 document.documentElement.classList.contains('dark'),
             ),

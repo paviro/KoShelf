@@ -69,6 +69,7 @@ export function useReaderView(
     scrubSettlingRef: RefObject<boolean>,
     setDragFraction: (value: number | null) => void,
     fontSize: number,
+    lineSpacing: number,
 ): UseReaderViewResult {
     const navigate = useNavigate();
     const params = useParams();
@@ -91,6 +92,9 @@ export function useReaderView(
 
     const fontSizeRef = useRef(fontSize);
     fontSizeRef.current = fontSize;
+
+    const lineSpacingRef = useRef(lineSpacing);
+    lineSpacingRef.current = lineSpacing;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
@@ -383,7 +387,11 @@ export function useReaderView(
 
                 await view.open(file);
                 setToc(resolveTocEntries(view));
-                applyReaderPresentation(view, fontSizeRef.current);
+                applyReaderPresentation(
+                    view,
+                    fontSizeRef.current,
+                    lineSpacingRef.current,
+                );
 
                 const hasAnnotationTarget =
                     highlightIndex !== null || bookmarkIndex !== null;

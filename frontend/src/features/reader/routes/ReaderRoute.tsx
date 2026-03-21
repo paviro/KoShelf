@@ -10,6 +10,7 @@ import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
 import { useReaderFontSize } from '../hooks/useReaderFontSize';
+import { useReaderLineSpacing } from '../hooks/useReaderLineSpacing';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
 import { useReaderThemeObserver } from '../hooks/useReaderThemeObserver';
@@ -32,6 +33,11 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         increase: increaseFontSize,
         decrease: decreaseFontSize,
     } = useReaderFontSize(id);
+    const {
+        lineSpacing,
+        increase: increaseLineSpacing,
+        decrease: decreaseLineSpacing,
+    } = useReaderLineSpacing(id);
     const scrubber = useReaderScrubber(viewRef);
 
     const {
@@ -59,10 +65,11 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
         fontSize,
+        lineSpacing,
     );
 
     useReaderKeyboardNav(handlePrev, handleNext);
-    useReaderThemeObserver(viewRef, fontSize);
+    useReaderThemeObserver(viewRef, fontSize, lineSpacing);
 
     const handleTocSelect = useCallback(
         (href: string) => {
@@ -101,6 +108,9 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 fontSize={fontSize}
                 onFontDecrease={decreaseFontSize}
                 onFontIncrease={increaseFontSize}
+                lineSpacing={lineSpacing}
+                onLineSpacingDecrease={decreaseLineSpacing}
+                onLineSpacingIncrease={increaseLineSpacing}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 

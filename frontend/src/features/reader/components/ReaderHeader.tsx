@@ -12,6 +12,9 @@ type ReaderHeaderProps = {
     fontSize: number;
     onFontDecrease: () => void;
     onFontIncrease: () => void;
+    lineSpacing: number;
+    onLineSpacingDecrease: () => void;
+    onLineSpacingIncrease: () => void;
     onDrawerOpen: () => void;
 };
 
@@ -23,6 +26,9 @@ export function ReaderHeader({
     fontSize,
     onFontDecrease,
     onFontIncrease,
+    lineSpacing,
+    onLineSpacingDecrease,
+    onLineSpacingIncrease,
     onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
@@ -56,6 +62,9 @@ export function ReaderHeader({
                     fontSize={fontSize}
                     onFontIncrease={onFontIncrease}
                     onFontDecrease={onFontDecrease}
+                    lineSpacing={lineSpacing}
+                    onLineSpacingIncrease={onLineSpacingIncrease}
+                    onLineSpacingDecrease={onLineSpacingDecrease}
                 />
 
                 <button

@@ -5,13 +5,23 @@ import {
     useLayoutEffect,
     useRef,
     useState,
+    type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { LuALargeSmall, LuMinus, LuPlus, LuSettings } from 'react-icons/lu';
+import {
+    LuALargeSmall,
+    LuAlignJustify,
+    LuMinus,
+    LuPlus,
+    LuSettings,
+} from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
-import { DEFAULT_READER_FONT_SIZE } from '../lib/reader-theme';
+import {
+    DEFAULT_READER_FONT_SIZE,
+    DEFAULT_READER_LINE_SPACING,
+} from '../lib/reader-theme';
 
 const HEADER_ICON_BUTTON_CLASS =
     'flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
@@ -25,6 +35,9 @@ type ReaderSettingsPanelProps = {
     fontSize: number;
     onFontIncrease: () => void;
     onFontDecrease: () => void;
+    lineSpacing: number;
+    onLineSpacingIncrease: () => void;
+    onLineSpacingDecrease: () => void;
 };
 
 type FoliateContent = {
@@ -45,10 +58,78 @@ function getReaderViews(): FoliateViewLike[] {
     ) as FoliateViewLike[];
 }
 
+function formatRelativeSettingValue(value: number, baseline: number): string {
+    const normalized = Math.round((value / baseline) * 10) / 10;
+    const isDefaultValue = Math.abs(normalized - 1) < 0.001;
+
+    return `${normalized.toLocaleString(undefined, {
+        minimumFractionDigits: isDefaultValue ? 0 : 1,
+        maximumFractionDigits: 1,
+    })}x`;
+}
+
+type ReaderSettingControlProps = {
+    icon: ReactNode;
+    label: string;
+    value: string;
+    decreaseAriaLabel: string;
+    increaseAriaLabel: string;
+    onDecrease: () => void;
+    onIncrease: () => void;
+};
+
+function ReaderSettingControl({
+    icon,
+    label,
+    value,
+    decreaseAriaLabel,
+    increaseAriaLabel,
+    onDecrease,
+    onIncrease,
+}: ReaderSettingControlProps) {
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center gap-2 text-gray-900 dark:text-white">
+                {icon}
+                <span className="text-sm font-semibold">{label}</span>
+            </div>
+
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-gray-100/70 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/60">
+                <button
+                    type="button"
+                    onClick={onDecrease}
+                    className={PANEL_CONTROL_BUTTON_CLASS}
+                    aria-label={decreaseAriaLabel}
+                >
+                    <LuMinus className="w-4 h-4" aria-hidden="true" />
+                </button>
+
+                <div className="flex-1 px-3 py-2 rounded-lg border border-gray-200/80 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-center">
+                    <span className="text-sm font-medium text-gray-700 dark:text-dark-200 tabular-nums">
+                        {value}
+                    </span>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onIncrease}
+                    className={PANEL_CONTROL_BUTTON_CLASS}
+                    aria-label={increaseAriaLabel}
+                >
+                    <LuPlus className="w-4 h-4" aria-hidden="true" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export function ReaderSettingsPanel({
     fontSize,
     onFontIncrease,
     onFontDecrease,
+    lineSpacing,
+    onLineSpacingIncrease,
+    onLineSpacingDecrease,
 }: ReaderSettingsPanelProps) {
     const [open, setOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -138,7 +219,9 @@ export function ReaderSettingsPanel({
     }, [close, open]);
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
 
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -150,13 +233,14 @@ export function ReaderSettingsPanel({
         return () => document.removeEventListener('keydown', handleEscape);
     }, [close, open]);
 
-    const normalizedScale =
-        Math.round((fontSize / DEFAULT_READER_FONT_SIZE) * 10) / 10;
-    const isDefaultScale = Math.abs(normalizedScale - 1) < 0.001;
-    const displayScale = `${normalizedScale.toLocaleString(undefined, {
-        minimumFractionDigits: isDefaultScale ? 0 : 1,
-        maximumFractionDigits: 1,
-    })}x`;
+    const displayScale = formatRelativeSettingValue(
+        fontSize,
+        DEFAULT_READER_FONT_SIZE,
+    );
+    const displayLineSpacing = formatRelativeSettingValue(
+        lineSpacing,
+        DEFAULT_READER_LINE_SPACING,
+    );
 
     return (
         <>
@@ -187,48 +271,44 @@ export function ReaderSettingsPanel({
                         role="dialog"
                         aria-label={translation.get('reader-settings-aria')}
                     >
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-gray-900 dark:text-white">
-                                <LuALargeSmall
-                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                    aria-hidden="true"
-                                />
-                                <span className="text-sm font-semibold">
-                                    {translation.get('reader-font-size')}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-gray-100/70 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/60">
-                                <button
-                                    type="button"
-                                    onClick={onFontDecrease}
-                                    className={PANEL_CONTROL_BUTTON_CLASS}
-                                    aria-label="Decrease font size"
-                                >
-                                    <LuMinus
-                                        className="w-4 h-4"
+                        <div className="space-y-4">
+                            <ReaderSettingControl
+                                icon={
+                                    <LuALargeSmall
+                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
                                         aria-hidden="true"
                                     />
-                                </button>
+                                }
+                                label={translation.get('reader-font-size')}
+                                value={displayScale}
+                                decreaseAriaLabel={translation.get(
+                                    'reader-font-size-decrease-aria',
+                                )}
+                                increaseAriaLabel={translation.get(
+                                    'reader-font-size-increase-aria',
+                                )}
+                                onDecrease={onFontDecrease}
+                                onIncrease={onFontIncrease}
+                            />
 
-                                <div className="flex-1 px-3 py-2 rounded-lg border border-gray-200/80 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-center">
-                                    <span className="text-sm font-medium text-gray-700 dark:text-dark-200 tabular-nums">
-                                        {displayScale}
-                                    </span>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={onFontIncrease}
-                                    className={PANEL_CONTROL_BUTTON_CLASS}
-                                    aria-label="Increase font size"
-                                >
-                                    <LuPlus
-                                        className="w-4 h-4"
+                            <ReaderSettingControl
+                                icon={
+                                    <LuAlignJustify
+                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
                                         aria-hidden="true"
                                     />
-                                </button>
-                            </div>
+                                }
+                                label={translation.get('reader-line-spacing')}
+                                value={displayLineSpacing}
+                                decreaseAriaLabel={translation.get(
+                                    'reader-line-spacing-decrease-aria',
+                                )}
+                                increaseAriaLabel={translation.get(
+                                    'reader-line-spacing-increase-aria',
+                                )}
+                                onDecrease={onLineSpacingDecrease}
+                                onIncrease={onLineSpacingIncrease}
+                            />
                         </div>
                     </div>,
                     document.body,

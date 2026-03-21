@@ -6,6 +6,7 @@ import { applyReaderPresentation } from '../lib/reader-theme';
 export function useReaderThemeObserver(
     viewRef: RefObject<FoliateView | null>,
     fontSize: number,
+    lineSpacing: number,
 ): void {
     useEffect(() => {
         const rootElement = document.documentElement;
@@ -14,14 +15,10 @@ export function useReaderThemeObserver(
             if (!currentView) {
                 return;
             }
-            applyReaderPresentation(currentView, fontSize);
+            applyReaderPresentation(currentView, fontSize, lineSpacing);
         };
 
-        const observer = new MutationObserver((entries) => {
-            if (entries.length > 0) {
-                updateReaderStyles();
-            }
-        });
+        const observer = new MutationObserver(updateReaderStyles);
 
         updateReaderStyles();
 
@@ -33,5 +30,5 @@ export function useReaderThemeObserver(
         return () => {
             observer.disconnect();
         };
-    }, [viewRef, fontSize]);
+    }, [viewRef, fontSize, lineSpacing]);
 }
