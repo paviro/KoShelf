@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use super::BookStatus;
+use super::{BookStatus, ReaderPresentation};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KoReaderMetadata {
     pub annotations: Vec<Annotation>,
+    pub reader_presentation: Option<ReaderPresentation>,
     pub doc_pages: Option<u32>,
     pub doc_path: Option<String>,
     pub doc_props: Option<DocProps>,

@@ -36,6 +36,7 @@ pub(crate) fn koreader_metadata_for_pages(
 ) -> KoReaderMetadata {
     KoReaderMetadata {
         annotations: Vec::new(),
+        reader_presentation: None,
         doc_pages: Some(200),
         doc_path: None,
         doc_props: None,

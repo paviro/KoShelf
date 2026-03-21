@@ -17,8 +17,11 @@ import {
 import { ApiHttpError, api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { StorageManager } from '../../../shared/storage-manager';
-import type { LibraryAnnotation } from '../../library/api/library-data';
-import { useLibraryDetailQuery } from '../../library/hooks/useLibraryQueries';
+import type {
+    LibraryAnnotation,
+    LibraryDetailData,
+    LibraryReaderPresentation,
+} from '../../library/api/library-data';
 import type { LibraryCollection } from '../../library/model/library-model';
 import { attachHighlightDrawListener } from '../lib/reader-highlight-overlay';
 import {
@@ -62,14 +65,22 @@ export type UseReaderViewResult = {
     handleNext: () => void;
 };
 
+type ReaderDetailState = {
+    data: LibraryDetailData | undefined;
+    error: unknown;
+    isError: boolean;
+};
+
 export function useReaderView(
     collection: LibraryCollection,
     viewRef: RefObject<FoliateView | null>,
     setLocation: Dispatch<SetStateAction<ReaderLocation | null>>,
     scrubSettlingRef: RefObject<boolean>,
     setDragFraction: (value: number | null) => void,
-    fontSize: number,
+    detailState: ReaderDetailState,
+    fontSizePt: number,
     lineSpacing: number,
+    readerPresentation: LibraryReaderPresentation | null | undefined,
 ): UseReaderViewResult {
     const navigate = useNavigate();
     const params = useParams();
@@ -78,23 +89,29 @@ export function useReaderView(
     const highlightIndex = searchParams.get('highlight');
     const bookmarkIndex = searchParams.get('bookmark');
 
-    const detailQuery = useLibraryDetailQuery(collection, id);
-    const item = detailQuery.data?.item;
+    const detailData = detailState.data;
+    const detailError = detailState.error;
+    const detailIsError = detailState.isError;
+
+    const item = detailData?.item;
     const hasItem = Boolean(item);
     const highlights = useMemo(
-        () => detailQuery.data?.highlights ?? [],
-        [detailQuery.data?.highlights],
+        () => detailData?.highlights ?? [],
+        [detailData?.highlights],
     );
     const bookmarks = useMemo(
-        () => detailQuery.data?.bookmarks ?? [],
-        [detailQuery.data?.bookmarks],
+        () => detailData?.bookmarks ?? [],
+        [detailData?.bookmarks],
     );
 
-    const fontSizeRef = useRef(fontSize);
-    fontSizeRef.current = fontSize;
+    const fontSizePtRef = useRef(fontSizePt);
+    fontSizePtRef.current = fontSizePt;
 
     const lineSpacingRef = useRef(lineSpacing);
     lineSpacingRef.current = lineSpacing;
+
+    const readerPresentationRef = useRef(readerPresentation);
+    readerPresentationRef.current = readerPresentation;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
@@ -165,10 +182,8 @@ export function useReaderView(
             return;
         }
 
-        if (detailQuery.isError) {
-            setError(
-                detailQuery.error ?? new Error('Failed to load book details.'),
-            );
+        if (detailIsError) {
+            setError(detailError ?? new Error('Failed to load book details.'));
             setLoading(false);
             return;
         }
@@ -203,6 +218,7 @@ export function useReaderView(
         let currentView: FoliateView | null = null;
         let detachHighlightDrawListener: (() => void) | null = null;
         let showAnnotationListener: EventListener | null = null;
+        let applyPresentationLoadListener: EventListener | null = null;
 
         setLoading(true);
         setError(null);
@@ -381,6 +397,16 @@ export function useReaderView(
 
                 view.addEventListener('create-overlay', createOverlayListener);
 
+                applyPresentationLoadListener = (() => {
+                    applyReaderPresentation(
+                        view,
+                        fontSizePtRef.current,
+                        lineSpacingRef.current,
+                        readerPresentationRef.current,
+                    );
+                }) as EventListener;
+                view.addEventListener('load', applyPresentationLoadListener);
+
                 container.appendChild(view);
                 currentView = view;
                 viewRef.current = view;
@@ -389,8 +415,9 @@ export function useReaderView(
                 setToc(resolveTocEntries(view));
                 applyReaderPresentation(
                     view,
-                    fontSizeRef.current,
+                    fontSizePtRef.current,
                     lineSpacingRef.current,
+                    readerPresentationRef.current,
                 );
 
                 const hasAnnotationTarget =
@@ -505,16 +532,22 @@ export function useReaderView(
                     showAnnotationListener,
                 );
             }
+            if (applyPresentationLoadListener && currentView) {
+                currentView.removeEventListener(
+                    'load',
+                    applyPresentationLoadListener,
+                );
+            }
             if (currentView === viewRef.current) {
                 closeReaderView();
             }
         };
     }, [
         closeReaderView,
-        detailQuery.error,
+        detailError,
         bookmarks,
         bookmarkIndex,
-        detailQuery.isError,
+        detailIsError,
         fileHref,
         hasItem,
         highlightIndex,

@@ -160,9 +160,6 @@ pages-label = { $count ->
 # -----------------------------------
 #       Statistics & Progress
 # -----------------------------------
-# -----------------------------------
-#        Statistics & Progress
-# -----------------------------------
 reading-statistics = Estadísticas de lectura
 overall-statistics = Estadísticas generales
 weekly-statistics = Estadísticas semanales
@@ -273,7 +270,6 @@ search =
     .aria-label = Buscar
 close-search =
     .aria-label = Cerrar búsqueda
-    .aria-label = Cerrar
 go-back =
     .aria-label = Volver
 open-reader-aria = Abrir en el lector
@@ -290,6 +286,26 @@ reader-font-size-increase-aria = Aumentar tamaño de fuente
 reader-line-spacing = Interlineado
 reader-line-spacing-decrease-aria = Disminuir interlineado
 reader-line-spacing-increase-aria = Aumentar interlineado
+reader-hyphenation = Guionado
+reader-floating-punctuation = Puntuación flotante
+reader-embedded-fonts = Fuentes incrustadas
+reader-left-margin = Margen izquierdo
+reader-left-margin-decrease-aria = Disminuir margen izquierdo
+reader-left-margin-increase-aria = Aumentar margen izquierdo
+reader-right-margin = Margen derecho
+reader-right-margin-decrease-aria = Disminuir margen derecho
+reader-right-margin-increase-aria = Aumentar margen derecho
+reader-top-margin = Margen superior
+reader-top-margin-decrease-aria = Disminuir margen superior
+reader-top-margin-increase-aria = Aumentar margen superior
+reader-bottom-margin = Margen inferior
+reader-bottom-margin-decrease-aria = Disminuir margen inferior
+reader-bottom-margin-increase-aria = Aumentar margen inferior
+reader-mode-auto = Libro
+reader-mode-on = Activado
+reader-mode-off = Desactivado
+reader-reset-defaults = Restablecer valores predeterminados
+reader-reset-defaults-aria = Restablecer la configuración de visualización del lector a los valores predeterminados
 reader-drawer-aria = Panel de navegación del libro
 reader-no-toc = No hay tabla de contenido disponible
 reader-no-toc-description = Este archivo no incluye marcadores de capítulo.

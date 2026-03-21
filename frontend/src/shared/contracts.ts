@@ -241,6 +241,22 @@ export interface LibraryDetailItem {
     search_base_path: string;
     subjects: string[];
     identifiers: ExternalIdentifier[];
+    reader_presentation?: LibraryReaderPresentation | null;
+}
+
+export interface LibraryReaderPresentation {
+    font_face?: string | null;
+    font_size_pt?: number | null;
+    line_spacing_percent?: number | null;
+    h_page_margins?: [number, number] | null;
+    t_page_margin?: number | null;
+    b_page_margin?: number | null;
+    embedded_css?: boolean | null;
+    embedded_fonts?: boolean | null;
+    hyphenation?: boolean | null;
+    floating_punctuation?: boolean | null;
+    word_spacing?: [number, number] | null;
+    word_expansion?: number | null;
 }
 
 export interface LibraryAnnotation {

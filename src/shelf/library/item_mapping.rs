@@ -78,6 +78,11 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
             .koreader_metadata
             .as_ref()
             .and_then(|m| m.partial_md5_checksum.clone()),
+        reader_presentation: item
+            .koreader_metadata
+            .as_ref()
+            .and_then(|m| m.reader_presentation.as_ref())
+            .and_then(|presentation| serde_json::to_string(presentation).ok()),
         last_open_at: None,
         total_reading_time_sec: None,
         created_at: now.clone(),

@@ -5,6 +5,7 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { translation } from '../../../shared/i18n';
 import type { LibraryAnnotation } from '../../library/api/library-data';
+import { useLibraryDetailQuery } from '../../library/hooks/useLibraryQueries';
 import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
@@ -27,7 +28,23 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     const [location, setLocation] = useState<ReaderLocation | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const { fontSize, lineSpacing } = useReaderStyle(id);
+    const detailQuery = useLibraryDetailQuery(collection, id);
+    const readerPresentation = detailQuery.data?.item.reader_presentation;
+
+    const {
+        fontSize,
+        lineSpacing,
+        leftMargin,
+        rightMargin,
+        topMargin,
+        bottomMargin,
+        hyphenation,
+        floatingPunctuation,
+        embeddedFonts,
+        effectivePresentation,
+        resetToDefaults,
+        hasOverrides,
+    } = useReaderStyle(id, readerPresentation);
     const scrubber = useReaderScrubber(viewRef);
 
     const {
@@ -54,12 +71,23 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         setLocation,
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
+        {
+            data: detailQuery.data,
+            error: detailQuery.error,
+            isError: detailQuery.isError,
+        },
         fontSize.value,
         lineSpacing.value,
+        effectivePresentation,
     );
 
     useReaderKeyboardNav(handlePrev, handleNext);
-    useReaderThemeObserver(viewRef, fontSize.value, lineSpacing.value);
+    useReaderThemeObserver(
+        viewRef,
+        fontSize.value,
+        lineSpacing.value,
+        effectivePresentation,
+    );
 
     const handleTocSelect = useCallback(
         (href: string) => {
@@ -95,12 +123,17 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
-                fontSize={fontSize.value}
-                onFontDecrease={fontSize.decrease}
-                onFontIncrease={fontSize.increase}
-                lineSpacing={lineSpacing.value}
-                onLineSpacingDecrease={lineSpacing.decrease}
-                onLineSpacingIncrease={lineSpacing.increase}
+                fontSize={fontSize}
+                lineSpacing={lineSpacing}
+                leftMargin={leftMargin}
+                rightMargin={rightMargin}
+                topMargin={topMargin}
+                bottomMargin={bottomMargin}
+                hyphenation={hyphenation}
+                floatingPunctuation={floatingPunctuation}
+                embeddedFonts={embeddedFonts}
+                onResetDefaults={resetToDefaults}
+                canResetDefaults={hasOverrides}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 
@@ -118,8 +151,12 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
 
                 <div
                     ref={containerRef}
-                    className="w-full h-full bg-white dark:bg-dark-925"
-                    style={{ visibility: loading ? 'hidden' : 'visible' }}
+                    className="w-full bg-white dark:bg-dark-925"
+                    style={{
+                        height: `max(0px, calc(100% - ${topMargin.value}px - ${bottomMargin.value}px))`,
+                        marginTop: `${topMargin.value}px`,
+                        visibility: loading ? 'hidden' : 'visible',
+                    }}
                 />
 
                 <ReaderNotePopover

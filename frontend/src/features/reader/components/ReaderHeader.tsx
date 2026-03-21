@@ -2,6 +2,11 @@ import { LuArrowLeft, LuList } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
+import type {
+    ReaderModeControl,
+    ReaderStyleControl,
+    ReaderToggleControl,
+} from '../hooks/useReaderStyle';
 import { ReaderSettingsPanel } from './ReaderSettingsPanel';
 
 type ReaderHeaderProps = {
@@ -9,12 +14,17 @@ type ReaderHeaderProps = {
     chapterLabel: string;
     backHref: string;
     onBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
-    fontSize: number;
-    onFontDecrease: () => void;
-    onFontIncrease: () => void;
-    lineSpacing: number;
-    onLineSpacingDecrease: () => void;
-    onLineSpacingIncrease: () => void;
+    fontSize: ReaderStyleControl;
+    lineSpacing: ReaderStyleControl;
+    leftMargin: ReaderStyleControl;
+    rightMargin: ReaderStyleControl;
+    topMargin: ReaderStyleControl;
+    bottomMargin: ReaderStyleControl;
+    hyphenation: ReaderModeControl;
+    floatingPunctuation: ReaderModeControl;
+    embeddedFonts: ReaderToggleControl;
+    onResetDefaults: () => void;
+    canResetDefaults: boolean;
     onDrawerOpen: () => void;
 };
 
@@ -24,11 +34,16 @@ export function ReaderHeader({
     backHref,
     onBackClick,
     fontSize,
-    onFontDecrease,
-    onFontIncrease,
     lineSpacing,
-    onLineSpacingDecrease,
-    onLineSpacingIncrease,
+    leftMargin,
+    rightMargin,
+    topMargin,
+    bottomMargin,
+    hyphenation,
+    floatingPunctuation,
+    embeddedFonts,
+    onResetDefaults,
+    canResetDefaults,
     onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
@@ -60,11 +75,16 @@ export function ReaderHeader({
             <div className="flex items-center space-x-2 shrink-0 ml-3">
                 <ReaderSettingsPanel
                     fontSize={fontSize}
-                    onFontIncrease={onFontIncrease}
-                    onFontDecrease={onFontDecrease}
                     lineSpacing={lineSpacing}
-                    onLineSpacingIncrease={onLineSpacingIncrease}
-                    onLineSpacingDecrease={onLineSpacingDecrease}
+                    leftMargin={leftMargin}
+                    rightMargin={rightMargin}
+                    topMargin={topMargin}
+                    bottomMargin={bottomMargin}
+                    hyphenation={hyphenation}
+                    floatingPunctuation={floatingPunctuation}
+                    embeddedFonts={embeddedFonts}
+                    onResetDefaults={onResetDefaults}
+                    canResetDefaults={canResetDefaults}
                 />
 
                 <button
