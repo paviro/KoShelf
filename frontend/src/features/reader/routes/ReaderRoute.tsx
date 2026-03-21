@@ -42,8 +42,11 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         floatingPunctuation,
         embeddedFonts,
         effectivePresentation,
-        resetToDefaults,
-        hasOverrides,
+        resetToBookDefaults,
+        resetToKoShelfDefaults,
+        hasBookOverrides,
+        hasKoShelfOverrides,
+        hasDistinctBookDefaults,
     } = useReaderStyle(id, readerPresentation);
     const scrubber = useReaderScrubber(viewRef);
 
@@ -132,8 +135,11 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 hyphenation={hyphenation}
                 floatingPunctuation={floatingPunctuation}
                 embeddedFonts={embeddedFonts}
-                onResetDefaults={resetToDefaults}
-                canResetDefaults={hasOverrides}
+                onResetBookDefaults={resetToBookDefaults}
+                canResetBookDefaults={hasBookOverrides}
+                onResetKoShelfDefaults={resetToKoShelfDefaults}
+                canResetKoShelfDefaults={hasKoShelfOverrides}
+                hasDistinctBookDefaults={hasDistinctBookDefaults}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 

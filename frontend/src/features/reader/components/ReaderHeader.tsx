@@ -23,8 +23,11 @@ type ReaderHeaderProps = {
     hyphenation: ReaderModeControl;
     floatingPunctuation: ReaderModeControl;
     embeddedFonts: ReaderToggleControl;
-    onResetDefaults: () => void;
-    canResetDefaults: boolean;
+    onResetBookDefaults: () => void;
+    canResetBookDefaults: boolean;
+    onResetKoShelfDefaults: () => void;
+    canResetKoShelfDefaults: boolean;
+    hasDistinctBookDefaults: boolean;
     onDrawerOpen: () => void;
 };
 
@@ -42,8 +45,11 @@ export function ReaderHeader({
     hyphenation,
     floatingPunctuation,
     embeddedFonts,
-    onResetDefaults,
-    canResetDefaults,
+    onResetBookDefaults,
+    canResetBookDefaults,
+    onResetKoShelfDefaults,
+    canResetKoShelfDefaults,
+    hasDistinctBookDefaults,
     onDrawerOpen,
 }: ReaderHeaderProps) {
     return (
@@ -83,8 +89,11 @@ export function ReaderHeader({
                     hyphenation={hyphenation}
                     floatingPunctuation={floatingPunctuation}
                     embeddedFonts={embeddedFonts}
-                    onResetDefaults={onResetDefaults}
-                    canResetDefaults={canResetDefaults}
+                    onResetBookDefaults={onResetBookDefaults}
+                    canResetBookDefaults={canResetBookDefaults}
+                    onResetKoShelfDefaults={onResetKoShelfDefaults}
+                    canResetKoShelfDefaults={canResetKoShelfDefaults}
+                    hasDistinctBookDefaults={hasDistinctBookDefaults}
                 />
 
                 <button

@@ -14,13 +14,15 @@ import {
     mapKoReaderLineSpacingPercentToCssLineHeight,
 } from '../lib/reader-theme';
 
-const READER_STYLE_KEY_PREFIX = 'reader_style_v2_';
+const READER_STYLE_KEY_PREFIX = 'reader_style_';
 
 const KOREADER_FONT_SIZE_PT_MIN = 12;
 const KOREADER_FONT_SIZE_PT_MAX = 44;
 const KOREADER_FONT_SIZE_PT_STEP = 1;
 
 export type ReaderModeValue = 'auto' | 'on' | 'off';
+
+type ReaderStyleBasis = 'book' | 'koshelf';
 
 const READER_MODE_VALUES: readonly ReaderModeValue[] = ['auto', 'on', 'off'];
 
@@ -65,8 +67,11 @@ export type UseReaderStyleResult = {
     floatingPunctuation: ReaderModeControl;
     embeddedFonts: ReaderToggleControl;
     effectivePresentation: LibraryReaderPresentation;
-    resetToDefaults: () => void;
-    hasOverrides: boolean;
+    resetToBookDefaults: () => void;
+    resetToKoShelfDefaults: () => void;
+    hasBookOverrides: boolean;
+    hasKoShelfOverrides: boolean;
+    hasDistinctBookDefaults: boolean;
 };
 
 type ReaderStyleState = {
@@ -90,6 +95,20 @@ type NumericStyleKey =
     | 'bottomMargin';
 
 type ModeStyleKey = 'hyphenation' | 'floatingPunctuation';
+
+const NUMERIC_STYLE_KEYS: readonly NumericStyleKey[] = [
+    'fontSize',
+    'lineSpacing',
+    'leftMargin',
+    'rightMargin',
+    'topMargin',
+    'bottomMargin',
+];
+
+const MODE_STYLE_KEYS: readonly ModeStyleKey[] = [
+    'hyphenation',
+    'floatingPunctuation',
+];
 
 const FONT_SIZE_CONFIG: NumericReaderStyleConfig = {
     min: KOREADER_FONT_SIZE_PT_MIN,
@@ -284,62 +303,75 @@ function readNumericStoredValue(
     return normalizeValue(value, config);
 }
 
-function loadStoredReaderStyleState(
+type LoadedReaderStyle = {
+    basis: ReaderStyleBasis;
+    style: ReaderStyleState;
+};
+
+function loadStoredReaderStyle(
     bookId: string | undefined,
-    defaultState: ReaderStyleState,
-): ReaderStyleState {
+    bookDefaultState: ReaderStyleState,
+    koshelfDefaultState: ReaderStyleState,
+): LoadedReaderStyle {
     if (!bookId) {
-        return defaultState;
+        return { basis: 'book', style: bookDefaultState };
     }
 
     const stored = StorageManager.getByKey<unknown>(
         `${READER_STYLE_KEY_PREFIX}${bookId}`,
     );
     if (!isRecord(stored)) {
-        return defaultState;
+        return { basis: 'book', style: bookDefaultState };
     }
 
+    const basis: ReaderStyleBasis =
+        stored.basis === 'koshelf' ? 'koshelf' : 'book';
+    const defaults = basis === 'book' ? bookDefaultState : koshelfDefaultState;
+
     return {
-        fontSize: readNumericStoredValue(
-            stored.fontSize,
-            FONT_SIZE_CONFIG,
-            defaultState.fontSize,
-        ),
-        lineSpacing: readNumericStoredValue(
-            stored.lineSpacing,
-            LINE_SPACING_CONFIG,
-            defaultState.lineSpacing,
-        ),
-        leftMargin: readNumericStoredValue(
-            stored.leftMargin,
-            LEFT_MARGIN_CONFIG,
-            defaultState.leftMargin,
-        ),
-        rightMargin: readNumericStoredValue(
-            stored.rightMargin,
-            RIGHT_MARGIN_CONFIG,
-            defaultState.rightMargin,
-        ),
-        topMargin: readNumericStoredValue(
-            stored.topMargin,
-            TOP_MARGIN_CONFIG,
-            defaultState.topMargin,
-        ),
-        bottomMargin: readNumericStoredValue(
-            stored.bottomMargin,
-            BOTTOM_MARGIN_CONFIG,
-            defaultState.bottomMargin,
-        ),
-        hyphenation: isReaderModeValue(stored.hyphenation)
-            ? stored.hyphenation
-            : defaultState.hyphenation,
-        floatingPunctuation: isReaderModeValue(stored.floatingPunctuation)
-            ? stored.floatingPunctuation
-            : defaultState.floatingPunctuation,
-        embeddedFonts:
-            typeof stored.embeddedFonts === 'boolean'
-                ? stored.embeddedFonts
-                : defaultState.embeddedFonts,
+        basis,
+        style: {
+            fontSize: readNumericStoredValue(
+                stored.fontSize,
+                FONT_SIZE_CONFIG,
+                defaults.fontSize,
+            ),
+            lineSpacing: readNumericStoredValue(
+                stored.lineSpacing,
+                LINE_SPACING_CONFIG,
+                defaults.lineSpacing,
+            ),
+            leftMargin: readNumericStoredValue(
+                stored.leftMargin,
+                LEFT_MARGIN_CONFIG,
+                defaults.leftMargin,
+            ),
+            rightMargin: readNumericStoredValue(
+                stored.rightMargin,
+                RIGHT_MARGIN_CONFIG,
+                defaults.rightMargin,
+            ),
+            topMargin: readNumericStoredValue(
+                stored.topMargin,
+                TOP_MARGIN_CONFIG,
+                defaults.topMargin,
+            ),
+            bottomMargin: readNumericStoredValue(
+                stored.bottomMargin,
+                BOTTOM_MARGIN_CONFIG,
+                defaults.bottomMargin,
+            ),
+            hyphenation: isReaderModeValue(stored.hyphenation)
+                ? stored.hyphenation
+                : defaults.hyphenation,
+            floatingPunctuation: isReaderModeValue(stored.floatingPunctuation)
+                ? stored.floatingPunctuation
+                : defaults.floatingPunctuation,
+            embeddedFonts:
+                typeof stored.embeddedFonts === 'boolean'
+                    ? stored.embeddedFonts
+                    : defaults.embeddedFonts,
+        },
     };
 }
 
@@ -374,6 +406,39 @@ function areReaderStyleStatesEqual(
         a.floatingPunctuation === b.floatingPunctuation &&
         a.embeddedFonts === b.embeddedFonts
     );
+}
+
+function buildStoredReaderStyle(
+    basis: ReaderStyleBasis,
+    styleState: ReaderStyleState,
+    basisDefaults: ReaderStyleState,
+): Record<string, unknown> {
+    const stored: Record<string, unknown> = { basis };
+
+    for (const key of NUMERIC_STYLE_KEYS) {
+        const config = NUMERIC_STYLE_CONFIGS[key];
+        if (
+            !areValuesEqual(
+                styleState[key],
+                basisDefaults[key],
+                config.precision,
+            )
+        ) {
+            stored[key] = styleState[key];
+        }
+    }
+
+    for (const key of MODE_STYLE_KEYS) {
+        if (styleState[key] !== basisDefaults[key]) {
+            stored[key] = styleState[key];
+        }
+    }
+
+    if (styleState.embeddedFonts !== basisDefaults.embeddedFonts) {
+        stored.embeddedFonts = styleState.embeddedFonts;
+    }
+
+    return stored;
 }
 
 function resolveApproxLineHeightPx(
@@ -421,48 +486,61 @@ export function useReaderStyle(
     bookId: string | undefined,
     presentation: LibraryReaderPresentation | null | undefined,
 ): UseReaderStyleResult {
-    const defaultState = useMemo(
+    const bookDefaultState = useMemo(
         () => resolveDefaultReaderStyleState(presentation),
         [presentation],
     );
 
-    const [styleState, setStyleState] = useState<ReaderStyleState>(() =>
-        loadStoredReaderStyleState(bookId, defaultState),
+    const koshelfDefaultState = useMemo(
+        () => resolveDefaultReaderStyleState(null),
+        [],
+    );
+
+    const [state, setState] = useState<LoadedReaderStyle>(() =>
+        loadStoredReaderStyle(bookId, bookDefaultState, koshelfDefaultState),
     );
 
     useEffect(() => {
-        setStyleState(loadStoredReaderStyleState(bookId, defaultState));
-    }, [bookId, defaultState]);
+        setState(
+            loadStoredReaderStyle(
+                bookId,
+                bookDefaultState,
+                koshelfDefaultState,
+            ),
+        );
+    }, [bookId, bookDefaultState, koshelfDefaultState]);
+
+    const { basis, style: styleState } = state;
+
+    const basisDefaults = useMemo(
+        () => (basis === 'book' ? bookDefaultState : koshelfDefaultState),
+        [basis, bookDefaultState, koshelfDefaultState],
+    );
 
     useEffect(() => {
         if (!bookId) {
             return;
         }
 
-        const storageKey = `${READER_STYLE_KEY_PREFIX}${bookId}`;
-        if (areReaderStyleStatesEqual(styleState, defaultState)) {
-            StorageManager.removeByKey(storageKey);
-            return;
-        }
-
-        StorageManager.setByKey(storageKey, styleState);
-    }, [bookId, defaultState, styleState]);
+        const stored = buildStoredReaderStyle(basis, styleState, basisDefaults);
+        StorageManager.setByKey(`${READER_STYLE_KEY_PREFIX}${bookId}`, stored);
+    }, [basis, basisDefaults, bookId, styleState]);
 
     const stepNumericStyle = useCallback(
         (key: NumericStyleKey, delta: number) => {
             const config = NUMERIC_STYLE_CONFIGS[key];
-            setStyleState((previousState) => {
-                const previousValue = previousState[key];
+            setState((prev) => {
+                const previousValue = prev.style[key];
                 const nextValue = stepValue(previousValue, delta, config);
                 if (
                     areValuesEqual(previousValue, nextValue, config.precision)
                 ) {
-                    return previousState;
+                    return prev;
                 }
 
                 return {
-                    ...previousState,
-                    [key]: nextValue,
+                    ...prev,
+                    style: { ...prev.style, [key]: nextValue },
                 };
             });
         },
@@ -471,14 +549,14 @@ export function useReaderStyle(
 
     const setModeStyle = useCallback(
         (key: ModeStyleKey, nextValue: ReaderModeValue) => {
-            setStyleState((previousState) => {
-                if (previousState[key] === nextValue) {
-                    return previousState;
+            setState((prev) => {
+                if (prev.style[key] === nextValue) {
+                    return prev;
                 }
 
                 return {
-                    ...previousState,
-                    [key]: nextValue,
+                    ...prev,
+                    style: { ...prev.style, [key]: nextValue },
                 };
             });
         },
@@ -486,14 +564,14 @@ export function useReaderStyle(
     );
 
     const setEmbeddedFonts = useCallback((nextValue: boolean) => {
-        setStyleState((previousState) => {
-            if (previousState.embeddedFonts === nextValue) {
-                return previousState;
+        setState((prev) => {
+            if (prev.style.embeddedFonts === nextValue) {
+                return prev;
             }
 
             return {
-                ...previousState,
-                embeddedFonts: nextValue,
+                ...prev,
+                style: { ...prev.style, embeddedFonts: nextValue },
             };
         });
     }, []);
@@ -501,55 +579,54 @@ export function useReaderStyle(
     const resetNumericStyle = useCallback(
         (key: NumericStyleKey) => {
             const config = NUMERIC_STYLE_CONFIGS[key];
-            setStyleState((previousState) => {
-                const nextValue = defaultState[key];
+            setState((prev) => {
+                const nextValue = basisDefaults[key];
                 if (
-                    areValuesEqual(
-                        previousState[key],
-                        nextValue,
-                        config.precision,
-                    )
+                    areValuesEqual(prev.style[key], nextValue, config.precision)
                 ) {
-                    return previousState;
+                    return prev;
                 }
 
                 return {
-                    ...previousState,
-                    [key]: nextValue,
+                    ...prev,
+                    style: { ...prev.style, [key]: nextValue },
                 };
             });
         },
-        [defaultState],
+        [basisDefaults],
     );
 
     const resetModeStyle = useCallback(
         (key: ModeStyleKey) => {
-            setStyleState((previousState) => {
-                if (previousState[key] === defaultState[key]) {
-                    return previousState;
+            setState((prev) => {
+                if (prev.style[key] === basisDefaults[key]) {
+                    return prev;
                 }
 
                 return {
-                    ...previousState,
-                    [key]: defaultState[key],
+                    ...prev,
+                    style: { ...prev.style, [key]: basisDefaults[key] },
                 };
             });
         },
-        [defaultState],
+        [basisDefaults],
     );
 
     const resetEmbeddedFonts = useCallback(() => {
-        setStyleState((previousState) => {
-            if (previousState.embeddedFonts === defaultState.embeddedFonts) {
-                return previousState;
+        setState((prev) => {
+            if (prev.style.embeddedFonts === basisDefaults.embeddedFonts) {
+                return prev;
             }
 
             return {
-                ...previousState,
-                embeddedFonts: defaultState.embeddedFonts,
+                ...prev,
+                style: {
+                    ...prev.style,
+                    embeddedFonts: basisDefaults.embeddedFonts,
+                },
             };
         });
-    }, [defaultState.embeddedFonts]);
+    }, [basisDefaults.embeddedFonts]);
 
     const marginLineStepPx = useMemo(
         () =>
@@ -567,7 +644,7 @@ export function useReaderStyle(
         ): ReaderStyleControl =>
             createNumericControl(
                 styleState[key],
-                defaultState[key],
+                basisDefaults[key],
                 NUMERIC_STYLE_CONFIGS[key].precision,
                 increaseStep,
                 (delta) => stepNumericStyle(key, delta),
@@ -583,7 +660,7 @@ export function useReaderStyle(
             bottomMargin: makeNumericControl('bottomMargin', marginLineStepPx),
         };
     }, [
-        defaultState,
+        basisDefaults,
         marginLineStepPx,
         resetNumericStyle,
         stepNumericStyle,
@@ -600,7 +677,7 @@ export function useReaderStyle(
                 setValue: (nextValue) => setModeStyle('hyphenation', nextValue),
                 reset: () => resetModeStyle('hyphenation'),
                 isOverridden:
-                    styleState.hyphenation !== defaultState.hyphenation,
+                    styleState.hyphenation !== basisDefaults.hyphenation,
             },
             floatingPunctuation: {
                 value: styleState.floatingPunctuation,
@@ -609,12 +686,12 @@ export function useReaderStyle(
                 reset: () => resetModeStyle('floatingPunctuation'),
                 isOverridden:
                     styleState.floatingPunctuation !==
-                    defaultState.floatingPunctuation,
+                    basisDefaults.floatingPunctuation,
             },
         }),
         [
-            defaultState.floatingPunctuation,
-            defaultState.hyphenation,
+            basisDefaults.floatingPunctuation,
+            basisDefaults.hyphenation,
             resetModeStyle,
             setModeStyle,
             styleState.floatingPunctuation,
@@ -628,10 +705,10 @@ export function useReaderStyle(
             setValue: setEmbeddedFonts,
             reset: resetEmbeddedFonts,
             isOverridden:
-                styleState.embeddedFonts !== defaultState.embeddedFonts,
+                styleState.embeddedFonts !== basisDefaults.embeddedFonts,
         }),
         [
-            defaultState.embeddedFonts,
+            basisDefaults.embeddedFonts,
             resetEmbeddedFonts,
             setEmbeddedFonts,
             styleState.embeddedFonts,
@@ -660,13 +737,27 @@ export function useReaderStyle(
         ],
     );
 
-    const resetToDefaults = useCallback(() => {
-        setStyleState(defaultState);
-    }, [defaultState]);
+    const resetToBookDefaults = useCallback(() => {
+        setState({ basis: 'book', style: bookDefaultState });
+    }, [bookDefaultState]);
 
-    const hasOverrides = useMemo(
-        () => !areReaderStyleStatesEqual(styleState, defaultState),
-        [defaultState, styleState],
+    const resetToKoShelfDefaults = useCallback(() => {
+        setState({ basis: 'koshelf', style: koshelfDefaultState });
+    }, [koshelfDefaultState]);
+
+    const hasBookOverrides = useMemo(
+        () => !areReaderStyleStatesEqual(styleState, bookDefaultState),
+        [bookDefaultState, styleState],
+    );
+
+    const hasKoShelfOverrides = useMemo(
+        () => !areReaderStyleStatesEqual(styleState, koshelfDefaultState),
+        [koshelfDefaultState, styleState],
+    );
+
+    const hasDistinctBookDefaults = useMemo(
+        () => !areReaderStyleStatesEqual(bookDefaultState, koshelfDefaultState),
+        [bookDefaultState, koshelfDefaultState],
     );
 
     return {
@@ -680,7 +771,10 @@ export function useReaderStyle(
         floatingPunctuation: modeControls.floatingPunctuation,
         embeddedFonts,
         effectivePresentation,
-        resetToDefaults,
-        hasOverrides,
+        resetToBookDefaults,
+        resetToKoShelfDefaults,
+        hasBookOverrides,
+        hasKoShelfOverrides,
+        hasDistinctBookDefaults,
     };
 }

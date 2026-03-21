@@ -60,8 +60,11 @@ type ReaderSettingsPanelProps = {
     hyphenation: ReaderModeControl;
     floatingPunctuation: ReaderModeControl;
     embeddedFonts: ReaderToggleControl;
-    onResetDefaults: () => void;
-    canResetDefaults: boolean;
+    onResetBookDefaults: () => void;
+    canResetBookDefaults: boolean;
+    onResetKoShelfDefaults: () => void;
+    canResetKoShelfDefaults: boolean;
+    hasDistinctBookDefaults: boolean;
 };
 
 type FoliateContent = {
@@ -169,6 +172,9 @@ function ReaderSettingControl({
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
                 {icon}
                 <span className="text-sm font-semibold">{label}</span>
+                {control.isOverridden && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-300" />
+                )}
             </div>
 
             <div className="flex items-center gap-2 p-1.5 rounded-xl bg-gray-100/70 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/60">
@@ -206,18 +212,23 @@ function ReaderChoiceControl<T extends string | boolean>({
     value,
     options,
     onSelect,
+    isOverridden,
 }: {
     icon?: ReactNode;
     label: string;
     value: T;
     options: readonly ReaderChoiceOption<T>[];
     onSelect: (nextValue: T) => void;
+    isOverridden?: boolean;
 }) {
     return (
         <div className="space-y-2">
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
                 {icon}
                 <span className="text-sm font-semibold">{label}</span>
+                {isOverridden && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-300" />
+                )}
             </div>
 
             <div
@@ -263,9 +274,14 @@ function ReaderCompactControl({
 }) {
     return (
         <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700 dark:text-dark-200">
-                {label}
-            </span>
+            <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-700 dark:text-dark-200">
+                    {label}
+                </span>
+                {control.isOverridden && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-300" />
+                )}
+            </div>
             <div className="flex items-center gap-1.5">
                 <button
                     type="button"
@@ -301,8 +317,11 @@ export function ReaderSettingsPanel({
     hyphenation,
     floatingPunctuation,
     embeddedFonts,
-    onResetDefaults,
-    canResetDefaults,
+    onResetBookDefaults,
+    canResetBookDefaults,
+    onResetKoShelfDefaults,
+    canResetKoShelfDefaults,
+    hasDistinctBookDefaults,
 }: ReaderSettingsPanelProps) {
     const [open, setOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -584,6 +603,7 @@ export function ReaderSettingsPanel({
                                     value={hyphenation.value}
                                     options={readerModeOptions}
                                     onSelect={hyphenation.setValue}
+                                    isOverridden={hyphenation.isOverridden}
                                 />
 
                                 <ReaderChoiceControl
@@ -599,6 +619,9 @@ export function ReaderSettingsPanel({
                                     value={floatingPunctuation.value}
                                     options={readerModeOptions}
                                     onSelect={floatingPunctuation.setValue}
+                                    isOverridden={
+                                        floatingPunctuation.isOverridden
+                                    }
                                 />
 
                                 <ReaderChoiceControl
@@ -614,6 +637,7 @@ export function ReaderSettingsPanel({
                                     value={embeddedFonts.value}
                                     options={embeddedFontOptions}
                                     onSelect={embeddedFonts.setValue}
+                                    isOverridden={embeddedFonts.isOverridden}
                                 />
                             </ReaderSettingsSection>
 
@@ -643,17 +667,32 @@ export function ReaderSettingsPanel({
 
                             <hr className="border-gray-200/50 dark:border-dark-700/40" />
 
-                            <button
-                                type="button"
-                                onClick={onResetDefaults}
-                                disabled={!canResetDefaults}
-                                className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
-                                aria-label={translation.get(
-                                    'reader-reset-defaults-aria',
+                            <div className="space-y-2">
+                                {hasDistinctBookDefaults && (
+                                    <button
+                                        type="button"
+                                        onClick={onResetBookDefaults}
+                                        disabled={!canResetBookDefaults}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                                        aria-label={translation.get(
+                                            'reader-reset-book-aria',
+                                        )}
+                                    >
+                                        {translation.get('reader-reset-book')}
+                                    </button>
                                 )}
-                            >
-                                {translation.get('reader-reset-defaults')}
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={onResetKoShelfDefaults}
+                                    disabled={!canResetKoShelfDefaults}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                                    aria-label={translation.get(
+                                        'reader-reset-defaults-aria',
+                                    )}
+                                >
+                                    {translation.get('reader-reset-defaults')}
+                                </button>
+                            </div>
                         </div>
                     </div>,
                     document.body,
