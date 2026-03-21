@@ -15,8 +15,8 @@ impl LibraryRepository {
                 status, progress_percentage, rating, review_note,
                 doc_pages, pagemap_doc_pages, has_synthetic_pagination, parser_pages,
                 cover_url, search_base_path, annotation_count, bookmark_count,
-                highlight_count, partial_md5_checksum, last_open_at,
-                total_reading_time_sec, created_at, updated_at
+                highlight_count, partial_md5_checksum, reader_presentation,
+                last_open_at, total_reading_time_sec, created_at, updated_at
             ) VALUES (
                 ?1, ?2, ?3, ?4, ?5,
                 ?6, ?7,
@@ -24,8 +24,8 @@ impl LibraryRepository {
                 ?13, ?14, ?15, ?16,
                 ?17, ?18, ?19, ?20,
                 ?21, ?22, ?23, ?24,
-                ?25, ?26, ?27,
-                ?28, ?29, ?30
+                ?25, ?26, ?27, ?28,
+                ?29, ?30, ?31
             )
             ON CONFLICT(id) DO UPDATE SET
                 file_path = excluded.file_path,
@@ -53,6 +53,7 @@ impl LibraryRepository {
                 bookmark_count = excluded.bookmark_count,
                 highlight_count = excluded.highlight_count,
                 partial_md5_checksum = excluded.partial_md5_checksum,
+                reader_presentation = excluded.reader_presentation,
                 last_open_at = excluded.last_open_at,
                 total_reading_time_sec = excluded.total_reading_time_sec,
                 updated_at = excluded.updated_at",
@@ -83,6 +84,7 @@ impl LibraryRepository {
         .bind(item.bookmark_count)
         .bind(item.highlight_count)
         .bind(&item.partial_md5_checksum)
+        .bind(&item.reader_presentation)
         .bind(&item.last_open_at)
         .bind(item.total_reading_time_sec)
         .bind(&item.created_at)
@@ -265,6 +267,32 @@ mod tests {
 
         let fetched = repo.get_item("bbb").await.unwrap().unwrap();
         assert_eq!(fetched.title, "Updated Title");
+    }
+
+    #[tokio::test]
+    async fn upsert_and_get_item_preserves_reader_presentation() {
+        let repo = test_repo().await;
+        let mut item = sample_item("reader");
+        item.reader_presentation =
+            Some(r#"{"font_face":"Noto Serif","embedded_fonts":false}"#.to_string());
+
+        repo.upsert_item(&item)
+            .await
+            .expect("upsert should work with reader presentation");
+
+        let fetched = repo
+            .get_item("reader")
+            .await
+            .expect("get should work")
+            .expect("item should exist");
+
+        let presentation = fetched
+            .reader_presentation
+            .expect("reader presentation should be present")
+            .0;
+
+        assert_eq!(presentation.font_face.as_deref(), Some("Noto Serif"));
+        assert_eq!(presentation.embedded_fonts, Some(false));
     }
 
     #[tokio::test]

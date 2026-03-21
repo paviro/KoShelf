@@ -31,6 +31,14 @@ export class StorageManager {
         writeToStorage(localStorage, this.PREFIX + key, value);
     }
 
+    static removeByKey(key: string): void {
+        try {
+            localStorage.removeItem(this.PREFIX + key);
+        } catch {
+            // Ignore storage failures.
+        }
+    }
+
     static getSessionByKey<T>(
         key: string,
         defaultValue: T | null = null,

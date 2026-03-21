@@ -14,11 +14,14 @@ import {
     buildRoutePath,
     detailRouteIdForCollection,
 } from '../../../app/routes/route-registry';
-import { api } from '../../../shared/api';
+import { ApiHttpError, api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { StorageManager } from '../../../shared/storage-manager';
-import type { LibraryAnnotation } from '../../library/api/library-data';
-import { useLibraryDetailQuery } from '../../library/hooks/useLibraryQueries';
+import type {
+    LibraryAnnotation,
+    LibraryDetailData,
+    LibraryReaderPresentation,
+} from '../../library/api/library-data';
 import type { LibraryCollection } from '../../library/model/library-model';
 import { attachHighlightDrawListener } from '../lib/reader-highlight-overlay';
 import {
@@ -45,7 +48,7 @@ export type ReaderActiveNote = {
 export type UseReaderViewResult = {
     containerRef: RefObject<HTMLDivElement | null>;
     loading: boolean;
-    error: string | null;
+    error: unknown | null;
     backHref: string;
     title: string;
     chapterLabel: string;
@@ -62,13 +65,22 @@ export type UseReaderViewResult = {
     handleNext: () => void;
 };
 
+type ReaderDetailState = {
+    data: LibraryDetailData | undefined;
+    error: unknown;
+    isError: boolean;
+};
+
 export function useReaderView(
     collection: LibraryCollection,
     viewRef: RefObject<FoliateView | null>,
     setLocation: Dispatch<SetStateAction<ReaderLocation | null>>,
     scrubSettlingRef: RefObject<boolean>,
     setDragFraction: (value: number | null) => void,
-    fontSize: number,
+    detailState: ReaderDetailState,
+    fontSizePt: number,
+    lineSpacing: number,
+    readerPresentation: LibraryReaderPresentation | null | undefined,
 ): UseReaderViewResult {
     const navigate = useNavigate();
     const params = useParams();
@@ -77,24 +89,33 @@ export function useReaderView(
     const highlightIndex = searchParams.get('highlight');
     const bookmarkIndex = searchParams.get('bookmark');
 
-    const detailQuery = useLibraryDetailQuery(collection, id);
-    const item = detailQuery.data?.item;
+    const detailData = detailState.data;
+    const detailError = detailState.error;
+    const detailIsError = detailState.isError;
+
+    const item = detailData?.item;
     const hasItem = Boolean(item);
     const highlights = useMemo(
-        () => detailQuery.data?.highlights ?? [],
-        [detailQuery.data?.highlights],
+        () => detailData?.highlights ?? [],
+        [detailData?.highlights],
     );
     const bookmarks = useMemo(
-        () => detailQuery.data?.bookmarks ?? [],
-        [detailQuery.data?.bookmarks],
+        () => detailData?.bookmarks ?? [],
+        [detailData?.bookmarks],
     );
 
-    const fontSizeRef = useRef(fontSize);
-    fontSizeRef.current = fontSize;
+    const fontSizePtRef = useRef(fontSizePt);
+    fontSizePtRef.current = fontSizePt;
+
+    const lineSpacingRef = useRef(lineSpacing);
+    lineSpacingRef.current = lineSpacing;
+
+    const readerPresentationRef = useRef(readerPresentation);
+    readerPresentationRef.current = readerPresentation;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown | null>(null);
     const [location, setLocationState] = useState<ReaderLocation | null>(null);
     const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
     const [toc, setToc] = useState<TocEntry[]>([]);
@@ -161,24 +182,30 @@ export function useReaderView(
             return;
         }
 
-        if (detailQuery.isError) {
-            setError('Failed to load book details.');
+        if (detailIsError) {
+            setError(detailError ?? new Error('Failed to load book details.'));
             setLoading(false);
             return;
         }
 
         if (hasItem && !supportsReader) {
             setError(
-                normalizedFormat
-                    ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
-                    : 'Unsupported format for in-app reader.',
+                new Error(
+                    normalizedFormat
+                        ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
+                        : 'Unsupported format for in-app reader.',
+                ),
             );
             setLoading(false);
             return;
         }
 
         if (hasItem && !fileHref) {
-            setError('Book file is unavailable.');
+            setError(
+                new ApiHttpError('/assets/files', 404, {
+                    code: 'book_file_unavailable',
+                }),
+            );
             setLoading(false);
             return;
         }
@@ -191,6 +218,7 @@ export function useReaderView(
         let currentView: FoliateView | null = null;
         let detachHighlightDrawListener: (() => void) | null = null;
         let showAnnotationListener: EventListener | null = null;
+        let applyPresentationLoadListener: EventListener | null = null;
 
         setLoading(true);
         setError(null);
@@ -215,9 +243,13 @@ export function useReaderView(
 
                 const response = await fetch(fileHref);
                 if (!response.ok) {
-                    throw new Error(
-                        `Failed to fetch book: ${response.statusText}`,
-                    );
+                    throw new ApiHttpError(fileHref, response.status, {
+                        code:
+                            response.status === 404
+                                ? 'book_file_unavailable'
+                                : undefined,
+                        apiMessage: response.statusText.trim() || undefined,
+                    });
                 }
 
                 if (cancelled) {
@@ -365,13 +397,28 @@ export function useReaderView(
 
                 view.addEventListener('create-overlay', createOverlayListener);
 
+                applyPresentationLoadListener = (() => {
+                    applyReaderPresentation(
+                        view,
+                        fontSizePtRef.current,
+                        lineSpacingRef.current,
+                        readerPresentationRef.current,
+                    );
+                }) as EventListener;
+                view.addEventListener('load', applyPresentationLoadListener);
+
                 container.appendChild(view);
                 currentView = view;
                 viewRef.current = view;
 
                 await view.open(file);
                 setToc(resolveTocEntries(view));
-                applyReaderPresentation(view, fontSizeRef.current);
+                applyReaderPresentation(
+                    view,
+                    fontSizePtRef.current,
+                    lineSpacingRef.current,
+                    readerPresentationRef.current,
+                );
 
                 const hasAnnotationTarget =
                     highlightIndex !== null || bookmarkIndex !== null;
@@ -466,8 +513,8 @@ export function useReaderView(
                 if (!cancelled) {
                     setError(
                         err instanceof Error
-                            ? err.message
-                            : 'Failed to load book',
+                            ? err
+                            : new Error('Failed to load book'),
                     );
                     setLoading(false);
                 }
@@ -485,15 +532,22 @@ export function useReaderView(
                     showAnnotationListener,
                 );
             }
+            if (applyPresentationLoadListener && currentView) {
+                currentView.removeEventListener(
+                    'load',
+                    applyPresentationLoadListener,
+                );
+            }
             if (currentView === viewRef.current) {
                 closeReaderView();
             }
         };
     }, [
         closeReaderView,
+        detailError,
         bookmarks,
         bookmarkIndex,
-        detailQuery.isError,
+        detailIsError,
         fileHref,
         hasItem,
         highlightIndex,
@@ -507,7 +561,7 @@ export function useReaderView(
         viewRef,
     ]);
 
-    const title = item?.title ?? translation.get('reader-loading');
+    const title = item?.title ?? translation.get('reader-title');
     const chapterLabel = location?.tocItem?.label ?? '';
     const chapterHref = location?.tocItem?.href ?? null;
     const currentSectionIndex =

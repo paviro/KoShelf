@@ -2,14 +2,15 @@ import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { translation } from '../../../shared/i18n';
 import type { LibraryAnnotation } from '../../library/api/library-data';
+import { useLibraryDetailQuery } from '../../library/hooks/useLibraryQueries';
 import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
-import { ReaderErrorState } from '../components/ReaderErrorState';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
-import { useReaderFontSize } from '../hooks/useReaderFontSize';
+import { useReaderStyle } from '../hooks/useReaderStyle';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
 import { useReaderThemeObserver } from '../hooks/useReaderThemeObserver';
@@ -27,11 +28,27 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     const [location, setLocation] = useState<ReaderLocation | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
 
+    const detailQuery = useLibraryDetailQuery(collection, id);
+    const readerPresentation = detailQuery.data?.item.reader_presentation;
+
     const {
         fontSize,
-        increase: increaseFontSize,
-        decrease: decreaseFontSize,
-    } = useReaderFontSize(id);
+        lineSpacing,
+        wordSpacing,
+        leftMargin,
+        rightMargin,
+        topMargin,
+        bottomMargin,
+        hyphenation,
+        floatingPunctuation,
+        embeddedFonts,
+        effectivePresentation,
+        resetToBookDefaults,
+        resetToKoShelfDefaults,
+        hasBookOverrides,
+        hasKoShelfOverrides,
+        hasDistinctBookDefaults,
+    } = useReaderStyle(id, readerPresentation);
     const scrubber = useReaderScrubber(viewRef);
 
     const {
@@ -58,11 +75,23 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         setLocation,
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
-        fontSize,
+        {
+            data: detailQuery.data,
+            error: detailQuery.error,
+            isError: detailQuery.isError,
+        },
+        fontSize.value,
+        lineSpacing.value,
+        effectivePresentation,
     );
 
     useReaderKeyboardNav(handlePrev, handleNext);
-    useReaderThemeObserver(viewRef, fontSize);
+    useReaderThemeObserver(
+        viewRef,
+        fontSize.value,
+        lineSpacing.value,
+        effectivePresentation,
+    );
 
     const handleTocSelect = useCallback(
         (href: string) => {
@@ -89,6 +118,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
 
     const displayFraction = scrubber.dragFraction ?? location?.fraction ?? 0;
     const progressPercent = Math.round(displayFraction * 100);
+    const hasError = error !== null;
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-dark-925">
@@ -97,8 +127,21 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
-                onFontDecrease={decreaseFontSize}
-                onFontIncrease={increaseFontSize}
+                fontSize={fontSize}
+                lineSpacing={lineSpacing}
+                wordSpacing={wordSpacing}
+                leftMargin={leftMargin}
+                rightMargin={rightMargin}
+                topMargin={topMargin}
+                bottomMargin={bottomMargin}
+                hyphenation={hyphenation}
+                floatingPunctuation={floatingPunctuation}
+                embeddedFonts={embeddedFonts}
+                onResetBookDefaults={resetToBookDefaults}
+                canResetBookDefaults={hasBookOverrides}
+                onResetKoShelfDefaults={resetToKoShelfDefaults}
+                canResetKoShelfDefaults={hasKoShelfOverrides}
+                hasDistinctBookDefaults={hasDistinctBookDefaults}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 
@@ -112,18 +155,16 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                     </div>
                 )}
 
-                {error && (
-                    <ReaderErrorState
-                        error={error}
-                        backHref={backHref}
-                        onBackClick={handleBackClick}
-                    />
-                )}
+                {hasError && <PageErrorState error={error} layout="overlay" />}
 
                 <div
                     ref={containerRef}
-                    className="w-full h-full bg-white dark:bg-dark-925"
-                    style={{ visibility: loading ? 'hidden' : 'visible' }}
+                    className="w-full bg-white dark:bg-dark-925"
+                    style={{
+                        height: `max(0px, calc(100% - ${topMargin.value}px - ${bottomMargin.value}px))`,
+                        marginTop: `${topMargin.value}px`,
+                        visibility: loading ? 'hidden' : 'visible',
+                    }}
                 />
 
                 <ReaderNotePopover
@@ -133,30 +174,34 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 />
             </main>
 
-            <ReaderScrubber
-                trackRef={scrubber.trackRef}
-                dragging={scrubber.dragging}
-                progressPercent={progressPercent}
-                onPrev={handlePrev}
-                onNext={handleNext}
-                onScrubStart={scrubber.handleScrubStart}
-                onScrubMove={scrubber.handleScrubMove}
-                onScrubEnd={scrubber.handleScrubEnd}
-            />
+            {!hasError && (
+                <ReaderScrubber
+                    trackRef={scrubber.trackRef}
+                    dragging={scrubber.dragging}
+                    progressPercent={progressPercent}
+                    onPrev={handlePrev}
+                    onNext={handleNext}
+                    onScrubStart={scrubber.handleScrubStart}
+                    onScrubMove={scrubber.handleScrubMove}
+                    onScrubEnd={scrubber.handleScrubEnd}
+                />
+            )}
 
-            <ReaderDrawerPanel
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                toc={toc}
-                highlights={highlights}
-                bookmarks={bookmarks}
-                currentChapter={chapterLabel}
-                currentChapterHref={chapterHref}
-                currentSectionIndex={currentSectionIndex}
-                onTocSelect={handleTocSelect}
-                onHighlightSelect={handleAnnotationSelect}
-                onBookmarkSelect={handleAnnotationSelect}
-            />
+            {!hasError && (
+                <ReaderDrawerPanel
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    toc={toc}
+                    highlights={highlights}
+                    bookmarks={bookmarks}
+                    currentChapter={chapterLabel}
+                    currentChapterHref={chapterHref}
+                    currentSectionIndex={currentSectionIndex}
+                    onTocSelect={handleTocSelect}
+                    onHighlightSelect={handleAnnotationSelect}
+                    onBookmarkSelect={handleAnnotationSelect}
+                />
+            )}
         </div>
     );
 }

@@ -54,7 +54,7 @@ impl LibraryRepository {
                 language, publisher, description, review_note,
                 {pages_expr} as pages,
                 search_base_path, subjects_json, identifiers_json,
-                partial_md5_checksum
+                partial_md5_checksum, reader_presentation
              FROM library_items WHERE id = ?1"
         );
 

@@ -5,6 +5,7 @@ export type {
     LibrarySeries,
     LibraryListItem,
     LibraryDetailItem,
+    LibraryReaderPresentation,
     LibraryAnnotation,
     LibraryCompletions,
     LibraryCompletionEntry,

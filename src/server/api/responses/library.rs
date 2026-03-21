@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
+use crate::shelf::models::ReaderPresentation as LibraryReaderPresentation;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
@@ -89,6 +91,8 @@ pub struct LibraryDetailItem {
     pub subjects: Json<Vec<String>>,
     #[sqlx(rename = "identifiers_json")]
     pub identifiers: Json<Vec<ExternalIdentifier>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reader_presentation: Option<Json<LibraryReaderPresentation>>,
     /// Used internally for statistics lookup; not exposed in API responses.
     #[serde(skip)]
     pub partial_md5_checksum: Option<String>,

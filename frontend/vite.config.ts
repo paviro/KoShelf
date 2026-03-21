@@ -33,9 +33,16 @@ export default defineConfig(({ mode }) => {
                     entryFileNames: 'core/js/[name]-[hash].js',
                     chunkFileNames: 'core/js/[name]-[hash].js',
                     assetFileNames: (assetInfo) => {
-                        if (assetInfo.name?.endsWith('.css')) {
+                        const assetName = assetInfo.name ?? '';
+
+                        if (assetName.endsWith('.css')) {
                             return 'core/css/[name]-[hash][extname]';
                         }
+
+                        if (/\.(woff2?|ttf|otf|eot)$/i.test(assetName)) {
+                            return 'core/fonts/[name]-[hash][extname]';
+                        }
+
                         return 'core/[name]-[hash][extname]';
                     },
                 },
