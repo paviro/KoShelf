@@ -129,7 +129,7 @@ export function ReaderHighlightList({
                 variant="highlights"
                 title={translation.get('reader-no-highlights')}
                 description={translation.get(
-                    'reader-no-highlights-description',
+                    'reader-no-highlights.description',
                 )}
             />
         );

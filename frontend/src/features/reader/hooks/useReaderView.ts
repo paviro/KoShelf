@@ -561,7 +561,7 @@ export function useReaderView(
         viewRef,
     ]);
 
-    const title = item?.title ?? translation.get('reader-title');
+    const title = item?.title ?? translation.get('reader.title');
     const chapterLabel = location?.tocItem?.label ?? '';
     const chapterHref = location?.tocItem?.href ?? null;
     const currentSectionIndex =

@@ -165,7 +165,7 @@ export function ReaderTocList({
                 icon={LuFileText}
                 variant="contents"
                 title={translation.get('reader-no-toc')}
-                description={translation.get('reader-no-toc-description')}
+                description={translation.get('reader-no-toc.description')}
             />
         );
     }

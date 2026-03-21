@@ -125,7 +125,7 @@ export function ReaderBookmarkList({
                 icon={BsBookmarkFill}
                 variant="bookmarks"
                 title={translation.get('reader-no-bookmarks')}
-                description={translation.get('reader-no-bookmarks-description')}
+                description={translation.get('reader-no-bookmarks.description')}
             />
         );
     }

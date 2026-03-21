@@ -190,7 +190,7 @@ export function SettingsRoute() {
                     <SettingsField
                         label={translation.get('theme-setting')}
                         htmlFor="settings-theme-preference"
-                        hints={[translation.get('theme-setting-description')]}
+                        hints={[translation.get('theme-setting.description')]}
                     >
                         <SettingsSelect
                             id="settings-theme-preference"
@@ -203,13 +203,13 @@ export function SettingsRoute() {
                             }}
                         >
                             <option value="auto">
-                                {translation.get('theme-option-auto')}
+                                {translation.get('theme-setting.option-auto')}
                             </option>
                             <option value="light">
-                                {translation.get('theme-option-light')}
+                                {translation.get('theme-setting.option-light')}
                             </option>
                             <option value="dark">
-                                {translation.get('theme-option-dark')}
+                                {translation.get('theme-setting.option-dark')}
                             </option>
                         </SettingsSelect>
                     </SettingsField>
@@ -223,8 +223,8 @@ export function SettingsRoute() {
                         label={translation.get('prefetch-setting')}
                         htmlFor="settings-prefetch-on-intent"
                         hints={[
-                            translation.get('prefetch-setting-description'),
-                            translation.get('prefetch-setting-connection-note'),
+                            translation.get('prefetch-setting.description'),
+                            translation.get('prefetch-setting.connection-note'),
                         ]}
                     >
                         <SettingsSelect
@@ -240,10 +240,14 @@ export function SettingsRoute() {
                             }}
                         >
                             <option value="enabled">
-                                {translation.get('prefetch-option-enabled')}
+                                {translation.get(
+                                    'prefetch-setting.option-enabled',
+                                )}
                             </option>
                             <option value="disabled">
-                                {translation.get('prefetch-option-disabled')}
+                                {translation.get(
+                                    'prefetch-setting.option-disabled',
+                                )}
                             </option>
                         </SettingsSelect>
                     </SettingsField>
@@ -256,7 +260,7 @@ export function SettingsRoute() {
                     <SettingsField
                         label={translation.get('language')}
                         htmlFor="settings-language"
-                        hints={[translation.get('language-setting-hint')]}
+                        hints={[translation.get('language-setting.hint')]}
                     >
                         <SettingsSelect
                             id="settings-language"
@@ -299,7 +303,7 @@ export function SettingsRoute() {
                     <SettingsField
                         label={translation.get('region-setting')}
                         htmlFor="settings-region"
-                        hints={[translation.get('region-setting-hint')]}
+                        hints={[translation.get('region-setting.hint')]}
                     >
                         <SettingsSelect
                             id="settings-region"
@@ -314,7 +318,7 @@ export function SettingsRoute() {
                                 <>
                                     <optgroup
                                         label={translation.get(
-                                            'region-setting-majority-group',
+                                            'region-setting.majority-group',
                                         )}
                                     >
                                         {likelyRegionOptions.map((option) => (
@@ -329,7 +333,7 @@ export function SettingsRoute() {
                                     {otherRegionOptions.length > 0 ? (
                                         <optgroup
                                             label={translation.get(
-                                                'region-setting-all-group',
+                                                'region-setting.all-group',
                                             )}
                                         >
                                             {otherRegionOptions.map(
@@ -361,7 +365,7 @@ export function SettingsRoute() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                             <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
-                                {translation.get('preview-date')}
+                                {translation.get('region-setting.preview-date')}
                             </p>
                             <p className="text-sm md:text-base text-gray-900 dark:text-white">
                                 {localePreview}
@@ -369,7 +373,9 @@ export function SettingsRoute() {
                         </div>
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
                             <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
-                                {translation.get('preview-number')}
+                                {translation.get(
+                                    'region-setting.preview-number',
+                                )}
                             </p>
                             <p className="text-sm md:text-base tabular-nums text-gray-900 dark:text-white">
                                 {numberPreview}
@@ -381,7 +387,7 @@ export function SettingsRoute() {
                 {authEnabled ? (
                     <SettingsSection
                         accentClass="bg-linear-to-b from-rose-400 to-red-600"
-                        title={translation.get('password-setting')}
+                        title={translation.get('change-password.setting')}
                     >
                         <PasswordChangeSection
                             minPasswordChars={
@@ -394,7 +400,7 @@ export function SettingsRoute() {
                 {authEnabled ? (
                     <SettingsSection
                         accentClass="bg-linear-to-b from-sky-400 to-blue-600"
-                        title={translation.get('sessions-setting')}
+                        title={translation.get('session-management.setting')}
                     >
                         <SessionManagementSection locale={currentUiLocale} />
                     </SettingsSection>

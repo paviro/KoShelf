@@ -525,14 +525,14 @@ export function ReaderSettingsPanel({
     const displayBottomMargin = formatPixelSettingValue(bottomMargin.value);
 
     const readerModeOptions: readonly ReaderChoiceOption<ReaderModeValue>[] = [
-        { value: 'auto', label: translation.get('reader-mode-auto') },
-        { value: 'on', label: translation.get('reader-mode-on') },
-        { value: 'off', label: translation.get('reader-mode-off') },
+        { value: 'auto', label: translation.get('reader-mode.auto') },
+        { value: 'on', label: translation.get('reader-mode.on') },
+        { value: 'off', label: translation.get('reader-mode.off') },
     ];
 
     const embeddedFontOptions: readonly ReaderChoiceOption<boolean>[] = [
-        { value: true, label: translation.get('reader-mode-on') },
-        { value: false, label: translation.get('reader-mode-off') },
+        { value: true, label: translation.get('reader-mode.on') },
+        { value: false, label: translation.get('reader-mode.off') },
     ];
 
     const marginSettings = [
@@ -541,10 +541,10 @@ export function ReaderSettingsPanel({
             label: translation.get('reader-left-margin'),
             value: displayLeftMargin,
             decreaseAriaLabel: translation.get(
-                'reader-left-margin-decrease-aria',
+                'reader-left-margin.decrease-aria',
             ),
             increaseAriaLabel: translation.get(
-                'reader-left-margin-increase-aria',
+                'reader-left-margin.increase-aria',
             ),
             control: leftMargin,
         },
@@ -553,10 +553,10 @@ export function ReaderSettingsPanel({
             label: translation.get('reader-right-margin'),
             value: displayRightMargin,
             decreaseAriaLabel: translation.get(
-                'reader-right-margin-decrease-aria',
+                'reader-right-margin.decrease-aria',
             ),
             increaseAriaLabel: translation.get(
-                'reader-right-margin-increase-aria',
+                'reader-right-margin.increase-aria',
             ),
             control: rightMargin,
         },
@@ -565,10 +565,10 @@ export function ReaderSettingsPanel({
             label: translation.get('reader-top-margin'),
             value: displayTopMargin,
             decreaseAriaLabel: translation.get(
-                'reader-top-margin-decrease-aria',
+                'reader-top-margin.decrease-aria',
             ),
             increaseAriaLabel: translation.get(
-                'reader-top-margin-increase-aria',
+                'reader-top-margin.increase-aria',
             ),
             control: topMargin,
         },
@@ -577,10 +577,10 @@ export function ReaderSettingsPanel({
             label: translation.get('reader-bottom-margin'),
             value: displayBottomMargin,
             decreaseAriaLabel: translation.get(
-                'reader-bottom-margin-decrease-aria',
+                'reader-bottom-margin.decrease-aria',
             ),
             increaseAriaLabel: translation.get(
-                'reader-bottom-margin-increase-aria',
+                'reader-bottom-margin.increase-aria',
             ),
             control: bottomMargin,
         },
@@ -609,7 +609,7 @@ export function ReaderSettingsPanel({
                         ? 'bg-gray-200/60 dark:bg-dark-700/60 border-gray-300/80 dark:border-dark-600/70 text-gray-900 dark:text-white'
                         : ''
                 }`}
-                aria-label={translation.get('reader-settings-aria')}
+                aria-label={translation.get('reader-settings.aria-label')}
                 aria-expanded={open}
                 aria-haspopup="dialog"
                 aria-controls={open ? panelId : undefined}
@@ -625,7 +625,9 @@ export function ReaderSettingsPanel({
                         className="fixed w-80 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto bg-white/95 dark:bg-dark-900/88 backdrop-blur-xs border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl p-4 z-[100]"
                         style={{ top: position.top, right: position.right }}
                         role="dialog"
-                        aria-label={translation.get('reader-settings-aria')}
+                        aria-label={translation.get(
+                            'reader-settings.aria-label',
+                        )}
                     >
                         <div className="space-y-2">
                             <ReaderSettingControl
@@ -638,10 +640,10 @@ export function ReaderSettingsPanel({
                                 label={translation.get('reader-font-size')}
                                 value={displayFontSize}
                                 decreaseAriaLabel={translation.get(
-                                    'reader-font-size-decrease-aria',
+                                    'reader-font-size.decrease-aria',
                                 )}
                                 increaseAriaLabel={translation.get(
-                                    'reader-font-size-increase-aria',
+                                    'reader-font-size.increase-aria',
                                 )}
                                 control={fontSize}
                             />
@@ -650,7 +652,7 @@ export function ReaderSettingsPanel({
 
                             <ReaderSettingsSection
                                 title={translation.get(
-                                    'reader-section-typography',
+                                    'reader-settings.typography',
                                 )}
                                 hasOverrides={hasTypographyOverrides}
                             >
@@ -666,10 +668,10 @@ export function ReaderSettingsPanel({
                                     )}
                                     value={displayLineSpacing}
                                     decreaseAriaLabel={translation.get(
-                                        'reader-line-spacing-decrease-aria',
+                                        'reader-line-spacing.decrease-aria',
                                     )}
                                     increaseAriaLabel={translation.get(
-                                        'reader-line-spacing-increase-aria',
+                                        'reader-line-spacing.increase-aria',
                                     )}
                                     control={lineSpacing}
                                     formatForEdit={formatLineSpacingForEdit}
@@ -688,10 +690,10 @@ export function ReaderSettingsPanel({
                                     )}
                                     value={displayWordSpacing}
                                     decreaseAriaLabel={translation.get(
-                                        'reader-word-spacing-decrease-aria',
+                                        'reader-word-spacing.decrease-aria',
                                     )}
                                     increaseAriaLabel={translation.get(
-                                        'reader-word-spacing-increase-aria',
+                                        'reader-word-spacing.increase-aria',
                                     )}
                                     control={wordSpacing}
                                 />
@@ -751,7 +753,7 @@ export function ReaderSettingsPanel({
 
                             <ReaderSettingsSection
                                 title={translation.get(
-                                    'reader-section-margins',
+                                    'reader-settings.margins',
                                 )}
                                 hasOverrides={hasMarginOverrides}
                             >
@@ -781,10 +783,10 @@ export function ReaderSettingsPanel({
                                         disabled={!canResetBookDefaults}
                                         className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
                                         aria-label={translation.get(
-                                            'reader-reset-book-aria',
+                                            'reader-reset.book-aria',
                                         )}
                                     >
-                                        {translation.get('reader-reset-book')}
+                                        {translation.get('reader-reset.book')}
                                     </button>
                                 )}
                                 <button
@@ -793,10 +795,10 @@ export function ReaderSettingsPanel({
                                     disabled={!canResetKoShelfDefaults}
                                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
                                     aria-label={translation.get(
-                                        'reader-reset-defaults-aria',
+                                        'reader-reset.defaults-aria',
                                     )}
                                 >
-                                    {translation.get('reader-reset-defaults')}
+                                    {translation.get('reader-reset.defaults')}
                                 </button>
                             </div>
                         </div>

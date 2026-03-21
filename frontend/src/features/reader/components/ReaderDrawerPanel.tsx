@@ -44,7 +44,7 @@ export function ReaderDrawerPanel({
     const tabs: TabbedDrawerTab<DrawerTab>[] = [
         {
             id: 'contents',
-            label: translation.get('reader-contents'),
+            label: translation.get('reader.contents'),
             content: (
                 <ReaderTocList
                     toc={toc}
@@ -85,8 +85,8 @@ export function ReaderDrawerPanel({
         <TabbedDrawer
             open={open}
             onClose={onClose}
-            ariaLabel={translation.get('reader-drawer-aria')}
-            tabListAriaLabel={translation.get('reader-drawer-aria')}
+            ariaLabel={translation.get('reader-drawer.aria-label')}
+            tabListAriaLabel={translation.get('reader-drawer.aria-label')}
             tabs={tabs}
             activeTab={activeTab}
             onTabChange={setActiveTab}

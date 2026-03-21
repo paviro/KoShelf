@@ -106,7 +106,11 @@ export function SessionManagementSection({
 
     const handleRevokeSession = useCallback(
         async (sessionId: string) => {
-            if (!window.confirm(translation.get('revoke-session-confirm'))) {
+            if (
+                !window.confirm(
+                    translation.get('session-management.revoke-confirm'),
+                )
+            ) {
                 return;
             }
 
@@ -117,7 +121,7 @@ export function SessionManagementSection({
                 await api.revokeSession(sessionId);
                 setFeedback({
                     type: 'success',
-                    message: translation.get('session-revoked'),
+                    message: translation.get('session-management.revoked'),
                 });
                 void sessionsQuery.refetch();
             } catch (error) {
@@ -170,7 +174,7 @@ export function SessionManagementSection({
 
             {sessionsQuery.isLoading ? (
                 <p className="text-sm text-gray-500 dark:text-dark-400">
-                    {translation.get('current-session')}...
+                    {translation.get('session-management.current')}...
                 </p>
             ) : null}
 
@@ -196,7 +200,7 @@ export function SessionManagementSection({
                                     <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                                             {translation.get(
-                                                'session-device-info',
+                                                'session-management.device-info',
                                                 {
                                                     browser: session.browser,
                                                     os: session.os,
@@ -205,13 +209,17 @@ export function SessionManagementSection({
                                         </p>
                                         {session.is_current ? (
                                             <span className="text-xs font-medium px-2 py-0.5 rounded-full border border-primary-300/70 dark:border-primary-600/70 text-primary-700 dark:text-primary-300 bg-primary-100/80 dark:bg-primary-900/40">
-                                                {translation.get('this-device')}
+                                                {translation.get(
+                                                    'session-management.this-device',
+                                                )}
                                             </span>
                                         ) : null}
                                     </div>
                                     <p className="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
                                         {session.last_seen_ip ?? '--'} ·{' '}
-                                        {translation.get('last-active')}{' '}
+                                        {translation.get(
+                                            'session-management.last-active',
+                                        )}{' '}
                                         {formatRelativeTimeFromNow(
                                             session.last_seen_at,
                                             locale,
@@ -226,7 +234,9 @@ export function SessionManagementSection({
                                         disabled={logoutPending}
                                         onClick={() => void handleLogout()}
                                     >
-                                        {translation.get('logout')}
+                                        {translation.get(
+                                            'session-management.logout',
+                                        )}
                                     </button>
                                 ) : (
                                     <button
@@ -237,7 +247,9 @@ export function SessionManagementSection({
                                             void handleRevokeSession(session.id)
                                         }
                                     >
-                                        {translation.get('revoke-session')}
+                                        {translation.get(
+                                            'session-management.revoke',
+                                        )}
                                     </button>
                                 )}
                             </div>

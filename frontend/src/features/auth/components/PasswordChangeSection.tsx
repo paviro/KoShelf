@@ -31,7 +31,7 @@ function resolvePasswordChangeError(
         error.status === 400 &&
         error.code === 'invalid_credentials'
     ) {
-        return translation.get('incorrect-password');
+        return translation.get('change-password.incorrect');
     }
 
     if (
@@ -39,7 +39,7 @@ function resolvePasswordChangeError(
         error.status === 400 &&
         error.code === 'password_too_short'
     ) {
-        return translation.get('password-too-short', {
+        return translation.get('change-password.too-short', {
             min: minPasswordCharsFromDetails(error.details, fallbackMinChars),
         });
     }
@@ -76,7 +76,7 @@ export function PasswordChangeSection({
             if (newPassword.length < effectiveMinChars) {
                 setFeedback({
                     type: 'error',
-                    message: translation.get('password-too-short', {
+                    message: translation.get('change-password.too-short', {
                         min: effectiveMinChars,
                     }),
                 });
@@ -86,7 +86,7 @@ export function PasswordChangeSection({
             if (newPassword !== confirmPassword) {
                 setFeedback({
                     type: 'error',
-                    message: translation.get('password-mismatch'),
+                    message: translation.get('change-password.mismatch'),
                 });
                 return;
             }
@@ -101,7 +101,7 @@ export function PasswordChangeSection({
                 setConfirmPassword('');
                 setFeedback({
                     type: 'success',
-                    message: translation.get('password-changed'),
+                    message: translation.get('change-password.changed'),
                 });
                 void queryClient.invalidateQueries({
                     queryKey: ['auth', 'sessions'],
@@ -131,7 +131,7 @@ export function PasswordChangeSection({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <SettingsField
-                label={translation.get('current-password')}
+                label={translation.get('change-password.current')}
                 htmlFor="settings-current-password"
                 wide
             >
@@ -140,7 +140,7 @@ export function PasswordChangeSection({
                     type="password"
                     autoComplete="current-password"
                     placeholder={translation.get(
-                        'current-password-placeholder',
+                        'change-password.current-placeholder',
                     )}
                     value={currentPassword}
                     onChange={(event) => {
@@ -152,16 +152,18 @@ export function PasswordChangeSection({
             </SettingsField>
 
             <SettingsField
-                label={translation.get('new-password')}
+                label={translation.get('change-password.new')}
                 htmlFor="settings-new-password"
-                hints={[translation.get('new-password-hint')]}
+                hints={[translation.get('change-password.new-hint')]}
                 wide
             >
                 <SettingsInput
                     id="settings-new-password"
                     type="password"
                     autoComplete="new-password"
-                    placeholder={translation.get('new-password-placeholder')}
+                    placeholder={translation.get(
+                        'change-password.new-placeholder',
+                    )}
                     value={newPassword}
                     onChange={(event) => {
                         setNewPassword(event.target.value);
@@ -172,7 +174,7 @@ export function PasswordChangeSection({
             </SettingsField>
 
             <SettingsField
-                label={translation.get('confirm-password')}
+                label={translation.get('change-password.confirm')}
                 htmlFor="settings-confirm-password"
                 wide
             >
@@ -181,7 +183,7 @@ export function PasswordChangeSection({
                     type="password"
                     autoComplete="new-password"
                     placeholder={translation.get(
-                        'confirm-password-placeholder',
+                        'change-password.confirm-placeholder',
                     )}
                     value={confirmPassword}
                     onChange={(event) => {

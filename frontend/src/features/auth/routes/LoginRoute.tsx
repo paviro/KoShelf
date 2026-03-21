@@ -21,11 +21,11 @@ function resolveLoginErrorMessage(error: unknown): string {
     }
 
     if (error.status === 429) {
-        return translation.get('login-rate-limited');
+        return translation.get('login.rate-limited');
     }
 
     if (error.status === 401) {
-        return translation.get('login-error');
+        return translation.get('login.error');
     }
 
     return error.apiMessage ?? translation.get('error-state.title');
@@ -43,7 +43,7 @@ export function LoginRoute({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitPending, setSubmitPending] = useState(false);
     const BrandIcon = BRAND_ICON;
-    const loginTitle = translation.get('login-title', { site: siteTitle });
+    const loginTitle = translation.get('login.title', { site: siteTitle });
 
     useEffect(() => {
         document.title = loginTitle;

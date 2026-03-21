@@ -96,8 +96,10 @@ export function LibraryDetailHeader({
                     {readerHref && (
                         <Link
                             to={readerHref}
-                            title={translation.get('open-reader-aria')}
-                            aria-label={translation.get('open-reader-aria')}
+                            title={translation.get('open-in-reader.aria-label')}
+                            aria-label={translation.get(
+                                'open-in-reader.aria-label',
+                            )}
                             className="flex items-center justify-center gap-1.5 h-10 px-3 md:px-4 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs text-sm font-medium text-gray-600 dark:text-gray-300"
                         >
                             <LuBookOpen
