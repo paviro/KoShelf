@@ -9,8 +9,7 @@ import { ReaderDrawerPanel } from '../components/ReaderDrawerPanel';
 import { ReaderHeader } from '../components/ReaderHeader';
 import { ReaderNotePopover } from '../components/ReaderNotePopover';
 import { ReaderScrubber } from '../components/ReaderScrubber';
-import { useReaderFontSize } from '../hooks/useReaderFontSize';
-import { useReaderLineSpacing } from '../hooks/useReaderLineSpacing';
+import { useReaderStyle } from '../hooks/useReaderStyle';
 import { useReaderKeyboardNav } from '../hooks/useReaderKeyboardNav';
 import { useReaderScrubber } from '../hooks/useReaderScrubber';
 import { useReaderThemeObserver } from '../hooks/useReaderThemeObserver';
@@ -28,16 +27,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
     const [location, setLocation] = useState<ReaderLocation | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const {
-        fontSize,
-        increase: increaseFontSize,
-        decrease: decreaseFontSize,
-    } = useReaderFontSize(id);
-    const {
-        lineSpacing,
-        increase: increaseLineSpacing,
-        decrease: decreaseLineSpacing,
-    } = useReaderLineSpacing(id);
+    const { fontSize, lineSpacing } = useReaderStyle(id);
     const scrubber = useReaderScrubber(viewRef);
 
     const {
@@ -64,12 +54,12 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         setLocation,
         scrubber.scrubSettlingRef,
         scrubber.setDragFraction,
-        fontSize,
-        lineSpacing,
+        fontSize.value,
+        lineSpacing.value,
     );
 
     useReaderKeyboardNav(handlePrev, handleNext);
-    useReaderThemeObserver(viewRef, fontSize, lineSpacing);
+    useReaderThemeObserver(viewRef, fontSize.value, lineSpacing.value);
 
     const handleTocSelect = useCallback(
         (href: string) => {
@@ -105,12 +95,12 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
                 chapterLabel={chapterLabel}
                 backHref={backHref}
                 onBackClick={handleBackClick}
-                fontSize={fontSize}
-                onFontDecrease={decreaseFontSize}
-                onFontIncrease={increaseFontSize}
-                lineSpacing={lineSpacing}
-                onLineSpacingDecrease={decreaseLineSpacing}
-                onLineSpacingIncrease={increaseLineSpacing}
+                fontSize={fontSize.value}
+                onFontDecrease={fontSize.decrease}
+                onFontIncrease={fontSize.increase}
+                lineSpacing={lineSpacing.value}
+                onLineSpacingDecrease={lineSpacing.decrease}
+                onLineSpacingIncrease={lineSpacing.increase}
                 onDrawerOpen={() => setDrawerOpen(true)}
             />
 
