@@ -93,7 +93,6 @@ impl LuaParser {
             h_page_margins: self.get_optional_u32_pair(table, "copt_h_page_margins")?,
             t_page_margin: self.get_optional_u32(table, "copt_t_page_margin")?,
             b_page_margin: self.get_optional_u32(table, "copt_b_page_margin")?,
-            embedded_css: self.get_optional_bool_or_flag(table, "copt_embedded_css")?,
             embedded_fonts: self.get_optional_bool_or_flag(table, "copt_embedded_fonts")?,
             hyphenation: self.get_optional_bool_or_flag(table, "hyphenation")?,
             floating_punctuation: self.get_optional_bool_or_flag(table, "floating_punctuation")?,

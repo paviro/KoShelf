@@ -251,7 +251,6 @@ export interface LibraryReaderPresentation {
     h_page_margins?: [number, number] | null;
     t_page_margin?: number | null;
     b_page_margin?: number | null;
-    embedded_css?: boolean | null;
     embedded_fonts?: boolean | null;
     hyphenation?: boolean | null;
     floating_punctuation?: boolean | null;

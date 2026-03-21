@@ -15,8 +15,6 @@ pub struct ReaderPresentation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub b_page_margin: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub embedded_css: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub embedded_fonts: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hyphenation: Option<bool>,
@@ -34,7 +32,6 @@ impl ReaderPresentation {
             && self.h_page_margins.is_none()
             && self.t_page_margin.is_none()
             && self.b_page_margin.is_none()
-            && self.embedded_css.is_none()
             && self.embedded_fonts.is_none()
             && self.hyphenation.is_none()
             && self.floating_punctuation.is_none()

@@ -122,7 +122,6 @@ fn test_parse_koreader_generated_metadata() {
     assert_eq!(presentation.h_page_margins, Some([30, 30]));
     assert_eq!(presentation.t_page_margin, Some(30));
     assert_eq!(presentation.b_page_margin, Some(15));
-    assert_eq!(presentation.embedded_css, Some(true));
     assert_eq!(presentation.embedded_fonts, Some(false));
     assert_eq!(presentation.hyphenation, Some(true));
     assert_eq!(presentation.floating_punctuation, Some(false));
