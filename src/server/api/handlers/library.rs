@@ -138,13 +138,18 @@ impl WriteContext {
         })
     }
 
-    /// Refresh the DB fingerprint and publish an SSE notification.
+    /// Mark the path as recently written, refresh the DB fingerprint, and
+    /// publish an SSE notification.
     ///
     /// Must be called while the write lock is still held (i.e. before this
     /// struct is dropped). Errors are logged but not propagated — the Lua
     /// write already succeeded; the worst case is the next write gets a 409
     /// that self-heals on re-ingestion.
     async fn finish(&self, state: &ServerState) {
+        // Tell the file watcher to ignore the filesystem event we just caused.
+        if let Some(ref coordinator) = state.write_coordinator {
+            coordinator.mark_written(&self.metadata_path);
+        }
         match FileFingerprint::capture(&self.metadata_path) {
             Ok(fp) => {
                 if let Err(e) = state

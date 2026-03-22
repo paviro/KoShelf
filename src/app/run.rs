@@ -482,19 +482,20 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
 
     let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
+    let write_coordinator = if args.enable_writeback {
+        Some(WriteCoordinator::new())
+    } else {
+        None
+    };
+
     let file_watcher = FileWatcher::new(
         state.config,
         Some(site_store.clone()),
         Some(reading_data_store.clone()),
         Some(update_notifier.clone()),
         Some(state.repo.clone()),
+        write_coordinator.as_ref().map(|wc| wc.recent_writes()),
     );
-
-    let write_coordinator = if args.enable_writeback {
-        Some(WriteCoordinator::new())
-    } else {
-        None
-    };
 
     let web_server = WebServer::new(WebServerOptions {
         media_cache_dir: output_dir,
@@ -564,7 +565,7 @@ async fn run_export(args: ExportArgs) -> Result<()> {
 
     if args.watch {
         info!("Watching library changes to refresh static shell/assets and /data export.");
-        let file_watcher = FileWatcher::new(state.config, None, None, None, Some(state.repo));
+        let file_watcher = FileWatcher::new(state.config, None, None, None, Some(state.repo), None);
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);
         }

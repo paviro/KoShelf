@@ -1,5 +1,6 @@
 use crate::app::config::SiteConfig;
 use crate::pipeline::rebuild::targeted_rebuild;
+use crate::server::RecentWrites;
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::MetadataLocation;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
@@ -27,6 +28,7 @@ pub struct FileWatcher {
     reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<UpdateNotifier>,
     library_repo: Option<LibraryRepository>,
+    recent_writes: Option<RecentWrites>,
 }
 
 impl Deref for FileWatcher {
@@ -43,6 +45,7 @@ impl FileWatcher {
         reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<UpdateNotifier>,
         library_repo: Option<LibraryRepository>,
+        recent_writes: Option<RecentWrites>,
     ) -> Self {
         Self {
             config,
@@ -50,6 +53,7 @@ impl FileWatcher {
             reading_data_store,
             update_notifier,
             library_repo,
+            recent_writes,
         }
     }
 
@@ -158,11 +162,15 @@ impl FileWatcher {
         // Main file event processing loop
         while let Some(event) = file_rx.recv().await {
             if self.is_relevant_event(&event) {
-                self.log_file_event(&event);
+                // Filter out paths recently written by our own write handlers.
+                let paths = self.filter_recent_writes(event.paths);
+                if paths.is_empty() {
+                    continue;
+                }
 
-                let rebuild_event = WatcherRebuildEvent { paths: event.paths };
+                Self::log_paths(&paths, &event.kind, self.statistics_db_path.as_deref());
 
-                let _ = rebuild_tx.send(rebuild_event);
+                let _ = rebuild_tx.send(WatcherRebuildEvent { paths });
             }
         }
 
@@ -218,10 +226,33 @@ impl FileWatcher {
         })
     }
 
-    fn log_file_event(&self, event: &Event) {
-        for path in &event.paths {
+    /// Remove paths that were recently written by a write handler.
+    fn filter_recent_writes(&self, paths: Vec<PathBuf>) -> Vec<PathBuf> {
+        let Some(ref recent) = self.recent_writes else {
+            return paths;
+        };
+
+        paths
+            .into_iter()
+            .filter(|p| {
+                if recent.remove(p).is_some() {
+                    debug!("Suppressing self-triggered event for {:?}", p);
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect()
+    }
+
+    fn log_paths(
+        paths: &[PathBuf],
+        kind: &EventKind,
+        statistics_db_path: Option<&std::path::Path>,
+    ) {
+        for path in paths {
             let filename = path.file_name().and_then(|s| s.to_str());
-            let action = match &event.kind {
+            let action = match kind {
                 EventKind::Create(_) | EventKind::Modify(_) => "modified",
                 EventKind::Remove(_) => "removed",
                 _ => continue,
@@ -243,7 +274,7 @@ impl FileWatcher {
                 info!("KoReader metadata directory {}: {:?}", action, path);
             }
 
-            if let Some(ref stats_path) = self.statistics_db_path
+            if let Some(stats_path) = statistics_db_path
                 && path == stats_path
             {
                 info!("Statistics database {}: {:?}", action, path);
