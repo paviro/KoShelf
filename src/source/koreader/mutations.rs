@@ -10,6 +10,10 @@ use chrono::Local;
 use mlua::{Lua, Table, Value};
 use std::path::Path;
 
+// NOTE: `chrono::Local` is used only for `summary.modified` in item mutations.
+// Annotation `datetime_updated` is computed by the caller and passed in, so
+// the Lua file and DB always receive the same timestamp.
+
 // ── Public write operations ──────────────────────────────────────────────
 
 /// Write item-level field changes to a KoReader metadata sidecar file.
@@ -29,17 +33,28 @@ pub fn write_item_metadata(
 ///
 /// `lua_index` is the 0-based position from the database; this function
 /// converts to Lua's 1-based indexing internally.
+///
+/// `datetime_updated` is pre-computed by the caller so the Lua file and DB
+/// receive the same timestamp.
 pub fn write_annotation_metadata(
     metadata_path: &Path,
     lua_index: i32,
     note: Option<&str>,
     color: Option<&str>,
     drawer: Option<&str>,
+    datetime_updated: Option<&str>,
 ) -> Result<()> {
     let lua_array_index = (lua_index + 1) as i64;
     let writer = LuaWriter::new();
     writer.write(metadata_path, |_lua, table| {
-        apply_annotation_mutations(table, lua_array_index, note, color, drawer)
+        apply_annotation_mutations(
+            table,
+            lua_array_index,
+            note,
+            color,
+            drawer,
+            datetime_updated,
+        )
     })
 }
 
@@ -103,6 +118,7 @@ fn apply_annotation_mutations(
     note: Option<&str>,
     color: Option<&str>,
     drawer: Option<&str>,
+    datetime_updated: Option<&str>,
 ) -> mlua::Result<()> {
     let annotations: Table = table.get("annotations")?;
     let annotation: Table = match annotations.get::<Value>(lua_array_index)? {
@@ -127,12 +143,8 @@ fn apply_annotation_mutations(
         annotation.set("drawer", drawer)?;
     }
 
-    // Match KoReader's onAnnotationsModified(): stamp datetime_updated on modification.
-    if color.is_some() || drawer.is_some() {
-        annotation.set(
-            "datetime_updated",
-            Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-        )?;
+    if let Some(dt) = datetime_updated {
+        annotation.set("datetime_updated", dt)?;
     }
 
     Ok(())

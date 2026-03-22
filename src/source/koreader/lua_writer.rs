@@ -311,12 +311,11 @@ fn write_and_sync(path: &Path, content: &[u8], fsync_parent: bool) -> Result<()>
     file.sync_all()
         .with_context(|| format!("Failed to fsync {:?}", path))?;
 
-    if fsync_parent {
-        if let Some(parent) = path.parent() {
-            if let Ok(dir) = File::open(parent) {
-                let _ = dir.sync_all();
-            }
-        }
+    if fsync_parent
+        && let Some(parent) = path.parent()
+        && let Ok(dir) = File::open(parent)
+    {
+        let _ = dir.sync_all();
     }
 
     Ok(())

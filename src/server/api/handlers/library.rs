@@ -18,8 +18,7 @@ use chrono::{Local, Utc};
 use log::warn;
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::OwnedMutexGuard;
 
 pub(crate) async fn items(
     State(state): State<ServerState>,
@@ -72,107 +71,116 @@ pub struct UpdateAnnotationRequest {
     pub drawer: Option<String>,
 }
 
-/// Resolve the metadata sidecar path and its last-ingested fingerprint.
-async fn resolve_metadata(state: &ServerState, item_id: &str) -> ApiResult<(PathBuf, i64, i64)> {
-    let (path, size, modified) = state
-        .library_repo
-        .find_metadata_fingerprint_by_item_id(item_id)
-        .await
-        .map_err(|e| {
-            warn!("Failed to resolve metadata for {}: {}", item_id, e);
-            ApiResponseError::internal_server_error()
-        })?
-        .ok_or_else(ApiResponseError::not_found)?;
+// ── Write context ─────────────────────────────────────────────────────────
+//
+// Encapsulates the lock → verify → … → refresh → publish contract shared by
+// all write handlers.  Each handler validates input, then calls
+// `WriteContext::prepare` to acquire the per-file lock and verify the
+// fingerprint, performs its mutation + DB sync, and finally calls `finish`.
 
-    Ok((PathBuf::from(path), size, modified))
+/// Holds the per-file write lock and metadata path for the duration of a
+/// write operation.  The lock is released when this struct is dropped.
+struct WriteContext {
+    metadata_path: PathBuf,
+    item_id: String,
+    _guard: OwnedMutexGuard<()>,
 }
 
-/// Acquire a write lock, restoring the `.old` backup if the primary metadata
-/// file went missing (e.g. a previous write panicked after backup-rotate).
-async fn acquire_write_lock<'a>(
-    lock: &'a Arc<Mutex<()>>,
-    metadata_path: &std::path::Path,
-) -> MutexGuard<'a, ()> {
-    let guard = lock.lock().await;
+impl WriteContext {
+    /// Resolve metadata, acquire per-file lock, verify fingerprint.
+    async fn prepare(state: &ServerState, item_id: &str) -> ApiResult<Self> {
+        let coordinator = state
+            .write_coordinator
+            .as_ref()
+            .ok_or_else(ApiResponseError::not_found)?;
 
-    // Safety net: if a prior write panicked between backup-rotate and the
-    // final write, the primary file may be missing while the .old exists.
-    if !metadata_path.exists() {
-        let old_path = lua_writer::backup_path(metadata_path);
-        if old_path.exists() {
-            let _ = std::fs::rename(&old_path, metadata_path);
-            warn!("Restored backup for {:?}", metadata_path);
-        }
-    }
-
-    guard
-}
-
-/// Verify the on-disk metadata file matches the last-ingested fingerprint.
-///
-/// Must be called while holding the `WriteCoordinator` lock to prevent TOCTOU.
-/// Returns 409 Conflict if the file was modified externally (e.g. by KoReader).
-fn verify_fingerprint(
-    metadata_path: &std::path::Path,
-    db_size: i64,
-    db_modified: i64,
-) -> ApiResult<()> {
-    let disk = FileFingerprint::capture(metadata_path).map_err(|e| {
-        warn!("Failed to stat metadata file {:?}: {}", metadata_path, e);
-        ApiResponseError::internal_server_error()
-    })?;
-
-    if disk.size_bytes as i64 != db_size || disk.modified_unix_ms as i64 != db_modified {
-        return Err(ApiResponseError::conflict(
-            "metadata file was modified externally; re-fetch and retry",
-        ));
-    }
-
-    Ok(())
-}
-
-/// Capture the current on-disk fingerprint and update the DB.
-///
-/// Must be called while holding the write lock. Errors are logged but not
-/// propagated — the Lua write already succeeded; the worst case is the next
-/// write gets a 409 that self-heals on re-ingestion.
-async fn refresh_fingerprint(state: &ServerState, item_id: &str, metadata_path: &std::path::Path) {
-    match FileFingerprint::capture(metadata_path) {
-        Ok(fp) => {
-            if let Err(e) = state
+        let (metadata_path, db_size, db_modified) = {
+            let (path, size, modified) = state
                 .library_repo
-                .update_metadata_fingerprint(
-                    item_id,
-                    fp.size_bytes as i64,
-                    fp.modified_unix_ms as i64,
-                )
+                .find_metadata_fingerprint_by_item_id(item_id)
                 .await
-            {
+                .map_err(|e| {
+                    warn!("Failed to resolve metadata for {}: {}", item_id, e);
+                    ApiResponseError::internal_server_error()
+                })?
+                .ok_or_else(ApiResponseError::not_found)?;
+            (PathBuf::from(path), size, modified)
+        };
+
+        let lock = coordinator.lock_for(&metadata_path);
+        let guard = lock.lock_owned().await;
+
+        // Safety net: if a prior write panicked between backup-rotate and the
+        // final write, the primary file may be missing while the .old exists.
+        if !metadata_path.exists() {
+            let old_path = lua_writer::backup_path(&metadata_path);
+            if old_path.exists() {
+                let _ = std::fs::rename(&old_path, &metadata_path);
+                warn!("Restored backup for {:?}", metadata_path);
+            }
+        }
+
+        let disk = FileFingerprint::capture(&metadata_path).map_err(|e| {
+            warn!("Failed to stat metadata file {:?}: {}", metadata_path, e);
+            ApiResponseError::internal_server_error()
+        })?;
+
+        if disk.size_bytes as i64 != db_size || disk.modified_unix_ms as i64 != db_modified {
+            return Err(ApiResponseError::conflict(
+                "metadata file was modified externally; re-fetch and retry",
+            ));
+        }
+
+        Ok(Self {
+            metadata_path,
+            item_id: item_id.to_string(),
+            _guard: guard,
+        })
+    }
+
+    /// Refresh the DB fingerprint and publish an SSE notification.
+    ///
+    /// Must be called while the write lock is still held (i.e. before this
+    /// struct is dropped). Errors are logged but not propagated — the Lua
+    /// write already succeeded; the worst case is the next write gets a 409
+    /// that self-heals on re-ingestion.
+    async fn finish(&self, state: &ServerState) {
+        match FileFingerprint::capture(&self.metadata_path) {
+            Ok(fp) => {
+                if let Err(e) = state
+                    .library_repo
+                    .update_metadata_fingerprint(
+                        &self.item_id,
+                        fp.size_bytes as i64,
+                        fp.modified_unix_ms as i64,
+                    )
+                    .await
+                {
+                    warn!(
+                        "Failed to update fingerprint after write for {}: {}",
+                        self.item_id, e
+                    );
+                }
+            }
+            Err(e) => {
                 warn!(
-                    "Failed to update fingerprint after write for {}: {}",
-                    item_id, e
+                    "Failed to capture fingerprint after write for {}: {}",
+                    self.item_id, e
                 );
             }
         }
-        Err(e) => {
-            warn!(
-                "Failed to capture fingerprint after write for {}: {}",
-                item_id, e
-            );
-        }
+
+        state.update_notifier.publish(Utc::now().to_rfc3339());
     }
 }
+
+// ── Write handlers ────────────────────────────────────────────────────────
 
 pub(crate) async fn update_item(
     State(state): State<ServerState>,
     Path(id): Path<String>,
     Json(body): Json<UpdateItemRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let coordinator = state
-        .write_coordinator
-        .as_ref()
-        .ok_or_else(ApiResponseError::not_found)?;
-
     if let Some(rating) = body.rating
         && rating > 5
     {
@@ -191,14 +199,10 @@ pub(crate) async fn update_item(
         ));
     }
 
-    let (metadata_path, db_size, db_modified) = resolve_metadata(&state, &id).await?;
-    let lock = coordinator.lock_for(&metadata_path);
-    let _guard = acquire_write_lock(&lock, &metadata_path).await;
-
-    verify_fingerprint(&metadata_path, db_size, db_modified)?;
+    let ctx = WriteContext::prepare(&state, &id).await?;
 
     mutations::write_item_metadata(
-        &metadata_path,
+        &ctx.metadata_path,
         body.review_note.as_deref(),
         body.rating,
         body.status.as_deref(),
@@ -221,9 +225,7 @@ pub(crate) async fn update_item(
         warn!("Failed to update DB after item write {}: {}", id, e);
     }
 
-    refresh_fingerprint(&state, &id, &metadata_path).await;
-    state.update_notifier.publish(Utc::now().to_rfc3339());
-
+    ctx.finish(&state).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -232,11 +234,6 @@ pub(crate) async fn update_annotation(
     Path((id, annotation_id)): Path<(String, String)>,
     Json(body): Json<UpdateAnnotationRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let coordinator = state
-        .write_coordinator
-        .as_ref()
-        .ok_or_else(ApiResponseError::not_found)?;
-
     if let Some(ref color) = body.color
         && !matches!(
             color.as_str(),
@@ -271,18 +268,23 @@ pub(crate) async fn update_annotation(
         })?
         .ok_or_else(ApiResponseError::not_found)?;
 
-    let (metadata_path, db_size, db_modified) = resolve_metadata(&state, &id).await?;
-    let lock = coordinator.lock_for(&metadata_path);
-    let _guard = acquire_write_lock(&lock, &metadata_path).await;
+    // Compute datetime_updated once so the Lua file and DB receive the same
+    // timestamp (previously this was computed in two separate Local::now() calls).
+    let datetime_updated = if body.color.is_some() || body.drawer.is_some() {
+        Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+    } else {
+        None
+    };
 
-    verify_fingerprint(&metadata_path, db_size, db_modified)?;
+    let ctx = WriteContext::prepare(&state, &id).await?;
 
     mutations::write_annotation_metadata(
-        &metadata_path,
+        &ctx.metadata_path,
         lua_index,
         body.note.as_deref(),
         body.color.as_deref(),
         body.drawer.as_deref(),
+        datetime_updated.as_deref(),
     )
     .map_err(|e| {
         warn!(
@@ -291,12 +293,6 @@ pub(crate) async fn update_annotation(
         );
         ApiResponseError::internal_server_error()
     })?;
-
-    let datetime_updated = if body.color.is_some() || body.drawer.is_some() {
-        Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
-    } else {
-        None
-    };
 
     if let Err(e) = state
         .library_repo
@@ -315,9 +311,7 @@ pub(crate) async fn update_annotation(
         );
     }
 
-    refresh_fingerprint(&state, &id, &metadata_path).await;
-    state.update_notifier.publish(Utc::now().to_rfc3339());
-
+    ctx.finish(&state).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -325,11 +319,6 @@ pub(crate) async fn delete_annotation(
     State(state): State<ServerState>,
     Path((id, annotation_id)): Path<(String, String)>,
 ) -> ApiResult<impl IntoResponse> {
-    let coordinator = state
-        .write_coordinator
-        .as_ref()
-        .ok_or_else(ApiResponseError::not_found)?;
-
     let (lua_index, annotation_kind) = state
         .library_repo
         .find_annotation_index_and_kind(&id, &annotation_id)
@@ -342,13 +331,9 @@ pub(crate) async fn delete_annotation(
 
     let is_highlight = annotation_kind == "highlight";
 
-    let (metadata_path, db_size, db_modified) = resolve_metadata(&state, &id).await?;
-    let lock = coordinator.lock_for(&metadata_path);
-    let _guard = acquire_write_lock(&lock, &metadata_path).await;
+    let ctx = WriteContext::prepare(&state, &id).await?;
 
-    verify_fingerprint(&metadata_path, db_size, db_modified)?;
-
-    mutations::delete_annotation(&metadata_path, lua_index, is_highlight).map_err(|e| {
+    mutations::delete_annotation(&ctx.metadata_path, lua_index, is_highlight).map_err(|e| {
         warn!(
             "Failed to delete annotation {} for item {}: {}",
             annotation_id, id, e
@@ -378,8 +363,6 @@ pub(crate) async fn delete_annotation(
         warn!("Failed to decrement annotation count for {}: {}", id, e);
     }
 
-    refresh_fingerprint(&state, &id, &metadata_path).await;
-    state.update_notifier.publish(Utc::now().to_rfc3339());
-
+    ctx.finish(&state).await;
     Ok(StatusCode::NO_CONTENT)
 }
