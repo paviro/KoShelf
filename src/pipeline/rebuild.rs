@@ -191,8 +191,9 @@ pub async fn targeted_rebuild(
         Err(e) => warn!("Failed to query content type flags: {}", e),
     }
 
-    // ── 6. SSE broadcast ─────────────────────────────────────────────
-    let published_revision = if let Some(notifier) = update_notifier {
+    // ── 6. SSE broadcast (only when something actually changed) ────
+    let data_changed = ingest_stats.upserted > 0 || deleted_count > 0 || stats_reloaded;
+    let published_revision = if data_changed && let Some(notifier) = update_notifier {
         let update = notifier.publish(generated_at.clone());
         info!("Published data_changed event, revision {}", update.revision);
         Some(update.revision)

@@ -14,7 +14,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use chrono::Local;
+use chrono::{Local, Utc};
 use log::warn;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -222,6 +222,7 @@ pub(crate) async fn update_item(
     }
 
     refresh_fingerprint(&state, &id, &metadata_path).await;
+    state.update_notifier.publish(Utc::now().to_rfc3339());
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -315,6 +316,7 @@ pub(crate) async fn update_annotation(
     }
 
     refresh_fingerprint(&state, &id, &metadata_path).await;
+    state.update_notifier.publish(Utc::now().to_rfc3339());
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -377,6 +379,7 @@ pub(crate) async fn delete_annotation(
     }
 
     refresh_fingerprint(&state, &id, &metadata_path).await;
+    state.update_notifier.publish(Utc::now().to_rfc3339());
 
     Ok(StatusCode::NO_CONTENT)
 }
