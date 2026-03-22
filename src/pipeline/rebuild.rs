@@ -10,6 +10,7 @@ use crate::pipeline::ingest::{ingest_paths, load_reading_data};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
+use crate::source::FileFingerprint;
 use crate::source::scanner::{MetadataLocation, collect_paths};
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
@@ -68,13 +69,27 @@ pub async fn targeted_rebuild(
                     derive_book_path_from_metadata_path(path, &config.metadata_location, repo).await
                     && book_path.exists()
                 {
-                    parse_paths.insert(book_path);
+                    if metadata_fingerprint_matches_db(&book_path, repo).await {
+                        debug!(
+                            "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
+                            path
+                        );
+                    } else {
+                        parse_paths.insert(book_path);
+                    }
                 }
             } else if filename.ends_with(".sdr")
                 && let Some(book_path) = derive_book_path_from_sdr_path(path)
                 && book_path.exists()
             {
-                parse_paths.insert(book_path);
+                if metadata_fingerprint_matches_db(&book_path, repo).await {
+                    debug!(
+                        "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
+                        path
+                    );
+                } else {
+                    parse_paths.insert(book_path);
+                }
             }
         }
     }
@@ -342,6 +357,36 @@ pub async fn full_rebuild(
         stats_reloaded: reading_data.is_some(),
         published_revision,
     })
+}
+
+// ── Fingerprint helpers ──────────────────────────────────────────────────
+
+/// Check whether the on-disk metadata fingerprint matches what's stored in the DB.
+///
+/// Returns `true` when the fingerprints match, indicating the change was already
+/// processed by a write handler and re-ingestion can be skipped.
+async fn metadata_fingerprint_matches_db(book_path: &Path, repo: &LibraryRepository) -> bool {
+    let book_str = book_path.to_string_lossy();
+    let stored = match repo.find_fingerprint_by_book_path(&book_str).await {
+        Ok(Some(fp)) => fp,
+        _ => return false,
+    };
+
+    let (meta_path, stored_size, stored_modified) = match (
+        &stored.metadata_path,
+        stored.metadata_size_bytes,
+        stored.metadata_modified_unix_ms,
+    ) {
+        (Some(p), Some(s), Some(m)) => (p.clone(), s, m),
+        _ => return false,
+    };
+
+    let disk = match FileFingerprint::capture(Path::new(&meta_path)) {
+        Ok(fp) => fp,
+        Err(_) => return false,
+    };
+
+    disk.size_bytes as i64 == stored_size && disk.modified_unix_ms as i64 == stored_modified
 }
 
 // ── Path derivation helpers ──────────────────────────────────────────────

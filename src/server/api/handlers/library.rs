@@ -14,6 +14,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use chrono::Local;
 use log::warn;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -130,6 +131,38 @@ fn verify_fingerprint(
     Ok(())
 }
 
+/// Capture the current on-disk fingerprint and update the DB.
+///
+/// Must be called while holding the write lock. Errors are logged but not
+/// propagated — the Lua write already succeeded; the worst case is the next
+/// write gets a 409 that self-heals on re-ingestion.
+async fn refresh_fingerprint(state: &ServerState, item_id: &str, metadata_path: &std::path::Path) {
+    match FileFingerprint::capture(metadata_path) {
+        Ok(fp) => {
+            if let Err(e) = state
+                .library_repo
+                .update_metadata_fingerprint(
+                    item_id,
+                    fp.size_bytes as i64,
+                    fp.modified_unix_ms as i64,
+                )
+                .await
+            {
+                warn!(
+                    "Failed to update fingerprint after write for {}: {}",
+                    item_id, e
+                );
+            }
+        }
+        Err(e) => {
+            warn!(
+                "Failed to capture fingerprint after write for {}: {}",
+                item_id, e
+            );
+        }
+    }
+}
+
 pub(crate) async fn update_item(
     State(state): State<ServerState>,
     Path(id): Path<String>,
@@ -140,22 +173,22 @@ pub(crate) async fn update_item(
         .as_ref()
         .ok_or_else(ApiResponseError::not_found)?;
 
-    if let Some(rating) = body.rating {
-        if rating > 5 {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "rating must be between 0 and 5 (0 clears the rating)",
-            ));
-        }
+    if let Some(rating) = body.rating
+        && rating > 5
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "rating must be between 0 and 5 (0 clears the rating)",
+        ));
     }
 
-    if let Some(ref status) = body.status {
-        if !matches!(status.as_str(), "reading" | "complete" | "abandoned") {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "status must be one of: reading, complete, abandoned",
-            ));
-        }
+    if let Some(ref status) = body.status
+        && !matches!(status.as_str(), "reading" | "complete" | "abandoned")
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "status must be one of: reading, complete, abandoned",
+        ));
     }
 
     let (metadata_path, db_size, db_modified) = resolve_metadata(&state, &id).await?;
@@ -175,6 +208,21 @@ pub(crate) async fn update_item(
         ApiResponseError::internal_server_error()
     })?;
 
+    if let Err(e) = state
+        .library_repo
+        .update_item_writeback_fields(
+            &id,
+            body.review_note.as_deref(),
+            body.rating,
+            body.status.as_deref(),
+        )
+        .await
+    {
+        warn!("Failed to update DB after item write {}: {}", id, e);
+    }
+
+    refresh_fingerprint(&state, &id, &metadata_path).await;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -188,28 +236,28 @@ pub(crate) async fn update_annotation(
         .as_ref()
         .ok_or_else(ApiResponseError::not_found)?;
 
-    if let Some(ref color) = body.color {
-        if !matches!(
+    if let Some(ref color) = body.color
+        && !matches!(
             color.as_str(),
             "red" | "orange" | "yellow" | "green" | "olive" | "cyan" | "blue" | "purple" | "gray"
-        ) {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "color must be one of: red, orange, yellow, green, olive, cyan, blue, purple, gray",
-            ));
-        }
+        )
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "color must be one of: red, orange, yellow, green, olive, cyan, blue, purple, gray",
+        ));
     }
 
-    if let Some(ref drawer) = body.drawer {
-        if !matches!(
+    if let Some(ref drawer) = body.drawer
+        && !matches!(
             drawer.as_str(),
             "lighten" | "underscore" | "strikeout" | "invert"
-        ) {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "drawer must be one of: lighten, underscore, strikeout, invert",
-            ));
-        }
+        )
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "drawer must be one of: lighten, underscore, strikeout, invert",
+        ));
     }
 
     let lua_index = state
@@ -242,6 +290,31 @@ pub(crate) async fn update_annotation(
         );
         ApiResponseError::internal_server_error()
     })?;
+
+    let datetime_updated = if body.color.is_some() || body.drawer.is_some() {
+        Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+    } else {
+        None
+    };
+
+    if let Err(e) = state
+        .library_repo
+        .update_annotation_writeback_fields(
+            &annotation_id,
+            body.note.as_deref(),
+            body.color.as_deref(),
+            body.drawer.as_deref(),
+            datetime_updated.as_deref(),
+        )
+        .await
+    {
+        warn!(
+            "Failed to update DB after annotation write {}: {}",
+            annotation_id, e
+        );
+    }
+
+    refresh_fingerprint(&state, &id, &metadata_path).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -294,6 +367,16 @@ pub(crate) async fn delete_annotation(
             );
             ApiResponseError::internal_server_error()
         })?;
+
+    if let Err(e) = state
+        .library_repo
+        .decrement_annotation_count(&id, is_highlight)
+        .await
+    {
+        warn!("Failed to decrement annotation count for {}: {}", id, e);
+    }
+
+    refresh_fingerprint(&state, &id, &metadata_path).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

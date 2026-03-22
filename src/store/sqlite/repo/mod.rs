@@ -25,6 +25,11 @@ impl LibraryRepository {
             use_stable_page_metadata,
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn pool(&self) -> &SqlitePool {
+        &self.pool
+    }
 }
 
 #[cfg(test)]
