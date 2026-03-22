@@ -150,6 +150,11 @@ pub fn merge_serve_with_file_config(
         {
             args.enable_auth = v;
         }
+        if let Some(v) = srv.enable_writeback
+            && not_explicit(matches, "enable_writeback")
+        {
+            args.enable_writeback = v;
+        }
         if let Some(ref values) = srv.trusted_proxies
             && not_explicit(matches, "trusted_proxies")
             && !values.is_empty()

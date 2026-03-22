@@ -115,12 +115,13 @@ impl LibraryRepository {
         for a in annotations {
             sqlx::query(
                 "INSERT INTO library_annotations
-                    (item_id, annotation_kind, ordinal, chapter, datetime, pageno, text, note, pos0, pos1, color, drawer)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                    (id, item_id, annotation_kind, lua_index, chapter, datetime, pageno, text, note, pos0, pos1, color, drawer)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             )
+            .bind(&a.id)
             .bind(&a.item_id)
             .bind(&a.annotation_kind)
-            .bind(a.ordinal)
+            .bind(a.lua_index)
             .bind(&a.chapter)
             .bind(&a.datetime)
             .bind(a.pageno)

@@ -4,6 +4,7 @@ export interface SiteCapabilities {
     has_reading_data: boolean;
     has_files?: boolean;
     auth_enabled: boolean;
+    has_writeback?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -257,6 +258,7 @@ export interface LibraryReaderPresentation {
 }
 
 export interface LibraryAnnotation {
+    id: string;
     chapter?: string | null;
     datetime?: string | null;
     pageno?: number | null;

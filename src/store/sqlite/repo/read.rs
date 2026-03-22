@@ -74,10 +74,10 @@ impl LibraryRepository {
         kind: Option<&str>,
     ) -> Result<Vec<LibraryAnnotation>> {
         sqlx::query_as::<_, LibraryAnnotation>(
-            "SELECT chapter, datetime, pageno, text, note, pos0, pos1, color, drawer
+            "SELECT id, chapter, datetime, pageno, text, note, pos0, pos1, color, drawer
              FROM library_annotations
              WHERE item_id = ?1 AND (?2 IS NULL OR annotation_kind = ?2)
-             ORDER BY ordinal ASC",
+             ORDER BY lua_index ASC",
         )
         .bind(item_id)
         .bind(kind)
@@ -217,6 +217,47 @@ impl LibraryRepository {
             .await
             .context("Failed to count items")?;
         Ok(row.0)
+    }
+
+    /// Find the lua_index for an annotation by its UUID, scoped to a specific item.
+    ///
+    /// Used by write handlers to resolve a frontend-facing annotation ID
+    /// to the internal Lua array position for metadata file writes.
+    /// The `item_id` check prevents cross-item annotation references.
+    pub async fn find_lua_index_by_annotation_id(
+        &self,
+        item_id: &str,
+        annotation_id: &str,
+    ) -> Result<Option<i32>> {
+        let row: Option<(i32,)> = sqlx::query_as(
+            "SELECT lua_index FROM library_annotations WHERE id = ?1 AND item_id = ?2",
+        )
+        .bind(annotation_id)
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find lua_index by annotation id")?;
+        Ok(row.map(|r| r.0))
+    }
+
+    /// Find the metadata sidecar path and fingerprint for an item.
+    ///
+    /// Returns `(metadata_path, metadata_size_bytes, metadata_modified_unix_ms)`.
+    /// Returns `None` if the item has no metadata sidecar or fingerprint data.
+    pub async fn find_metadata_fingerprint_by_item_id(
+        &self,
+        item_id: &str,
+    ) -> Result<Option<(String, i64, i64)>> {
+        let row: Option<(Option<String>, Option<i64>, Option<i64>)> = sqlx::query_as(
+            "SELECT metadata_path, metadata_size_bytes, metadata_modified_unix_ms
+             FROM library_item_fingerprints WHERE item_id = ?1",
+        )
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find metadata fingerprint by item id")?;
+
+        Ok(row.and_then(|(path, size, modified)| Some((path?, size?, modified?))))
     }
 
     /// Find the file_path for an item by its canonical ID.

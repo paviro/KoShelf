@@ -2,9 +2,8 @@ mod events;
 mod library;
 mod reading;
 mod site;
-
 pub(crate) use events::events_stream;
-pub(crate) use library::{item_detail, items};
+pub(crate) use library::{item_detail, items, update_annotation, update_item};
 pub(crate) use reading::{
     reading_available_periods, reading_calendar, reading_completions, reading_metrics,
     reading_summary,

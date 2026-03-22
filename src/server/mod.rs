@@ -8,15 +8,42 @@ use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifi
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
 use axum::Router;
-use axum::routing::{delete, get, post, put};
+use axum::routing::{delete, get, patch, post, put};
+use dashmap::DashMap;
 use log::info;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
+
+/// Per-file mutex coordinator for serializing metadata writes.
+///
+/// One entry per distinct metadata file path is kept in the map for the
+/// lifetime of the server. This is bounded by the number of books in the
+/// library (typically hundreds to low thousands), so unbounded growth is
+/// not a practical concern.
+#[derive(Clone, Default)]
+pub struct WriteCoordinator {
+    locks: Arc<DashMap<PathBuf, Arc<Mutex<()>>>>,
+}
+
+impl WriteCoordinator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Acquire a lock for the given metadata file path.
+    pub fn lock_for(&self, path: &Path) -> Arc<Mutex<()>> {
+        self.locks
+            .entry(path.to_path_buf())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
+    }
+}
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -26,6 +53,7 @@ pub struct ServerState {
     pub library_repo: LibraryRepository,
     pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
+    pub write_coordinator: Option<WriteCoordinator>,
 }
 
 /// Axum-based HTTP server serving the API, embedded React frontend, and media assets.
@@ -38,6 +66,7 @@ pub struct WebServer {
     library_repo: LibraryRepository,
     koshelf_pool: SqlitePool,
     auth_state: Option<auth::AuthState>,
+    write_coordinator: Option<WriteCoordinator>,
 }
 
 pub struct WebServerOptions {
@@ -49,6 +78,7 @@ pub struct WebServerOptions {
     pub library_repo: LibraryRepository,
     pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
+    pub write_coordinator: Option<WriteCoordinator>,
 }
 
 impl WebServer {
@@ -62,6 +92,7 @@ impl WebServer {
             library_repo,
             koshelf_pool,
             auth_state,
+            write_coordinator,
         } = options;
 
         Self {
@@ -73,6 +104,7 @@ impl WebServer {
             library_repo,
             koshelf_pool,
             auth_state,
+            write_coordinator,
         }
     }
 
@@ -85,6 +117,7 @@ impl WebServer {
             library_repo: self.library_repo,
             koshelf_pool: self.koshelf_pool,
             auth_state: self.auth_state,
+            write_coordinator: self.write_coordinator,
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
         let files_cache_dir = self.media_cache_dir.join("files");
@@ -115,6 +148,17 @@ impl WebServer {
             app = app.merge(auth_routes);
         }
 
+        if state.write_coordinator.is_some() {
+            let write_routes = Router::new()
+                .route("/api/items/{id}", patch(api::handlers::update_item))
+                .route(
+                    "/api/items/{id}/annotations/{annotation_id}",
+                    patch(api::handlers::update_annotation),
+                )
+                .with_state(state.clone());
+            app = app.merge(write_routes);
+        }
+
         app = app.layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::middleware::auth_middleware,
@@ -141,6 +185,9 @@ impl WebServer {
 
         if state.auth_state.is_some() {
             info!("Authentication enabled");
+        }
+        if state.write_coordinator.is_some() {
+            info!("Metadata writeback enabled");
         }
 
         info!(

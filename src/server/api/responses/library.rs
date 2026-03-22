@@ -102,6 +102,7 @@ pub struct LibraryDetailItem {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryAnnotation {
+    pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chapter: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

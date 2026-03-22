@@ -104,19 +104,11 @@ pub fn map_annotations_to_rows(
     let annotations = item.annotations();
     let mut rows = Vec::with_capacity(annotations.len());
 
-    // Separate into highlights and bookmarks, preserving ordinal within each kind.
-    let mut highlight_ordinal: i32 = 0;
-    let mut bookmark_ordinal: i32 = 0;
-
-    for annotation in annotations {
-        let (kind, ordinal) = if annotation.is_highlight() {
-            let ord = highlight_ordinal;
-            highlight_ordinal += 1;
-            ("highlight", ord)
+    for (lua_index, annotation) in annotations.iter().enumerate() {
+        let kind = if annotation.is_highlight() {
+            "highlight"
         } else {
-            let ord = bookmark_ordinal;
-            bookmark_ordinal += 1;
-            ("bookmark", ord)
+            "bookmark"
         };
 
         let datetime = annotation
@@ -125,9 +117,10 @@ pub fn map_annotations_to_rows(
             .and_then(|v| time_config.normalize_naive_datetime_to_rfc3339(v));
 
         rows.push(AnnotationRow {
+            id: uuid::Uuid::new_v4().to_string(),
             item_id: item_id.to_string(),
             annotation_kind: kind.to_string(),
-            ordinal,
+            lua_index: lua_index as i32,
             chapter: annotation.chapter.clone(),
             datetime,
             pageno: annotation.pageno.map(|p| p as i32),

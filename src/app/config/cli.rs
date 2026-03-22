@@ -151,6 +151,10 @@ pub struct ServeArgs {
     #[arg(long, env = "KOSHELF_ENABLE_AUTH", default_value = "false")]
     pub enable_auth: bool,
 
+    /// Enable metadata writeback (allows editing KoReader metadata via API).
+    #[arg(long, env = "KOSHELF_ENABLE_WRITEBACK", default_value = "false")]
+    pub enable_writeback: bool,
+
     /// Trusted reverse proxy IPs/CIDRs allowed to provide Forwarded/X-Forwarded-* headers.
     /// Repeat the flag or pass comma-separated values.
     #[arg(long, env = "KOSHELF_TRUSTED_PROXIES", value_delimiter = ',', action = clap::ArgAction::Append)]
