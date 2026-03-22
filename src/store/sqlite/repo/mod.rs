@@ -88,6 +88,7 @@ pub(crate) mod tests {
             lua_index,
             chapter: Some("Chapter 1".to_string()),
             datetime: Some("2026-01-15T10:00:00Z".to_string()),
+            datetime_updated: None,
             pageno: Some(42),
             text: Some("highlighted text".to_string()),
             note: None,

@@ -48,6 +48,7 @@ pub struct AnnotationRow {
     pub lua_index: i32,
     pub chapter: Option<String>,
     pub datetime: Option<String>,
+    pub datetime_updated: Option<String>,
     pub pageno: Option<i32>,
     pub text: Option<String>,
     pub note: Option<String>,

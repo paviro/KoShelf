@@ -108,6 +108,8 @@ pub struct LibraryAnnotation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub datetime: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub datetime_updated: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pageno: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,

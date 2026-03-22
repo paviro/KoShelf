@@ -74,7 +74,7 @@ impl LibraryRepository {
         kind: Option<&str>,
     ) -> Result<Vec<LibraryAnnotation>> {
         sqlx::query_as::<_, LibraryAnnotation>(
-            "SELECT id, chapter, datetime, pageno, text, note, pos0, pos1, color, drawer
+            "SELECT id, chapter, datetime, datetime_updated, pageno, text, note, pos0, pos1, color, drawer
              FROM library_annotations
              WHERE item_id = ?1 AND (?2 IS NULL OR annotation_kind = ?2)
              ORDER BY lua_index ASC",
@@ -238,6 +238,52 @@ impl LibraryRepository {
         .await
         .context("Failed to find lua_index by annotation id")?;
         Ok(row.map(|r| r.0))
+    }
+
+    /// Find the lua_index and annotation_kind for an annotation by its ID.
+    pub async fn find_annotation_index_and_kind(
+        &self,
+        item_id: &str,
+        annotation_id: &str,
+    ) -> Result<Option<(i32, String)>> {
+        let row: Option<(i32, String)> = sqlx::query_as(
+            "SELECT lua_index, annotation_kind FROM library_annotations WHERE id = ?1 AND item_id = ?2",
+        )
+        .bind(annotation_id)
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find annotation index and kind")?;
+        Ok(row)
+    }
+
+    /// Delete an annotation row and shift lua_index for remaining annotations.
+    pub async fn delete_annotation_and_shift(
+        &self,
+        item_id: &str,
+        annotation_id: &str,
+        lua_index: i32,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await.context("begin tx")?;
+
+        sqlx::query("DELETE FROM library_annotations WHERE id = ?1 AND item_id = ?2")
+            .bind(annotation_id)
+            .bind(item_id)
+            .execute(&mut *tx)
+            .await
+            .context("delete annotation")?;
+
+        sqlx::query(
+            "UPDATE library_annotations SET lua_index = lua_index - 1 WHERE item_id = ?1 AND lua_index > ?2",
+        )
+        .bind(item_id)
+        .bind(lua_index)
+        .execute(&mut *tx)
+        .await
+        .context("shift lua_index after deletion")?;
+
+        tx.commit().await.context("commit annotation deletion")?;
+        Ok(())
     }
 
     /// Find the metadata sidecar path and fingerprint for an item.

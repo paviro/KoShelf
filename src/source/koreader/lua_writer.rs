@@ -35,7 +35,7 @@ impl Default for LuaWriter {
 impl LuaWriter {
     pub fn new() -> Self {
         Self {
-            lua: Lua::new_with(StdLib::NONE, LuaOptions::default())
+            lua: Lua::new_with(StdLib::TABLE, LuaOptions::default())
                 .expect("Failed to create sandboxed Lua state"),
         }
     }
@@ -113,7 +113,10 @@ fn write_value(
     seen: &mut HashSet<usize>,
 ) -> Result<()> {
     if depth > MAX_DEPTH {
-        return Err(anyhow!("Exceeded maximum serialization depth of {}", MAX_DEPTH));
+        return Err(anyhow!(
+            "Exceeded maximum serialization depth of {}",
+            MAX_DEPTH
+        ));
     }
 
     match value {
@@ -258,9 +261,7 @@ fn write_lua_escaped_chars(buf: &mut String, s: &str) {
 pub(crate) fn backup_path(path: &Path) -> std::path::PathBuf {
     path.with_extension(format!(
         "{}.old",
-        path.extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
+        path.extension().and_then(|e| e.to_str()).unwrap_or("")
     ))
 }
 
@@ -273,16 +274,13 @@ fn backup_rotate(path: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let metadata = fs::metadata(path)
-        .with_context(|| format!("Failed to stat {:?}", path))?;
+    let metadata = fs::metadata(path).with_context(|| format!("Failed to stat {:?}", path))?;
 
     let mtime = metadata
         .modified()
         .with_context(|| format!("Failed to read mtime of {:?}", path))?;
 
-    let age = SystemTime::now()
-        .duration_since(mtime)
-        .unwrap_or_default();
+    let age = SystemTime::now().duration_since(mtime).unwrap_or_default();
 
     if age.as_secs() < BACKUP_MIN_AGE_SECS {
         return Ok(false);
@@ -299,8 +297,7 @@ fn backup_rotate(path: &Path) -> Result<bool> {
 // ── Write + fsync ───────────────────────────────────────────────────────
 
 fn write_and_sync(path: &Path, content: &[u8], fsync_parent: bool) -> Result<()> {
-    let file = File::create(path)
-        .with_context(|| format!("Failed to create {:?}", path))?;
+    let file = File::create(path).with_context(|| format!("Failed to create {:?}", path))?;
 
     let mut writer = std::io::BufWriter::new(file);
     writer
@@ -333,8 +330,7 @@ mod tests {
     /// Fixture that mirrors the structure and formatting of a real KoReader
     /// `metadata.*.lua` sidecar file (as produced by KoReader's `dump.lua`),
     /// using entirely fictional data.
-    const KOREADER_FIXTURE: &str =
-        include_str!("test_fixtures/round_trip_sample.lua");
+    const KOREADER_FIXTURE: &str = include_str!("test_fixtures/round_trip_sample.lua");
 
     fn write_fixture(dir: &Path, content: &str) -> std::path::PathBuf {
         let path = dir.join("metadata.epub.lua");
@@ -351,7 +347,9 @@ mod tests {
         let path = write_fixture(tmp.path(), KOREADER_FIXTURE);
 
         let writer = LuaWriter::new();
-        writer.write(&path, |_, _| Ok(())).expect("write should succeed");
+        writer
+            .write(&path, |_, _| Ok(()))
+            .expect("write should succeed");
 
         let result = fs::read_to_string(&path).unwrap();
 
@@ -414,7 +412,9 @@ mod tests {
         );
 
         let writer = LuaWriter::new();
-        writer.write(&path, |_, _| Ok(())).expect("write should succeed");
+        writer
+            .write(&path, |_, _| Ok(()))
+            .expect("write should succeed");
 
         let content = fs::read_to_string(&path).unwrap();
         let alpha_pos = content.find("[\"alpha\"]").unwrap();
@@ -443,7 +443,9 @@ mod tests {
         );
 
         let writer = LuaWriter::new();
-        writer.write(&path, |_, _| Ok(())).expect("write should succeed");
+        writer
+            .write(&path, |_, _| Ok(()))
+            .expect("write should succeed");
 
         let content = fs::read_to_string(&path).unwrap();
         assert!(content.contains("[\"valid\"] = \"data\""));
@@ -480,10 +482,15 @@ mod tests {
 
         // File was just created — should not create .old
         let writer = LuaWriter::new();
-        writer.write(&path, |_, _| Ok(())).expect("write should succeed");
+        writer
+            .write(&path, |_, _| Ok(()))
+            .expect("write should succeed");
 
         let old_path = path.with_extension("lua.old");
-        assert!(!old_path.exists(), ".old should not be created for recent files");
+        assert!(
+            !old_path.exists(),
+            ".old should not be created for recent files"
+        );
     }
 
     #[test]
@@ -498,7 +505,9 @@ mod tests {
         );
 
         let writer = LuaWriter::new();
-        writer.write(&path, |_, _| Ok(())).expect("write should succeed");
+        writer
+            .write(&path, |_, _| Ok(()))
+            .expect("write should succeed");
 
         let content = fs::read_to_string(&path).unwrap();
         assert!(content.contains("[\"empty\"] = {}"));
@@ -507,6 +516,9 @@ mod tests {
     #[test]
     fn backup_path_appends_old_extension() {
         let p = std::path::Path::new("/tmp/metadata.epub.lua");
-        assert_eq!(backup_path(p), std::path::PathBuf::from("/tmp/metadata.epub.lua.old"));
+        assert_eq!(
+            backup_path(p),
+            std::path::PathBuf::from("/tmp/metadata.epub.lua.old")
+        );
     }
 }

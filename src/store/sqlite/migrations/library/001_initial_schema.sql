@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS library_annotations (
     lua_index INTEGER NOT NULL CHECK (lua_index >= 0),
     chapter TEXT,
     datetime TEXT,
+    datetime_updated TEXT,
     pageno INTEGER CHECK (pageno IS NULL OR pageno >= 0),
     text TEXT,
     note TEXT,

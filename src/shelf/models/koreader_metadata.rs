@@ -76,6 +76,7 @@ pub struct FlowPoint {
 pub struct Annotation {
     pub chapter: Option<String>,
     pub datetime: Option<String>,
+    pub datetime_updated: Option<String>,
     pub pageno: Option<u32>,
     pub pos0: Option<String>,
     pub pos1: Option<String>,

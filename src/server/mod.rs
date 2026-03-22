@@ -14,7 +14,8 @@ use log::info;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::services::ServeDir;
@@ -154,6 +155,10 @@ impl WebServer {
                 .route(
                     "/api/items/{id}/annotations/{annotation_id}",
                     patch(api::handlers::update_annotation),
+                )
+                .route(
+                    "/api/items/{id}/annotations/{annotation_id}",
+                    delete(api::handlers::delete_annotation),
                 )
                 .with_state(state.clone());
             app = app.merge(write_routes);

@@ -123,6 +123,7 @@ pub fn map_annotations_to_rows(
             lua_index: lua_index as i32,
             chapter: annotation.chapter.clone(),
             datetime,
+            datetime_updated: annotation.datetime_updated.clone(),
             pageno: annotation.pageno.map(|p| p as i32),
             text: annotation.text.clone(),
             note: annotation.note.clone(),

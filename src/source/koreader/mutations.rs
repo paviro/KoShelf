@@ -6,6 +6,7 @@
 
 use super::LuaWriter;
 use anyhow::Result;
+use chrono::Local;
 use mlua::{Lua, Table, Value};
 use std::path::Path;
 
@@ -39,6 +40,19 @@ pub fn write_annotation_metadata(
     let writer = LuaWriter::new();
     writer.write(metadata_path, |_lua, table| {
         apply_annotation_mutations(table, lua_array_index, note, color, drawer)
+    })
+}
+
+/// Delete an annotation from a KoReader metadata sidecar file.
+///
+/// `lua_index` is the 0-based position from the database.
+/// `is_highlight` indicates whether the deleted annotation is a highlight (true)
+/// or a bookmark (false), used to decrement the correct stats counter.
+pub fn delete_annotation(metadata_path: &Path, lua_index: i32, is_highlight: bool) -> Result<()> {
+    let lua_array_index = (lua_index + 1) as i64;
+    let writer = LuaWriter::new();
+    writer.write(metadata_path, |lua, table| {
+        apply_annotation_deletion(lua, table, lua_array_index, is_highlight)
     })
 }
 
@@ -77,6 +91,9 @@ fn apply_item_mutations(
         summary.set("status", status)?;
     }
 
+    // Match KoReader's filemanagerutil.saveSummary(): always stamp the modified date.
+    summary.set("modified", Local::now().format("%Y-%m-%d").to_string())?;
+
     Ok(())
 }
 
@@ -94,7 +111,7 @@ fn apply_annotation_mutations(
             return Err(mlua::Error::external(format!(
                 "no annotation at Lua index {}",
                 lua_array_index
-            )))
+            )));
         }
     };
 
@@ -108,6 +125,50 @@ fn apply_annotation_mutations(
 
     if let Some(drawer) = drawer {
         annotation.set("drawer", drawer)?;
+    }
+
+    // Match KoReader's onAnnotationsModified(): stamp datetime_updated on modification.
+    if color.is_some() || drawer.is_some() {
+        annotation.set(
+            "datetime_updated",
+            Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn apply_annotation_deletion(
+    lua: &Lua,
+    table: &Table,
+    lua_array_index: i64,
+    is_highlight: bool,
+) -> mlua::Result<()> {
+    let annotations: Table = table.get("annotations")?;
+
+    // Verify the annotation exists before removing.
+    match annotations.get::<Value>(lua_array_index)? {
+        Value::Table(_) => {}
+        _ => {
+            return Err(mlua::Error::external(format!(
+                "no annotation at Lua index {}",
+                lua_array_index
+            )));
+        }
+    }
+
+    // Use Lua's table.remove() which shifts subsequent elements down,
+    // matching KoReader's readerbookmark:removeItemByIndex().
+    let table_lib: Table = lua.globals().get("table")?;
+    let remove_fn: mlua::Function = table_lib.get("remove")?;
+    remove_fn.call::<Value>((annotations, lua_array_index))?;
+
+    // Decrement the stats counter matching KoReader's AnnotationsModified event.
+    if let Value::Table(stats) = table.get("stats")? {
+        let key = if is_highlight { "highlights" } else { "notes" };
+        if let Value::Integer(count) = stats.get(key)? {
+            stats.set(key, (count - 1).max(0))?;
+        }
     }
 
     Ok(())
