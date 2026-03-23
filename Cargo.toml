@@ -29,7 +29,7 @@ notify = "8.0.0"
 # Temporary directories
 tempfile = "3.20.0"
 # EPUB and .fb2.zip parsing
-zip = "8.1.0"
+zip = "8.4.0"
 # Image processing
 image = { version = "0.25.6", default-features = false, features = [
     "jpeg",
@@ -97,10 +97,10 @@ tikv-jemallocator = "0.6"
 unrar = "0.5"
 
 [build-dependencies]
-ureq = "3.1.4"
+ureq = "3.3.0"
 
 [dev-dependencies]
-ureq = { version = "3.1.4", features = ["json"] }
+ureq = { version = "3.3.0", features = ["json"] }
 rayon = "1.11.0"
 fluent-syntax = "0.12"
 
