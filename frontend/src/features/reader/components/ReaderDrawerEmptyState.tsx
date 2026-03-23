@@ -51,7 +51,7 @@ export function ReaderDrawerEmptyState({
                 <p className="text-[0.95rem] font-semibold text-gray-900 dark:text-white">
                     {title}
                 </p>
-                <p className="mt-1.5 text-sm leading-snug text-gray-500 dark:text-dark-300">
+                <p className="mt-1.5 text-sm font-medium leading-snug text-gray-500 dark:text-dark-300">
                     {description}
                 </p>
             </div>

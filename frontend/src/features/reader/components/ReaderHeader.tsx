@@ -44,7 +44,7 @@ export function ReaderHeader({
                         {title}
                     </h1>
                     {chapterLabel && (
-                        <p className="text-xs text-gray-500 dark:text-dark-300 truncate">
+                        <p className="text-sm font-medium text-gray-500 dark:text-dark-300 truncate">
                             {chapterLabel}
                         </p>
                     )}

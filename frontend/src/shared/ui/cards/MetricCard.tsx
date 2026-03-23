@@ -41,7 +41,7 @@ export function MetricCard({
                         >
                             {value}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                             {label}
                         </div>
                     </div>
@@ -68,7 +68,7 @@ export function MetricCard({
                     >
                         {value}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-dark-400">
+                    <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                         {label}
                     </div>
                 </div>

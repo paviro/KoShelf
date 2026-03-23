@@ -15,7 +15,7 @@ function ToggleButton({ visible, onClick }: ToggleButtonProps) {
             onClick={onClick}
             className="flex items-center justify-center sm:space-x-2 w-10 sm:w-auto sm:px-3 h-10 bg-gray-100/50 dark:bg-dark-800/50 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs"
         >
-            <span className="hidden sm:inline text-sm text-gray-600 dark:text-dark-300">
+            <span className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-dark-300">
                 {visible
                     ? translation.get('toggle.hide')
                     : translation.get('toggle.show')}

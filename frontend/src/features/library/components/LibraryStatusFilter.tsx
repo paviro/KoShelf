@@ -85,9 +85,9 @@ export function LibraryStatusFilter({
                         <button
                             key={option}
                             type="button"
-                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base transition-colors duration-200 whitespace-nowrap ${hasSeparator ? 'border-b border-gray-200/30 dark:border-dark-700/30' : ''} ${
+                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base font-medium transition-colors duration-200 whitespace-nowrap ${hasSeparator ? 'border-b border-gray-200/30 dark:border-dark-700/30' : ''} ${
                                 active
-                                    ? 'text-primary-700 dark:text-primary-300 font-medium'
+                                    ? 'text-primary-700 dark:text-primary-300'
                                     : 'text-gray-700 dark:text-dark-200'
                             }`}
                             onClick={() => {

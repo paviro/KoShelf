@@ -41,7 +41,7 @@ export function LibraryAdditionalInfoSection({
                                 <div className="text-lg font-bold text-gray-900 dark:text-white">
                                     {publisher}
                                 </div>
-                                <div className="text-sm text-gray-500 dark:text-dark-400">
+                                <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                                     {translation.get('publisher')}
                                 </div>
                             </div>

@@ -188,7 +188,7 @@ export function YearlyStatsSection({
 
                     <div
                         id="yearlyStatsEmptyState"
-                        className={`${availableYears.length === 0 ? '' : 'hidden'} rounded-lg border border-dashed border-gray-300/80 dark:border-dark-700 p-8 text-center text-sm text-gray-500 dark:text-dark-300`}
+                        className={`${availableYears.length === 0 ? '' : 'hidden'} rounded-lg border border-dashed border-gray-300/80 dark:border-dark-700 p-8 text-center text-sm font-medium text-gray-500 dark:text-dark-300`}
                     >
                         {translation.get('stats-empty.nothing-here')}
                     </div>

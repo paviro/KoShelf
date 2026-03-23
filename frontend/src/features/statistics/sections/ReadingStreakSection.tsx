@@ -83,7 +83,7 @@ export function ReadingStreakSection({
                                         <div className="text-xs md:text-sm lg:text-base xl:text-base font-bold text-center lg:text-left text-primary-600 dark:text-primary-300 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">
                                             {translation.get('streak.current')}
                                         </div>
-                                        <div className="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-left text-primary-500/90 dark:text-primary-200/70">
+                                        <div className="text-xs md:text-xs lg:text-sm xl:text-sm font-medium text-center lg:text-left text-primary-500/90 dark:text-primary-200/70">
                                             {formatStreakDateRange(
                                                 currentStreak.start_date,
                                                 currentStreak.end_date,
@@ -112,7 +112,7 @@ export function ReadingStreakSection({
                                         <div className="text-xs md:text-sm lg:text-base xl:text-base font-bold text-center lg:text-right text-gray-700 dark:text-dark-200 tracking-wider xl:tracking-widest uppercase mb-0.5 md:mb-0.5">
                                             {translation.get('streak.longest')}
                                         </div>
-                                        <div className="text-xs md:text-xs lg:text-sm xl:text-sm text-center lg:text-right text-gray-600/90 dark:text-dark-300">
+                                        <div className="text-xs md:text-xs lg:text-sm xl:text-sm font-medium text-center lg:text-right text-gray-600/90 dark:text-dark-300">
                                             {formatStreakDateRange(
                                                 longestStreak.start_date,
                                                 longestStreak.end_date,

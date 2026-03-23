@@ -1,7 +1,7 @@
 import { LuChevronDown } from 'react-icons/lu';
 
 const selectClassName =
-    'w-full appearance-none bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/60';
+    'w-full appearance-none bg-gray-50 dark:bg-dark-800/70 border border-gray-300/70 dark:border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-sm font-medium text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary-500/60';
 
 type SettingsSelectProps = {
     children: React.ReactNode;

@@ -52,7 +52,7 @@ export function CalendarMonthPickerModal({
                             <button
                                 key={`${year}-${monthIndex}`}
                                 type="button"
-                                className={`px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
+                                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
                                     active
                                         ? 'bg-linear-to-r from-primary-600 to-primary-700 text-white shadow-md'
                                         : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-dark-700/70'

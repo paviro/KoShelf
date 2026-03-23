@@ -272,7 +272,7 @@
 
 /* Event styling */
 .calendar-container .ec-event {
-    @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-[0.65rem]/[1rem] md:text-xs lg:text-sm;
+    @apply shadow-lg rounded-md md:rounded-lg px-1 md:py-1 md:px-2 text-[0.65rem]/[1rem] md:text-xs lg:text-sm font-medium;
 }
 
 /* Scrollbar styling */

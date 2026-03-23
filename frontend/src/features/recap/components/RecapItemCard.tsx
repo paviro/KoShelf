@@ -131,12 +131,12 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                             <div className="flex-1">
                                 {titleNode}
                                 {item.series && (
-                                    <div className="text-sm text-gray-500 dark:text-dark-300 mt-1">
+                                    <div className="text-sm font-medium text-gray-500 dark:text-dark-300 mt-1">
                                         {item.series}
                                     </div>
                                 )}
                                 {item.authors.length > 0 && (
-                                    <div className="text-sm text-gray-600 dark:text-dark-300">
+                                    <div className="text-sm font-medium text-gray-600 dark:text-dark-300">
                                         {translation.get('by')}{' '}
                                         {item.authors.map((author, index) => {
                                             const separator =
@@ -205,15 +205,15 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                         </div>
 
                         <div className="mt-3 grid grid-cols-2 xl:grid-cols-4 gap-2">
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
                                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuCalendarDays className="w-4 h-4 text-blue-600 dark:text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         {translation.get('period')}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
                                         {formatRecapDateRange(
                                             item.start_date,
                                             item.end_date,
@@ -222,15 +222,15 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 </div>
                             </div>
 
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
                                 <div className="w-8 h-8 rounded-lg bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuClock3 className="w-4 h-4 text-purple-600 dark:text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         {translation.get('reading-time')}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
                                         <MetricCardUnitValue
                                             value={formatRecapDurationParts(
                                                 item.reading_time_sec,
@@ -241,32 +241,32 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 </div>
                             </div>
 
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
                                 <div className="w-8 h-8 rounded-lg bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <LuFileText className="w-4 h-4 text-green-600 dark:text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         {translation.get(
                                             'pages-label',
                                             item.pages_read,
                                         )}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
                                         {item.pages_read}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-2 flex items-center">
+                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
                                 <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 shrink-0">
                                     <HiOutlineBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         {translation.get('sessions')}
                                     </div>
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
                                         {item.session_count}
                                     </div>
                                 </div>
@@ -278,7 +278,7 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                 <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg p-3 md:p-4">
                                     <div className="flex items-start">
                                         <LuQuote className="w-5 h-5 text-primary-400 mt-0.5 mr-2.5 shrink-0" />
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
                                             {item.review_note}
                                         </p>
                                     </div>

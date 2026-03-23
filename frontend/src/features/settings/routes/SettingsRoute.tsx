@@ -364,20 +364,20 @@ export function SettingsRoute() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                            <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
+                            <p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
                                 {translation.get('region-setting.preview-date')}
                             </p>
-                            <p className="text-sm md:text-base text-gray-900 dark:text-white">
+                            <p className="text-base md:text-lg font-medium text-gray-900 dark:text-white">
                                 {localePreview}
                             </p>
                         </div>
                         <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                            <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
+                            <p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400 mb-1.5">
                                 {translation.get(
                                     'region-setting.preview-number',
                                 )}
                             </p>
-                            <p className="text-sm md:text-base tabular-nums text-gray-900 dark:text-white">
+                            <p className="text-base md:text-lg font-medium tabular-nums text-gray-900 dark:text-white">
                                 {numberPreview}
                             </p>
                         </div>

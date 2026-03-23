@@ -40,8 +40,8 @@ export function LibraryHighlightsSection({
             accentClass="bg-linear-to-b from-amber-400 to-amber-600"
             title={translation.get('highlights-quotes')}
             titleBadge={
-                <span className="ml-3 text-sm font-normal text-gray-500 dark:text-dark-400">
-                    ({annotations.length})
+                <span className="bg-linear-to-r from-amber-500 to-amber-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">
+                    {annotations.length}
                 </span>
             }
             visible={visible}

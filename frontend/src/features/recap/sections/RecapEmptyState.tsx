@@ -53,7 +53,7 @@ export function RecapEmptyState({ hasYearContext }: RecapEmptyStateProps) {
                             />
                         </svg>
                     </summary>
-                    <div className="px-4 pb-4 pt-4 text-left text-sm text-gray-500 dark:text-gray-400 ml-8 leading-relaxed">
+                    <div className="px-4 pb-4 pt-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 ml-8 leading-relaxed">
                         <p>{translation.get('recap-empty.info-answer')}</p>
                     </div>
                 </details>

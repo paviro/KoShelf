@@ -25,7 +25,7 @@ export function LibraryEmptyState() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 items-center mt-8">
-                <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-dark-400">
+                <div className="flex items-center space-x-2 text-sm font-medium text-gray-500 dark:text-dark-400">
                     <LuInfo className="w-4 h-4" aria-hidden="true" />
                     <span>{translation.get('try-adjusting')}</span>
                 </div>

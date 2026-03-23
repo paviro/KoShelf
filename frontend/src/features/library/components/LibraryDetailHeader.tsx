@@ -85,7 +85,7 @@ export function LibraryDetailHeader({
                     </h2>
 
                     {primaryAuthor && (
-                        <p className="text-sm text-gray-500 dark:text-dark-300 truncate">
+                        <p className="text-sm font-medium text-gray-500 dark:text-dark-300 truncate">
                             {translation.get('by')} {primaryAuthor}
                         </p>
                     )}
@@ -160,7 +160,7 @@ export function LibraryDetailHeader({
                                 <a
                                     href={fileHref}
                                     download={fileDownloadName}
-                                    className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200"
+                                    className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm font-medium transition-colors duration-200"
                                     onClick={() => setShareOpen(false)}
                                 >
                                     {fileLabel}
@@ -169,7 +169,7 @@ export function LibraryDetailHeader({
                             <a
                                 href={jsonHref}
                                 download={jsonDownloadName}
-                                className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm transition-colors duration-200"
+                                className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm font-medium transition-colors duration-200"
                                 onClick={() => setShareOpen(false)}
                             >
                                 JSON

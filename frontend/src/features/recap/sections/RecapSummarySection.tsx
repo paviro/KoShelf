@@ -118,7 +118,7 @@ export function RecapSummarySection({
                                         )}
                                         %
                                     </span>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                         {translation.get('of-the-year')}
                                     </span>
                                 </div>
@@ -175,7 +175,7 @@ export function RecapSummarySection({
                                 <span className="text-2xl/none md:text-3xl font-black text-gray-900 dark:text-white">
                                     {formatNumber(summary.total_items)}
                                 </span>
-                                <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                                     {completionLabel(
                                         scope,
                                         summary.total_items,
@@ -229,14 +229,14 @@ export function RecapSummarySection({
                                         </span>
                                     </span>
                                 </div>
-                                <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
                                     {translation.get('total-read-time')}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-3 shadow-xs hover:shadow-md hover:border-red-300/50 dark:hover:border-red-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-orange-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuFlame
@@ -245,7 +245,7 @@ export function RecapSummarySection({
                                 />
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
+                                <span className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                     {formatNumber(summary.longest_streak_days)}{' '}
                                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {translation.get(
@@ -254,7 +254,7 @@ export function RecapSummarySection({
                                         )}
                                     </span>
                                 </span>
-                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                     {translation.get('streak.longest')}
                                 </span>
                             </div>
@@ -262,7 +262,7 @@ export function RecapSummarySection({
                     </div>
 
                     {bestMonth && (
-                        <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/40 transition-all duration-300 group flex items-center">
+                        <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-3 shadow-xs hover:shadow-md hover:border-amber-300/50 dark:hover:border-amber-700/40 transition-all duration-300 group flex items-center">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-lg bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-yellow-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                     <LuSparkles
@@ -271,10 +271,10 @@ export function RecapSummarySection({
                                     />
                                 </div>
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-base font-bold text-gray-900 dark:text-white leading-none truncate">
+                                    <span className="text-lg font-bold text-gray-900 dark:text-white leading-none truncate">
                                         {bestMonth}
                                     </span>
-                                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                         {translation.get('best-month')}
                                     </span>
                                 </div>
@@ -282,7 +282,7 @@ export function RecapSummarySection({
                         </div>
                     )}
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-orange-300/50 dark:hover:border-orange-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-3 shadow-xs hover:shadow-md hover:border-orange-300/50 dark:hover:border-orange-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuClock3
@@ -294,10 +294,10 @@ export function RecapSummarySection({
                                 <div className="flex items-baseline gap-1">
                                     {hasAverageSessionHours && (
                                         <>
-                                            <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
+                                            <span className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(avgSession.hours)}
                                             </span>
-                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 {averageSessionHasTwoValues
                                                     ? translation.get('units.h')
                                                     : translation.get(
@@ -309,12 +309,12 @@ export function RecapSummarySection({
                                     )}
                                     {hasAverageSessionMinutes && (
                                         <>
-                                            <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
+                                            <span className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
                                                     avgSession.minutes,
                                                 )}
                                             </span>
-                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 {averageSessionHasTwoValues
                                                     ? translation.get('units.m')
                                                     : translation.get(
@@ -325,14 +325,14 @@ export function RecapSummarySection({
                                         </>
                                     )}
                                 </div>
-                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                     {translation.get('session.average')}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-2.5 shadow-xs hover:shadow-md hover:border-pink-300/50 dark:hover:border-pink-700/40 transition-all duration-300 group flex items-center">
+                    <div className="col-span-1 lg:col-span-2 xl:col-span-1 h-full bg-white dark:bg-dark-800/80 border border-gray-200/70 dark:border-dark-700/50 rounded-xl px-3 py-3 shadow-xs hover:shadow-md hover:border-pink-300/50 dark:hover:border-pink-700/40 transition-all duration-300 group flex items-center">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-pink-500/20 dark:bg-linear-to-br dark:from-pink-500 dark:to-rose-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                 <LuZap
@@ -344,12 +344,12 @@ export function RecapSummarySection({
                                 <div className="flex items-baseline gap-1">
                                     {hasLongestSessionHours && (
                                         <>
-                                            <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
+                                            <span className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
                                                     longestSession.hours,
                                                 )}
                                             </span>
-                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 {longestSessionHasTwoValues
                                                     ? translation.get('units.h')
                                                     : translation.get(
@@ -361,12 +361,12 @@ export function RecapSummarySection({
                                     )}
                                     {hasLongestSessionMinutes && (
                                         <>
-                                            <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">
+                                            <span className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                                 {formatNumber(
                                                     longestSession.minutes,
                                                 )}
                                             </span>
-                                            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 {longestSessionHasTwoValues
                                                     ? translation.get('units.m')
                                                     : translation.get(
@@ -377,7 +377,7 @@ export function RecapSummarySection({
                                         </>
                                     )}
                                 </div>
-                                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                     {translation.get('session.longest')}
                                 </span>
                             </div>

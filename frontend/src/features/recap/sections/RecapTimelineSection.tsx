@@ -41,7 +41,7 @@ export function RecapTimelineSection({
                             </h3>
 
                             <div className="flex items-center gap-2">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-br from-blue-500/10 to-blue-400/5 dark:from-blue-500/20 dark:to-blue-400/10 border border-blue-200/50 dark:border-blue-700/30 text-blue-700 dark:text-blue-300 text-sm">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-br from-blue-500/10 to-blue-400/5 dark:from-blue-500/20 dark:to-blue-400/10 border border-blue-200/50 dark:border-blue-700/30 text-blue-700 dark:text-blue-300 text-sm font-medium">
                                     <HiOutlineBookOpen
                                         className="w-4 h-4"
                                         aria-hidden
@@ -55,7 +55,7 @@ export function RecapTimelineSection({
                                     )}
                                 </div>
 
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-br from-purple-500/10 to-purple-400/5 dark:from-purple-500/20 dark:to-purple-400/10 border border-purple-200/50 dark:border-purple-700/30 text-purple-700 dark:text-purple-300 text-sm">
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-br from-purple-500/10 to-purple-400/5 dark:from-purple-500/20 dark:to-purple-400/10 border border-purple-200/50 dark:border-purple-700/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
                                     <LuClock3 className="w-4 h-4" aria-hidden />
                                     <span className="month-hours-display font-semibold">
                                         {formatRecapDuration(
