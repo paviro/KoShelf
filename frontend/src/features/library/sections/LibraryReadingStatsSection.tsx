@@ -156,14 +156,14 @@ export function LibraryReadingStatsSection({
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                                            <div className="text-base font-medium text-gray-900 dark:text-white mb-1">
                                                 {formatCompletionDateRange(
                                                     entry.start_date,
                                                     entry.end_date,
                                                 )}
                                             </div>
 
-                                            <div className="flex flex-wrap items-center mt-1 gap-2 text-xs text-gray-500 dark:text-dark-400">
+                                            <div className="flex flex-wrap items-center mt-1 gap-2 text-sm font-medium text-gray-500 dark:text-dark-400">
                                                 <span className="flex items-center whitespace-nowrap">
                                                     <LuClock3
                                                         className="w-3.5 h-3.5 mr-1"
@@ -239,7 +239,7 @@ export function LibraryReadingStatsSection({
             )}
 
             <div className="mt-6 p-4 bg-primary-50 dark:bg-dark-850/30 rounded-lg border border-primary-200 dark:border-dark-700/50">
-                <div className="flex items-center text-sm text-gray-500 dark:text-dark-400">
+                <div className="flex items-center text-sm font-medium text-gray-500 dark:text-dark-400">
                     <LuInfo
                         className="w-4 h-4 mr-2 text-primary-400"
                         aria-hidden="true"

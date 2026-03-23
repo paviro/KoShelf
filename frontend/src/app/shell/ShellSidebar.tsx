@@ -43,7 +43,7 @@ export function ShellSidebar({
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                             {siteTitle}
                         </h1>
-                        <p className="text-xs text-gray-500 dark:text-dark-400 mt-0.5">
+                        <p className="text-xs font-medium text-gray-500 dark:text-dark-400 mt-0.5">
                             {translation.get('reading-companion')}
                         </p>
                     </div>
@@ -116,7 +116,7 @@ export function ShellSidebar({
                             />
                         </div>
                         <span
-                            className={`text-xs font-medium ${
+                            className={`text-sm font-medium ${
                                 settingsActive
                                     ? 'text-primary-700 dark:text-primary-300'
                                     : 'text-gray-500 dark:text-dark-400'
@@ -138,15 +138,15 @@ export function ShellSidebar({
                             href="https://github.com/paviro/KOShelf"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-gray-500 dark:text-dark-400 hover:text-primary-400 transition-colors font-medium"
+                            className="text-sm text-gray-500 dark:text-dark-400 hover:text-primary-400 transition-colors font-medium"
                         >
                             {translation.get('github')}
                         </a>
-                        <span className="text-xs text-gray-400 dark:text-dark-500 ml-1">
+                        <span className="text-xs font-medium text-gray-400 dark:text-dark-500 ml-1">
                             &middot; {version ?? '--'}
                         </span>
                     </div>
-                    <div className="text-[0.65rem] leading-tight text-gray-400 dark:text-dark-500">
+                    <div className="text-xs font-medium leading-tight text-gray-400 dark:text-dark-500">
                         {translation.get('last-updated')}:{' '}
                         {formattedGeneratedAt}
                     </div>

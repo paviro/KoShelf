@@ -44,7 +44,7 @@ export function EditWarningModal({
                     </h2>
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-dark-300 leading-relaxed mb-6">
+                <p className="text-sm font-medium text-gray-600 dark:text-dark-300 leading-relaxed mb-6">
                     {translation.get('edit-warning.body')}
                 </p>
 
@@ -55,7 +55,7 @@ export function EditWarningModal({
                         onChange={(e) => setDontShow(e.target.checked)}
                         className="w-4 h-4 rounded border-gray-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm text-gray-500 dark:text-dark-400">
+                    <span className="text-sm font-medium text-gray-500 dark:text-dark-400">
                         {translation.get('edit-warning.dismiss')}
                     </span>
                 </label>
@@ -64,7 +64,7 @@ export function EditWarningModal({
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 text-sm text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                     >
                         {translation.get('cancel')}
                     </button>

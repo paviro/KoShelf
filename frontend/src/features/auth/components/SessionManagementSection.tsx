@@ -162,7 +162,7 @@ export function SessionManagementSection({
             {feedback ? (
                 <p
                     role="alert"
-                    className={`text-sm px-3 py-2 rounded-lg border ${
+                    className={`text-sm font-medium px-3 py-2 rounded-lg border ${
                         feedback.type === 'success'
                             ? 'border-emerald-300/70 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                             : 'border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300'
@@ -173,13 +173,13 @@ export function SessionManagementSection({
             ) : null}
 
             {sessionsQuery.isLoading ? (
-                <p className="text-sm text-gray-500 dark:text-dark-400">
+                <p className="text-sm font-medium text-gray-500 dark:text-dark-400">
                     {translation.get('session-management.current')}...
                 </p>
             ) : null}
 
             {sessionsQuery.isError ? (
-                <p className="text-sm text-red-700 dark:text-red-300">
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">
                     {resolveGenericApiErrorMessage(sessionsQuery.error)}
                 </p>
             ) : null}
@@ -189,16 +189,16 @@ export function SessionManagementSection({
                     {orderedSessions.map((session) => (
                         <li
                             key={session.id}
-                            className={`rounded-lg border px-4 py-3 ${
+                            className={`rounded-lg border p-4 ${
                                 session.is_current
                                     ? 'border-primary-300/80 dark:border-primary-600/60 bg-primary-50/40 dark:bg-primary-900/15'
                                     : 'bg-white dark:bg-dark-850/50 border-gray-200/70 dark:border-dark-700/70'
                             }`}
                         >
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        <p className="text-base font-semibold text-gray-900 dark:text-white">
                                             {translation.get(
                                                 'session-management.device-info',
                                                 {
@@ -215,7 +215,7 @@ export function SessionManagementSection({
                                             </span>
                                         ) : null}
                                     </div>
-                                    <p className="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
+                                    <p className="mt-1 text-xs font-medium text-gray-500 dark:text-dark-400">
                                         {session.last_seen_ip ?? '--'} ·{' '}
                                         {translation.get(
                                             'session-management.last-active',

@@ -362,7 +362,7 @@ function ReaderCompactControl({
     return (
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-                <span className="text-sm text-gray-700 dark:text-dark-200">
+                <span className="text-sm font-medium text-gray-700 dark:text-dark-200">
                     {label}
                 </span>
                 {control.isOverridden && (

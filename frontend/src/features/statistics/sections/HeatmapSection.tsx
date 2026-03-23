@@ -343,7 +343,7 @@ export function HeatmapSection({
                 </div>
             </div>
 
-            <div className="flex items-center justify-end mt-4 space-x-2 text-xs">
+            <div className="flex items-center justify-end mt-4 space-x-2 text-xs font-medium">
                 <span className="text-gray-500 dark:text-dark-400">
                     {translation.get('less')}
                 </span>

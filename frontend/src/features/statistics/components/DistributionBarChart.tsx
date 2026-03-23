@@ -68,7 +68,7 @@ export function DistributionBarChart({
                                 <span className="block h-[2px] w-full bg-white/75 dark:bg-white/45"></span>
                             </div>
                         </div>
-                        <div className="mt-3 text-center text-xs text-gray-500 dark:text-dark-400 leading-none">
+                        <div className="mt-3 text-center text-xs font-medium text-gray-500 dark:text-dark-400">
                             {item.label}
                         </div>
                     </div>

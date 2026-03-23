@@ -133,7 +133,7 @@ export function LoginRoute({
                             {submitError ? (
                                 <p
                                     role="alert"
-                                    className="text-sm rounded-lg border border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2"
+                                    className="text-sm font-medium rounded-lg border border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2"
                                 >
                                     {submitError}
                                 </p>

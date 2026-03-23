@@ -147,7 +147,7 @@ export function LibraryReviewSection({
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={saving}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
                                 >
                                     <LuTrash2
                                         className="w-3.5 h-3.5"
@@ -162,7 +162,7 @@ export function LibraryReviewSection({
                                 type="button"
                                 onClick={closeEditing}
                                 disabled={saving}
-                                className="px-4 py-2 text-sm text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors disabled:opacity-50"
+                                className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors disabled:opacity-50"
                             >
                                 {translation.get('cancel')}
                             </button>
@@ -200,7 +200,7 @@ export function LibraryReviewSection({
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {translation.get('no-review-available')}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-dark-400 mt-0.5">
+                        <p className="text-sm font-medium text-gray-500 dark:text-dark-400 mt-0.5">
                             {canWrite
                                 ? translation.get(
                                       'no-review-available.hint-edit',

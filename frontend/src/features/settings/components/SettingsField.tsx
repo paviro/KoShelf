@@ -19,14 +19,14 @@ export function SettingsField({
                 <div className="space-y-0.5">
                     <label
                         htmlFor={htmlFor}
-                        className="block text-sm font-medium text-gray-900 dark:text-white"
+                        className="block text-base font-semibold text-gray-900 dark:text-white"
                     >
                         {label}
                     </label>
                     {hints?.map((line, i) => (
                         <p
                             key={i}
-                            className="text-xs text-gray-500 dark:text-dark-400"
+                            className="text-sm font-medium text-gray-500 dark:text-dark-400"
                         >
                             {line}
                         </p>

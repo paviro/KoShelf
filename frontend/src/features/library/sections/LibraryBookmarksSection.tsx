@@ -34,8 +34,8 @@ export function LibraryBookmarksSection({
             accentClass="bg-linear-to-b from-yellow-400 to-yellow-600"
             title={translation.get('bookmarks')}
             titleBadge={
-                <span className="ml-3 text-sm font-normal text-gray-500 dark:text-dark-400">
-                    ({annotations.length})
+                <span className="bg-linear-to-r from-yellow-500 to-yellow-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">
+                    {annotations.length}
                 </span>
             }
             visible={visible}

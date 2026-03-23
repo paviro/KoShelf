@@ -116,7 +116,7 @@ function StatusCard({
                         {title}
                     </div>
                     {subtitle && (
-                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                             {subtitle}
                         </div>
                     )}
@@ -290,7 +290,7 @@ export function LibraryOverviewSection({
                                         <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                                             {cardValueOrUnknown(pagesCount)}
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                                             {translation.get(
                                                 'pages-label',
                                                 pagesCount ?? 0,
@@ -313,7 +313,7 @@ export function LibraryOverviewSection({
                                             <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                                                 {formatNumber(highlightCount)}
                                             </div>
-                                            <div className="text-sm text-gray-500 dark:text-dark-400">
+                                            <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                                                 {translation.get(
                                                     'highlights-label',
                                                     highlightCount,
@@ -337,7 +337,7 @@ export function LibraryOverviewSection({
                                             <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                                                 {formatNumber(noteCount)}
                                             </div>
-                                            <div className="text-sm text-gray-500 dark:text-dark-400">
+                                            <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                                                 {translation.get(
                                                     'notes-label',
                                                     noteCount,
@@ -360,7 +360,7 @@ export function LibraryOverviewSection({
                                         <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
                                             {languageDisplay}
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
                                             {translation.get('language')}
                                         </div>
                                     </div>

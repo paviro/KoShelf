@@ -59,7 +59,7 @@ export function ReaderScrubber({
                         style={{ left: `${progressPercent}%` }}
                     />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-dark-300 tabular-nums shrink-0 w-10 text-right">
+                <span className="text-xs font-medium text-gray-500 dark:text-dark-300 tabular-nums shrink-0 w-10 text-right">
                     {progressPercent}%
                 </span>
             </div>

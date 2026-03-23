@@ -148,7 +148,7 @@ export function LibraryAnnotationCard({
     return (
         <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-xs">
             {/* Header — metadata only */}
-            <header className="flex items-center justify-between text-sm text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
+            <header className="flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center gap-3">
                     {variant === 'bookmark' && (
                         <span
@@ -298,7 +298,7 @@ export function LibraryAnnotationCard({
                                 onSaveNote?.(null);
                                 stopEditingNote();
                             }}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         >
                             <LuTrash2
                                 className="w-3.5 h-3.5"
@@ -313,7 +313,7 @@ export function LibraryAnnotationCard({
                         <button
                             type="button"
                             onClick={stopEditingNote}
-                            className="px-4 py-2 text-sm text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
+                            className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                         >
                             {translation.get('cancel')}
                         </button>
@@ -360,7 +360,7 @@ export function LibraryAnnotationCard({
                                             onClick={() =>
                                                 setConfirmingDelete(false)
                                             }
-                                            className="px-2 py-1.5 text-sm text-gray-500 dark:text-dark-400 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
+                                            className="px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-dark-400 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                                         >
                                             {translation.get('cancel')}
                                         </button>
@@ -371,7 +371,7 @@ export function LibraryAnnotationCard({
                                         onClick={() =>
                                             setConfirmingDelete(true)
                                         }
-                                        className="inline-flex items-center gap-1.5 px-2 py-1.5 text-sm text-red-500 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-red-500 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                     >
                                         <LuTrash2
                                             className="w-3.5 h-3.5"

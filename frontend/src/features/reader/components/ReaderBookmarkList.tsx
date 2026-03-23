@@ -95,7 +95,7 @@ export function ReaderBookmarkList({
                                                 {annotation.text}
                                             </p>
                                         ) : (
-                                            <p className="text-[0.925rem] text-gray-500 dark:text-dark-300 leading-snug">
+                                            <p className="text-[0.925rem] font-medium text-gray-500 dark:text-dark-300 leading-snug">
                                                 {translation.get(
                                                     'page-bookmark',
                                                 )}
@@ -103,7 +103,7 @@ export function ReaderBookmarkList({
                                         )}
                                         {typeof annotation.pageno ===
                                             'number' && (
-                                            <p className="mt-0.5 text-xs text-gray-400 dark:text-dark-400">
+                                            <p className="mt-0.5 text-xs font-medium text-gray-400 dark:text-dark-400">
                                                 {translation.get(
                                                     'page-number',
                                                     annotation.pageno,

@@ -243,7 +243,7 @@ export function RecapShareModal({
                                     <div className="font-semibold text-gray-900 dark:text-white">
                                         {translation.get(option.titleKey)}
                                     </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                         {translation.get(option.detailKey)}
                                     </div>
                                 </div>
