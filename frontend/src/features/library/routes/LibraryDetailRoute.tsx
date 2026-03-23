@@ -20,7 +20,11 @@ import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { EditWarningModal } from '../components/EditWarningModal';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
 import { useEditWarning } from '../hooks/useEditWarning';
-import { useUpdateItem, useUpdateAnnotation, useDeleteAnnotation } from '../api/library-mutations';
+import {
+    useUpdateItem,
+    useUpdateAnnotation,
+    useDeleteAnnotation,
+} from '../api/library-mutations';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import {
     LIBRARY_DETAIL_SECTION_KEYS,
@@ -64,7 +68,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const detail = detailTransition.displayData;
     const item = detail?.item;
 
-    const canWrite = siteQuery.data?.capabilities.has_writeback === true && item?.has_metadata === true;
+    const canWrite =
+        siteQuery.data?.capabilities.has_writeback === true &&
+        item?.has_metadata === true;
     const itemStats = detail?.statistics?.item_stats ?? null;
     const sessionStats = detail?.statistics?.session_stats ?? null;
     const completions = detail?.completions ?? null;
@@ -77,8 +83,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const reviewNote = item?.review_note ?? '';
     const hasReviewNote =
         item?.review_note !== null && item?.review_note !== undefined;
-    const hasRating =
-        typeof item?.rating === 'number' && item.rating > 0;
+    const hasRating = typeof item?.rating === 'number' && item.rating > 0;
     const hasReview = hasReviewNote || hasRating;
     const hasPublisher =
         item?.publisher !== null && item?.publisher !== undefined;
@@ -300,7 +305,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     canWrite={canWrite}
                                     onSaveNote={handleAnnotationNoteUpdate}
                                     onColorChange={handleAnnotationColorChange}
-                                    onDrawerChange={handleAnnotationDrawerChange}
+                                    onDrawerChange={
+                                        handleAnnotationDrawerChange
+                                    }
                                     onDelete={handleAnnotationDelete}
                                     guardedAction={guardedAction}
                                 />

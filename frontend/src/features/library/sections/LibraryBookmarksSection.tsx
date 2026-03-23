@@ -60,9 +60,7 @@ export function LibraryBookmarksSection({
                         )}
                         canWrite={canWrite && editing}
                         onDelete={
-                            onDelete
-                                ? () => onDelete(annotation.id)
-                                : undefined
+                            onDelete ? () => onDelete(annotation.id) : undefined
                         }
                     />
                 ))}

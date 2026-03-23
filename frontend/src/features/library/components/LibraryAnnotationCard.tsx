@@ -14,7 +14,11 @@ import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
 import { formatAnnotationDatetime } from '../lib/library-detail-formatters';
-import { colorDotClass, colorQuoteBarGradient, DRAWER_ICONS } from '../lib/highlight-constants';
+import {
+    colorDotClass,
+    colorQuoteBarGradient,
+    DRAWER_ICONS,
+} from '../lib/highlight-constants';
 import type { LibraryAnnotation } from '../api/library-data';
 import { HighlightColorPicker } from './HighlightColorPicker';
 import { HighlightDrawerPicker } from './HighlightDrawerPicker';
@@ -65,7 +69,9 @@ export function LibraryAnnotationCard({
     const formattedDate = formatAnnotationDatetime(annotation.datetime);
     const hasText = annotation.text !== null && annotation.text !== undefined;
     const [confirmingDelete, setConfirmingDelete] = useState(false);
-    const [activePicker, setActivePicker] = useState<'color' | 'drawer' | null>(null);
+    const [activePicker, setActivePicker] = useState<'color' | 'drawer' | null>(
+        null,
+    );
     const colorButtonRef = useRef<HTMLButtonElement>(null);
     const drawerButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -101,7 +107,8 @@ export function LibraryAnnotationCard({
             ? BOOKMARK_QUOTE_BAR
             : colorQuoteBarGradient(annotation.color);
 
-    const DrawerIcon = DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
+    const DrawerIcon =
+        DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
 
     const hasWriteCapabilities =
         canWrite && (onSaveNote || onColorChange || onDrawerChange || onDelete);
@@ -245,7 +252,9 @@ export function LibraryAnnotationCard({
                                 <textarea
                                     ref={textareaRef}
                                     value={draftNote}
-                                    onChange={(e) => setDraftNote(e.target.value)}
+                                    onChange={(e) =>
+                                        setDraftNote(e.target.value)
+                                    }
                                     rows={3}
                                     className="w-full rounded-lg border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-800 text-gray-900 dark:text-white p-3 text-sm leading-relaxed focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-y placeholder:text-gray-400 dark:placeholder:text-dark-500"
                                     placeholder={translation.get('add-note')}
@@ -274,7 +283,10 @@ export function LibraryAnnotationCard({
                             }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         >
-                            <LuTrash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                            <LuTrash2
+                                className="w-3.5 h-3.5"
+                                aria-hidden="true"
+                            />
                             {translation.get('delete-note')}
                         </button>
                     ) : (
@@ -339,7 +351,9 @@ export function LibraryAnnotationCard({
                                 ) : (
                                     <button
                                         type="button"
-                                        onClick={() => setConfirmingDelete(true)}
+                                        onClick={() =>
+                                            setConfirmingDelete(true)
+                                        }
                                         className="inline-flex items-center gap-1.5 px-2 py-1.5 text-sm text-red-500 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                     >
                                         <LuTrash2
@@ -349,8 +363,12 @@ export function LibraryAnnotationCard({
                                         {variant === 'bookmark'
                                             ? translation.get('delete-bookmark')
                                             : hasNote
-                                              ? translation.get('delete-highlight-and-note')
-                                              : translation.get('delete-highlight')}
+                                              ? translation.get(
+                                                    'delete-highlight-and-note',
+                                                )
+                                              : translation.get(
+                                                    'delete-highlight',
+                                                )}
                                     </button>
                                 )}
                             </div>
@@ -364,22 +382,39 @@ export function LibraryAnnotationCard({
                                     <button
                                         ref={drawerButtonRef}
                                         type="button"
-                                        onClick={() => setActivePicker(activePicker === 'drawer' ? null : 'drawer')}
+                                        onClick={() =>
+                                            setActivePicker(
+                                                activePicker === 'drawer'
+                                                    ? null
+                                                    : 'drawer',
+                                            )
+                                        }
                                         className="inline-flex items-center p-1.5 rounded-md text-gray-500 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                                        title={translation.get('highlight-drawer.aria-label')}
-                                        aria-label={translation.get('highlight-drawer.aria-label')}
+                                        title={translation.get(
+                                            'highlight-drawer.aria-label',
+                                        )}
+                                        aria-label={translation.get(
+                                            'highlight-drawer.aria-label',
+                                        )}
                                     >
-                                        <DrawerIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                                        <DrawerIcon
+                                            className="w-3.5 h-3.5"
+                                            aria-hidden="true"
+                                        />
                                     </button>
                                     {activePicker === 'drawer' && (
                                         <HighlightDrawerPicker
                                             anchorRef={drawerButtonRef}
-                                            currentDrawer={annotation.drawer ?? 'lighten'}
+                                            currentDrawer={
+                                                annotation.drawer ?? 'lighten'
+                                            }
                                             onSelect={(drawer) => {
                                                 onDrawerChange(drawer);
                                                 setActivePicker(null);
                                             }}
-                                            onClose={() => setActivePicker(null)}
+                                            onClose={() =>
+                                                setActivePicker(null)
+                                            }
                                         />
                                     )}
                                 </>
@@ -390,9 +425,17 @@ export function LibraryAnnotationCard({
                                     <button
                                         ref={colorButtonRef}
                                         type="button"
-                                        onClick={() => setActivePicker(activePicker === 'color' ? null : 'color')}
+                                        onClick={() =>
+                                            setActivePicker(
+                                                activePicker === 'color'
+                                                    ? null
+                                                    : 'color',
+                                            )
+                                        }
                                         className="inline-flex items-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                                        title={translation.get('highlight-color.aria-label')}
+                                        title={translation.get(
+                                            'highlight-color.aria-label',
+                                        )}
                                         aria-label={translation.get(
                                             'highlight-color.aria-label',
                                         )}

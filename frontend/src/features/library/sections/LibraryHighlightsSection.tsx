@@ -67,14 +67,12 @@ export function LibraryHighlightsSection({
                         canWrite={canWrite && editing}
                         onSaveNote={
                             onSaveNote
-                                ? (note) =>
-                                      onSaveNote(annotation.id, note)
+                                ? (note) => onSaveNote(annotation.id, note)
                                 : undefined
                         }
                         onColorChange={
                             onColorChange
-                                ? (color) =>
-                                      onColorChange(annotation.id, color)
+                                ? (color) => onColorChange(annotation.id, color)
                                 : undefined
                         }
                         onDrawerChange={
@@ -84,9 +82,7 @@ export function LibraryHighlightsSection({
                                 : undefined
                         }
                         onDelete={
-                            onDelete
-                                ? () => onDelete(annotation.id)
-                                : undefined
+                            onDelete ? () => onDelete(annotation.id) : undefined
                         }
                     />
                 ))}

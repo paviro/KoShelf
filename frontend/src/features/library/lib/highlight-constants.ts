@@ -74,7 +74,8 @@ export const DRAWER_TYPES = [
         name: 'underscore',
         labelKey: 'highlight-drawer.underscore',
         icon: LuUnderline,
-        sampleClass: 'underline underline-offset-2 decoration-2 decoration-current',
+        sampleClass:
+            'underline underline-offset-2 decoration-2 decoration-current',
     },
     {
         name: 'strikeout',
@@ -86,7 +87,8 @@ export const DRAWER_TYPES = [
         name: 'invert',
         labelKey: 'highlight-drawer.invert',
         icon: LuType,
-        sampleClass: 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 px-1 rounded-sm',
+        sampleClass:
+            'bg-gray-800 text-white dark:bg-white dark:text-gray-900 px-1 rounded-sm',
     },
 ] as const;
 
@@ -106,9 +108,16 @@ const COLOR_QUOTE_BAR_MAP = Object.fromEntries(
 const DEFAULT_COLOR = 'yellow';
 
 export function colorDotClass(color: string | null | undefined): string {
-    return COLOR_DOT_MAP[color ?? DEFAULT_COLOR] ?? COLOR_DOT_MAP[DEFAULT_COLOR];
+    return (
+        COLOR_DOT_MAP[color ?? DEFAULT_COLOR] ?? COLOR_DOT_MAP[DEFAULT_COLOR]
+    );
 }
 
-export function colorQuoteBarGradient(color: string | null | undefined): string {
-    return COLOR_QUOTE_BAR_MAP[color ?? DEFAULT_COLOR] ?? COLOR_QUOTE_BAR_MAP[DEFAULT_COLOR];
+export function colorQuoteBarGradient(
+    color: string | null | undefined,
+): string {
+    return (
+        COLOR_QUOTE_BAR_MAP[color ?? DEFAULT_COLOR] ??
+        COLOR_QUOTE_BAR_MAP[DEFAULT_COLOR]
+    );
 }

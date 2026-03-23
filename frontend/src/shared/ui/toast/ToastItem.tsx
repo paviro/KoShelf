@@ -8,7 +8,11 @@ import {
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
-import { dismissToast, type ToastEntry, type ToastVariant } from './toast-store';
+import {
+    dismissToast,
+    type ToastEntry,
+    type ToastVariant,
+} from './toast-store';
 
 const VARIANT_STYLES: Record<
     ToastVariant,
@@ -21,32 +25,28 @@ const VARIANT_STYLES: Record<
 > = {
     success: {
         icon: LuCheck,
-        containerClass:
-            'border-emerald-200/60 dark:border-emerald-500/20',
+        containerClass: 'border-emerald-200/60 dark:border-emerald-500/20',
         iconContainerClass:
             'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
         progressClass: 'bg-emerald-500 dark:bg-emerald-400',
     },
     error: {
         icon: LuCircleAlert,
-        containerClass:
-            'border-red-200/60 dark:border-red-500/20',
+        containerClass: 'border-red-200/60 dark:border-red-500/20',
         iconContainerClass:
             'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400',
         progressClass: 'bg-red-500 dark:bg-red-400',
     },
     warning: {
         icon: LuTriangleAlert,
-        containerClass:
-            'border-amber-200/60 dark:border-amber-500/20',
+        containerClass: 'border-amber-200/60 dark:border-amber-500/20',
         iconContainerClass:
             'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
         progressClass: 'bg-amber-500 dark:bg-amber-400',
     },
     info: {
         icon: LuInfo,
-        containerClass:
-            'border-primary-200/60 dark:border-primary-500/20',
+        containerClass: 'border-primary-200/60 dark:border-primary-500/20',
         iconContainerClass:
             'bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400',
         progressClass: 'bg-primary-500 dark:bg-primary-400',
@@ -118,7 +118,7 @@ export function ToastItem({ toast }: { toast: ToastEntry }) {
         <div
             ref={wrapperRef}
             style={{
-                maxHeight: isExit ? 0 : measuredHeight ?? 200,
+                maxHeight: isExit ? 0 : (measuredHeight ?? 200),
                 transition: `max-height ${EXIT_DURATION_MS}ms ease-out, margin ${EXIT_DURATION_MS}ms ease-out`,
                 marginBottom: isExit ? -8 : 0, // collapse the flex gap
             }}

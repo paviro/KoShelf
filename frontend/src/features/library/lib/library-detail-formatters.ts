@@ -17,7 +17,9 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 export function normalizeRating(rating: number | null | undefined): number {
-    return isFiniteNumber(rating) ? Math.max(0, Math.min(5, Math.floor(rating))) : 0;
+    return isFiniteNumber(rating)
+        ? Math.max(0, Math.min(5, Math.floor(rating)))
+        : 0;
 }
 
 export function toProgressPercentage(

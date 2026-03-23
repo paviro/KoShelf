@@ -28,7 +28,10 @@ export function patchDetailCache(
 ): LibraryDetailData | undefined {
     const previous = queryClient.getQueryData<LibraryDetailData>(queryKey);
     if (previous) {
-        queryClient.setQueryData<LibraryDetailData>(queryKey, updater(previous));
+        queryClient.setQueryData<LibraryDetailData>(
+            queryKey,
+            updater(previous),
+        );
     }
     return previous;
 }
@@ -38,9 +41,7 @@ function updateInList(
     annotationId: string,
     payload: UpdateAnnotationPayload,
 ): LibraryAnnotation[] | null | undefined {
-    return list?.map((a) =>
-        a.id === annotationId ? { ...a, ...payload } : a,
-    );
+    return list?.map((a) => (a.id === annotationId ? { ...a, ...payload } : a));
 }
 
 /** Patch a single annotation's note / color / drawer in the cache. */

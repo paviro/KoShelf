@@ -30,7 +30,10 @@ const VALID_DRAWERS: &[&str] = &["lighten", "underscore", "strikeout", "invert"]
 fn now_in_tz(tz: Option<&chrono_tz::Tz>, fmt: &str) -> String {
     let utc = Utc::now();
     match tz {
-        Some(tz) => tz.from_utc_datetime(&utc.naive_utc()).format(fmt).to_string(),
+        Some(tz) => tz
+            .from_utc_datetime(&utc.naive_utc())
+            .format(fmt)
+            .to_string(),
         None => utc.with_timezone(&Local).format(fmt).to_string(),
     }
 }
@@ -351,12 +354,12 @@ pub(crate) async fn update_annotation(
         (Some(false), Some(Some(_))) | (Some(true), Some(None))
     );
 
-    let datetime_updated =
-        if body.color.is_some() || body.drawer.is_some() || note_type_transition {
-            Some(now_in_tz(state.timezone.as_ref(), "%Y-%m-%d %H:%M:%S"))
-        } else {
-            None
-        };
+    let datetime_updated = if body.color.is_some() || body.drawer.is_some() || note_type_transition
+    {
+        Some(now_in_tz(state.timezone.as_ref(), "%Y-%m-%d %H:%M:%S"))
+    } else {
+        None
+    };
 
     let ctx = WriteContext::prepare(&state, &id).await?;
 

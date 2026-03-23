@@ -250,7 +250,9 @@ impl FileWatcher {
                     // Expired — clean up, but only if the timestamp hasn't
                     // been refreshed by a concurrent `mark_written()`.
                     drop(entry);
-                    recent.remove_if(p, |_, ts| now.duration_since(*ts) >= SELF_WRITE_SUPPRESSION_WINDOW);
+                    recent.remove_if(p, |_, ts| {
+                        now.duration_since(*ts) >= SELF_WRITE_SUPPRESSION_WINDOW
+                    });
                 }
                 true
             })
