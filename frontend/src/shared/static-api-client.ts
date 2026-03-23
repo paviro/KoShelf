@@ -1,4 +1,10 @@
-import type { ApiClient, CompletionsParams, ScopeValue } from './api-client';
+import type {
+    ApiClient,
+    CompletionsParams,
+    ScopeValue,
+    UpdateAnnotationPayload,
+    UpdateItemPayload,
+} from './api-client';
 import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
@@ -23,6 +29,10 @@ import type {
 
 function authUnavailableError(): Error {
     return new Error('Authentication is unavailable in static mode.');
+}
+
+function writeUnavailableError(): Error {
+    return new Error('Write operations are unavailable in static mode.');
 }
 
 function pickScope<T>(
@@ -235,6 +245,29 @@ export class StaticApiClient implements ApiClient {
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
         return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
+    async updateItem(id: string, payload: UpdateItemPayload): Promise<void> {
+        void id;
+        void payload;
+        throw writeUnavailableError();
+    }
+
+    async updateAnnotation(
+        itemId: string,
+        annotationId: string,
+        payload: UpdateAnnotationPayload,
+    ): Promise<void> {
+        void itemId;
+        void annotationId;
+        void payload;
+        throw writeUnavailableError();
+    }
+
+    async deleteAnnotation(itemId: string, annotationId: string): Promise<void> {
+        void itemId;
+        void annotationId;
+        throw writeUnavailableError();
     }
 
     clearCache(): void {

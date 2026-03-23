@@ -242,6 +242,7 @@ export interface LibraryDetailItem {
     search_base_path: string;
     subjects: string[];
     identifiers: ExternalIdentifier[];
+    has_metadata?: boolean;
 }
 
 export interface LibraryReaderPresentation {
@@ -288,6 +289,7 @@ export interface LibraryItemStats {
     notes?: number | null;
     last_open_at?: string | null;
     highlights?: number | null;
+    bookmarks?: number | null;
     pages?: number | null;
     total_reading_time_sec?: number | null;
 }

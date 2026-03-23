@@ -1,8 +1,20 @@
-import type { ApiClient, CompletionsParams, ScopeValue } from './api-client';
+import type {
+    ApiClient,
+    CompletionsParams,
+    ScopeValue,
+    UpdateAnnotationPayload,
+    UpdateItemPayload,
+} from './api-client';
 import { HttpApiClient } from './http-api-client';
 import { StaticApiClient } from './static-api-client';
 
-export type { ApiClient, CompletionsParams, ScopeValue } from './api-client';
+export type {
+    ApiClient,
+    CompletionsParams,
+    ScopeValue,
+    UpdateAnnotationPayload,
+    UpdateItemPayload,
+} from './api-client';
 export { ApiHttpError, isApiHttpError } from './api-fetch';
 
 // ── Server mode detection ───────────────────────────────────────────────
@@ -103,5 +115,14 @@ export const api: ApiClient = {
     getItemDownloadHref: (id: string) => getClient().getItemDownloadHref(id),
     getItemFileHref: (id: string, format?: string | null) =>
         getClient().getItemFileHref(id, format),
+    updateItem: (id: string, payload: UpdateItemPayload) =>
+        getClient().updateItem(id, payload),
+    updateAnnotation: (
+        itemId: string,
+        annotationId: string,
+        payload: UpdateAnnotationPayload,
+    ) => getClient().updateAnnotation(itemId, annotationId, payload),
+    deleteAnnotation: (itemId: string, annotationId: string) =>
+        getClient().deleteAnnotation(itemId, annotationId),
     clearCache: () => getClient().clearCache(),
 };
