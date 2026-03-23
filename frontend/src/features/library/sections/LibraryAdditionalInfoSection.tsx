@@ -73,7 +73,7 @@ export function LibraryAdditionalInfoSection({
                                             href={identifier.url ?? undefined}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="group relative bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg p-4 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-dark-650 transition-all duration-200 shadow-xs hover:shadow-md"
+                                            className="group relative bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg p-4 hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-dark-600 transition-all duration-200 shadow-xs hover:shadow-md"
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="text-sm font-medium text-primary-600 dark:text-primary-300 uppercase tracking-wide group-hover:text-primary-700 dark:group-hover:text-primary-200">

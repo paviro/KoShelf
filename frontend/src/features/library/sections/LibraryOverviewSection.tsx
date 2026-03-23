@@ -402,7 +402,7 @@ export function LibraryOverviewSection({
 
                                 <Link
                                     to={`${seriesSearchBasePath}?search=${encodeURIComponent(seriesSearchTerm)}`}
-                                    className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-650 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors"
+                                    className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-dark-700 text-primary-600 dark:text-primary-300 border border-gray-300 dark:border-dark-600 hover:bg-primary-50 dark:hover:bg-dark-600 hover:border-primary-500 hover:text-primary-700 dark:hover:text-primary-200 transition-colors"
                                 >
                                     {seriesDisplay}
                                     <LuArrowUpRight
