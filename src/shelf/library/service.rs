@@ -153,7 +153,9 @@ fn map_detail_statistics(
             pages: reading.as_ref().and_then(|r| r.pages),
             total_reading_time_sec: reading.as_ref().and_then(|r| r.total_reading_time_sec),
         }),
-        session_stats: reading.map(|r| r.session_stats),
+        session_stats: reading
+            .map(|r| r.session_stats)
+            .filter(|s| s.session_count > 0),
     }
 }
 
