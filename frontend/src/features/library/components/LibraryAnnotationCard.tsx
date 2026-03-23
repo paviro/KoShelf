@@ -14,9 +14,10 @@ import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
 import { formatAnnotationDatetime } from '../lib/library-detail-formatters';
+import { colorDotClass, colorQuoteBarGradient, DRAWER_ICONS } from '../lib/highlight-constants';
 import type { LibraryAnnotation } from '../api/library-data';
 import { HighlightColorPicker } from './HighlightColorPicker';
-import { HighlightDrawerPicker, DRAWER_ICONS } from './HighlightDrawerPicker';
+import { HighlightDrawerPicker } from './HighlightDrawerPicker';
 
 type LibraryAnnotationCardVariant = 'highlight' | 'bookmark';
 
@@ -50,30 +51,6 @@ const VARIANT_STYLES: Record<
 
 const BOOKMARK_QUOTE_BAR = 'from-yellow-400 to-yellow-600';
 
-const HIGHLIGHT_QUOTE_BAR: Record<string, string> = {
-    yellow: 'from-amber-400 to-amber-600',
-    orange: 'from-orange-400 to-orange-600',
-    red: 'from-red-400 to-red-600',
-    green: 'from-emerald-400 to-emerald-600',
-    olive: 'from-lime-400 to-lime-600',
-    blue: 'from-blue-400 to-blue-600',
-    cyan: 'from-cyan-400 to-cyan-600',
-    purple: 'from-purple-400 to-purple-600',
-    gray: 'from-gray-400 to-gray-600',
-};
-
-const HIGHLIGHT_COLOR_CSS: Record<string, string> = {
-    yellow: 'bg-yellow-400',
-    green: 'bg-emerald-400',
-    blue: 'bg-blue-400',
-    red: 'bg-red-400',
-    orange: 'bg-orange-400',
-    olive: 'bg-lime-500',
-    cyan: 'bg-cyan-400',
-    purple: 'bg-purple-400',
-    gray: 'bg-gray-400',
-};
-
 export function LibraryAnnotationCard({
     annotation,
     variant,
@@ -88,9 +65,8 @@ export function LibraryAnnotationCard({
     const formattedDate = formatAnnotationDatetime(annotation.datetime);
     const hasText = annotation.text !== null && annotation.text !== undefined;
     const [confirmingDelete, setConfirmingDelete] = useState(false);
-    const [colorPickerOpen, setColorPickerOpen] = useState(false);
+    const [activePicker, setActivePicker] = useState<'color' | 'drawer' | null>(null);
     const colorButtonRef = useRef<HTMLButtonElement>(null);
-    const [drawerPickerOpen, setDrawerPickerOpen] = useState(false);
     const drawerButtonRef = useRef<HTMLButtonElement>(null);
 
     // Inline note editing (draft state only — optimistic display is handled
@@ -118,14 +94,12 @@ export function LibraryAnnotationCard({
         }
     }, [editingNote, annotation.note]);
 
-    const colorDotClass =
-        HIGHLIGHT_COLOR_CSS[annotation.color ?? 'yellow'] ?? 'bg-yellow-400';
+    const dotClass = colorDotClass(annotation.color);
 
     const quoteBarClass =
         variant === 'bookmark'
             ? BOOKMARK_QUOTE_BAR
-            : (HIGHLIGHT_QUOTE_BAR[annotation.color ?? 'yellow'] ??
-              HIGHLIGHT_QUOTE_BAR.yellow);
+            : colorQuoteBarGradient(annotation.color);
 
     const DrawerIcon = DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
 
@@ -390,25 +364,22 @@ export function LibraryAnnotationCard({
                                     <button
                                         ref={drawerButtonRef}
                                         type="button"
-                                        onClick={() => {
-                                            setColorPickerOpen(false);
-                                            setDrawerPickerOpen(!drawerPickerOpen);
-                                        }}
+                                        onClick={() => setActivePicker(activePicker === 'drawer' ? null : 'drawer')}
                                         className="inline-flex items-center p-1.5 rounded-md text-gray-500 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                                         title={translation.get('highlight-drawer.aria-label')}
                                         aria-label={translation.get('highlight-drawer.aria-label')}
                                     >
                                         <DrawerIcon className="w-3.5 h-3.5" aria-hidden="true" />
                                     </button>
-                                    {drawerPickerOpen && (
+                                    {activePicker === 'drawer' && (
                                         <HighlightDrawerPicker
                                             anchorRef={drawerButtonRef}
                                             currentDrawer={annotation.drawer ?? 'lighten'}
                                             onSelect={(drawer) => {
                                                 onDrawerChange(drawer);
-                                                setDrawerPickerOpen(false);
+                                                setActivePicker(null);
                                             }}
-                                            onClose={() => setDrawerPickerOpen(false)}
+                                            onClose={() => setActivePicker(null)}
                                         />
                                     )}
                                 </>
@@ -419,10 +390,7 @@ export function LibraryAnnotationCard({
                                     <button
                                         ref={colorButtonRef}
                                         type="button"
-                                        onClick={() => {
-                                            setDrawerPickerOpen(false);
-                                            setColorPickerOpen(!colorPickerOpen);
-                                        }}
+                                        onClick={() => setActivePicker(activePicker === 'color' ? null : 'color')}
                                         className="inline-flex items-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                                         title={translation.get('highlight-color.aria-label')}
                                         aria-label={translation.get(
@@ -430,10 +398,10 @@ export function LibraryAnnotationCard({
                                         )}
                                     >
                                         <span
-                                            className={`w-3.5 h-3.5 rounded-full ${colorDotClass} border border-black/10 dark:border-white/20`}
+                                            className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
                                         />
                                     </button>
-                                    {colorPickerOpen && (
+                                    {activePicker === 'color' && (
                                         <HighlightColorPicker
                                             anchorRef={colorButtonRef}
                                             currentColor={
@@ -441,10 +409,10 @@ export function LibraryAnnotationCard({
                                             }
                                             onSelect={(color) => {
                                                 onColorChange(color);
-                                                setColorPickerOpen(false);
+                                                setActivePicker(null);
                                             }}
                                             onClose={() =>
-                                                setColorPickerOpen(false)
+                                                setActivePicker(null)
                                             }
                                         />
                                     )}

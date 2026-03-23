@@ -20,6 +20,11 @@ use serde::{Deserialize, Deserializer};
 use std::path::PathBuf;
 use tokio::sync::OwnedMutexGuard;
 
+const VALID_COLORS: &[&str] = &[
+    "red", "orange", "yellow", "green", "olive", "cyan", "blue", "purple", "gray",
+];
+const VALID_DRAWERS: &[&str] = &["lighten", "underscore", "strikeout", "invert"];
+
 /// Format the current time in the configured timezone (falls back to system local).
 /// Matches KoReader's `os.date()` which uses the device's local time.
 fn now_in_tz(tz: Option<&chrono_tz::Tz>, fmt: &str) -> String {
@@ -42,7 +47,10 @@ pub(crate) async fn items(
 
     let payload = library::list(&state.library_repo, list_query)
         .await
-        .map_err(|_| ApiResponseError::internal_server_error())?;
+        .map_err(|e| {
+            warn!("Failed to list library items: {}", e);
+            ApiResponseError::internal_server_error()
+        })?;
 
     Ok(Json(ApiResponse::new(payload)))
 }
@@ -68,17 +76,12 @@ pub(crate) async fn item_detail(
 // ── Write handlers (requires enable_writeback) ───────────────────────────
 
 /// Three-state patch field: absent (don't change), null (clear), or value (set).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 enum Patch<T> {
+    #[default]
     Absent,
     Null,
     Value(T),
-}
-
-impl<T> Default for Patch<T> {
-    fn default() -> Self {
-        Patch::Absent
-    }
 }
 
 impl Patch<String> {
@@ -182,6 +185,7 @@ impl WriteContext {
             ApiResponseError::internal_server_error()
         })?;
 
+        // FileFingerprint uses u64; SQLite stores i64. Cast is lossless for realistic values.
         if disk.size_bytes as i64 != db_size || disk.modified_unix_ms as i64 != db_modified {
             return Err(ApiResponseError::conflict(
                 "metadata file was modified externally; re-fetch and retry",
@@ -243,22 +247,22 @@ pub(crate) async fn update_item(
     Path(id): Path<String>,
     Json(body): Json<UpdateItemRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    if let Patch::Value(rating) = body.rating {
-        if rating > 5 {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "rating must be between 0 and 5 (0 clears the rating)",
-            ));
-        }
+    if let Patch::Value(rating) = body.rating
+        && rating > 5
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "rating must be between 0 and 5 (0 clears the rating)",
+        ));
     }
 
-    if let Patch::Value(ref status) = body.status {
-        if !matches!(status.as_str(), "reading" | "complete" | "abandoned") {
-            return Err(ApiResponseError::bad_request_with_message(
-                ApiErrorCode::InvalidQuery,
-                "status must be one of: reading, complete, abandoned",
-            ));
-        }
+    if let Patch::Value(ref status) = body.status
+        && !matches!(status.as_str(), "reading" | "complete" | "abandoned")
+    {
+        return Err(ApiResponseError::bad_request_with_message(
+            ApiErrorCode::InvalidQuery,
+            "status must be one of: reading, complete, abandoned",
+        ));
     }
 
     let review_note = body.review_note.into_nullable();
@@ -311,26 +315,20 @@ pub(crate) async fn update_annotation(
     Json(body): Json<UpdateAnnotationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if let Some(ref color) = body.color
-        && !matches!(
-            color.as_str(),
-            "red" | "orange" | "yellow" | "green" | "olive" | "cyan" | "blue" | "purple" | "gray"
-        )
+        && !VALID_COLORS.contains(&color.as_str())
     {
         return Err(ApiResponseError::bad_request_with_message(
             ApiErrorCode::InvalidQuery,
-            "color must be one of: red, orange, yellow, green, olive, cyan, blue, purple, gray",
+            format!("color must be one of: {}", VALID_COLORS.join(", ")),
         ));
     }
 
     if let Some(ref drawer) = body.drawer
-        && !matches!(
-            drawer.as_str(),
-            "lighten" | "underscore" | "strikeout" | "invert"
-        )
+        && !VALID_DRAWERS.contains(&drawer.as_str())
     {
         return Err(ApiResponseError::bad_request_with_message(
             ApiErrorCode::InvalidQuery,
-            "drawer must be one of: lighten, underscore, strikeout, invert",
+            format!("drawer must be one of: {}", VALID_DRAWERS.join(", ")),
         ));
     }
 

@@ -76,6 +76,18 @@ pub fn delete_annotation(metadata_path: &Path, lua_index: i32) -> Result<()> {
 
 // ── Mutation helpers ─────────────────────────────────────────────────────
 
+/// Returns the KOReader stats table key for an annotation.
+/// KOReader tracks "highlights" and "notes" separately in its stats counters,
+/// even though KoShelf treats both as highlights. Bookmarks (no drawer) return None.
+fn annotation_stats_key(annotation: &Table) -> mlua::Result<Option<&'static str>> {
+    let has_drawer = !matches!(annotation.get::<Value>("drawer")?, Value::Nil);
+    if !has_drawer {
+        return Ok(None);
+    }
+    let has_note = !matches!(annotation.get::<Value>("note")?, Value::Nil);
+    Ok(Some(if has_note { "notes" } else { "highlights" }))
+}
+
 fn apply_item_mutations(
     lua: &Lua,
     table: &Table,
@@ -138,17 +150,11 @@ fn apply_annotation_mutations(
         }
     };
 
-    // Capture the note status before mutation so we can update stats if it changes.
-    // KOReader's getBookmarkType: drawer + note → "note", drawer + no note → "highlight".
-    let had_note = if note.is_some() {
-        let has_drawer = !matches!(annotation.get::<Value>("drawer")?, Value::Nil);
-        if has_drawer {
-            Some(!matches!(annotation.get::<Value>("note")?, Value::Nil))
-        } else {
-            None // bookmark — not tracked in stats
-        }
+    // Capture the stats key before mutation so we can detect highlight↔note transitions.
+    let pre_stats_key = if note.is_some() {
+        annotation_stats_key(&annotation)?
     } else {
-        None // note field not being changed
+        None // note field not being changed — no transition possible
     };
 
     match note {
@@ -171,28 +177,16 @@ fn apply_annotation_mutations(
 
     // Update stats counters if the annotation transitioned between highlight ↔ note.
     // Matches KOReader's setBookmarkNote / deleteItemNote AnnotationsModified events.
-    if let Some(had_note) = had_note {
-        let has_note = !matches!(annotation.get::<Value>("note")?, Value::Nil);
-        if had_note != has_note {
-            if let Value::Table(stats) = table.get("stats")? {
-                if has_note {
-                    // highlight → note
-                    if let Value::Integer(c) = stats.get("highlights")? {
-                        stats.set("highlights", (c - 1).max(0))?;
-                    }
-                    if let Value::Integer(c) = stats.get("notes")? {
-                        stats.set("notes", c + 1)?;
-                    }
-                } else {
-                    // note → highlight
-                    if let Value::Integer(c) = stats.get("highlights")? {
-                        stats.set("highlights", c + 1)?;
-                    }
-                    if let Value::Integer(c) = stats.get("notes")? {
-                        stats.set("notes", (c - 1).max(0))?;
-                    }
-                }
-            }
+    if let Some(old_key) = pre_stats_key
+        && let Some(new_key) = annotation_stats_key(&annotation)?
+        && new_key != old_key
+        && let Value::Table(stats) = table.get("stats")?
+    {
+        if let Value::Integer(c) = stats.get(old_key)? {
+            stats.set(old_key, (c - 1).max(0))?;
+        }
+        if let Value::Integer(c) = stats.get(new_key)? {
+            stats.set(new_key, c + 1)?;
         }
     }
 
@@ -217,15 +211,7 @@ fn apply_annotation_deletion(
         }
     };
 
-    // KOReader's getBookmarkType: no drawer → "bookmark", drawer + note → "note",
-    // drawer + no note → "highlight". Only highlights and notes are tracked in stats.
-    let has_drawer = !matches!(annotation.get::<Value>("drawer")?, Value::Nil);
-    let stats_key = if has_drawer {
-        let has_note = !matches!(annotation.get::<Value>("note")?, Value::Nil);
-        Some(if has_note { "notes" } else { "highlights" })
-    } else {
-        None // bookmark — not tracked in stats
-    };
+    let stats_key = annotation_stats_key(&annotation)?;
 
     // Use Lua's table.remove() which shifts subsequent elements down,
     // matching KoReader's readerbookmark:removeItemByIndex().
@@ -234,12 +220,11 @@ fn apply_annotation_deletion(
     remove_fn.call::<Value>((annotations, lua_array_index))?;
 
     // Decrement the stats counter matching KoReader's AnnotationsModified event.
-    if let Some(key) = stats_key {
-        if let Value::Table(stats) = table.get("stats")? {
-            if let Value::Integer(count) = stats.get(key)? {
-                stats.set(key, (count - 1).max(0))?;
-            }
-        }
+    if let Some(key) = stats_key
+        && let Value::Table(stats) = table.get("stats")?
+        && let Value::Integer(count) = stats.get(key)?
+    {
+        stats.set(key, (count - 1).max(0))?;
     }
 
     Ok(())

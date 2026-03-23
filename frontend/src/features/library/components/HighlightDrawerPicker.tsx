@@ -1,53 +1,8 @@
-import {
-    LuCheck,
-    LuHighlighter,
-    LuStrikethrough,
-    LuType,
-    LuUnderline,
-} from 'react-icons/lu';
-import type { IconType } from 'react-icons';
+import { LuCheck } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { DRAWER_TYPES } from '../lib/highlight-constants';
 import { OverlayPicker } from './OverlayPicker';
-
-const DRAWERS: ReadonlyArray<{
-    name: string;
-    labelKey: string;
-    icon: IconType;
-    sampleClass: string;
-}> = [
-    {
-        name: 'lighten',
-        labelKey: 'highlight-drawer.lighten',
-        icon: LuHighlighter,
-        sampleClass: 'bg-amber-300/60 dark:bg-amber-400/40',
-    },
-    {
-        name: 'underscore',
-        labelKey: 'highlight-drawer.underscore',
-        icon: LuUnderline,
-        sampleClass: 'underline underline-offset-2 decoration-2 decoration-current',
-    },
-    {
-        name: 'strikeout',
-        labelKey: 'highlight-drawer.strikeout',
-        icon: LuStrikethrough,
-        sampleClass: 'line-through decoration-2 decoration-current',
-    },
-    {
-        name: 'invert',
-        labelKey: 'highlight-drawer.invert',
-        icon: LuType,
-        sampleClass: 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 px-1 rounded-sm',
-    },
-];
-
-export const DRAWER_ICONS: Record<string, IconType> = {
-    lighten: LuHighlighter,
-    underscore: LuUnderline,
-    strikeout: LuStrikethrough,
-    invert: LuType,
-};
 
 type HighlightDrawerPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;
@@ -65,7 +20,7 @@ export function HighlightDrawerPicker({
     return (
         <OverlayPicker anchorRef={anchorRef} onClose={onClose}>
             <div className="flex flex-col gap-0.5">
-                {DRAWERS.map((drawer) => {
+                {DRAWER_TYPES.map((drawer) => {
                     const isSelected = drawer.name === currentDrawer;
                     const Icon = drawer.icon;
 

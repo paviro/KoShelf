@@ -12,6 +12,7 @@ import {
     LuPencil,
     LuTags,
 } from 'react-icons/lu';
+import type { IconType } from 'react-icons';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -30,6 +31,40 @@ import {
     toProgressPercentage,
 } from '../lib/library-detail-formatters';
 
+const ITEM_STATUS_OPTIONS: ReadonlyArray<{
+    value: string;
+    labelKey: string;
+    active: string;
+    iconContainer: string;
+    iconClassName: string;
+    icon: IconType;
+}> = [
+    {
+        value: 'reading',
+        labelKey: 'status.reading-short',
+        active: 'bg-primary-50 dark:bg-primary-500/10 border-primary-300 dark:border-primary-500/30 text-primary-700 dark:text-primary-300',
+        iconContainer: 'bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600',
+        iconClassName: 'text-primary-600 dark:text-white',
+        icon: HiOutlineBookOpen,
+    },
+    {
+        value: 'complete',
+        labelKey: 'status.completed-short',
+        active: 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/30 text-green-700 dark:text-green-300',
+        iconContainer: 'bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600',
+        iconClassName: 'text-green-600 dark:text-white',
+        icon: LuCheck,
+    },
+    {
+        value: 'abandoned',
+        labelKey: 'status.abandoned',
+        active: 'bg-red-50 dark:bg-red-500/10 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-300',
+        iconContainer: 'bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600',
+        iconClassName: 'text-red-600 dark:text-white',
+        icon: LuBan,
+    },
+];
+
 type LibraryOverviewSectionProps = {
     item: LibraryDetailItem;
     itemStats: LibraryItemStats | null;
@@ -42,6 +77,36 @@ type LibraryOverviewSectionProps = {
     onStatusChange?: (status: string) => void;
     guardedAction?: (action: () => void) => void;
 };
+
+function StatusCard({ bgClass, borderClass, iconContainerClass, icon: Icon, iconClass, title, subtitle }: {
+    bgClass: string;
+    borderClass: string;
+    iconContainerClass: string;
+    icon: IconType;
+    iconClass: string;
+    title: string;
+    subtitle?: string;
+}) {
+    return (
+        <div className={`@container ${bgClass} dark:bg-dark-850/50 border ${borderClass} dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs`}>
+            <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
+                <div className={`w-10 h-10 ${iconContainerClass} rounded-lg flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-5 h-5 ${iconClass}`} aria-hidden="true" />
+                </div>
+                <div className="text-center @[180px]:text-left">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        {title}
+                    </div>
+                    {subtitle && (
+                        <div className="text-sm text-gray-500 dark:text-dark-400">
+                            {subtitle}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function cardValueOrUnknown(value: number | null | undefined): string {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -96,33 +161,6 @@ export function LibraryOverviewSection({
         [item.description],
     );
 
-    const STATUS_OPTIONS = [
-        {
-            value: 'reading',
-            labelKey: 'status.reading-short',
-            active: 'bg-primary-50 dark:bg-primary-500/10 border-primary-300 dark:border-primary-500/30 text-primary-700 dark:text-primary-300',
-            iconContainer: 'bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600',
-            iconClassName: 'text-primary-600 dark:text-white',
-            icon: <HiOutlineBookOpen className="w-5 h-5" aria-hidden="true" />,
-        },
-        {
-            value: 'complete',
-            labelKey: 'status.completed-short',
-            active: 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/30 text-green-700 dark:text-green-300',
-            iconContainer: 'bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600',
-            iconClassName: 'text-green-600 dark:text-white',
-            icon: <LuCheck className="w-5 h-5" aria-hidden="true" />,
-        },
-        {
-            value: 'abandoned',
-            labelKey: 'status.abandoned',
-            active: 'bg-red-50 dark:bg-red-500/10 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-300',
-            iconContainer: 'bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600',
-            iconClassName: 'text-red-600 dark:text-white',
-            icon: <LuBan className="w-5 h-5" aria-hidden="true" />,
-        },
-    ];
-
     return (
         <>
         <CollapsibleSection
@@ -176,71 +214,40 @@ export function LibraryOverviewSection({
                         </div>
 
                         {showProgressStatus && (
-                            <div className="@container bg-primary-50 dark:bg-dark-850/50 border border-primary-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
-                                <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
-                                    <div className="w-10 h-10 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center shrink-0">
-                                        <HiOutlineBookOpen
-                                            className="w-5 h-5 text-primary-600 dark:text-white"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="text-center @[180px]:text-left">
-                                        <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {progressPercentage}%
-                                        </div>
-                                        <div className="text-sm text-gray-500 dark:text-dark-400">
-                                            {translation.get(
-                                                'reading-progress',
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <StatusCard
+                                bgClass="bg-primary-50"
+                                borderClass="border-primary-200"
+                                iconContainerClass="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
+                                icon={HiOutlineBookOpen}
+                                iconClass="text-primary-600 dark:text-white"
+                                title={`${progressPercentage}%`}
+                                subtitle={translation.get('reading-progress')}
+                            />
                         )}
 
                         {showCompletedStatus && (
-                            <div className="@container bg-green-50 dark:bg-dark-850/50 border border-green-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
-                                <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
-                                    <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
-                                        <LuCheck
-                                            className="w-5 h-5 text-green-600 dark:text-white"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="text-center @[180px]:text-left">
-                                        <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {translation.get(
-                                                'status.completed',
-                                            )}
-                                        </div>
-                                        {completions?.last_completion_date && (
-                                            <div className="text-sm text-gray-500 dark:text-dark-400">
-                                                {`${translation.get('last')}: ${formatIsoDate(completions.last_completion_date)}`}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            <StatusCard
+                                bgClass="bg-green-50"
+                                borderClass="border-green-200"
+                                iconContainerClass="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
+                                icon={LuCheck}
+                                iconClass="text-green-600 dark:text-white"
+                                title={translation.get('status.completed')}
+                                subtitle={completions?.last_completion_date
+                                    ? `${translation.get('last')}: ${formatIsoDate(completions.last_completion_date)}`
+                                    : undefined}
+                            />
                         )}
 
                         {showAbandonedStatus && (
-                            <div className="@container bg-red-50 dark:bg-dark-850/50 border border-red-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
-                                <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
-                                    <div className="w-10 h-10 bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600 rounded-lg flex items-center justify-center shrink-0">
-                                        <LuBan
-                                            className="w-5 h-5 text-red-600 dark:text-white"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="text-center @[180px]:text-left">
-                                        <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                            {translation.get(
-                                                'status.abandoned',
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <StatusCard
+                                bgClass="bg-red-50"
+                                borderClass="border-red-200"
+                                iconContainerClass="bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600"
+                                icon={LuBan}
+                                iconClass="text-red-600 dark:text-white"
+                                title={translation.get('status.abandoned')}
+                            />
                         )}
                     </div>
                 </div>
@@ -425,7 +432,7 @@ export function LibraryOverviewSection({
                     </h2>
                 </div>
                 <div className="flex flex-col gap-2">
-                    {STATUS_OPTIONS.map((opt) => {
+                    {ITEM_STATUS_OPTIONS.map((opt) => {
                         const isActive = item.status === opt.value;
                         return (
                             <button
@@ -439,7 +446,7 @@ export function LibraryOverviewSection({
                                 }`}
                             >
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${opt.iconContainer}`}>
-                                    <span className={opt.iconClassName}>{opt.icon}</span>
+                                    <opt.icon className={`w-5 h-5 ${opt.iconClassName}`} aria-hidden="true" />
                                 </div>
                                 <span className="flex-1 text-left">
                                     {translation.get(opt.labelKey)}
