@@ -476,3 +476,11 @@ highlight-drawer =
     .underscore = Подчёркивание
     .strikeout = Зачёркивание
     .invert = Инверсия
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Закрыть
+toast-update-item-error = Не удалось сохранить изменения. Ваши правки были отменены.
+toast-update-annotation-error = Не удалось обновить аннотацию. Ваши изменения были отменены.
+toast-delete-annotation-error = Не удалось удалить аннотацию. Она была восстановлена.

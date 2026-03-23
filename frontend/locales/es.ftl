@@ -440,3 +440,11 @@ highlight-drawer =
     .underscore = Subrayado
     .strikeout = Tachado
     .invert = Invertido
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Cerrar
+toast-update-item-error = No se pudieron guardar los cambios. Tus ediciones han sido revertidas.
+toast-update-annotation-error = No se pudo actualizar la anotación. Tus cambios han sido revertidos.
+toast-delete-annotation-error = No se pudo eliminar la anotación. Ha sido restaurada.

@@ -444,3 +444,11 @@ highlight-drawer =
     .underscore = Unterstreichen
     .strikeout = Durchstreichen
     .invert = Invertieren
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Schließen
+toast-update-item-error = Änderungen konnten nicht gespeichert werden. Deine Bearbeitungen wurden zurückgesetzt.
+toast-update-annotation-error = Anmerkung konnte nicht aktualisiert werden. Deine Änderungen wurden zurückgesetzt.
+toast-delete-annotation-error = Anmerkung konnte nicht gelöscht werden. Sie wurde wiederhergestellt.

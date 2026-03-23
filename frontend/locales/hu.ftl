@@ -420,3 +420,11 @@ highlight-drawer =
     .underscore = Aláhúzás
     .strikeout = Áthúzás
     .invert = Invertálás
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Elvetés
+toast-update-item-error = A módosítások mentése sikertelen. A szerkesztések visszaállítva.
+toast-update-annotation-error = A jegyzet frissítése sikertelen. A módosítások visszaállítva.
+toast-delete-annotation-error = A jegyzet törlése sikertelen. Visszaállítva.
