@@ -33,7 +33,11 @@ export function LibraryReviewSection({
 }: LibraryReviewSectionProps) {
     const normalizedRating = normalizeRating(rating);
 
-    const { editing, toggle: toggleEditing, close: closeEditing } = useEditToggle(guardedAction);
+    const {
+        editing,
+        toggle: toggleEditing,
+        close: closeEditing,
+    } = useEditToggle(guardedAction);
     const [draftNote, setDraftNote] = useState(note);
     const [draftRating, setDraftRating] = useState(normalizedRating);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -126,14 +130,18 @@ export function LibraryReviewSection({
 
                     <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200/50 dark:border-dark-700/50 bg-gray-50/50 dark:bg-dark-900/30">
                         <div>
-                            {(note.trim().length > 0 || normalizedRating > 0) && (
+                            {(note.trim().length > 0 ||
+                                normalizedRating > 0) && (
                                 <button
                                     type="button"
                                     onClick={handleDelete}
                                     disabled={saving}
                                     className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
                                 >
-                                    <LuTrash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                                    <LuTrash2
+                                        className="w-3.5 h-3.5"
+                                        aria-hidden="true"
+                                    />
                                     {translation.get('delete-review')}
                                 </button>
                             )}
@@ -172,7 +180,10 @@ export function LibraryReviewSection({
             ) : (
                 <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6 flex items-center gap-4">
                     <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
-                        <LuNotebookPen className="w-5 h-5 text-green-600 dark:text-white" aria-hidden="true" />
+                        <LuNotebookPen
+                            className="w-5 h-5 text-green-600 dark:text-white"
+                            aria-hidden="true"
+                        />
                     </div>
                     <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -180,8 +191,12 @@ export function LibraryReviewSection({
                         </p>
                         <p className="text-sm text-gray-500 dark:text-dark-400 mt-0.5">
                             {canWrite
-                                ? translation.get('no-review-available.hint-edit')
-                                : translation.get('no-review-available.hint-readonly')}
+                                ? translation.get(
+                                      'no-review-available.hint-edit',
+                                  )
+                                : translation.get(
+                                      'no-review-available.hint-readonly',
+                                  )}
                         </p>
                     </div>
                 </div>

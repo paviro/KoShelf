@@ -193,11 +193,7 @@ fn apply_annotation_mutations(
     Ok(())
 }
 
-fn apply_annotation_deletion(
-    lua: &Lua,
-    table: &Table,
-    lua_array_index: i64,
-) -> mlua::Result<()> {
+fn apply_annotation_deletion(lua: &Lua, table: &Table, lua_array_index: i64) -> mlua::Result<()> {
     let annotations: Table = table.get("annotations")?;
 
     // Read the annotation before removing to determine its KOReader type.

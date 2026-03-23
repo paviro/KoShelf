@@ -7,7 +7,10 @@ type EditSectionButtonProps = {
     onToggle: () => void;
 };
 
-export function EditSectionButton({ editing, onToggle }: EditSectionButtonProps) {
+export function EditSectionButton({
+    editing,
+    onToggle,
+}: EditSectionButtonProps) {
     return (
         <button
             type="button"

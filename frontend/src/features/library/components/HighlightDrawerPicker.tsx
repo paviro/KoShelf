@@ -35,7 +35,10 @@ export function HighlightDrawerPicker({
                                     : 'text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/60'
                             }`}
                         >
-                            <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <Icon
+                                className="w-4 h-4 shrink-0"
+                                aria-hidden="true"
+                            />
                             <span className={drawer.sampleClass}>
                                 {translation.get(drawer.labelKey)}
                             </span>

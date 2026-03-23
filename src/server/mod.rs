@@ -56,7 +56,8 @@ impl WriteCoordinator {
 
     /// Mark a metadata path as recently written by a write handler.
     pub fn mark_written(&self, path: &Path) {
-        self.recent_writes.insert(path.to_path_buf(), Instant::now());
+        self.recent_writes
+            .insert(path.to_path_buf(), Instant::now());
     }
 
     /// Get a shared handle to the recent-writes map for the file watcher.

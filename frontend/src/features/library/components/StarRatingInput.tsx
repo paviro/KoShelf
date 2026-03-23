@@ -66,7 +66,11 @@ export function StarRatingInput({
                     <div
                         key={index}
                         className="p-0.5 cursor-pointer"
-                        onClick={() => onChange(starValue === normalizedValue ? 0 : starValue)}
+                        onClick={() =>
+                            onChange(
+                                starValue === normalizedValue ? 0 : starValue,
+                            )
+                        }
                         role="radio"
                         aria-checked={starValue === normalizedValue}
                         aria-label={`${starValue} star${starValue !== 1 ? 's' : ''}`}

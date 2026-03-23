@@ -264,7 +264,10 @@ export class StaticApiClient implements ApiClient {
         throw writeUnavailableError();
     }
 
-    async deleteAnnotation(itemId: string, annotationId: string): Promise<void> {
+    async deleteAnnotation(
+        itemId: string,
+        annotationId: string,
+    ): Promise<void> {
         void itemId;
         void annotationId;
         throw writeUnavailableError();

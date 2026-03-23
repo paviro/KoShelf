@@ -9,7 +9,10 @@ import { translation } from '../../../shared/i18n';
 import { addToast } from '../../../shared/ui/toast';
 import type { LibraryDetailData } from '../api/library-data';
 import type { LibraryCollection } from '../model/library-model';
-import { libraryDetailQueryKey, libraryListQueryKey } from '../hooks/useLibraryQueries';
+import {
+    libraryDetailQueryKey,
+    libraryListQueryKey,
+} from '../hooks/useLibraryQueries';
 import {
     applyAnnotationDeletion,
     applyAnnotationUpdate,
@@ -51,7 +54,10 @@ export function useUpdateItem(itemId: string, collection: LibraryCollection) {
     });
 }
 
-type AnnotationVars = { annotationId: string; payload: UpdateAnnotationPayload };
+type AnnotationVars = {
+    annotationId: string;
+    payload: UpdateAnnotationPayload;
+};
 
 export function useUpdateAnnotation(
     itemId: string,
@@ -73,7 +79,10 @@ export function useUpdateAnnotation(
         },
 
         onError: (error, _vars, context) => {
-            console.error('[useUpdateAnnotation] Failed to update annotation:', error);
+            console.error(
+                '[useUpdateAnnotation] Failed to update annotation:',
+                error,
+            );
             addToast('error', translation.get('toast-update-annotation-error'));
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
@@ -106,7 +115,10 @@ export function useDeleteAnnotation(
         },
 
         onError: (error, _annotationId, context) => {
-            console.error('[useDeleteAnnotation] Failed to delete annotation:', error);
+            console.error(
+                '[useDeleteAnnotation] Failed to delete annotation:',
+                error,
+            );
             addToast('error', translation.get('toast-delete-annotation-error'));
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);

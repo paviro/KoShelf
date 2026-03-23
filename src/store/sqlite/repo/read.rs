@@ -95,10 +95,7 @@ impl LibraryRepository {
     /// - `notes`: highlights that contain a note
     /// - `highlights`: all highlights (including those with notes)
     /// - `bookmarks`: bookmark-type annotations
-    pub async fn get_annotation_counts(
-        &self,
-        item_id: &str,
-    ) -> Result<(i64, i64, i64)> {
+    pub async fn get_annotation_counts(&self, item_id: &str) -> Result<(i64, i64, i64)> {
         let row: (i64, i64, i64) = sqlx::query_as(
             "SELECT
                 COUNT(CASE WHEN annotation_kind = 'highlight' AND note IS NOT NULL THEN 1 END),

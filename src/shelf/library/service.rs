@@ -69,7 +69,10 @@ pub async fn detail(
                 sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
             Some(map_reading_stats(sb, &session_stats, &rd.time_config))
         });
-        Some(map_detail_statistics(annotation_counts, session_and_reading))
+        Some(map_detail_statistics(
+            annotation_counts,
+            session_and_reading,
+        ))
     } else {
         None
     };
