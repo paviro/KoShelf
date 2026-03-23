@@ -75,7 +75,7 @@ pub fn verify_password(candidate: &str, hash_str: &str) -> bool {
 }
 
 pub fn generate_random_password() -> Result<String> {
-    use rand::Rng;
+    use rand::RngExt;
     use rand::distr::Uniform;
 
     let mut rng = rand::rng();
