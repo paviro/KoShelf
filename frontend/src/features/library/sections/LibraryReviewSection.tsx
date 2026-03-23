@@ -44,12 +44,23 @@ export function LibraryReviewSection({
 
     const hasNote = note.trim().length > 0;
 
-    useEffect(() => {
+    // Sync drafts when entering edit mode or when source values change while editing.
+    const [prevEditing, setPrevEditing] = useState(editing);
+    const [prevNote, setPrevNote] = useState(note);
+    const [prevRating, setPrevRating] = useState(normalizedRating);
+    if (
+        editing !== prevEditing ||
+        note !== prevNote ||
+        normalizedRating !== prevRating
+    ) {
+        if (editing !== prevEditing) setPrevEditing(editing);
+        if (note !== prevNote) setPrevNote(note);
+        if (normalizedRating !== prevRating) setPrevRating(normalizedRating);
         if (editing) {
             setDraftNote(note);
             setDraftRating(normalizedRating);
         }
-    }, [editing, note, normalizedRating]);
+    }
 
     useEffect(() => {
         if (editing && textareaRef.current) {
