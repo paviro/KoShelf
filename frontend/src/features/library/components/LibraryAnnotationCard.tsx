@@ -80,15 +80,32 @@ export function LibraryAnnotationCard({
     const [editingNote, setEditingNote] = useState(false);
     const [draftNote, setDraftNote] = useState(annotation.note ?? '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const suppressToolbarTransition = useRef(false);
+    const [suppressToolbarTransition, setSuppressToolbarTransition] =
+        useState(false);
 
     const hasNote = annotation.note !== null && annotation.note !== undefined;
     const hasBody = hasText || hasNote;
 
-    useEffect(() => {
+    // Sync draft when entering edit mode or when the note changes while editing.
+    const [prevEditingNote, setPrevEditingNote] = useState(false);
+    const [prevAnnotationNote, setPrevAnnotationNote] = useState(
+        annotation.note,
+    );
+    if (
+        editingNote !== prevEditingNote ||
+        annotation.note !== prevAnnotationNote
+    ) {
+        if (editingNote !== prevEditingNote) setPrevEditingNote(editingNote);
+        if (annotation.note !== prevAnnotationNote)
+            setPrevAnnotationNote(annotation.note);
         if (editingNote) {
             setDraftNote(annotation.note ?? '');
-            // Focus on next frame after render
+        }
+    }
+
+    // Focus textarea when entering edit mode.
+    useEffect(() => {
+        if (editingNote) {
             requestAnimationFrame(() => {
                 if (textareaRef.current) {
                     const ta = textareaRef.current;
@@ -98,7 +115,7 @@ export function LibraryAnnotationCard({
                 }
             });
         }
-    }, [editingNote, annotation.note]);
+    }, [editingNote]);
 
     const dotClass = colorDotClass(annotation.color);
 
@@ -115,10 +132,10 @@ export function LibraryAnnotationCard({
     const showToolbar = hasWriteCapabilities && !editingNote;
 
     const stopEditingNote = () => {
-        suppressToolbarTransition.current = true;
+        setSuppressToolbarTransition(true);
         setEditingNote(false);
         requestAnimationFrame(() => {
-            suppressToolbarTransition.current = false;
+            setSuppressToolbarTransition(false);
         });
     };
 
@@ -313,7 +330,7 @@ export function LibraryAnnotationCard({
 
             {/* Footer — compact action bar, animated on section toggle only */}
             <div
-                className={`grid ${!editingNote && !suppressToolbarTransition.current ? 'transition-[grid-template-rows] duration-200 ease-in-out' : ''}`}
+                className={`grid ${!editingNote && !suppressToolbarTransition ? 'transition-[grid-template-rows] duration-200 ease-in-out' : ''}`}
                 style={{
                     gridTemplateRows: showToolbar ? '1fr' : '0fr',
                 }}

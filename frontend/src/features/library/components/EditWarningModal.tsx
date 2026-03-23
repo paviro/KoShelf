@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
@@ -18,9 +18,13 @@ export function EditWarningModal({
     const [dontShow, setDontShow] = useState(false);
 
     // Reset checkbox when modal reopens so a previous Cancel doesn't persist it.
-    useEffect(() => {
-        if (open) setDontShow(false);
-    }, [open]);
+    const [prevOpen, setPrevOpen] = useState(false);
+    if (open && !prevOpen) {
+        setDontShow(false);
+    }
+    if (open !== prevOpen) {
+        setPrevOpen(open);
+    }
 
     return (
         <ModalShell
