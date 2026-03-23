@@ -1,5 +1,7 @@
 import { LuStar } from 'react-icons/lu';
 
+import { normalizeRating } from '../lib/library-detail-formatters';
+
 type StarRatingInputProps = {
     value: number;
     onChange: (rating: number) => void;
@@ -13,10 +15,7 @@ export function StarRatingInput({
     disabled = false,
     size = 'sm',
 }: StarRatingInputProps) {
-    const normalizedValue =
-        typeof value === 'number' && Number.isFinite(value)
-            ? Math.max(0, Math.min(5, Math.floor(value)))
-            : 0;
+    const normalizedValue = normalizeRating(value);
 
     const starSize = size === 'md' ? 'w-7 h-7' : 'w-5 h-5';
 

@@ -21,11 +21,6 @@ use tokio::time::sleep;
 /// and the arrival of the corresponding filesystem event.
 const SELF_WRITE_SUPPRESSION_WINDOW: Duration = Duration::from_secs(3);
 
-/// Payload sent through the rebuild channel: raw file paths that triggered the rebuild.
-struct WatcherRebuildEvent {
-    paths: Vec<PathBuf>,
-}
-
 /// Watches library paths and statistics DB for changes, triggering debounced rebuilds.
 pub struct FileWatcher {
     config: SiteConfig,
@@ -65,7 +60,7 @@ impl FileWatcher {
     /// Start watching and processing file changes. Blocks until an error occurs.
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
-        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<WatcherRebuildEvent>();
+        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<Vec<PathBuf>>();
 
         let mut watcher = RecommendedWatcher::new(
             move |result: Result<Event, notify::Error>| match result {
@@ -128,16 +123,16 @@ impl FileWatcher {
             rt.block_on(async move {
                 let rebuild_delay = Duration::from_secs(1);
 
-                while let Some(initial_event) = rebuild_rx.recv().await {
+                while let Some(initial_paths) = rebuild_rx.recv().await {
                     // Accumulate paths across the debounce window.
                     let mut accumulated_paths: HashSet<PathBuf> =
-                        initial_event.paths.into_iter().collect();
+                        initial_paths.into_iter().collect();
 
                     sleep(rebuild_delay).await;
 
                     // Drain any additional events that came in during the delay
-                    while let Ok(event) = rebuild_rx.try_recv() {
-                        accumulated_paths.extend(event.paths);
+                    while let Ok(paths) = rebuild_rx.try_recv() {
+                        accumulated_paths.extend(paths);
                     }
 
                     let result = if let Some(ref repo) = library_repo_clone {
@@ -175,7 +170,7 @@ impl FileWatcher {
 
                 Self::log_paths(&paths, &event.kind, self.statistics_db_path.as_deref());
 
-                let _ = rebuild_tx.send(WatcherRebuildEvent { paths });
+                let _ = rebuild_tx.send(paths);
             }
         }
 

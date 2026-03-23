@@ -6,6 +6,7 @@ import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSecti
 import { EditSectionButton } from '../components/EditSectionButton';
 import { StarRatingInput } from '../components/StarRatingInput';
 import { useEditToggle } from '../hooks/useEditToggle';
+import { normalizeRating } from '../lib/library-detail-formatters';
 
 type LibraryReviewSectionProps = {
     note: string;
@@ -30,10 +31,7 @@ export function LibraryReviewSection({
     saving = false,
     guardedAction,
 }: LibraryReviewSectionProps) {
-    const normalizedRating =
-        typeof rating === 'number' && Number.isFinite(rating)
-            ? Math.max(0, Math.min(5, Math.floor(rating)))
-            : 0;
+    const normalizedRating = normalizeRating(rating);
 
     const { editing, toggle: toggleEditing, close: closeEditing } = useEditToggle(guardedAction);
     const [draftNote, setDraftNote] = useState(note);
