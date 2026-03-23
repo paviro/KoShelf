@@ -5,6 +5,8 @@ import type {
     UpdateAnnotationPayload,
     UpdateItemPayload,
 } from '../../../shared/api-client';
+import { translation } from '../../../shared/i18n';
+import { addToast } from '../../../shared/ui/toast';
 import type { LibraryDetailData } from '../api/library-data';
 import type { LibraryCollection } from '../model/library-model';
 import { libraryDetailQueryKey, libraryListQueryKey } from '../hooks/useLibraryQueries';
@@ -34,6 +36,7 @@ export function useUpdateItem(itemId: string, collection: LibraryCollection) {
 
         onError: (error, _payload, context) => {
             console.error('[useUpdateItem] Failed to update item:', error);
+            addToast('error', translation.get('toast-update-item-error'));
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }
@@ -71,6 +74,7 @@ export function useUpdateAnnotation(
 
         onError: (error, _vars, context) => {
             console.error('[useUpdateAnnotation] Failed to update annotation:', error);
+            addToast('error', translation.get('toast-update-annotation-error'));
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }
@@ -103,6 +107,7 @@ export function useDeleteAnnotation(
 
         onError: (error, _annotationId, context) => {
             console.error('[useDeleteAnnotation] Failed to delete annotation:', error);
+            addToast('error', translation.get('toast-delete-annotation-error'));
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }

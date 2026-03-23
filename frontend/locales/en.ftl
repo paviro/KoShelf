@@ -444,3 +444,11 @@ highlight-drawer =
     .underscore = Underline
     .strikeout = Strikeout
     .invert = Invert
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Dismiss
+toast-update-item-error = Failed to save changes. Your edits have been reverted.
+toast-update-annotation-error = Failed to update annotation. Your changes have been reverted.
+toast-delete-annotation-error = Failed to delete annotation. It has been restored.
