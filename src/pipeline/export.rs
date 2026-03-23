@@ -154,6 +154,7 @@ pub async fn export_data_files(
                 has_reading_data,
                 has_files: config.include_files,
                 auth_enabled: false,
+                has_writeback: false,
             },
         },
     )?;

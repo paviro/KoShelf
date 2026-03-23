@@ -108,9 +108,12 @@ no-books-match = Нет книг, соответствующих вашему п
 try-adjusting = Попробуйте изменить критерии поиска или фильтра
 status =
     .reading = Читаю сейчас
+    .reading-short = Читаю
     .on-hold = Отложено
     .completed = Прочитано
+    .completed-short = Завершено
     .unread = Не прочитано
+    .abandoned = Заброшено
 book-label = { $count ->
     [one] Книга
     [few] Книги
@@ -439,3 +442,45 @@ minutes_label = { $count ->
     [many] минут
    *[other] минут
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Перед редактированием
+    .body = Убедитесь, что книга закрыта в KoReader и была закрыта достаточно долго, чтобы синхронизация файлов (например, Syncthing) завершилась. KoReader перезаписывает файл метаданных, когда книга открыта. Если вы сохраните изменения здесь, пока книга ещё открыта — или до того, как последний sidecar-файл синхронизировался — ваши изменения будут потеряны.
+    .dismiss = Больше не показывать это предупреждение
+    .understood = Понятно
+edit =
+    .aria-label = Редактировать
+save = Сохранить
+cancel = Отмена
+delete = Удалить
+no-review-available = Рецензия отсутствует
+    .hint-edit = Используйте кнопку редактирования, чтобы добавить рецензию и оценку.
+    .hint-readonly = Рецензии можно добавлять непосредственно в KoReader.
+add-review = Добавить рецензию
+delete-review = Удалить рецензию
+add-note = Добавить заметку
+edit-note = Редактировать заметку
+delete-note = Удалить заметку
+delete-highlight = Удалить выделение
+delete-highlight-and-note = Удалить выделение и заметку
+delete-bookmark = Удалить закладку
+change-status = Изменить статус
+highlight-color =
+    .aria-label = Цвет выделения
+highlight-drawer =
+    .aria-label = Стиль выделения
+    .lighten = Выделение
+    .underscore = Подчёркивание
+    .strikeout = Зачёркивание
+    .invert = Инверсия
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Закрыть
+toast-update-item-error = Не удалось сохранить изменения. Ваши правки были отменены.
+toast-update-annotation-error = Не удалось обновить аннотацию. Ваши изменения были отменены.
+toast-delete-annotation-error = Не удалось удалить аннотацию. Она была восстановлена.

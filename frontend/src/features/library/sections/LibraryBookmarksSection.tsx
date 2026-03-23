@@ -1,14 +1,19 @@
 import { translation } from '../../../shared/i18n';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import { LibraryAnnotationCard } from '../components/LibraryAnnotationCard';
+import { EditSectionButton } from '../components/EditSectionButton';
 import type { LibraryAnnotation } from '../api/library-data';
 import { annotationReaderHref } from '../lib/library-reader-links';
+import { useEditToggle } from '../hooks/useEditToggle';
 
 type LibraryBookmarksSectionProps = {
     annotations: LibraryAnnotation[];
     visible: boolean;
     onToggle: () => void;
     readerBaseHref?: string | null;
+    canWrite?: boolean;
+    onDelete?: (annotationId: string) => void;
+    guardedAction?: (action: () => void) => void;
 };
 
 export function LibraryBookmarksSection({
@@ -16,7 +21,12 @@ export function LibraryBookmarksSection({
     visible,
     onToggle,
     readerBaseHref,
+    canWrite = false,
+    onDelete,
+    guardedAction,
 }: LibraryBookmarksSectionProps) {
+    const { editing, toggle } = useEditToggle(guardedAction);
+
     return (
         <CollapsibleSection
             sectionKey="bookmarks"
@@ -31,11 +41,16 @@ export function LibraryBookmarksSection({
             visible={visible}
             onToggle={onToggle}
             contentClassName="mb-8"
+            controls={
+                canWrite && visible ? (
+                    <EditSectionButton editing={editing} onToggle={toggle} />
+                ) : undefined
+            }
         >
             <div className="space-y-6">
                 {annotations.map((annotation, index) => (
                     <LibraryAnnotationCard
-                        key={`${annotation.datetime ?? ''}-${annotation.pageno ?? ''}-${index}`}
+                        key={annotation.id}
                         annotation={annotation}
                         variant="bookmark"
                         readerHref={annotationReaderHref(
@@ -43,6 +58,12 @@ export function LibraryBookmarksSection({
                             'bookmark',
                             index,
                         )}
+                        canWrite={canWrite && editing}
+                        onDelete={
+                            onDelete
+                                ? () => onDelete(annotation.id)
+                                : undefined
+                        }
                     />
                 ))}
             </div>

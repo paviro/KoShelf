@@ -186,9 +186,7 @@ impl StatisticsData {
     }
 
     fn adjust_book_pages(book: &mut StatBook, hidden_pages_by_md5: &HashMap<String, i32>) {
-        if let Some((&hidden, pages)) = hidden_pages_by_md5
-            .get(&book.md5)
-            .zip(book.pages.as_mut())
+        if let Some((&hidden, pages)) = hidden_pages_by_md5.get(&book.md5).zip(book.pages.as_mut())
         {
             let adjusted = (*pages).saturating_sub(hidden as i64);
             if adjusted > 0 {

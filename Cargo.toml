@@ -86,7 +86,8 @@ rand = "0.9"
 rusty_paseto = "0.9"
 rpassword = "7.4"
 governor = "0.10.4"
-uuid = { version = "1", features = ["v7"] }
+dashmap = "6"
+uuid = { version = "1", features = ["v4", "v7"] }
 ipnet = "2"
 
 [target.'cfg(not(windows))'.dependencies]

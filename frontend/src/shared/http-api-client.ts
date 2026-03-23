@@ -1,4 +1,10 @@
-import type { ApiClient, CompletionsParams, ScopeValue } from './api-client';
+import type {
+    ApiClient,
+    CompletionsParams,
+    ScopeValue,
+    UpdateAnnotationPayload,
+    UpdateItemPayload,
+} from './api-client';
 import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
@@ -197,6 +203,39 @@ export class HttpApiClient implements ApiClient {
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
         return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
+    async updateItem(id: string, payload: UpdateItemPayload): Promise<void> {
+        await fetchJson(`/api/items/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async updateAnnotation(
+        itemId: string,
+        annotationId: string,
+        payload: UpdateAnnotationPayload,
+    ): Promise<void> {
+        await fetchJson(
+            `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
+            {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            },
+        );
+    }
+
+    async deleteAnnotation(
+        itemId: string,
+        annotationId: string,
+    ): Promise<void> {
+        await fetchJson(
+            `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
+            { method: 'DELETE' },
+        );
     }
 
     clearCache(): void {

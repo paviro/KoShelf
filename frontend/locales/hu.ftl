@@ -100,9 +100,12 @@ no-books-match = Egyetlen könyv sem felel meg a keresési vagy szűrési felté
 try-adjusting = Próbáld meg módosítani a keresési vagy szűrési feltételeket
 status =
     .reading = Most olvasom
+    .reading-short = Olvasás
     .on-hold = Félretéve
     .completed = Befejezve
+    .completed-short = Befejezett
     .unread = Olvasatlan
+    .abandoned = Félbehagyott
 book-label = { $count ->
    *[other] Könyv
 }
@@ -383,3 +386,45 @@ hours_label = { $count ->
 minutes_label = { $count ->
    *[other] perc
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Mielőtt szerkesztenél
+    .body = Győződj meg róla, hogy a könyv be van zárva a KoReaderben, és elég idő eltelt a bezárás óta, hogy az esetleges fájlszinkronizálás (pl. Syncthing) befejeződjön. A KoReader felülírja a metaadat-fájlt, amíg a könyv nyitva van. Ha itt mentesz módosításokat, amíg a könyv még nyitva van — vagy mielőtt a legfrissebb sidecar fájl szinkronizálódott volna — a módosításaid elvesznek.
+    .dismiss = Ne jelenjen meg többé ez a figyelmeztetés
+    .understood = Megértettem
+edit =
+    .aria-label = Szerkesztés
+save = Mentés
+cancel = Mégse
+delete = Törlés
+no-review-available = Nincs elérhető értékelés
+    .hint-edit = Használd a szerkesztés gombot az értékelésed hozzáadásához.
+    .hint-readonly = Az értékelések közvetlenül a KoReaderben adhatók hozzá.
+add-review = Értékelés hozzáadása
+delete-review = Értékelés törlése
+add-note = Jegyzet hozzáadása
+edit-note = Jegyzet szerkesztése
+delete-note = Jegyzet törlése
+delete-highlight = Kiemelés törlése
+delete-highlight-and-note = Kiemelés és jegyzet törlése
+delete-bookmark = Könyvjelző törlése
+change-status = Állapot módosítása
+highlight-color =
+    .aria-label = Kiemelés színe
+highlight-drawer =
+    .aria-label = Kiemelés stílusa
+    .lighten = Kiemelés
+    .underscore = Aláhúzás
+    .strikeout = Áthúzás
+    .invert = Invertálás
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Elvetés
+toast-update-item-error = A módosítások mentése sikertelen. A szerkesztések visszaállítva.
+toast-update-annotation-error = A jegyzet frissítése sikertelen. A módosítások visszaállítva.
+toast-delete-annotation-error = A jegyzet törlése sikertelen. Visszaállítva.

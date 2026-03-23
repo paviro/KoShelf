@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     identifiers_json TEXT NOT NULL DEFAULT '[]',
     status TEXT NOT NULL CHECK (status IN ('reading', 'complete', 'abandoned', 'unknown')),
     progress_percentage REAL,
-    rating INTEGER CHECK (rating IS NULL OR (rating >= 0 AND rating <= 5)),
+    rating INTEGER CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
     review_note TEXT,
     doc_pages INTEGER CHECK (doc_pages IS NULL OR doc_pages > 0),
     pagemap_doc_pages INTEGER CHECK (pagemap_doc_pages IS NULL OR pagemap_doc_pages > 0),
@@ -34,11 +34,13 @@ CREATE TABLE IF NOT EXISTS library_items (
 );
 
 CREATE TABLE IF NOT EXISTS library_annotations (
+    id TEXT PRIMARY KEY,
     item_id TEXT NOT NULL,
     annotation_kind TEXT NOT NULL CHECK (annotation_kind IN ('highlight', 'bookmark')),
-    ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+    lua_index INTEGER NOT NULL CHECK (lua_index >= 0),
     chapter TEXT,
     datetime TEXT,
+    datetime_updated TEXT,
     pageno INTEGER CHECK (pageno IS NULL OR pageno >= 0),
     text TEXT,
     note TEXT,
@@ -46,7 +48,6 @@ CREATE TABLE IF NOT EXISTS library_annotations (
     pos1 TEXT,
     color TEXT,
     drawer TEXT,
-    PRIMARY KEY (item_id, annotation_kind, ordinal),
     FOREIGN KEY (item_id) REFERENCES library_items(id) ON DELETE CASCADE
 );
 
@@ -92,6 +93,9 @@ CREATE INDEX IF NOT EXISTS idx_library_items_partial_md5_checksum
 
 CREATE INDEX IF NOT EXISTS idx_library_annotations_item_kind
     ON library_annotations (item_id, annotation_kind);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_annotations_item_lua_index
+    ON library_annotations (item_id, lua_index);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_library_item_fingerprints_book_path
     ON library_item_fingerprints (book_path);

@@ -12,6 +12,7 @@ pub enum ApiErrorCode {
     PasswordTooShort,
     Unauthorized,
     RateLimited,
+    Conflict,
     NotFound,
     InternalServerError,
 }
@@ -27,6 +28,7 @@ impl ApiErrorCode {
             Self::PasswordTooShort => "password is too short",
             Self::Unauthorized => "unauthorized",
             Self::RateLimited => "too many requests",
+            Self::Conflict => "resource was modified externally; re-fetch and retry",
             Self::NotFound => "requested resource was not found",
             Self::InternalServerError => "internal server error",
         }

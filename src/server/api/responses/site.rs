@@ -7,6 +7,7 @@ pub struct SiteCapabilities {
     pub has_reading_data: bool,
     pub has_files: bool,
     pub auth_enabled: bool,
+    pub has_writeback: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

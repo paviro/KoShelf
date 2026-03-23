@@ -17,7 +17,7 @@ use crate::server::auth::password::{
 };
 use crate::server::auth::rate_limit::login_rate_limiter;
 use crate::server::auth::session::{cleanup_expired, paseto_key_from_bytes};
-use crate::server::{WebServer, WebServerOptions};
+use crate::server::{WebServer, WebServerOptions, WriteCoordinator};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::{
@@ -71,6 +71,7 @@ fn build_site_config(
     output_dir: PathBuf,
     is_internal_server: bool,
     auth_enabled: bool,
+    writeback_enabled: bool,
     include_files: bool,
     runtime_data_policy: RuntimeDataPolicy,
 ) -> Result<SiteConfig> {
@@ -105,6 +106,7 @@ fn build_site_config(
         language: common.language.clone(),
         use_stable_page_metadata: !common.ignore_stable_page_metadata,
         auth_enabled,
+        writeback_enabled,
         include_files,
         runtime_data_policy,
     })
@@ -127,6 +129,7 @@ async fn initialize_pipeline(
     output_dir: PathBuf,
     is_internal_server: bool,
     auth_enabled: bool,
+    writeback_enabled: bool,
     include_files: bool,
 ) -> Result<PipelineState> {
     let mut runtime_data_policy = resolve_data_policy(common);
@@ -157,6 +160,7 @@ async fn initialize_pipeline(
         output_dir,
         is_internal_server,
         auth_enabled,
+        writeback_enabled,
         include_files,
         runtime_data_policy,
     )?;
@@ -253,6 +257,7 @@ async fn initialize_pipeline(
             has_reading_data,
             has_files: is_internal_server || config.include_files,
             auth_enabled: config.auth_enabled,
+            has_writeback: config.writeback_enabled,
         },
         authenticated: None,
         password_policy,
@@ -371,6 +376,7 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         output_dir.clone(),
         true,
         args.enable_auth,
+        args.enable_writeback,
         false,
     )
     .await?;
@@ -476,12 +482,21 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
 
     let update_notifier = UpdateNotifier::new(revision_epoch, initial_generated_at);
 
+    let write_coordinator = if args.enable_writeback {
+        Some(WriteCoordinator::new())
+    } else {
+        None
+    };
+
+    let timezone = state.config.time_config.timezone;
+
     let file_watcher = FileWatcher::new(
         state.config,
         Some(site_store.clone()),
         Some(reading_data_store.clone()),
         Some(update_notifier.clone()),
         Some(state.repo.clone()),
+        write_coordinator.as_ref().map(|wc| wc.recent_writes()),
     );
 
     let web_server = WebServer::new(WebServerOptions {
@@ -493,6 +508,8 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         library_repo: state.repo,
         koshelf_pool,
         auth_state,
+        write_coordinator,
+        timezone,
     });
 
     tokio::select! {
@@ -526,6 +543,7 @@ async fn run_export(args: ExportArgs) -> Result<()> {
         output_dir.clone(),
         false,
         false,
+        false,
         args.include_files,
     )
     .await?;
@@ -550,7 +568,7 @@ async fn run_export(args: ExportArgs) -> Result<()> {
 
     if args.watch {
         info!("Watching library changes to refresh static shell/assets and /data export.");
-        let file_watcher = FileWatcher::new(state.config, None, None, None, Some(state.repo));
+        let file_watcher = FileWatcher::new(state.config, None, None, None, Some(state.repo), None);
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);
         }

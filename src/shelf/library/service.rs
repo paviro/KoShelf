@@ -62,12 +62,14 @@ pub async fn detail(
         };
 
     let statistics = if includes.has(IncludeToken::Statistics) {
-        stat_book.as_ref().and_then(|sb| {
+        let annotation_counts = repo.get_annotation_counts(&query.id).await?;
+        let session_and_reading = stat_book.as_ref().and_then(|sb| {
             let rd = reading_data?;
             let session_stats =
                 sb.calculate_session_stats(&rd.stats_data.page_stats, &rd.time_config);
-            Some(map_detail_statistics(sb, &session_stats, &rd.time_config))
-        })
+            Some(map_reading_stats(sb, &session_stats, &rd.time_config))
+        });
+        Some(map_detail_statistics(annotation_counts, session_and_reading))
     } else {
         None
     };
@@ -103,30 +105,52 @@ fn lookup_stat_book<'a>(
         .or_else(|| stats_data.stats_by_md5.get(&md5.to_uppercase()))
 }
 
-// ── Statistics mapping (non-DB data → contract types) ─────────────────
+// ── Statistics mapping ──────────────────────────────────────────────────
 
-fn map_detail_statistics(
+/// Reading-level stats extracted from KOReader's statistics database.
+struct ReadingStats {
+    last_open_at: Option<String>,
+    pages: Option<i64>,
+    total_reading_time_sec: Option<i64>,
+    session_stats: LibrarySessionStats,
+}
+
+fn map_reading_stats(
     stat_book: &StatBook,
     session_stats: &BookSessionStats,
     time_config: &TimeConfig,
-) -> LibraryDetailStatistics {
-    LibraryDetailStatistics {
-        item_stats: Some(LibraryItemStats {
-            notes: stat_book.notes,
-            last_open_at: stat_book
-                .last_open
-                .map(|ts| time_config.format_timestamp_rfc3339(ts)),
-            highlights: stat_book.highlights,
-            pages: stat_book.pages,
-            total_reading_time_sec: stat_book.total_read_time,
-        }),
-        session_stats: Some(LibrarySessionStats {
+) -> ReadingStats {
+    ReadingStats {
+        last_open_at: stat_book
+            .last_open
+            .map(|ts| time_config.format_timestamp_rfc3339(ts)),
+        pages: stat_book.pages,
+        total_reading_time_sec: stat_book.total_read_time,
+        session_stats: LibrarySessionStats {
             session_count: session_stats.session_count,
             average_session_duration_sec: session_stats.average_session_duration,
             longest_session_duration_sec: session_stats.longest_session_duration,
             last_read_date: session_stats.last_read_date.clone(),
             reading_speed: session_stats.reading_speed,
+        },
+    }
+}
+
+fn map_detail_statistics(
+    annotation_counts: (i64, i64, i64),
+    reading: Option<ReadingStats>,
+) -> LibraryDetailStatistics {
+    let (notes, highlights, bookmarks) = annotation_counts;
+    LibraryDetailStatistics {
+        item_stats: Some(LibraryItemStats {
+            notes: Some(notes),
+            highlights: Some(highlights),
+            bookmarks: Some(bookmarks),
+            last_open_at: reading.as_ref().and_then(|r| r.last_open_at.clone()),
+            pages: reading.as_ref().and_then(|r| r.pages),
+            total_reading_time_sec: reading.as_ref().and_then(|r| r.total_reading_time_sec),
         }),
+        session_stats: reading.map(|r| r.session_stats),
     }
 }
 

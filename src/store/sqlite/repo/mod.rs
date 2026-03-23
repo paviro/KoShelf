@@ -25,6 +25,11 @@ impl LibraryRepository {
             use_stable_page_metadata,
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn pool(&self) -> &SqlitePool {
+        &self.pool
+    }
 }
 
 #[cfg(test)]
@@ -80,13 +85,15 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn sample_annotation(item_id: &str, kind: &str, ordinal: i32) -> AnnotationRow {
+    pub fn sample_annotation(item_id: &str, kind: &str, lua_index: i32) -> AnnotationRow {
         AnnotationRow {
+            id: uuid::Uuid::new_v4().to_string(),
             item_id: item_id.to_string(),
             annotation_kind: kind.to_string(),
-            ordinal,
+            lua_index,
             chapter: Some("Chapter 1".to_string()),
             datetime: Some("2026-01-15T10:00:00Z".to_string()),
+            datetime_updated: None,
             pageno: Some(42),
             text: Some("highlighted text".to_string()),
             note: None,
