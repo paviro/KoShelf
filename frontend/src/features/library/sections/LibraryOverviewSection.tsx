@@ -4,15 +4,18 @@ import { BsHighlighter } from 'react-icons/bs';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
 import {
     LuArrowUpRight,
+    LuBan,
     LuCheck,
     LuFileText,
     LuLanguages,
     LuNotebookPen,
+    LuPencil,
     LuTags,
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type {
     LibraryCompletions,
@@ -35,6 +38,9 @@ type LibraryOverviewSectionProps = {
     noteCount: number;
     visible: boolean;
     onToggle: () => void;
+    canWrite?: boolean;
+    onStatusChange?: (status: string) => void;
+    guardedAction?: (action: () => void) => void;
 };
 
 function cardValueOrUnknown(value: number | null | undefined): string {
@@ -53,13 +59,30 @@ export function LibraryOverviewSection({
     noteCount,
     visible,
     onToggle,
+    canWrite = false,
+    onStatusChange,
+    guardedAction,
 }: LibraryOverviewSectionProps) {
     const [coverFailed, setCoverFailed] = useState(false);
+    const [statusModalOpen, setStatusModalOpen] = useState(false);
+
+    const handleOpenStatusModal = () => {
+        if (guardedAction) {
+            guardedAction(() => setStatusModalOpen(true));
+        } else {
+            setStatusModalOpen(true);
+        }
+    };
+
+    const handleStatusSelect = (newStatus: string) => {
+        onStatusChange?.(newStatus);
+        setStatusModalOpen(false);
+    };
 
     const progressPercentage = toProgressPercentage(item.progress_percentage);
     const languageDisplay = formatLanguageDisplayName(item.language);
-    const showProgressStatus =
-        item.status === 'reading' || item.status === 'abandoned';
+    const showProgressStatus = item.status === 'reading';
+    const showAbandonedStatus = item.status === 'abandoned';
     const showCompletedStatus = item.status === 'complete';
     const isBook = item.content_type === 'book';
     const seriesDisplay = formatSeriesDisplay(item.series);
@@ -73,7 +96,35 @@ export function LibraryOverviewSection({
         [item.description],
     );
 
+    const STATUS_OPTIONS = [
+        {
+            value: 'reading',
+            labelKey: 'status.reading-short',
+            active: 'bg-primary-50 dark:bg-primary-500/10 border-primary-300 dark:border-primary-500/30 text-primary-700 dark:text-primary-300',
+            iconContainer: 'bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600',
+            iconClassName: 'text-primary-600 dark:text-white',
+            icon: <HiOutlineBookOpen className="w-5 h-5" aria-hidden="true" />,
+        },
+        {
+            value: 'complete',
+            labelKey: 'status.completed-short',
+            active: 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/30 text-green-700 dark:text-green-300',
+            iconContainer: 'bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600',
+            iconClassName: 'text-green-600 dark:text-white',
+            icon: <LuCheck className="w-5 h-5" aria-hidden="true" />,
+        },
+        {
+            value: 'abandoned',
+            labelKey: 'status.abandoned',
+            active: 'bg-red-50 dark:bg-red-500/10 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-300',
+            iconContainer: 'bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600',
+            iconClassName: 'text-red-600 dark:text-white',
+            icon: <LuBan className="w-5 h-5" aria-hidden="true" />,
+        },
+    ];
+
     return (
+        <>
         <CollapsibleSection
             sectionKey="book-overview"
             defaultVisible
@@ -86,6 +137,18 @@ export function LibraryOverviewSection({
             visible={visible}
             onToggle={onToggle}
             contentClassName="mb-8"
+            controls={
+                canWrite && visible ? (
+                    <button
+                        type="button"
+                        onClick={handleOpenStatusModal}
+                        className="flex items-center justify-center w-10 h-10 rounded-lg border transition-colors backdrop-blur-xs bg-gray-100/50 dark:bg-dark-800/50 border-gray-300/50 dark:border-dark-700/50 text-gray-600 dark:text-dark-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
+                        aria-label={translation.get('edit.aria-label')}
+                    >
+                        <LuPencil className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                ) : undefined
+            }
         >
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
                 <div className="lg:col-span-1 space-y-4 md:space-y-6 mb-4 md:mb-0">
@@ -150,12 +213,30 @@ export function LibraryOverviewSection({
                                                 'status.completed',
                                             )}
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-dark-400">
-                                            {completions?.last_completion_date
-                                                ? `${translation.get('last')}: ${formatIsoDate(completions.last_completion_date)}`
-                                                : translation.get(
-                                                      'reading-progress',
-                                                  )}
+                                        {completions?.last_completion_date && (
+                                            <div className="text-sm text-gray-500 dark:text-dark-400">
+                                                {`${translation.get('last')}: ${formatIsoDate(completions.last_completion_date)}`}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {showAbandonedStatus && (
+                            <div className="@container bg-red-50 dark:bg-dark-850/50 border border-red-200 dark:border-dark-700/70 rounded-lg p-4 mx-auto max-w-[280px] md:max-w-xs">
+                                <div className="flex flex-col @[180px]:flex-row items-center justify-center gap-3">
+                                    <div className="w-10 h-10 bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600 rounded-lg flex items-center justify-center shrink-0">
+                                        <LuBan
+                                            className="w-5 h-5 text-red-600 dark:text-white"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+                                    <div className="text-center @[180px]:text-left">
+                                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                                            {translation.get(
+                                                'status.abandoned',
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -327,5 +408,51 @@ export function LibraryOverviewSection({
                 </div>
             </div>
         </CollapsibleSection>
+
+        <ModalShell
+            open={statusModalOpen}
+            onClose={() => setStatusModalOpen(false)}
+            containerClassName="z-[60]"
+            cardClassName="max-w-sm bg-white/95 dark:bg-dark-900/90 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl"
+        >
+            <div className="p-6">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center shrink-0">
+                        <LuPencil className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {translation.get('change-status')}
+                    </h2>
+                </div>
+                <div className="flex flex-col gap-2">
+                    {STATUS_OPTIONS.map((opt) => {
+                        const isActive = item.status === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => handleStatusSelect(opt.value)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                                    isActive
+                                        ? opt.active
+                                        : 'bg-gray-50 dark:bg-dark-800 border-gray-200 dark:border-dark-700 text-gray-700 dark:text-dark-300 hover:bg-gray-100 dark:hover:bg-dark-700'
+                                }`}
+                            >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${opt.iconContainer}`}>
+                                    <span className={opt.iconClassName}>{opt.icon}</span>
+                                </div>
+                                <span className="flex-1 text-left">
+                                    {translation.get(opt.labelKey)}
+                                </span>
+                                {isActive && (
+                                    <LuCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </ModalShell>
+        </>
     );
 }
