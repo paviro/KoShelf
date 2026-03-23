@@ -14,11 +14,21 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use chrono::{Local, Utc};
+use chrono::{Local, TimeZone, Utc};
 use log::warn;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::path::PathBuf;
 use tokio::sync::OwnedMutexGuard;
+
+/// Format the current time in the configured timezone (falls back to system local).
+/// Matches KoReader's `os.date()` which uses the device's local time.
+fn now_in_tz(tz: Option<&chrono_tz::Tz>, fmt: &str) -> String {
+    let utc = Utc::now();
+    match tz {
+        Some(tz) => tz.from_utc_datetime(&utc.naive_utc()).format(fmt).to_string(),
+        None => utc.with_timezone(&Local).format(fmt).to_string(),
+    }
+}
 
 pub(crate) async fn items(
     State(state): State<ServerState>,
@@ -57,18 +67,65 @@ pub(crate) async fn item_detail(
 
 // ── Write handlers (requires enable_writeback) ───────────────────────────
 
-#[derive(Deserialize)]
-pub struct UpdateItemRequest {
-    pub review_note: Option<String>,
-    pub rating: Option<u32>,
-    pub status: Option<String>,
+/// Three-state patch field: absent (don't change), null (clear), or value (set).
+#[derive(Debug, Clone, PartialEq)]
+enum Patch<T> {
+    Absent,
+    Null,
+    Value(T),
+}
+
+impl<T> Default for Patch<T> {
+    fn default() -> Self {
+        Patch::Absent
+    }
+}
+
+impl Patch<String> {
+    /// Convert to `Option<Option<String>>` for DB/Lua layers, treating empty
+    /// strings the same as null (clear the field).
+    fn into_nullable(self) -> Option<Option<String>> {
+        match self {
+            Patch::Absent => None,
+            Patch::Null => Some(None),
+            Patch::Value(v) if v.trim().is_empty() => Some(None),
+            Patch::Value(v) => Some(Some(v)),
+        }
+    }
+}
+
+fn deserialize_patch<'de, T, D>(deserializer: D) -> Result<Patch<T>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    // This is only called when the field is present in JSON.
+    // If null → None → Patch::Null, if value → Some(v) → Patch::Value(v).
+    Option::<T>::deserialize(deserializer).map(|opt| match opt {
+        Some(v) => Patch::Value(v),
+        None => Patch::Null,
+    })
 }
 
 #[derive(Deserialize)]
-pub struct UpdateAnnotationRequest {
-    pub note: Option<String>,
-    pub color: Option<String>,
-    pub drawer: Option<String>,
+pub(crate) struct UpdateItemRequest {
+    #[serde(default, deserialize_with = "deserialize_patch")]
+    review_note: Patch<String>,
+    #[serde(default, deserialize_with = "deserialize_patch")]
+    rating: Patch<u32>,
+    #[serde(default, deserialize_with = "deserialize_patch")]
+    status: Patch<String>,
+}
+
+/// `note` uses `Patch` (three-state: absent / null / value) because notes can
+/// be cleared.  `color` and `drawer` use plain `Option` (absent / value)
+/// because KoReader annotations always have a color and drawer once created.
+#[derive(Deserialize)]
+pub(crate) struct UpdateAnnotationRequest {
+    #[serde(default, deserialize_with = "deserialize_patch")]
+    note: Patch<String>,
+    color: Option<String>,
+    drawer: Option<String>,
 }
 
 // ── Write context ─────────────────────────────────────────────────────────
@@ -186,31 +243,45 @@ pub(crate) async fn update_item(
     Path(id): Path<String>,
     Json(body): Json<UpdateItemRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    if let Some(rating) = body.rating
-        && rating > 5
-    {
-        return Err(ApiResponseError::bad_request_with_message(
-            ApiErrorCode::InvalidQuery,
-            "rating must be between 0 and 5 (0 clears the rating)",
-        ));
+    if let Patch::Value(rating) = body.rating {
+        if rating > 5 {
+            return Err(ApiResponseError::bad_request_with_message(
+                ApiErrorCode::InvalidQuery,
+                "rating must be between 0 and 5 (0 clears the rating)",
+            ));
+        }
     }
 
-    if let Some(ref status) = body.status
-        && !matches!(status.as_str(), "reading" | "complete" | "abandoned")
-    {
-        return Err(ApiResponseError::bad_request_with_message(
-            ApiErrorCode::InvalidQuery,
-            "status must be one of: reading, complete, abandoned",
-        ));
+    if let Patch::Value(ref status) = body.status {
+        if !matches!(status.as_str(), "reading" | "complete" | "abandoned") {
+            return Err(ApiResponseError::bad_request_with_message(
+                ApiErrorCode::InvalidQuery,
+                "status must be one of: reading, complete, abandoned",
+            ));
+        }
     }
 
+    let review_note = body.review_note.into_nullable();
+    let rating: Option<u32> = match body.rating {
+        Patch::Absent => None,
+        Patch::Null => Some(0),
+        Patch::Value(v) => Some(v),
+    };
+    let status: Option<String> = match body.status {
+        Patch::Absent => None,
+        Patch::Null => None, // can't clear status
+        Patch::Value(v) => Some(v),
+    };
+
+    let modified_date = now_in_tz(state.timezone.as_ref(), "%Y-%m-%d");
     let ctx = WriteContext::prepare(&state, &id).await?;
 
     mutations::write_item_metadata(
         &ctx.metadata_path,
-        body.review_note.as_deref(),
-        body.rating,
-        body.status.as_deref(),
+        review_note.as_ref().map(|o| o.as_deref()),
+        rating,
+        status.as_deref(),
+        &modified_date,
     )
     .map_err(|e| {
         warn!("Failed to write metadata for item {}: {}", id, e);
@@ -221,9 +292,9 @@ pub(crate) async fn update_item(
         .library_repo
         .update_item_writeback_fields(
             &id,
-            body.review_note.as_deref(),
-            body.rating,
-            body.status.as_deref(),
+            review_note.as_ref().map(|o| o.as_deref()),
+            rating,
+            status.as_deref(),
         )
         .await
     {
@@ -263,9 +334,9 @@ pub(crate) async fn update_annotation(
         ));
     }
 
-    let lua_index = state
+    let (lua_index, had_note) = state
         .library_repo
-        .find_lua_index_by_annotation_id(&id, &annotation_id)
+        .find_annotation_write_info(&id, &annotation_id)
         .await
         .map_err(|e| {
             warn!("Failed to resolve annotation {}: {}", annotation_id, e);
@@ -273,20 +344,28 @@ pub(crate) async fn update_annotation(
         })?
         .ok_or_else(ApiResponseError::not_found)?;
 
-    // Compute datetime_updated once so the Lua file and DB receive the same
-    // timestamp (previously this was computed in two separate Local::now() calls).
-    let datetime_updated = if body.color.is_some() || body.drawer.is_some() {
-        Some(Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
-    } else {
-        None
-    };
+    let note = body.note.into_nullable();
+
+    // KOReader sets datetime_updated on color/drawer changes and on note type
+    // transitions (highlight↔note), but NOT on plain note text edits.
+    let note_type_transition = matches!(
+        (had_note, &note),
+        (Some(false), Some(Some(_))) | (Some(true), Some(None))
+    );
+
+    let datetime_updated =
+        if body.color.is_some() || body.drawer.is_some() || note_type_transition {
+            Some(now_in_tz(state.timezone.as_ref(), "%Y-%m-%d %H:%M:%S"))
+        } else {
+            None
+        };
 
     let ctx = WriteContext::prepare(&state, &id).await?;
 
     mutations::write_annotation_metadata(
         &ctx.metadata_path,
         lua_index,
-        body.note.as_deref(),
+        note.as_ref().map(|o| o.as_deref()),
         body.color.as_deref(),
         body.drawer.as_deref(),
         datetime_updated.as_deref(),
@@ -303,7 +382,7 @@ pub(crate) async fn update_annotation(
         .library_repo
         .update_annotation_writeback_fields(
             &annotation_id,
-            body.note.as_deref(),
+            note.as_ref().map(|o| o.as_deref()),
             body.color.as_deref(),
             body.drawer.as_deref(),
             datetime_updated.as_deref(),
@@ -324,9 +403,9 @@ pub(crate) async fn delete_annotation(
     State(state): State<ServerState>,
     Path((id, annotation_id)): Path<(String, String)>,
 ) -> ApiResult<impl IntoResponse> {
-    let (lua_index, annotation_kind) = state
+    let (lua_index, had_note) = state
         .library_repo
-        .find_annotation_index_and_kind(&id, &annotation_id)
+        .find_annotation_write_info(&id, &annotation_id)
         .await
         .map_err(|e| {
             warn!("Failed to resolve annotation {}: {}", annotation_id, e);
@@ -334,11 +413,11 @@ pub(crate) async fn delete_annotation(
         })?
         .ok_or_else(ApiResponseError::not_found)?;
 
-    let is_highlight = annotation_kind == "highlight";
+    let is_highlight = had_note.is_some(); // Some(_) = has drawer = highlight
 
     let ctx = WriteContext::prepare(&state, &id).await?;
 
-    mutations::delete_annotation(&ctx.metadata_path, lua_index, is_highlight).map_err(|e| {
+    mutations::delete_annotation(&ctx.metadata_path, lua_index).map_err(|e| {
         warn!(
             "Failed to delete annotation {} for item {}: {}",
             annotation_id, id, e

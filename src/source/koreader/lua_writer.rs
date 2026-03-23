@@ -69,9 +69,14 @@ impl LuaWriter {
         // 2. Mutate
         mutate(&self.lua, &table).map_err(|e| anyhow!("Mutation failed: {}", e))?;
 
-        // 3. Serialize
-        let header_path = metadata_path.to_string_lossy();
-        let serialized = serialize_table(&table, &header_path)?;
+        // 3. Serialize (preserve the original header comment from the file)
+        let original_header = content.lines().next().unwrap_or_default();
+        let header = if original_header.starts_with("--") {
+            original_header.to_string()
+        } else {
+            format!("-- {}", metadata_path.to_string_lossy())
+        };
+        let serialized = serialize_table(&table, &header)?;
 
         // 4. Backup rotate
         let directory_updated = backup_rotate(metadata_path)?;
@@ -94,9 +99,9 @@ impl LuaWriter {
 // ── Pure-Rust serializer ─────────────────────────────────────────────────
 
 /// Serialize an `mlua::Table` to KoReader's `dump()` format.
-fn serialize_table(table: &Table, file_path: &str) -> Result<String> {
+fn serialize_table(table: &Table, header_line: &str) -> Result<String> {
     let mut buf = String::new();
-    writeln!(buf, "-- {}", file_path).unwrap();
+    writeln!(buf, "{}", header_line).unwrap();
     write!(buf, "return ").unwrap();
 
     let mut seen = HashSet::new();

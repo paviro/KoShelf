@@ -6,26 +6,29 @@
 
 use super::LuaWriter;
 use anyhow::Result;
-use chrono::Local;
 use mlua::{Lua, Table, Value};
 use std::path::Path;
 
-// NOTE: `chrono::Local` is used only for `summary.modified` in item mutations.
-// Annotation `datetime_updated` is computed by the caller and passed in, so
-// the Lua file and DB always receive the same timestamp.
+// NOTE: All timestamps (`summary.modified`, `datetime_updated`) are computed
+// by the caller using the configured timezone, so the Lua file and DB always
+// receive the same value and both match the KoReader device's local time.
 
 // ── Public write operations ──────────────────────────────────────────────
 
 /// Write item-level field changes to a KoReader metadata sidecar file.
+///
+/// `modified_date` is the caller-formatted date string (YYYY-MM-DD) stamped
+/// on `summary.modified`, matching KoReader's `filemanagerutil.saveSummary()`.
 pub fn write_item_metadata(
     metadata_path: &Path,
-    review_note: Option<&str>,
+    review_note: Option<Option<&str>>,
     rating: Option<u32>,
     status: Option<&str>,
+    modified_date: &str,
 ) -> Result<()> {
     let writer = LuaWriter::new();
     writer.write(metadata_path, |lua, table| {
-        apply_item_mutations(lua, table, review_note, rating, status)
+        apply_item_mutations(lua, table, review_note, rating, status, modified_date)
     })
 }
 
@@ -39,7 +42,7 @@ pub fn write_item_metadata(
 pub fn write_annotation_metadata(
     metadata_path: &Path,
     lua_index: i32,
-    note: Option<&str>,
+    note: Option<Option<&str>>,
     color: Option<&str>,
     drawer: Option<&str>,
     datetime_updated: Option<&str>,
@@ -61,13 +64,13 @@ pub fn write_annotation_metadata(
 /// Delete an annotation from a KoReader metadata sidecar file.
 ///
 /// `lua_index` is the 0-based position from the database.
-/// `is_highlight` indicates whether the deleted annotation is a highlight (true)
-/// or a bookmark (false), used to decrement the correct stats counter.
-pub fn delete_annotation(metadata_path: &Path, lua_index: i32, is_highlight: bool) -> Result<()> {
+/// The correct stats counter is determined by reading the annotation's `drawer`
+/// and `note` fields, matching KOReader's `getBookmarkType` classification.
+pub fn delete_annotation(metadata_path: &Path, lua_index: i32) -> Result<()> {
     let lua_array_index = (lua_index + 1) as i64;
     let writer = LuaWriter::new();
     writer.write(metadata_path, |lua, table| {
-        apply_annotation_deletion(lua, table, lua_array_index, is_highlight)
+        apply_annotation_deletion(lua, table, lua_array_index)
     })
 }
 
@@ -76,9 +79,10 @@ pub fn delete_annotation(metadata_path: &Path, lua_index: i32, is_highlight: boo
 fn apply_item_mutations(
     lua: &Lua,
     table: &Table,
-    review_note: Option<&str>,
+    review_note: Option<Option<&str>>,
     rating: Option<u32>,
     status: Option<&str>,
+    modified_date: &str,
 ) -> mlua::Result<()> {
     // Ensure summary table exists
     let summary: Table = match table.get("summary")? {
@@ -90,8 +94,11 @@ fn apply_item_mutations(
         }
     };
 
-    if let Some(note) = review_note {
-        summary.set("note", note)?;
+    // None = don't touch, Some(None) = clear, Some(Some(v)) = set
+    match review_note {
+        Some(Some(note)) => summary.set("note", note)?,
+        Some(None) => summary.set("note", Value::Nil)?,
+        None => {}
     }
 
     if let Some(rating) = rating {
@@ -107,7 +114,7 @@ fn apply_item_mutations(
     }
 
     // Match KoReader's filemanagerutil.saveSummary(): always stamp the modified date.
-    summary.set("modified", Local::now().format("%Y-%m-%d").to_string())?;
+    summary.set("modified", modified_date)?;
 
     Ok(())
 }
@@ -115,7 +122,7 @@ fn apply_item_mutations(
 fn apply_annotation_mutations(
     table: &Table,
     lua_array_index: i64,
-    note: Option<&str>,
+    note: Option<Option<&str>>,
     color: Option<&str>,
     drawer: Option<&str>,
     datetime_updated: Option<&str>,
@@ -131,8 +138,23 @@ fn apply_annotation_mutations(
         }
     };
 
-    if let Some(note) = note {
-        annotation.set("note", note)?;
+    // Capture the note status before mutation so we can update stats if it changes.
+    // KOReader's getBookmarkType: drawer + note → "note", drawer + no note → "highlight".
+    let had_note = if note.is_some() {
+        let has_drawer = !matches!(annotation.get::<Value>("drawer")?, Value::Nil);
+        if has_drawer {
+            Some(!matches!(annotation.get::<Value>("note")?, Value::Nil))
+        } else {
+            None // bookmark — not tracked in stats
+        }
+    } else {
+        None // note field not being changed
+    };
+
+    match note {
+        Some(Some(text)) => annotation.set("note", text)?,
+        Some(None) => annotation.set("note", Value::Nil)?,
+        None => {}
     }
 
     if let Some(color) = color {
@@ -147,6 +169,33 @@ fn apply_annotation_mutations(
         annotation.set("datetime_updated", dt)?;
     }
 
+    // Update stats counters if the annotation transitioned between highlight ↔ note.
+    // Matches KOReader's setBookmarkNote / deleteItemNote AnnotationsModified events.
+    if let Some(had_note) = had_note {
+        let has_note = !matches!(annotation.get::<Value>("note")?, Value::Nil);
+        if had_note != has_note {
+            if let Value::Table(stats) = table.get("stats")? {
+                if has_note {
+                    // highlight → note
+                    if let Value::Integer(c) = stats.get("highlights")? {
+                        stats.set("highlights", (c - 1).max(0))?;
+                    }
+                    if let Value::Integer(c) = stats.get("notes")? {
+                        stats.set("notes", c + 1)?;
+                    }
+                } else {
+                    // note → highlight
+                    if let Value::Integer(c) = stats.get("highlights")? {
+                        stats.set("highlights", c + 1)?;
+                    }
+                    if let Value::Integer(c) = stats.get("notes")? {
+                        stats.set("notes", (c - 1).max(0))?;
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -154,20 +203,29 @@ fn apply_annotation_deletion(
     lua: &Lua,
     table: &Table,
     lua_array_index: i64,
-    is_highlight: bool,
 ) -> mlua::Result<()> {
     let annotations: Table = table.get("annotations")?;
 
-    // Verify the annotation exists before removing.
-    match annotations.get::<Value>(lua_array_index)? {
-        Value::Table(_) => {}
+    // Read the annotation before removing to determine its KOReader type.
+    let annotation: Table = match annotations.get::<Value>(lua_array_index)? {
+        Value::Table(t) => t,
         _ => {
             return Err(mlua::Error::external(format!(
                 "no annotation at Lua index {}",
                 lua_array_index
             )));
         }
-    }
+    };
+
+    // KOReader's getBookmarkType: no drawer → "bookmark", drawer + note → "note",
+    // drawer + no note → "highlight". Only highlights and notes are tracked in stats.
+    let has_drawer = !matches!(annotation.get::<Value>("drawer")?, Value::Nil);
+    let stats_key = if has_drawer {
+        let has_note = !matches!(annotation.get::<Value>("note")?, Value::Nil);
+        Some(if has_note { "notes" } else { "highlights" })
+    } else {
+        None // bookmark — not tracked in stats
+    };
 
     // Use Lua's table.remove() which shifts subsequent elements down,
     // matching KoReader's readerbookmark:removeItemByIndex().
@@ -176,10 +234,11 @@ fn apply_annotation_deletion(
     remove_fn.call::<Value>((annotations, lua_array_index))?;
 
     // Decrement the stats counter matching KoReader's AnnotationsModified event.
-    if let Value::Table(stats) = table.get("stats")? {
-        let key = if is_highlight { "highlights" } else { "notes" };
-        if let Value::Integer(count) = stats.get(key)? {
-            stats.set(key, (count - 1).max(0))?;
+    if let Some(key) = stats_key {
+        if let Value::Table(stats) = table.get("stats")? {
+            if let Value::Integer(count) = stats.get(key)? {
+                stats.set(key, (count - 1).max(0))?;
+            }
         }
     }
 

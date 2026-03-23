@@ -72,6 +72,7 @@ pub struct ServerState {
     pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
+    pub timezone: Option<chrono_tz::Tz>,
 }
 
 /// Axum-based HTTP server serving the API, embedded React frontend, and media assets.
@@ -85,6 +86,7 @@ pub struct WebServer {
     koshelf_pool: SqlitePool,
     auth_state: Option<auth::AuthState>,
     write_coordinator: Option<WriteCoordinator>,
+    timezone: Option<chrono_tz::Tz>,
 }
 
 pub struct WebServerOptions {
@@ -97,6 +99,7 @@ pub struct WebServerOptions {
     pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
+    pub timezone: Option<chrono_tz::Tz>,
 }
 
 impl WebServer {
@@ -111,6 +114,7 @@ impl WebServer {
             koshelf_pool,
             auth_state,
             write_coordinator,
+            timezone,
         } = options;
 
         Self {
@@ -123,6 +127,7 @@ impl WebServer {
             koshelf_pool,
             auth_state,
             write_coordinator,
+            timezone,
         }
     }
 
@@ -136,6 +141,7 @@ impl WebServer {
             koshelf_pool: self.koshelf_pool,
             auth_state: self.auth_state,
             write_coordinator: self.write_coordinator,
+            timezone: self.timezone,
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
         let files_cache_dir = self.media_cache_dir.join("files");

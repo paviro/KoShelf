@@ -42,20 +42,23 @@ impl LibraryRepository {
 
     pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
         let pages_expr = if self.use_stable_page_metadata {
-            "COALESCE(pagemap_doc_pages, doc_pages, parser_pages)"
+            "COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages)"
         } else {
-            "COALESCE(doc_pages, parser_pages)"
+            "COALESCE(i.doc_pages, i.parser_pages)"
         };
 
         let sql = format!(
             "SELECT
-                id, title, authors_json, series_json, status,
-                progress_percentage, rating, cover_url, content_type, format,
-                language, publisher, description, review_note,
+                i.id, i.title, i.authors_json, i.series_json, i.status,
+                i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
+                i.language, i.publisher, i.description, i.review_note,
                 {pages_expr} as pages,
-                search_base_path, subjects_json, identifiers_json,
-                partial_md5_checksum, reader_presentation
-             FROM library_items WHERE id = ?1"
+                i.search_base_path, i.subjects_json, i.identifiers_json,
+                (f.metadata_path IS NOT NULL) AS has_metadata,
+                i.partial_md5_checksum, i.reader_presentation
+             FROM library_items i
+             LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
+             WHERE i.id = ?1"
         );
 
         sqlx::query_as::<_, LibraryDetailItem>(&sql)
@@ -84,6 +87,31 @@ impl LibraryRepository {
         .fetch_all(&self.pool)
         .await
         .context("Failed to get annotations")
+    }
+
+    /// Count annotations grouped by KoShelf type for a given item.
+    ///
+    /// Returns `(notes, highlights, bookmarks)` where:
+    /// - `notes`: highlights that contain a note
+    /// - `highlights`: all highlights (including those with notes)
+    /// - `bookmarks`: bookmark-type annotations
+    pub async fn get_annotation_counts(
+        &self,
+        item_id: &str,
+    ) -> Result<(i64, i64, i64)> {
+        let row: (i64, i64, i64) = sqlx::query_as(
+            "SELECT
+                COUNT(CASE WHEN annotation_kind = 'highlight' AND note IS NOT NULL THEN 1 END),
+                COUNT(CASE WHEN annotation_kind = 'highlight' THEN 1 END),
+                COUNT(CASE WHEN annotation_kind = 'bookmark' THEN 1 END)
+             FROM library_annotations
+             WHERE item_id = ?1",
+        )
+        .bind(item_id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to get annotation counts")?;
+        Ok(row)
     }
 
     /// Load all stored fingerprints (for reconciliation during incremental builds).
@@ -219,41 +247,32 @@ impl LibraryRepository {
         Ok(row.0)
     }
 
-    /// Find the lua_index for an annotation by its UUID, scoped to a specific item.
+    /// Find the lua_index and note-on-highlight state for an annotation.
     ///
-    /// Used by write handlers to resolve a frontend-facing annotation ID
-    /// to the internal Lua array position for metadata file writes.
-    /// The `item_id` check prevents cross-item annotation references.
-    pub async fn find_lua_index_by_annotation_id(
+    /// Returns `(lua_index, had_note)` where `had_note` is:
+    /// - `Some(true)` — highlight with an existing note
+    /// - `Some(false)` — highlight without a note
+    /// - `None` — bookmark (no drawer, not tracked in stats)
+    ///
+    /// Used by both update and delete write handlers:
+    /// - Update uses `had_note` to detect highlight↔note type transitions
+    ///   (for setting `datetime_updated` to match KOReader).
+    /// - Delete uses `had_note.is_some()` to determine whether the annotation
+    ///   is a highlight (decrement `highlight_count`) or bookmark.
+    pub async fn find_annotation_write_info(
         &self,
         item_id: &str,
         annotation_id: &str,
-    ) -> Result<Option<i32>> {
-        let row: Option<(i32,)> = sqlx::query_as(
-            "SELECT lua_index FROM library_annotations WHERE id = ?1 AND item_id = ?2",
+    ) -> Result<Option<(i32, Option<bool>)>> {
+        let row: Option<(i32, Option<bool>)> = sqlx::query_as(
+            "SELECT lua_index, (CASE WHEN drawer IS NOT NULL THEN note IS NOT NULL END)
+             FROM library_annotations WHERE id = ?1 AND item_id = ?2",
         )
         .bind(annotation_id)
         .bind(item_id)
         .fetch_optional(&self.pool)
         .await
-        .context("Failed to find lua_index by annotation id")?;
-        Ok(row.map(|r| r.0))
-    }
-
-    /// Find the lua_index and annotation_kind for an annotation by its ID.
-    pub async fn find_annotation_index_and_kind(
-        &self,
-        item_id: &str,
-        annotation_id: &str,
-    ) -> Result<Option<(i32, String)>> {
-        let row: Option<(i32, String)> = sqlx::query_as(
-            "SELECT lua_index, annotation_kind FROM library_annotations WHERE id = ?1 AND item_id = ?2",
-        )
-        .bind(annotation_id)
-        .bind(item_id)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to find annotation index and kind")?;
+        .context("Failed to find annotation write info")?;
         Ok(row)
     }
 

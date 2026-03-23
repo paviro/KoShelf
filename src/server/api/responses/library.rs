@@ -91,6 +91,9 @@ pub struct LibraryDetailItem {
     pub subjects: Json<Vec<String>>,
     #[sqlx(rename = "identifiers_json")]
     pub identifiers: Json<Vec<ExternalIdentifier>>,
+    /// Whether this item has a KOReader metadata sidecar file that can be
+    /// written back to.  `false` for unread books included via `--include-unread`.
+    pub has_metadata: bool,
     /// Populated from DB but not serialized directly; moved to `LibraryDetailData`
     /// when the `reader_presentation` include token is present.
     #[serde(skip)]
@@ -157,6 +160,8 @@ pub struct LibraryItemStats {
     pub last_open_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub highlights: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bookmarks: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pages: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]

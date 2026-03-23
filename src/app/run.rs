@@ -488,6 +488,8 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         None
     };
 
+    let timezone = state.config.time_config.timezone;
+
     let file_watcher = FileWatcher::new(
         state.config,
         Some(site_store.clone()),
@@ -507,6 +509,7 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         koshelf_pool,
         auth_state,
         write_coordinator,
+        timezone,
     });
 
     tokio::select! {

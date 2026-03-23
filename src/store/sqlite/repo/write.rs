@@ -255,21 +255,24 @@ impl LibraryRepository {
     }
 
     /// Update writable item-level fields after a writeback operation.
+    ///
+    /// `review_note`: `None` = don't touch, `Some(None)` = clear, `Some(Some(v))` = set.
     pub async fn update_item_writeback_fields(
         &self,
         item_id: &str,
-        review_note: Option<&str>,
+        review_note: Option<Option<&str>>,
         rating: Option<u32>,
         status: Option<&str>,
     ) -> Result<()> {
         sqlx::query(
             "UPDATE library_items SET
-                review_note = COALESCE(?1, review_note),
-                rating = CASE WHEN ?2 THEN ?3 ELSE rating END,
-                status = COALESCE(?4, status)
-             WHERE id = ?5",
+                review_note = CASE WHEN ?1 THEN ?2 ELSE review_note END,
+                rating = CASE WHEN ?3 THEN ?4 ELSE rating END,
+                status = COALESCE(?5, status)
+             WHERE id = ?6",
         )
-        .bind(review_note)
+        .bind(review_note.is_some())
+        .bind(review_note.flatten())
         .bind(rating.is_some())
         .bind(rating.filter(|&r| r > 0).map(|r| r as i32))
         .bind(status)
@@ -281,23 +284,26 @@ impl LibraryRepository {
     }
 
     /// Update writable annotation-level fields after a writeback operation.
+    ///
+    /// `note`: `None` = don't touch, `Some(None)` = clear, `Some(Some(v))` = set.
     pub async fn update_annotation_writeback_fields(
         &self,
         annotation_id: &str,
-        note: Option<&str>,
+        note: Option<Option<&str>>,
         color: Option<&str>,
         drawer: Option<&str>,
         datetime_updated: Option<&str>,
     ) -> Result<()> {
         sqlx::query(
             "UPDATE library_annotations SET
-                note = COALESCE(?1, note),
-                color = COALESCE(?2, color),
-                drawer = COALESCE(?3, drawer),
-                datetime_updated = COALESCE(?4, datetime_updated)
-             WHERE id = ?5",
+                note = CASE WHEN ?1 THEN ?2 ELSE note END,
+                color = COALESCE(?3, color),
+                drawer = COALESCE(?4, drawer),
+                datetime_updated = COALESCE(?5, datetime_updated)
+             WHERE id = ?6",
         )
-        .bind(note)
+        .bind(note.is_some())
+        .bind(note.flatten())
         .bind(color)
         .bind(drawer)
         .bind(datetime_updated)
@@ -511,7 +517,7 @@ mod tests {
         repo.upsert_item(&item).await.unwrap();
 
         // Update only review_note, leave rating and status unchanged
-        repo.update_item_writeback_fields("wb1", Some("new note"), None, None)
+        repo.update_item_writeback_fields("wb1", Some(Some("new note")), None, None)
             .await
             .unwrap();
 
@@ -546,7 +552,7 @@ mod tests {
         ann.drawer = Some("lighten".to_string());
         repo.replace_annotations("aw1", &[ann]).await.unwrap();
 
-        repo.update_annotation_writeback_fields(&ann_id, Some("my note"), None, None, None)
+        repo.update_annotation_writeback_fields(&ann_id, Some(Some("my note")), None, None, None)
             .await
             .unwrap();
 
