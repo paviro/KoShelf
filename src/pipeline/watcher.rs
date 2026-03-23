@@ -1,5 +1,6 @@
 use crate::app::config::SiteConfig;
 use crate::pipeline::rebuild::targeted_rebuild;
+use crate::server::RecentWrites;
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::MetadataLocation;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
@@ -11,14 +12,14 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
-/// Payload sent through the rebuild channel: raw file paths that triggered the rebuild.
-struct WatcherRebuildEvent {
-    paths: Vec<PathBuf>,
-}
+/// Events for paths written by the app within this window are suppressed.
+/// Must exceed the poll interval (1 s) to cover the gap between `mark_written()`
+/// and the arrival of the corresponding filesystem event.
+const SELF_WRITE_SUPPRESSION_WINDOW: Duration = Duration::from_secs(3);
 
 /// Watches library paths and statistics DB for changes, triggering debounced rebuilds.
 pub struct FileWatcher {
@@ -27,6 +28,7 @@ pub struct FileWatcher {
     reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<UpdateNotifier>,
     library_repo: Option<LibraryRepository>,
+    recent_writes: Option<RecentWrites>,
 }
 
 impl Deref for FileWatcher {
@@ -43,6 +45,7 @@ impl FileWatcher {
         reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<UpdateNotifier>,
         library_repo: Option<LibraryRepository>,
+        recent_writes: Option<RecentWrites>,
     ) -> Self {
         Self {
             config,
@@ -50,13 +53,14 @@ impl FileWatcher {
             reading_data_store,
             update_notifier,
             library_repo,
+            recent_writes,
         }
     }
 
     /// Start watching and processing file changes. Blocks until an error occurs.
     pub async fn run(self) -> Result<()> {
         let (file_tx, mut file_rx) = mpsc::unbounded_channel();
-        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<WatcherRebuildEvent>();
+        let (rebuild_tx, mut rebuild_rx) = mpsc::unbounded_channel::<Vec<PathBuf>>();
 
         let mut watcher = RecommendedWatcher::new(
             move |result: Result<Event, notify::Error>| match result {
@@ -119,16 +123,16 @@ impl FileWatcher {
             rt.block_on(async move {
                 let rebuild_delay = Duration::from_secs(1);
 
-                while let Some(initial_event) = rebuild_rx.recv().await {
+                while let Some(initial_paths) = rebuild_rx.recv().await {
                     // Accumulate paths across the debounce window.
                     let mut accumulated_paths: HashSet<PathBuf> =
-                        initial_event.paths.into_iter().collect();
+                        initial_paths.into_iter().collect();
 
                     sleep(rebuild_delay).await;
 
                     // Drain any additional events that came in during the delay
-                    while let Ok(event) = rebuild_rx.try_recv() {
-                        accumulated_paths.extend(event.paths);
+                    while let Ok(paths) = rebuild_rx.try_recv() {
+                        accumulated_paths.extend(paths);
                     }
 
                     let result = if let Some(ref repo) = library_repo_clone {
@@ -158,11 +162,15 @@ impl FileWatcher {
         // Main file event processing loop
         while let Some(event) = file_rx.recv().await {
             if self.is_relevant_event(&event) {
-                self.log_file_event(&event);
+                // Filter out paths recently written by our own write handlers.
+                let paths = self.filter_recent_writes(event.paths);
+                if paths.is_empty() {
+                    continue;
+                }
 
-                let rebuild_event = WatcherRebuildEvent { paths: event.paths };
+                Self::log_paths(&paths, &event.kind, self.statistics_db_path.as_deref());
 
-                let _ = rebuild_tx.send(rebuild_event);
+                let _ = rebuild_tx.send(paths);
             }
         }
 
@@ -218,10 +226,45 @@ impl FileWatcher {
         })
     }
 
-    fn log_file_event(&self, event: &Event) {
-        for path in &event.paths {
+    /// Remove paths that were recently written by a write handler.
+    fn filter_recent_writes(&self, paths: Vec<PathBuf>) -> Vec<PathBuf> {
+        let Some(ref recent) = self.recent_writes else {
+            return paths;
+        };
+
+        let now = Instant::now();
+
+        paths
+            .into_iter()
+            .filter(|p| {
+                if let Some(entry) = recent.get(p) {
+                    let elapsed = now.duration_since(*entry.value());
+                    if elapsed < SELF_WRITE_SUPPRESSION_WINDOW {
+                        debug!(
+                            "Suppressing self-triggered event for {:?} (written {:.1}s ago)",
+                            p,
+                            elapsed.as_secs_f64()
+                        );
+                        return false;
+                    }
+                    // Expired — clean up, but only if the timestamp hasn't
+                    // been refreshed by a concurrent `mark_written()`.
+                    drop(entry);
+                    recent.remove_if(p, |_, ts| now.duration_since(*ts) >= SELF_WRITE_SUPPRESSION_WINDOW);
+                }
+                true
+            })
+            .collect()
+    }
+
+    fn log_paths(
+        paths: &[PathBuf],
+        kind: &EventKind,
+        statistics_db_path: Option<&std::path::Path>,
+    ) {
+        for path in paths {
             let filename = path.file_name().and_then(|s| s.to_str());
-            let action = match &event.kind {
+            let action = match kind {
                 EventKind::Create(_) | EventKind::Modify(_) => "modified",
                 EventKind::Remove(_) => "removed",
                 _ => continue,
@@ -243,7 +286,7 @@ impl FileWatcher {
                 info!("KoReader metadata directory {}: {:?}", action, path);
             }
 
-            if let Some(ref stats_path) = self.statistics_db_path
+            if let Some(stats_path) = statistics_db_path
                 && path == stats_path
             {
                 info!("Statistics database {}: {:?}", action, path);

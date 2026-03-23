@@ -4,6 +4,7 @@ export interface SiteCapabilities {
     has_reading_data: boolean;
     has_files?: boolean;
     auth_enabled: boolean;
+    has_writeback?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -241,6 +242,7 @@ export interface LibraryDetailItem {
     search_base_path: string;
     subjects: string[];
     identifiers: ExternalIdentifier[];
+    has_metadata?: boolean;
 }
 
 export interface LibraryReaderPresentation {
@@ -257,6 +259,7 @@ export interface LibraryReaderPresentation {
 }
 
 export interface LibraryAnnotation {
+    id: string;
     chapter?: string | null;
     datetime?: string | null;
     pageno?: number | null;
@@ -286,6 +289,7 @@ export interface LibraryItemStats {
     notes?: number | null;
     last_open_at?: string | null;
     highlights?: number | null;
+    bookmarks?: number | null;
     pages?: number | null;
     total_reading_time_sec?: number | null;
 }

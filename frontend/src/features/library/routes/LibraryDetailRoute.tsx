@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 
 import {
@@ -17,7 +17,10 @@ import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
+import { EditWarningModal } from '../components/EditWarningModal';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
+import { useEditWarning } from '../hooks/useEditWarning';
+import { useUpdateItem, useUpdateAnnotation, useDeleteAnnotation } from '../api/library-mutations';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import {
     LIBRARY_DETAIL_SECTION_KEYS,
@@ -60,6 +63,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     });
     const detail = detailTransition.displayData;
     const item = detail?.item;
+
+    const canWrite = siteQuery.data?.capabilities.has_writeback === true && item?.has_metadata === true;
     const itemStats = detail?.statistics?.item_stats ?? null;
     const sessionStats = detail?.statistics?.session_stats ?? null;
     const completions = detail?.completions ?? null;
@@ -67,16 +72,89 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const highlightAnnotations = detail?.highlights ?? [];
     const bookmarkAnnotations = detail?.bookmarks ?? [];
 
-    const noteCount =
-        typeof itemStats?.notes === 'number' && Number.isFinite(itemStats.notes)
-            ? Math.max(0, Math.floor(itemStats.notes))
-            : 0;
+    const noteCount = itemStats?.notes ?? 0;
+    const highlightCount = itemStats?.highlights ?? 0;
     const reviewNote = item?.review_note ?? '';
     const hasReviewNote =
         item?.review_note !== null && item?.review_note !== undefined;
+    const hasRating =
+        typeof item?.rating === 'number' && item.rating > 0;
+    const hasReview = hasReviewNote || hasRating;
     const hasPublisher =
         item?.publisher !== null && item?.publisher !== undefined;
 
+    // ── Write infrastructure ────────────────────────────────────────────
+    const { guardedAction, warningOpen, acknowledge, cancel } =
+        useEditWarning();
+    const updateItemMutation = useUpdateItem(id ?? '', collection);
+    const updateAnnotationMutation = useUpdateAnnotation(id ?? '', collection);
+    const deleteAnnotationMutation = useDeleteAnnotation(id ?? '', collection);
+
+    // ── Review editing ──────────────────────────────────────────────────
+    const handleReviewSave = useCallback(
+        (note: string, rating: number) => {
+            updateItemMutation.mutate({
+                review_note: note || null,
+                rating: rating || null,
+            });
+        },
+        [updateItemMutation],
+    );
+
+    const handleReviewDelete = useCallback(() => {
+        updateItemMutation.mutate({
+            review_note: null,
+            rating: null,
+        });
+    }, [updateItemMutation]);
+
+    // ── Status change ───────────────────────────────────────────────────
+    const handleStatusChange = useCallback(
+        (status: string) => {
+            updateItemMutation.mutate({ status });
+        },
+        [updateItemMutation],
+    );
+
+    // ── Annotation mutations ────────────────────────────────────────────
+    const handleAnnotationNoteUpdate = useCallback(
+        (annotationId: string, note: string | null) => {
+            updateAnnotationMutation.mutate({
+                annotationId,
+                payload: { note },
+            });
+        },
+        [updateAnnotationMutation],
+    );
+
+    const handleAnnotationColorChange = useCallback(
+        (annotationId: string, color: string) => {
+            updateAnnotationMutation.mutate({
+                annotationId,
+                payload: { color },
+            });
+        },
+        [updateAnnotationMutation],
+    );
+
+    const handleAnnotationDrawerChange = useCallback(
+        (annotationId: string, drawer: string) => {
+            updateAnnotationMutation.mutate({
+                annotationId,
+                payload: { drawer },
+            });
+        },
+        [updateAnnotationMutation],
+    );
+
+    const handleAnnotationDelete = useCallback(
+        (annotationId: string) => {
+            deleteAnnotationMutation.mutate(annotationId);
+        },
+        [deleteAnnotationMutation],
+    );
+
+    // ── Section visibility ──────────────────────────────────────────────
     const detailRouteId = useMemo(
         () => detailRouteIdForCollection(collection),
         [collection],
@@ -179,10 +257,13 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                             item={item}
                             itemStats={itemStats}
                             completions={completions}
-                            highlightCount={highlightAnnotations.length}
+                            highlightCount={highlightCount}
                             noteCount={noteCount}
                             visible={sectionState['book-overview']}
                             onToggle={() => toggle('book-overview')}
+                            canWrite={canWrite}
+                            onStatusChange={handleStatusChange}
+                            guardedAction={guardedAction}
                         />
 
                         {sessionStats && (
@@ -195,12 +276,17 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                             />
                         )}
 
-                        {hasReviewNote && (
+                        {(hasReview || canWrite) && (
                             <LibraryReviewSection
                                 note={reviewNote}
                                 rating={item.rating ?? null}
                                 visible={sectionState.review}
                                 onToggle={() => toggle('review')}
+                                canWrite={canWrite}
+                                onSave={handleReviewSave}
+                                onDelete={handleReviewDelete}
+                                saving={updateItemMutation.isPending}
+                                guardedAction={guardedAction}
                             />
                         )}
 
@@ -211,6 +297,12 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     visible={sectionState.highlights}
                                     onToggle={() => toggle('highlights')}
                                     readerBaseHref={readerBaseHref}
+                                    canWrite={canWrite}
+                                    onSaveNote={handleAnnotationNoteUpdate}
+                                    onColorChange={handleAnnotationColorChange}
+                                    onDrawerChange={handleAnnotationDrawerChange}
+                                    onDelete={handleAnnotationDelete}
+                                    guardedAction={guardedAction}
                                 />
                             )}
 
@@ -221,6 +313,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     visible={sectionState.bookmarks}
                                     onToggle={() => toggle('bookmarks')}
                                     readerBaseHref={readerBaseHref}
+                                    canWrite={canWrite}
+                                    onDelete={handleAnnotationDelete}
+                                    guardedAction={guardedAction}
                                 />
                             )}
 
@@ -235,6 +330,14 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                     </div>
                 )}
             </PageContent>
+
+            {canWrite && (
+                <EditWarningModal
+                    open={warningOpen}
+                    onAcknowledge={acknowledge}
+                    onCancel={cancel}
+                />
+            )}
         </>
     );
 }

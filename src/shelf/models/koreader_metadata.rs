@@ -76,6 +76,7 @@ pub struct FlowPoint {
 pub struct Annotation {
     pub chapter: Option<String>,
     pub datetime: Option<String>,
+    pub datetime_updated: Option<String>,
     pub pageno: Option<u32>,
     pub pos0: Option<String>,
     pub pos1: Option<String>,
@@ -86,12 +87,14 @@ pub struct Annotation {
 }
 
 impl Annotation {
-    /// Returns true if this annotation is a bookmark (no pos0/pos1), false if it's a highlight/quote
+    /// Returns true if this annotation is a bookmark (no drawer), false if it's a highlight/note.
+    /// Matches KOReader's `getBookmarkType`: annotations without `drawer` are bookmarks.
     pub fn is_bookmark(&self) -> bool {
-        self.pos0.is_none() && self.pos1.is_none()
+        self.drawer.is_none()
     }
 
-    /// Returns true if this annotation is a highlight/quote (has pos0/pos1), false if it's a bookmark
+    /// Returns true if this annotation is a highlight or note (has drawer), false if it's a bookmark.
+    /// Matches KOReader's `getBookmarkType`: annotations with `drawer` are highlights or notes.
     pub fn is_highlight(&self) -> bool {
         !self.is_bookmark()
     }

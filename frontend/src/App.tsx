@@ -9,6 +9,7 @@ import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { SiteData } from './shared/contracts';
 import { I18N_LANGUAGE_CHANGE_EVENT, translation } from './shared/i18n';
+import { ToastContainer } from './shared/ui/toast';
 
 function resolveDefaultRoute(
     site: SiteData | undefined,
@@ -81,6 +82,7 @@ export function App() {
         return (
             <div className="min-h-full bg-gray-100 dark:bg-dark-925 text-gray-900 dark:text-white font-sans">
                 {routes}
+                <ToastContainer />
             </div>
         );
     }
@@ -94,6 +96,7 @@ export function App() {
             version={site?.version}
         >
             {routes}
+            <ToastContainer />
         </AppShell>
     );
 }

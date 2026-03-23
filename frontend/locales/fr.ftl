@@ -108,9 +108,12 @@ no-books-match = Aucun livre ne correspond à votre recherche ou vos filtres.
 try-adjusting = Essayez d’ajuster vos critères de recherche ou filtres
 status =
     .reading = En cours de lecture
+    .reading-short = En lecture
     .on-hold = En pause
     .completed = Terminé
+    .completed-short = Terminé
     .unread = Non lu
+    .abandoned = Abandonné
 book-label = { $count ->
     [one] Livre
    *[other] Livres
@@ -408,3 +411,45 @@ minutes_label = { $count ->
     [one] minute
    *[other] minutes
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Avant de modifier
+    .body = Assurez-vous que le livre est fermé dans KoReader et qu'il est resté fermé assez longtemps pour que toute synchronisation de fichiers (par exemple Syncthing) soit terminée. KoReader écrase le fichier de métadonnées lorsqu'un livre est ouvert. Si vous enregistrez des modifications ici alors que le livre est encore ouvert — ou avant que le dernier fichier sidecar ne soit synchronisé — vos modifications seront perdues.
+    .dismiss = Ne plus afficher cet avertissement
+    .understood = Compris
+edit =
+    .aria-label = Modifier
+save = Enregistrer
+cancel = Annuler
+delete = Supprimer
+no-review-available = Aucune critique disponible
+    .hint-edit = Utilisez le bouton de modification pour ajouter votre critique et note.
+    .hint-readonly = Les critiques peuvent être ajoutées directement dans KoReader.
+add-review = Ajouter une critique
+delete-review = Supprimer la critique
+add-note = Ajouter une note
+edit-note = Modifier la note
+delete-note = Supprimer la note
+delete-highlight = Supprimer le surlignage
+delete-highlight-and-note = Supprimer le surlignage et la note
+delete-bookmark = Supprimer le signet
+change-status = Changer le statut
+highlight-color =
+    .aria-label = Couleur de surlignage
+highlight-drawer =
+    .aria-label = Style de surlignage
+    .lighten = Surlignage
+    .underscore = Souligné
+    .strikeout = Barré
+    .invert = Inversé
+
+# -----------------------------------
+#         Toast notifications
+# -----------------------------------
+toast-dismiss-label = Fermer
+toast-update-item-error = Impossible d'enregistrer les modifications. Vos changements ont été annulés.
+toast-update-annotation-error = Impossible de mettre à jour l'annotation. Vos modifications ont été annulées.
+toast-delete-annotation-error = Impossible de supprimer l'annotation. Elle a été restaurée.

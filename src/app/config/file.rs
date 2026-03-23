@@ -38,6 +38,7 @@ pub struct KoshelfSection {
 pub struct ServerSection {
     pub port: Option<u16>,
     pub enable_auth: Option<bool>,
+    pub enable_writeback: Option<bool>,
     pub trusted_proxies: Option<Vec<String>>,
 }
 

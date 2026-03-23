@@ -57,6 +57,7 @@ describe('reader annotation targeting', () => {
         ]);
 
         const annotation: LibraryAnnotation = {
+            id: "test-id",
             pos0: '/body/DocFragment[1]/body/section/p[1]/text().2',
             pos1: '/body/DocFragment[1]/body/section/p[1]/text().6',
         };
@@ -74,6 +75,7 @@ describe('reader annotation targeting', () => {
         ]);
 
         const annotation: LibraryAnnotation = {
+            id: "test-id",
             pos0: '/body/DocFragment[999]/body/section/p[1]/text().0',
             text: 'hello world',
         };
@@ -93,6 +95,7 @@ describe('reader annotation targeting', () => {
         };
 
         const annotation: LibraryAnnotation = {
+            id: "test-id",
             chapter: 'Chapter 12: My Topic',
         };
 
@@ -111,6 +114,7 @@ describe('reader annotation targeting', () => {
         };
 
         const annotation: LibraryAnnotation = {
+            id: "test-id",
             pageno: 42,
         };
 
@@ -128,6 +132,7 @@ describe('reader annotation targeting', () => {
         };
 
         const annotation: LibraryAnnotation = {
+            id: "test-id",
             pos0: '/body/DocFragment[1]/body/section/p[1]/text().0',
         };
 
@@ -144,14 +149,17 @@ describe('reader annotation targeting', () => {
 
         const highlights: LibraryAnnotation[] = [
             {
+                id: "test-id",
                 pos0: '/body/DocFragment[1]/body/section/p[1]/text().0',
                 pos1: '/body/DocFragment[1]/body/section/p[1]/text().5',
             },
             {
+                id: "test-id-1",
                 pos0: '/body/DocFragment[2]/body/section/p[1]/text().0',
                 pos1: '/body/DocFragment[2]/body/section/p[1]/text().6',
             },
             {
+                id: "test-id-2",
                 text: 'not found',
             },
         ];
@@ -194,14 +202,17 @@ describe('reader annotation targeting', () => {
 
         const highlights: LibraryAnnotation[] = [
             {
+                id: "test-id",
                 pos0: '/body/DocFragment[1]/body/section/p[1]/text().0',
                 pos1: '/body/DocFragment[1]/body/section/p[1]/text().2',
             },
             {
+                id: "test-id-1",
                 pos0: '/body/DocFragment[1]/body/section/p[1]/text().2',
                 pos1: '/body/DocFragment[1]/body/section/p[1]/text().4',
             },
             {
+                id: "test-id-2",
                 pos0: '/body/DocFragment[1]/body/section/p[1]/text().4',
                 pos1: '/body/DocFragment[1]/body/section/p[1]/text().6',
             },
@@ -229,10 +240,12 @@ describe('reader annotation targeting', () => {
 
         const highlights: LibraryAnnotation[] = [
             {
+                id: "test-id",
                 pos0: '/body/DocFragment[1]/body/section/p[1]/text().0',
                 pos1: '/body/DocFragment[1]/body/section/p[1]/text().5',
             },
             {
+                id: "test-id-1",
                 pos0: '/body/DocFragment[2]/body/section/p[1]/text().0',
                 pos1: '/body/DocFragment[2]/body/section/p[1]/text().6',
             },

@@ -25,6 +25,7 @@ pub const LIBRARY_DB_REQUIRED_INDEXES: &[&str] = &[
     "idx_library_items_scope_last_open_at",
     "idx_library_items_partial_md5_checksum",
     "idx_library_annotations_item_kind",
+    "idx_library_annotations_item_lua_index",
     "idx_library_item_fingerprints_book_path",
     "idx_library_item_fingerprints_metadata_path",
     "idx_library_collision_diagnostics_winner_item_id",

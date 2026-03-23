@@ -12,6 +12,18 @@ import type {
 
 export type ScopeValue = 'all' | 'books' | 'comics';
 
+export interface UpdateItemPayload {
+    review_note?: string | null;
+    rating?: number | null;
+    status?: string;
+}
+
+export interface UpdateAnnotationPayload {
+    note?: string | null;
+    color?: string;
+    drawer?: string;
+}
+
 export interface CompletionsParams {
     year?: number;
     from?: string;
@@ -56,6 +68,13 @@ export interface ApiClient {
     ): Promise<ReadingCompletionsData>;
     getItemDownloadHref(id: string): string;
     getItemFileHref(id: string, format?: string | null): string | null;
+    updateItem(id: string, payload: UpdateItemPayload): Promise<void>;
+    updateAnnotation(
+        itemId: string,
+        annotationId: string,
+        payload: UpdateAnnotationPayload,
+    ): Promise<void>;
+    deleteAnnotation(itemId: string, annotationId: string): Promise<void>;
     clearCache(): void;
 }
 

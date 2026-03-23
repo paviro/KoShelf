@@ -42,20 +42,23 @@ impl LibraryRepository {
 
     pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
         let pages_expr = if self.use_stable_page_metadata {
-            "COALESCE(pagemap_doc_pages, doc_pages, parser_pages)"
+            "COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages)"
         } else {
-            "COALESCE(doc_pages, parser_pages)"
+            "COALESCE(i.doc_pages, i.parser_pages)"
         };
 
         let sql = format!(
             "SELECT
-                id, title, authors_json, series_json, status,
-                progress_percentage, rating, cover_url, content_type, format,
-                language, publisher, description, review_note,
+                i.id, i.title, i.authors_json, i.series_json, i.status,
+                i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
+                i.language, i.publisher, i.description, i.review_note,
                 {pages_expr} as pages,
-                search_base_path, subjects_json, identifiers_json,
-                partial_md5_checksum, reader_presentation
-             FROM library_items WHERE id = ?1"
+                i.search_base_path, i.subjects_json, i.identifiers_json,
+                (f.metadata_path IS NOT NULL) AS has_metadata,
+                i.partial_md5_checksum, i.reader_presentation
+             FROM library_items i
+             LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
+             WHERE i.id = ?1"
         );
 
         sqlx::query_as::<_, LibraryDetailItem>(&sql)
@@ -74,16 +77,41 @@ impl LibraryRepository {
         kind: Option<&str>,
     ) -> Result<Vec<LibraryAnnotation>> {
         sqlx::query_as::<_, LibraryAnnotation>(
-            "SELECT chapter, datetime, pageno, text, note, pos0, pos1, color, drawer
+            "SELECT id, chapter, datetime, datetime_updated, pageno, text, note, pos0, pos1, color, drawer
              FROM library_annotations
              WHERE item_id = ?1 AND (?2 IS NULL OR annotation_kind = ?2)
-             ORDER BY ordinal ASC",
+             ORDER BY lua_index ASC",
         )
         .bind(item_id)
         .bind(kind)
         .fetch_all(&self.pool)
         .await
         .context("Failed to get annotations")
+    }
+
+    /// Count annotations grouped by KoShelf type for a given item.
+    ///
+    /// Returns `(notes, highlights, bookmarks)` where:
+    /// - `notes`: highlights that contain a note
+    /// - `highlights`: all highlights (including those with notes)
+    /// - `bookmarks`: bookmark-type annotations
+    pub async fn get_annotation_counts(
+        &self,
+        item_id: &str,
+    ) -> Result<(i64, i64, i64)> {
+        let row: (i64, i64, i64) = sqlx::query_as(
+            "SELECT
+                COUNT(CASE WHEN annotation_kind = 'highlight' AND note IS NOT NULL THEN 1 END),
+                COUNT(CASE WHEN annotation_kind = 'highlight' THEN 1 END),
+                COUNT(CASE WHEN annotation_kind = 'bookmark' THEN 1 END)
+             FROM library_annotations
+             WHERE item_id = ?1",
+        )
+        .bind(item_id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to get annotation counts")?;
+        Ok(row)
     }
 
     /// Load all stored fingerprints (for reconciliation during incremental builds).
@@ -217,6 +245,84 @@ impl LibraryRepository {
             .await
             .context("Failed to count items")?;
         Ok(row.0)
+    }
+
+    /// Find the lua_index and note-on-highlight state for an annotation.
+    ///
+    /// Returns `(lua_index, had_note)` where `had_note` is:
+    /// - `Some(true)` — highlight with an existing note
+    /// - `Some(false)` — highlight without a note
+    /// - `None` — bookmark (no drawer, not tracked in stats)
+    ///
+    /// Used by both update and delete write handlers:
+    /// - Update uses `had_note` to detect highlight↔note type transitions
+    ///   (for setting `datetime_updated` to match KOReader).
+    /// - Delete uses `had_note.is_some()` to determine whether the annotation
+    ///   is a highlight (decrement `highlight_count`) or bookmark.
+    pub async fn find_annotation_write_info(
+        &self,
+        item_id: &str,
+        annotation_id: &str,
+    ) -> Result<Option<(i32, Option<bool>)>> {
+        let row: Option<(i32, Option<bool>)> = sqlx::query_as(
+            "SELECT lua_index, (CASE WHEN drawer IS NOT NULL THEN note IS NOT NULL END)
+             FROM library_annotations WHERE id = ?1 AND item_id = ?2",
+        )
+        .bind(annotation_id)
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find annotation write info")?;
+        Ok(row)
+    }
+
+    /// Delete an annotation row and shift lua_index for remaining annotations.
+    pub async fn delete_annotation_and_shift(
+        &self,
+        item_id: &str,
+        annotation_id: &str,
+        lua_index: i32,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await.context("begin tx")?;
+
+        sqlx::query("DELETE FROM library_annotations WHERE id = ?1 AND item_id = ?2")
+            .bind(annotation_id)
+            .bind(item_id)
+            .execute(&mut *tx)
+            .await
+            .context("delete annotation")?;
+
+        sqlx::query(
+            "UPDATE library_annotations SET lua_index = lua_index - 1 WHERE item_id = ?1 AND lua_index > ?2",
+        )
+        .bind(item_id)
+        .bind(lua_index)
+        .execute(&mut *tx)
+        .await
+        .context("shift lua_index after deletion")?;
+
+        tx.commit().await.context("commit annotation deletion")?;
+        Ok(())
+    }
+
+    /// Find the metadata sidecar path and fingerprint for an item.
+    ///
+    /// Returns `(metadata_path, metadata_size_bytes, metadata_modified_unix_ms)`.
+    /// Returns `None` if the item has no metadata sidecar or fingerprint data.
+    pub async fn find_metadata_fingerprint_by_item_id(
+        &self,
+        item_id: &str,
+    ) -> Result<Option<(String, i64, i64)>> {
+        let row: Option<(Option<String>, Option<i64>, Option<i64>)> = sqlx::query_as(
+            "SELECT metadata_path, metadata_size_bytes, metadata_modified_unix_ms
+             FROM library_item_fingerprints WHERE item_id = ?1",
+        )
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to find metadata fingerprint by item id")?;
+
+        Ok(row.and_then(|(path, size, modified)| Some((path?, size?, modified?))))
     }
 
     /// Find the file_path for an item by its canonical ID.

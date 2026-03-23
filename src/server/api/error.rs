@@ -32,6 +32,14 @@ impl ApiResponseError {
         }
     }
 
+    pub(crate) fn conflict(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            code: ApiErrorCode::Conflict,
+            message: Some(message.into()),
+        }
+    }
+
     pub(crate) fn internal_server_error() -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -92,6 +100,16 @@ mod tests {
 
         let payload = decode_error_response(response).await;
         assert_eq!(payload.error.code, ApiErrorCode::NotFound);
+    }
+
+    #[tokio::test]
+    async fn conflict_maps_to_409_status_and_code() {
+        let response = ApiResponseError::conflict("file changed externally").into_response();
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+
+        let payload = decode_error_response(response).await;
+        assert_eq!(payload.error.code, ApiErrorCode::Conflict);
+        assert_eq!(payload.error.message, "file changed externally");
     }
 
     #[tokio::test]

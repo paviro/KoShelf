@@ -147,6 +147,7 @@ impl LuaParser {
         Ok(Annotation {
             chapter: self.get_optional_string(&table, "chapter")?,
             datetime: self.get_optional_string(&table, "datetime")?,
+            datetime_updated: self.get_optional_string(&table, "datetime_updated")?,
             pageno: self.get_optional_u32(&table, "pageno")?,
             pos0: self.get_optional_string(&table, "pos0")?,
             pos1: self.get_optional_string(&table, "pos1")?,

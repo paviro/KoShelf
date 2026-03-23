@@ -42,11 +42,13 @@ pub struct LibraryItemRow {
 
 #[derive(Debug, Clone)]
 pub struct AnnotationRow {
+    pub id: String,
     pub item_id: String,
     pub annotation_kind: String,
-    pub ordinal: i32,
+    pub lua_index: i32,
     pub chapter: Option<String>,
     pub datetime: Option<String>,
+    pub datetime_updated: Option<String>,
     pub pageno: Option<i32>,
     pub text: Option<String>,
     pub note: Option<String>,
