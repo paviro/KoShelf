@@ -12,9 +12,14 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
+
+/// Events for paths written by the app within this window are suppressed.
+/// Must exceed the poll interval (1 s) to cover the gap between `mark_written()`
+/// and the arrival of the corresponding filesystem event.
+const SELF_WRITE_SUPPRESSION_WINDOW: Duration = Duration::from_secs(3);
 
 /// Payload sent through the rebuild channel: raw file paths that triggered the rebuild.
 struct WatcherRebuildEvent {
@@ -232,15 +237,27 @@ impl FileWatcher {
             return paths;
         };
 
+        let now = Instant::now();
+
         paths
             .into_iter()
             .filter(|p| {
-                if recent.remove(p).is_some() {
-                    debug!("Suppressing self-triggered event for {:?}", p);
-                    false
-                } else {
-                    true
+                if let Some(entry) = recent.get(p) {
+                    let elapsed = now.duration_since(*entry.value());
+                    if elapsed < SELF_WRITE_SUPPRESSION_WINDOW {
+                        debug!(
+                            "Suppressing self-triggered event for {:?} (written {:.1}s ago)",
+                            p,
+                            elapsed.as_secs_f64()
+                        );
+                        return false;
+                    }
+                    // Expired — clean up, but only if the timestamp hasn't
+                    // been refreshed by a concurrent `mark_written()`.
+                    drop(entry);
+                    recent.remove_if(p, |_, ts| now.duration_since(*ts) >= SELF_WRITE_SUPPRESSION_WINDOW);
                 }
+                true
             })
             .collect()
     }

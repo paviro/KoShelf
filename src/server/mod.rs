@@ -9,12 +9,13 @@ use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
 use axum::Router;
 use axum::routing::{delete, get, patch, post, put};
-use dashmap::{DashMap, DashSet};
+use dashmap::DashMap;
 use log::info;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -30,14 +31,15 @@ use tower_http::set_header::SetResponseHeaderLayer;
 #[derive(Clone, Default)]
 pub struct WriteCoordinator {
     locks: Arc<DashMap<PathBuf, Arc<Mutex<()>>>>,
-    recent_writes: Arc<DashSet<PathBuf>>,
+    recent_writes: Arc<DashMap<PathBuf, Instant>>,
 }
 
-/// Shared set of recently-written metadata paths.
+/// Shared map of recently-written metadata paths to the time they were written.
 ///
 /// Write handlers insert paths after modifying a metadata file; the file
-/// watcher drains matching entries to suppress self-triggered events.
-pub type RecentWrites = Arc<DashSet<PathBuf>>;
+/// watcher checks timestamps to suppress self-triggered events within a
+/// suppression window.
+pub type RecentWrites = Arc<DashMap<PathBuf, Instant>>;
 
 impl WriteCoordinator {
     pub fn new() -> Self {
@@ -54,10 +56,10 @@ impl WriteCoordinator {
 
     /// Mark a metadata path as recently written by a write handler.
     pub fn mark_written(&self, path: &Path) {
-        self.recent_writes.insert(path.to_path_buf());
+        self.recent_writes.insert(path.to_path_buf(), Instant::now());
     }
 
-    /// Get a shared handle to the recent-writes set for the file watcher.
+    /// Get a shared handle to the recent-writes map for the file watcher.
     pub fn recent_writes(&self) -> RecentWrites {
         self.recent_writes.clone()
     }
