@@ -108,9 +108,12 @@ no-books-match = No books match your current search or filter criteria.
 try-adjusting = Try adjusting your search or filter criteria
 status =
     .reading = Currently Reading
+    .reading-short = Reading
     .on-hold = On Hold
     .completed = Completed
+    .completed-short = Complete
     .unread = Unread
+    .abandoned = Abandoned
 book-label = { $count ->
     [one] Book
    *[other] Books
@@ -407,3 +410,37 @@ minutes_label = { $count ->
     [one] minute
    *[other] minutes
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Before you edit
+    .body = Make sure the book is closed in KoReader and has been closed long enough for any file sync (e.g. Syncthing) to complete. KoReader overwrites the metadata file when a book is open. If you save changes here while the book is still open — or before the latest sidecar file has synced — your changes will be lost.
+    .dismiss = Don't show this warning again
+    .understood = Understood
+edit =
+    .aria-label = Edit
+save = Save
+cancel = Cancel
+delete = Delete
+no-review-available = No review available
+    .hint-edit = Use the edit button to add your review and rating.
+    .hint-readonly = Reviews can be added directly in KoReader.
+add-review = Add review
+delete-review = Delete review
+add-note = Add note
+edit-note = Edit note
+delete-note = Delete note
+delete-highlight = Delete highlight
+delete-highlight-and-note = Delete highlight and note
+delete-bookmark = Delete bookmark
+change-status = Change Status
+highlight-color =
+    .aria-label = Highlight color
+highlight-drawer =
+    .aria-label = Highlight style
+    .lighten = Highlight
+    .underscore = Underline
+    .strikeout = Strikeout
+    .invert = Invert

@@ -108,9 +108,12 @@ no-books-match = Keine Bücher entsprechen deiner Suche oder deinem Filter.
 try-adjusting = Passe deine Such- oder Filterkriterien an
 status =
     .reading = Wird gelesen
+    .reading-short = Lesen
     .on-hold = Pausiert
     .completed = Abgeschlossen
+    .completed-short = Abgeschlossen
     .unread = Ungelesen
+    .abandoned = Abgebrochen
 book-label = { $count ->
     [one] Buch
    *[other] Bücher
@@ -407,3 +410,37 @@ minutes_label = { $count ->
     [one] Minute
    *[other] Minuten
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Bevor du bearbeitest
+    .body = Stelle sicher, dass das Buch in KoReader geschlossen ist und lange genug geschlossen war, damit eine eventuelle Dateisynchronisierung (z. B. Syncthing) abgeschlossen werden konnte. KoReader überschreibt die Metadaten-Datei, wenn ein Buch geöffnet ist. Wenn du hier Änderungen speicherst, während das Buch noch geöffnet ist — oder bevor die neueste Sidecar-Datei synchronisiert wurde — gehen deine Änderungen verloren.
+    .dismiss = Diese Warnung nicht mehr anzeigen
+    .understood = Verstanden
+edit =
+    .aria-label = Bearbeiten
+save = Speichern
+cancel = Abbrechen
+delete = Löschen
+no-review-available = Keine Rezension vorhanden
+    .hint-edit = Verwende die Bearbeiten-Schaltfläche, um deine Rezension und Bewertung hinzuzufügen.
+    .hint-readonly = Rezensionen können direkt in KoReader hinzugefügt werden.
+add-review = Rezension hinzufügen
+delete-review = Rezension löschen
+add-note = Notiz hinzufügen
+edit-note = Notiz bearbeiten
+delete-note = Notiz löschen
+delete-highlight = Markierung löschen
+delete-highlight-and-note = Markierung und Notiz löschen
+delete-bookmark = Lesezeichen löschen
+change-status = Status ändern
+highlight-color =
+    .aria-label = Markierungsfarbe
+highlight-drawer =
+    .aria-label = Markierungsstil
+    .lighten = Hervorhebung
+    .underscore = Unterstreichen
+    .strikeout = Durchstreichen
+    .invert = Invertieren

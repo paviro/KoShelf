@@ -108,9 +108,12 @@ no-books-match = Немає книг, що відповідають вашому
 try-adjusting = Спробуйте змінити критерії пошуку або фільтру
 status =
     .reading = Читаю зараз
+    .reading-short = Читаю
     .on-hold = Відкладено
     .completed = Прочитано
+    .completed-short = Завершено
     .unread = Не прочитано
+    .abandoned = Покинуто
 book-label = { $count ->
     [one] Книга
     [few] Книги
@@ -439,3 +442,37 @@ minutes_label = { $count ->
     [many] хвилин
    *[other] хвилин
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Перед редагуванням
+    .body = Переконайтеся, що книга закрита в KoReader і була закрита достатньо довго, щоб синхронізація файлів (наприклад, Syncthing) завершилася. KoReader перезаписує файл метаданих, коли книга відкрита. Якщо ви збережете зміни тут, поки книга ще відкрита — або до того, як останній sidecar-файл синхронізувався — ваші зміни будуть втрачені.
+    .dismiss = Більше не показувати це попередження
+    .understood = Зрозуміло
+edit =
+    .aria-label = Редагувати
+save = Зберегти
+cancel = Скасувати
+delete = Видалити
+no-review-available = Рецензія відсутня
+    .hint-edit = Використовуйте кнопку редагування, щоб додати рецензію та оцінку.
+    .hint-readonly = Рецензії можна додавати безпосередньо в KoReader.
+add-review = Додати рецензію
+delete-review = Видалити рецензію
+add-note = Додати нотатку
+edit-note = Редагувати нотатку
+delete-note = Видалити нотатку
+delete-highlight = Видалити виділення
+delete-highlight-and-note = Видалити виділення та нотатку
+delete-bookmark = Видалити закладку
+change-status = Змінити статус
+highlight-color =
+    .aria-label = Колір виділення
+highlight-drawer =
+    .aria-label = Стиль виділення
+    .lighten = Виділення
+    .underscore = Підкреслення
+    .strikeout = Закреслення
+    .invert = Інверсія

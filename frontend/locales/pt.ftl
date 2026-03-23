@@ -108,9 +108,12 @@ no-books-match = Nenhum livro corresponde aos seus critérios de busca ou filtro
 try-adjusting = Tente ajustar sua busca ou filtros
 status =
     .reading = Lendo Atualmente
+    .reading-short = A ler
     .on-hold = Em Espera
     .completed = Concluído
+    .completed-short = Concluído
     .unread = Não lido
+    .abandoned = Abandonado
 book-label = { $count ->
     [one] Livro
    *[other] Livros
@@ -407,3 +410,37 @@ minutes_label = { $count ->
     [one] minuto
    *[other] minutos
 }
+
+# -----------------------------------
+#         Writeback / Editing
+# -----------------------------------
+edit-warning =
+    .title = Antes de editar
+    .body = Certifique-se de que o livro está fechado no KoReader e que ficou fechado tempo suficiente para que qualquer sincronização de ficheiros (por exemplo, Syncthing) tenha sido concluída. O KoReader sobrescreve o ficheiro de metadados quando um livro está aberto. Se guardar alterações aqui enquanto o livro ainda estiver aberto — ou antes de o último ficheiro sidecar ter sido sincronizado — as suas alterações serão perdidas.
+    .dismiss = Não mostrar este aviso novamente
+    .understood = Entendido
+edit =
+    .aria-label = Editar
+save = Guardar
+cancel = Cancelar
+delete = Eliminar
+no-review-available = Sem avaliação disponível
+    .hint-edit = Use o botão de edição para adicionar a sua avaliação e classificação.
+    .hint-readonly = As avaliações podem ser adicionadas diretamente no KoReader.
+add-review = Adicionar avaliação
+delete-review = Eliminar avaliação
+add-note = Adicionar nota
+edit-note = Editar nota
+delete-note = Eliminar nota
+delete-highlight = Eliminar destaque
+delete-highlight-and-note = Eliminar destaque e nota
+delete-bookmark = Eliminar marcador
+change-status = Alterar estado
+highlight-color =
+    .aria-label = Cor do destaque
+highlight-drawer =
+    .aria-label = Estilo de destaque
+    .lighten = Destaque
+    .underscore = Sublinhado
+    .strikeout = Riscado
+    .invert = Invertido
