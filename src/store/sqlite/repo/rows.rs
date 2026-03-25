@@ -34,6 +34,7 @@ pub struct LibraryItemRow {
     pub partial_md5_checksum: Option<String>,
     pub hidden_flow_pages: Option<i32>,
     pub reader_presentation: Option<String>,
+    pub chapters_json: String,
     pub last_open_at: Option<String>,
     pub total_reading_time_sec: Option<i64>,
     pub created_at: String,

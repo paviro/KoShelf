@@ -339,6 +339,7 @@ impl Fb2Parser {
             series,
             series_number,
             pages: None,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         };

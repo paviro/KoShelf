@@ -220,6 +220,7 @@ impl MobiParser {
             series: None,
             series_number: None,
             pages: None,
+            chapters: Vec::new(),
             cover_data,
             cover_mime_type: cover_mime_type.map(|m| m.to_string()),
         })
@@ -237,6 +238,7 @@ impl MobiParser {
             series: None,
             series_number: None,
             pages: None,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         }
