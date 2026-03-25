@@ -500,7 +500,7 @@ pub struct BookInfo {
     pub series: Option<String>,
     pub series_number: Option<String>,
     pub pages: Option<u32>, // Page count from format (EPUB page-list, comic images)
-    pub chapters: Vec<ChapterEntry>, // Table of contents (EPUB only for now)
+    pub chapters: Vec<ChapterEntry>, // Table of contents (EPUB, FB2)
     pub cover_data: Option<Vec<u8>>,
     pub cover_mime_type: Option<String>,
 }
