@@ -1,6 +1,7 @@
-import { LuNotebookPen, LuX } from 'react-icons/lu';
+import { LuNotebookPen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { CloseButton } from '../../../shared/ui/button/CloseButton';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 
 type ReaderNotePopoverProps = {
@@ -22,15 +23,10 @@ export function ReaderNotePopover({
             showCloseButton={false}
         >
             <div className="relative p-6 pb-4">
-                <button
-                    type="button"
-                    className="absolute top-4 right-4 text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 rounded-full p-2 transition-all duration-200 z-20"
-                    title={translation.get('close.aria-label')}
-                    aria-label={translation.get('close.aria-label')}
+                <CloseButton
                     onClick={onDismiss}
-                >
-                    <LuX className="w-5 h-5" aria-hidden="true" />
-                </button>
+                    className="absolute top-4 right-4 rounded-full p-2 z-20"
+                />
 
                 <div className="flex items-center gap-3 pr-8">
                     <div className="w-10 h-10 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-xl flex items-center justify-center shrink-0">

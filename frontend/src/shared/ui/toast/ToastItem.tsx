@@ -8,6 +8,7 @@ import {
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../button/Button';
 import {
     dismissToast,
     type ToastEntry,
@@ -148,14 +149,14 @@ export function ToastItem({ toast }: { toast: ToastEntry }) {
                     <p className="flex-1 text-sm font-medium text-gray-800 dark:text-dark-100 leading-snug pt-1">
                         {toast.message}
                     </p>
-                    <button
-                        type="button"
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        icon={LuX}
+                        label={translation.get('toast-dismiss-label')}
                         onClick={handleDismiss}
-                        className="shrink-0 mt-0.5 p-1 rounded-lg text-gray-400 dark:text-dark-400 hover:text-gray-600 dark:hover:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/50 transition-colors"
-                        aria-label={translation.get('toast-dismiss-label')}
-                    >
-                        <LuX className="w-3.5 h-3.5" aria-hidden />
-                    </button>
+                        className="shrink-0 mt-0.5 p-1 h-auto"
+                    />
                 </div>
 
                 {/* Progress bar */}

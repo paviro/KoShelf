@@ -7,6 +7,7 @@ import {
     DROPDOWN_PANEL_BASE_CLASSNAME,
     DROPDOWN_TRIGGER_BASE_CLASSNAME,
 } from '../../../shared/ui/dropdown/dropdown-styles';
+import { DropdownOption } from '../../../shared/ui/dropdown/DropdownOption';
 import type { LibraryFilterValue } from '../model/library-model';
 
 type LibraryStatusFilterProps = {
@@ -77,28 +78,20 @@ export function LibraryStatusFilter({
                 className={`${DROPDOWN_PANEL_BASE_CLASSNAME} right-0 w-max min-w-40 ${open ? '' : 'hidden'}`}
                 role="menu"
             >
-                {options.map((option, index) => {
-                    const active = option === value;
-                    const hasSeparator = index < options.length - 1;
-
-                    return (
-                        <button
-                            key={option}
-                            type="button"
-                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm md:text-base font-medium transition-colors duration-200 whitespace-nowrap ${hasSeparator ? 'border-b border-gray-200/30 dark:border-dark-700/30' : ''} ${
-                                active
-                                    ? 'text-primary-700 dark:text-primary-300'
-                                    : 'text-gray-700 dark:text-dark-200'
-                            }`}
-                            onClick={() => {
-                                onChange(option);
-                                setOpen(false);
-                            }}
-                        >
-                            {filterLabel(option)}
-                        </button>
-                    );
-                })}
+                {options.map((option, index) => (
+                    <DropdownOption
+                        key={option}
+                        active={option === value}
+                        separator={index < options.length - 1}
+                        className="text-sm md:text-base whitespace-nowrap"
+                        onClick={() => {
+                            onChange(option);
+                            setOpen(false);
+                        }}
+                    >
+                        {filterLabel(option)}
+                    </DropdownOption>
+                ))}
             </div>
         </div>
     );

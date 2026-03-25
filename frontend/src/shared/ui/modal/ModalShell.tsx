@@ -5,9 +5,8 @@ import {
     type MouseEvent,
     type ReactNode,
 } from 'react';
-import { LuX } from 'react-icons/lu';
 
-import { translation } from '../../i18n';
+import { CloseButton } from '../button/CloseButton';
 
 export const MODAL_TRANSITION_DURATION_MS = 300;
 
@@ -117,15 +116,10 @@ export function ModalShell({
                 onMouseDown={(event) => event.stopPropagation()}
             >
                 {showCloseButton && (
-                    <button
-                        type="button"
-                        className="absolute top-4 right-4 text-gray-500 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 rounded-full p-2 transition-colors duration-200"
-                        aria-label={translation.get('close.aria-label')}
-                        title={translation.get('close.aria-label')}
+                    <CloseButton
                         onClick={onClose}
-                    >
-                        <LuX className="w-5 h-5" aria-hidden="true" />
-                    </button>
+                        className="absolute top-4 right-4 rounded-full p-2"
+                    />
                 )}
                 {children}
             </div>

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 
 type CalendarMonthPickerModalProps = {
@@ -49,21 +50,22 @@ export function CalendarMonthPickerModal({
                         const active = monthIndex === selectedMonthIndex;
 
                         return (
-                            <button
+                            <Button
                                 key={`${year}-${monthIndex}`}
-                                type="button"
-                                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                                variant={active ? 'gradient' : 'ghost'}
+                                size="xs"
+                                className={
                                     active
-                                        ? 'bg-linear-to-r from-primary-600 to-primary-700 text-white shadow-md'
-                                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-dark-700/70'
-                                }`}
+                                        ? 'px-3 py-2'
+                                        : 'px-3 py-2 text-gray-700 dark:text-gray-200'
+                                }
                                 onClick={() => {
                                     onSelectMonth(monthIndex);
                                     onClose();
                                 }}
                             >
                                 {monthName}
-                            </button>
+                            </Button>
                         );
                     })}
                 </div>

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { api, isApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { SettingsField } from '../../settings/components/SettingsField';
 import { SettingsInput } from '../../settings/components/SettingsInput';
 
@@ -211,10 +212,11 @@ export function PasswordChangeSection({
                 label={translation.get('change-password')}
                 htmlFor="settings-change-password-submit"
             >
-                <button
+                <Button
                     id="settings-change-password-submit"
                     type="submit"
-                    className="w-full inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium bg-primary-600 text-white hover:bg-primary-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    variant="gradient"
+                    fullWidth
                     disabled={
                         pending ||
                         currentPassword.length === 0 ||
@@ -223,7 +225,7 @@ export function PasswordChangeSection({
                     }
                 >
                     {translation.get('change-password')}
-                </button>
+                </Button>
             </SettingsField>
         </form>
     );

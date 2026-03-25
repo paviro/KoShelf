@@ -272,6 +272,7 @@ error-state =
     .file-unavailable-title = Book file unavailable
     .file-unavailable-description = The book details were found, but the book file is missing.
     .retry = Try again
+    .go-to-list = Go to {$collection}
 
 # Navigation and sorting
 sort-order =

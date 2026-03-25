@@ -3,6 +3,7 @@ import { LuSearch, LuX } from 'react-icons/lu';
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import type { LibraryFilterValue } from '../model/library-model';
 import { LibraryStatusFilter } from './LibraryStatusFilter';
 
@@ -85,9 +86,10 @@ export function LibraryHeader({
                     </div>
 
                     {!mobileSearchOpen && (
-                        <button
-                            type="button"
-                            className="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs"
+                        <Button
+                            variant="neutral"
+                            size="icon"
+                            className="sm:hidden"
                             title={translation.get('search.aria-label')}
                             aria-label={translation.get('search.aria-label')}
                             onClick={onOpenMobileSearch}
@@ -96,13 +98,14 @@ export function LibraryHeader({
                                 className="w-5 h-5 text-gray-600 dark:text-gray-300"
                                 aria-hidden="true"
                             />
-                        </button>
+                        </Button>
                     )}
 
                     {mobileSearchOpen && (
-                        <button
-                            type="button"
-                            className="sm:hidden w-10 h-10 flex items-center justify-center bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs"
+                        <Button
+                            variant="neutral"
+                            size="icon"
+                            className="sm:hidden"
                             title={translation.get('close-search.aria-label')}
                             aria-label={translation.get(
                                 'close-search.aria-label',
@@ -113,7 +116,7 @@ export function LibraryHeader({
                                 className="w-5 h-5 text-gray-600 dark:text-gray-300"
                                 aria-hidden="true"
                             />
-                        </button>
+                        </Button>
                     )}
 
                     <div

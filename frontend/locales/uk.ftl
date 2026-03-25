@@ -298,6 +298,7 @@ error-state =
     .file-unavailable-title = Файл книги недоступний
     .file-unavailable-description = Дані книги знайдено, але файл книги відсутній.
     .retry = Спробувати знову
+    .go-to-list = Відкрити {$collection}
 
 # Navigation and sorting
 sort-order =

@@ -16,6 +16,7 @@ import type { IconType } from 'react-icons';
 
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import { Button } from '../../../shared/ui/button/Button';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type {
@@ -195,14 +196,13 @@ export function LibraryOverviewSection({
                 contentClassName="mb-8"
                 controls={
                     canWrite && visible ? (
-                        <button
-                            type="button"
+                        <Button
+                            variant="neutral"
+                            size="icon"
+                            icon={LuPencil}
+                            label={translation.get('edit.aria-label')}
                             onClick={handleOpenStatusModal}
-                            className="flex items-center justify-center w-10 h-10 rounded-lg border transition-colors backdrop-blur-xs bg-gray-100/50 dark:bg-dark-800/50 border-gray-300/50 dark:border-dark-700/50 text-gray-600 dark:text-dark-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
-                            aria-label={translation.get('edit.aria-label')}
-                        >
-                            <LuPencil className="w-4 h-4" aria-hidden="true" />
-                        </button>
+                        />
                     ) : undefined
                 }
             >

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { HiOutlineBookOpen } from 'react-icons/hi2';
-import { LuClock3, LuEye, LuFileText, LuX } from 'react-icons/lu';
+import { LuClock3, LuEye, LuFileText } from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router';
 
 import {
@@ -10,6 +10,8 @@ import {
 import { translation } from '../../../shared/i18n';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
+import { Button } from '../../../shared/ui/button/Button';
+import { CloseButton } from '../../../shared/ui/button/CloseButton';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import type {
     CalendarEventResponse,
@@ -90,15 +92,10 @@ export function CalendarEventModal({
                         </p>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-dark-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700/50 transition-colors shrink-0"
-                    title={translation.get('close.aria-label')}
-                    aria-label={translation.get('close.aria-label')}
+                <CloseButton
                     onClick={onClose}
-                >
-                    <LuX className="w-5 h-5" aria-hidden="true" />
-                </button>
+                    className="w-8 h-8 rounded-lg shrink-0"
+                />
             </div>
 
             <div className="p-4 space-y-4">
@@ -161,9 +158,9 @@ export function CalendarEventModal({
                 </div>
 
                 {canViewDetails && (
-                    <button
-                        type="button"
-                        className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-500/30 dark:border-primary-500/20 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
+                    <Button
+                        fullWidth
+                        icon={LuEye}
                         onClick={() => {
                             onClose();
                             if (detailPath) {
@@ -173,12 +170,8 @@ export function CalendarEventModal({
                             }
                         }}
                     >
-                        <LuEye
-                            className="w-4 h-4 shrink-0"
-                            aria-hidden="true"
-                        />
                         {translation.get('view-details')}
-                    </button>
+                    </Button>
                 )}
             </div>
         </ModalShell>

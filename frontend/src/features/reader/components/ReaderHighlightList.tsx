@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { LuNotebookPen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { DRAWER_LIST_ITEM_CLASSNAME } from '../../../shared/ui/dropdown/dropdown-styles';
 import type { LibraryAnnotation } from '../../library/api/library-data';
 import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
 import {
@@ -86,7 +87,7 @@ export function ReaderHighlightList({
                                     key={index}
                                     type="button"
                                     onClick={() => onSelect(annotation)}
-                                    className="cursor-pointer flex items-start gap-3 text-left px-2 py-2.5 rounded-lg transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-dark-700/50"
+                                    className={DRAWER_LIST_ITEM_CLASSNAME}
                                 >
                                     <span
                                         className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"

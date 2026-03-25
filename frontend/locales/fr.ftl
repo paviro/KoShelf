@@ -273,6 +273,7 @@ error-state =
     .file-unavailable-title = Fichier du livre indisponible
     .file-unavailable-description = Les détails du livre ont été trouvés, mais le fichier du livre est manquant.
     .retry = Réessayer
+    .go-to-list = Voir {$collection}
 
 # Navigation and sorting
 sort-order =

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, isApiHttpError } from '../../../shared/api';
 import { redirectToLogin } from '../../../shared/api-fetch';
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 
 const RELATIVE_TIME_UNITS: ReadonlyArray<{
     unit: Intl.RelativeTimeFormatUnit;
@@ -228,20 +229,20 @@ export function SessionManagementSection({
                                 </div>
 
                                 {session.is_current ? (
-                                    <button
-                                        type="button"
-                                        className="inline-flex items-center justify-center rounded-lg min-w-28 px-4 py-2.5 text-sm font-medium border border-gray-300/80 dark:border-dark-600 bg-gray-50 dark:bg-dark-800/70 text-gray-800 dark:text-dark-100 hover:bg-gray-100 dark:hover:bg-dark-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                    <Button
+                                        color="primary"
+                                        className="min-w-28"
                                         disabled={logoutPending}
                                         onClick={() => void handleLogout()}
                                     >
                                         {translation.get(
                                             'session-management.logout',
                                         )}
-                                    </button>
+                                    </Button>
                                 ) : (
-                                    <button
-                                        type="button"
-                                        className="inline-flex items-center justify-center rounded-lg min-w-28 px-4 py-2.5 text-sm font-medium border border-red-300/80 dark:border-red-500/50 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    <Button
+                                        color="danger"
+                                        className="min-w-28"
                                         disabled={revokePendingId !== null}
                                         onClick={() =>
                                             void handleRevokeSession(session.id)
@@ -250,7 +251,7 @@ export function SessionManagementSection({
                                         {translation.get(
                                             'session-management.revoke',
                                         )}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </li>

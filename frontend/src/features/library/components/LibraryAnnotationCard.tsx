@@ -13,6 +13,7 @@ import {
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { formatAnnotationDatetime } from '../lib/library-detail-formatters';
 import {
     colorDotClass,
@@ -292,38 +293,26 @@ export function LibraryAnnotationCard({
             {editingNote && (
                 <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200/50 dark:border-dark-700/50 bg-gray-50/50 dark:bg-dark-900/30">
                     {hasNote ? (
-                        <button
-                            type="button"
+                        <Button
+                            color="danger"
+                            icon={LuTrash2}
                             onClick={() => {
                                 onSaveNote?.(null);
                                 stopEditingNote();
                             }}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         >
-                            <LuTrash2
-                                className="w-3.5 h-3.5"
-                                aria-hidden="true"
-                            />
                             {translation.get('delete-note')}
-                        </button>
+                        </Button>
                     ) : (
                         <div />
                     )}
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={stopEditingNote}
-                            className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                        >
+                        <Button color="secondary" onClick={stopEditingNote}>
                             {translation.get('cancel')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleNoteSave}
-                            className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-500/30 dark:border-primary-500/20 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
-                        >
+                        </Button>
+                        <Button onClick={handleNoteSave}>
                             {translation.get('save')}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -341,42 +330,38 @@ export function LibraryAnnotationCard({
                             <div className="flex items-center">
                                 {confirmingDelete ? (
                                     <div className="inline-flex items-center gap-0.5">
-                                        <button
-                                            type="button"
+                                        <Button
+                                            variant="ghost"
+                                            color="danger"
+                                            size="xs"
+                                            icon={LuCheck}
                                             onClick={() => {
                                                 onDelete();
                                                 setConfirmingDelete(false);
                                             }}
-                                            className="inline-flex items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-red-500 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                         >
-                                            <LuCheck
-                                                className="w-3.5 h-3.5"
-                                                aria-hidden="true"
-                                            />
                                             {translation.get('delete')}
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="xs"
                                             onClick={() =>
                                                 setConfirmingDelete(false)
                                             }
-                                            className="px-2 py-1.5 text-sm font-medium text-gray-500 dark:text-dark-400 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
                                         >
                                             {translation.get('cancel')}
-                                        </button>
+                                        </Button>
                                     </div>
                                 ) : (
-                                    <button
-                                        type="button"
+                                    <Button
+                                        variant="ghost"
+                                        color="danger"
+                                        size="xs"
+                                        icon={LuTrash2}
                                         onClick={() =>
                                             setConfirmingDelete(true)
                                         }
-                                        className="inline-flex items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-red-500 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                     >
-                                        <LuTrash2
-                                            className="w-3.5 h-3.5"
-                                            aria-hidden="true"
-                                        />
                                         {variant === 'bookmark'
                                             ? translation.get('delete-bookmark')
                                             : hasNote
@@ -386,7 +371,7 @@ export function LibraryAnnotationCard({
                                               : translation.get(
                                                     'delete-highlight',
                                                 )}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         ) : (
@@ -396,9 +381,14 @@ export function LibraryAnnotationCard({
                         <div className="flex items-center gap-0.5">
                             {variant === 'highlight' && onDrawerChange && (
                                 <>
-                                    <button
+                                    <Button
                                         ref={drawerButtonRef}
-                                        type="button"
+                                        variant="ghost"
+                                        size="xs"
+                                        icon={DrawerIcon}
+                                        label={translation.get(
+                                            'highlight-drawer.aria-label',
+                                        )}
                                         onClick={() =>
                                             setActivePicker(
                                                 activePicker === 'drawer'
@@ -406,19 +396,8 @@ export function LibraryAnnotationCard({
                                                     : 'drawer',
                                             )
                                         }
-                                        className="inline-flex items-center p-1.5 rounded-md text-gray-500 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                                        title={translation.get(
-                                            'highlight-drawer.aria-label',
-                                        )}
-                                        aria-label={translation.get(
-                                            'highlight-drawer.aria-label',
-                                        )}
-                                    >
-                                        <DrawerIcon
-                                            className="w-3.5 h-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    </button>
+                                        className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
+                                    />
                                     {activePicker === 'drawer' && (
                                         <HighlightDrawerPicker
                                             anchorRef={drawerButtonRef}
@@ -439,9 +418,13 @@ export function LibraryAnnotationCard({
 
                             {variant === 'highlight' && onColorChange && (
                                 <>
-                                    <button
+                                    <Button
                                         ref={colorButtonRef}
-                                        type="button"
+                                        variant="ghost"
+                                        size="xs"
+                                        label={translation.get(
+                                            'highlight-color.aria-label',
+                                        )}
                                         onClick={() =>
                                             setActivePicker(
                                                 activePicker === 'color'
@@ -449,18 +432,12 @@ export function LibraryAnnotationCard({
                                                     : 'color',
                                             )
                                         }
-                                        className="inline-flex items-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                                        title={translation.get(
-                                            'highlight-color.aria-label',
-                                        )}
-                                        aria-label={translation.get(
-                                            'highlight-color.aria-label',
-                                        )}
+                                        className="p-1.5"
                                     >
                                         <span
                                             className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
                                         />
-                                    </button>
+                                    </Button>
                                     {activePicker === 'color' && (
                                         <HighlightColorPicker
                                             anchorRef={colorButtonRef}
@@ -480,26 +457,18 @@ export function LibraryAnnotationCard({
                             )}
 
                             {onSaveNote && (
-                                <button
-                                    type="button"
+                                <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    icon={LuPencil}
+                                    label={
+                                        hasNote
+                                            ? translation.get('edit-note')
+                                            : translation.get('add-note')
+                                    }
                                     onClick={() => setEditingNote(!editingNote)}
-                                    className="inline-flex items-center p-1.5 rounded-md text-gray-500 dark:text-dark-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                                    title={
-                                        hasNote
-                                            ? translation.get('edit-note')
-                                            : translation.get('add-note')
-                                    }
-                                    aria-label={
-                                        hasNote
-                                            ? translation.get('edit-note')
-                                            : translation.get('add-note')
-                                    }
-                                >
-                                    <LuPencil
-                                        className="w-3.5 h-3.5"
-                                        aria-hidden="true"
-                                    />
-                                </button>
+                                    className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
+                                />
                             )}
                         </div>
                     </footer>

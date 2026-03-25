@@ -2,8 +2,8 @@ import { LuArrowLeft, LuList } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import {
-    HEADER_ICON_BUTTON_CLASS,
     ReaderSettingsPanel,
     type ReaderSettingsPanelProps,
 } from './ReaderSettingsPanel';
@@ -54,14 +54,13 @@ export function ReaderHeader({
             <div className="flex items-center space-x-2 shrink-0 ml-3">
                 <ReaderSettingsPanel {...settingsProps} />
 
-                <button
-                    type="button"
+                <Button
+                    variant="neutral"
+                    size="icon"
+                    icon={LuList}
+                    label={translation.get('reader-drawer.aria-label')}
                     onClick={onDrawerOpen}
-                    className={HEADER_ICON_BUTTON_CLASS}
-                    aria-label={translation.get('reader-drawer.aria-label')}
-                >
-                    <LuList className="w-5 h-5" aria-hidden="true" />
-                </button>
+                />
             </div>
         </header>
     );

@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 
 import { isApiHttpError } from '../../api';
 import { translation } from '../../i18n';
+import { Button } from '../button/Button';
 
 type ErrorVariant = 'generic' | 'not-found' | 'connection' | 'file-unavailable';
 type ErrorLayout = 'page' | 'overlay';
@@ -128,14 +129,10 @@ export function PageErrorState({
                 {hasActions && (
                     <div className="flex flex-col sm:flex-row items-center gap-3 mt-6">
                         {onRetry && (
-                            <button
-                                type="button"
-                                onClick={onRetry}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-dark-700 transition-colors"
-                            >
+                            <Button onClick={onRetry}>
                                 <LuRotateCw className="w-4 h-4" aria-hidden />
                                 {translation.get('error-state.retry')}
-                            </button>
+                            </Button>
                         )}
                         {children}
                     </div>

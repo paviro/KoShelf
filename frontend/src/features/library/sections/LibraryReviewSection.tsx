@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LuNotebookPen, LuStar, LuTrash2 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import { EditSectionButton } from '../components/EditSectionButton';
 import { StarRatingInput } from '../components/StarRatingInput';
@@ -143,37 +144,27 @@ export function LibraryReviewSection({
                         <div>
                             {(note.trim().length > 0 ||
                                 normalizedRating > 0) && (
-                                <button
-                                    type="button"
+                                <Button
+                                    color="danger"
+                                    icon={LuTrash2}
                                     onClick={handleDelete}
                                     disabled={saving}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-300/50 dark:border-red-500/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50"
                                 >
-                                    <LuTrash2
-                                        className="w-3.5 h-3.5"
-                                        aria-hidden="true"
-                                    />
                                     {translation.get('delete-review')}
-                                </button>
+                                </Button>
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                type="button"
+                            <Button
+                                color="secondary"
                                 onClick={closeEditing}
                                 disabled={saving}
-                                className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors disabled:opacity-50"
                             >
                                 {translation.get('cancel')}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-500/30 dark:border-primary-500/20 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors disabled:opacity-50"
-                            >
+                            </Button>
+                            <Button onClick={handleSave} disabled={saving}>
                                 {translation.get('save')}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

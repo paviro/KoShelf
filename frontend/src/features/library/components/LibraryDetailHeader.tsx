@@ -11,6 +11,7 @@ import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
+import { Button, buttonVariants } from '../../../shared/ui/button/Button';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
 
@@ -96,31 +97,36 @@ export function LibraryDetailHeader({
                     {readerHref && (
                         <Link
                             to={readerHref}
+                            className={buttonVariants({
+                                variant: 'neutral',
+                                size: 'icon',
+                                className: 'gap-1.5 px-3 md:px-4 w-auto',
+                            })}
                             title={translation.get('open-in-reader.aria-label')}
                             aria-label={translation.get(
                                 'open-in-reader.aria-label',
                             )}
-                            className="flex items-center justify-center gap-1.5 h-10 px-3 md:px-4 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs text-sm font-medium text-gray-600 dark:text-gray-300"
                         >
                             <LuBookOpen
                                 className="w-5 h-5"
                                 aria-hidden="true"
                             />
-                            <span className="hidden sm:inline">
+                            <span className="hidden sm:inline text-sm">
                                 {translation.get('open-in-reader')}
                             </span>
                         </Link>
                     )}
                     <div className="relative" ref={dropdownRef}>
-                        <button
+                        <Button
                             id="shareDropdownButton"
-                            type="button"
+                            variant="neutral"
+                            size="icon"
+                            className="dropdown-trigger"
                             aria-haspopup="menu"
                             aria-expanded={shareOpen}
                             aria-controls="shareDropdownMenu"
                             title={translation.get('share')}
                             aria-label={translation.get('share')}
-                            className="dropdown-trigger flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs"
                             onClick={() => setShareOpen((current) => !current)}
                         >
                             <svg
@@ -149,7 +155,7 @@ export function LibraryDetailHeader({
                                     d="M12 4v12"
                                 />
                             </svg>
-                        </button>
+                        </Button>
 
                         <div
                             id="shareDropdownMenu"

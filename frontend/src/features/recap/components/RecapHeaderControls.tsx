@@ -1,6 +1,7 @@
 import { LuDownload } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
 import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
 import type { RecapScope } from '../api/recap-data';
@@ -77,26 +78,24 @@ export function RecapHeaderControls({
                 />
             )}
 
-            <button
-                type="button"
-                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                title={shareLabel}
-                aria-label={shareLabel}
+            <Button
+                variant="neutral"
+                size="icon"
+                icon={LuDownload}
+                label={shareLabel}
                 onClick={onShareClick}
                 disabled={!shareEnabled}
-            >
-                <LuDownload className="w-5 h-5" aria-hidden />
-            </button>
+            />
 
-            <button
-                type="button"
-                className="flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors backdrop-blur-xs"
+            <Button
+                variant="neutral"
+                size="icon"
                 title={sortLabel}
                 aria-label={sortLabel}
                 onClick={onToggleSort}
             >
                 <SortOrderIcon newestFirst={sortNewestFirst} />
-            </button>
+            </Button>
 
             <ContentScopeFilter
                 visible={showTypeFilter}
