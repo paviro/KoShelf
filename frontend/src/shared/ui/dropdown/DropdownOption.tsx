@@ -16,7 +16,7 @@ export function DropdownOption({
     return (
         <button
             type="button"
-            className={`block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 transition-colors duration-200 ${
+            className={`block w-full text-left px-4 py-2 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-dark-700/50 transition-colors duration-200 ${
                 separator
                     ? 'border-b border-gray-200/30 dark:border-dark-700/30'
                     : ''
