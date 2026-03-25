@@ -3,3 +3,6 @@ export const DROPDOWN_TRIGGER_BASE_CLASSNAME =
 
 export const DROPDOWN_PANEL_BASE_CLASSNAME =
     'dropdown-menu-right z-30 bg-white dark:bg-dark-800/75 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl overflow-hidden backdrop-blur-md';
+
+export const DRAWER_LIST_ITEM_CLASSNAME =
+    'cursor-pointer flex items-start gap-3 text-left px-2 py-2.5 rounded-lg transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-dark-700/50';

@@ -251,6 +251,7 @@ error-state =
     .file-unavailable-title = A könyvfájl nem érhető el
     .file-unavailable-description = A könyv adatai megvannak, de a könyvfájl hiányzik.
     .retry = Újrapróbálkozás
+    .go-to-list = Ugrás ide: {$collection}
 
 # Navigation and sorting
 sort-order =

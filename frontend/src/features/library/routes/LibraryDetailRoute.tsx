@@ -14,6 +14,7 @@ import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-r
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
+import { buttonVariants } from '../../../shared/ui/button/Button';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
@@ -240,9 +241,11 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                     >
                         <Link
                             to={backHref}
-                            className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                            className={buttonVariants({ variant: 'neutral' })}
                         >
-                            {collectionTitle(collection)}
+                            {translation.get('error-state.go-to-list', {
+                                collection: collectionTitle(collection),
+                            })}
                         </Link>
                     </PageErrorState>
                 )}

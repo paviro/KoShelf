@@ -2,6 +2,7 @@ import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 
 type ReaderScrubberProps = {
     trackRef: RefObject<HTMLDivElement | null>;
@@ -26,14 +27,14 @@ export function ReaderScrubber({
 }: ReaderScrubberProps) {
     return (
         <footer className="flex items-center gap-3 h-[70px] md:h-[80px] px-4 md:px-6 border-t border-gray-200/50 dark:border-dark-700/50 bg-white/90 dark:bg-dark-950/75 backdrop-blur-xs shrink-0">
-            <button
-                type="button"
+            <Button
+                variant="ghost"
+                size="icon"
+                icon={LuChevronLeft}
+                label={translation.get('reader.previous-page')}
                 onClick={onPrev}
-                className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors"
-                aria-label={translation.get('reader.previous-page')}
-            >
-                <LuChevronLeft className="w-5 h-5 text-gray-600 dark:text-dark-300" />
-            </button>
+                className="hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
+            />
 
             <div className="flex-1 flex items-center gap-3">
                 <div
@@ -64,14 +65,14 @@ export function ReaderScrubber({
                 </span>
             </div>
 
-            <button
-                type="button"
+            <Button
+                variant="ghost"
+                size="icon"
+                icon={LuChevronRight}
+                label={translation.get('reader.next-page')}
                 onClick={onNext}
-                className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors"
-                aria-label={translation.get('reader.next-page')}
-            >
-                <LuChevronRight className="w-5 h-5 text-gray-600 dark:text-dark-300" />
-            </button>
+                className="hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
+            />
         </footer>
     );
 }

@@ -29,9 +29,7 @@ import type {
     ReaderStyleControl,
     ReaderToggleControl,
 } from '../hooks/useReaderStyle';
-
-export const HEADER_ICON_BUTTON_CLASS =
-    'flex items-center justify-center w-10 h-10 p-2.5 bg-gray-100/50 dark:bg-dark-800/10 border border-gray-300/50 dark:border-dark-700/50 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-dark-700/50 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
+import { Button } from '../../../shared/ui/button/Button';
 
 const PANEL_CONTROL_BUTTON_CLASS =
     'flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300/60 dark:border-dark-700/60 bg-white/80 dark:bg-dark-900/60 text-gray-600 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50';
@@ -600,22 +598,22 @@ export function ReaderSettingsPanel({
 
     return (
         <>
-            <button
+            <Button
                 ref={buttonRef}
-                type="button"
+                variant="neutral"
+                size="icon"
+                icon={LuSettings}
+                label={translation.get('reader-settings.aria-label')}
                 onClick={() => setOpen((prev) => !prev)}
-                className={`${HEADER_ICON_BUTTON_CLASS} ${
+                className={
                     open
                         ? 'bg-gray-200/60 dark:bg-dark-700/60 border-gray-300/80 dark:border-dark-600/70 text-gray-900 dark:text-white'
                         : ''
-                }`}
-                aria-label={translation.get('reader-settings.aria-label')}
+                }
                 aria-expanded={open}
                 aria-haspopup="dialog"
                 aria-controls={open ? panelId : undefined}
-            >
-                <LuSettings className="w-5 h-5" aria-hidden="true" />
-            </button>
+            />
 
             {open &&
                 createPortal(

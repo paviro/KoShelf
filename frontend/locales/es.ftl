@@ -268,6 +268,7 @@ error-state =
     .file-unavailable-title = Archivo del libro no disponible
     .file-unavailable-description = Se encontraron los detalles del libro, pero falta el archivo del libro.
     .retry = Reintentar
+    .go-to-list = Ir a {$collection}
 
 # Navigation and sorting
 sort-order =

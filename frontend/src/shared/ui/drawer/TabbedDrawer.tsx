@@ -6,9 +6,7 @@ import {
     type MouseEvent,
     type ReactNode,
 } from 'react';
-import { LuX } from 'react-icons/lu';
-
-import { translation } from '../../i18n';
+import { CloseButton } from '../button/CloseButton';
 
 const TRANSITION_DURATION_MS = 300;
 
@@ -159,14 +157,7 @@ export function TabbedDrawer<TTabId extends string>({
                                     );
                                 })}
                             </div>
-                            <button
-                                type="button"
-                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100/50 dark:bg-dark-800/40 border border-gray-300/60 dark:border-dark-700/60 text-gray-500 dark:text-dark-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-dark-700/60 transition-colors duration-200 backdrop-blur-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
-                                aria-label={translation.get('close.aria-label')}
-                                onClick={onClose}
-                            >
-                                <LuX className="w-5 h-5" aria-hidden="true" />
-                            </button>
+                            <CloseButton bordered onClick={onClose} />
                         </div>
                     </div>
 

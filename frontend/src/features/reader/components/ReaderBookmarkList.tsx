@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { BsBookmarkFill } from 'react-icons/bs';
 
 import { translation } from '../../../shared/i18n';
+import { DRAWER_LIST_ITEM_CLASSNAME } from '../../../shared/ui/dropdown/dropdown-styles';
 import type { LibraryAnnotation } from '../../library/api/library-data';
 import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
 import {
@@ -81,7 +82,7 @@ export function ReaderBookmarkList({
                                     key={index}
                                     type="button"
                                     onClick={() => onSelect(annotation)}
-                                    className="cursor-pointer flex items-start gap-3 text-left px-2 py-2.5 rounded-lg transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-dark-700/50"
+                                    className={DRAWER_LIST_ITEM_CLASSNAME}
                                 >
                                     <span className="w-5 h-5 rounded-md shrink-0 mt-0.5 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-300 flex items-center justify-center">
                                         <BsBookmarkFill

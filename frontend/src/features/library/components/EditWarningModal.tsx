@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { Button } from '../../../shared/ui/button/Button';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 
 type EditWarningModalProps = {
@@ -61,20 +62,12 @@ export function EditWarningModal({
                 </label>
 
                 <div className="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-dark-400 border border-gray-300/50 dark:border-dark-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
-                    >
+                    <Button color="secondary" onClick={onCancel}>
                         {translation.get('cancel')}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onAcknowledge(dontShow)}
-                        className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-500/30 dark:border-primary-500/20 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
-                    >
+                    </Button>
+                    <Button onClick={() => onAcknowledge(dontShow)}>
                         {translation.get('edit-warning.understood')}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </ModalShell>

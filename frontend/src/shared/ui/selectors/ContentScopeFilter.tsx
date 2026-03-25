@@ -8,6 +8,7 @@ import {
     DROPDOWN_PANEL_BASE_CLASSNAME,
     DROPDOWN_TRIGGER_BASE_CLASSNAME,
 } from '../dropdown/dropdown-styles';
+import { DropdownOption } from '../dropdown/DropdownOption';
 
 type ContentScopeFilterProps = {
     visible: boolean;
@@ -70,27 +71,18 @@ export function ContentScopeFilter({
                 className={`${DROPDOWN_PANEL_BASE_CLASSNAME} right-0 w-40 ${open ? '' : 'hidden'}`}
                 role="menu"
             >
-                {OPTIONS.map((scope) => {
-                    const active = scope === value;
-
-                    return (
-                        <button
-                            key={scope}
-                            type="button"
-                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 ${
-                                active
-                                    ? 'text-primary-700 dark:text-primary-300 font-medium'
-                                    : 'text-gray-700 dark:text-dark-200'
-                            }`}
-                            onClick={() => {
-                                onChange(scope);
-                                setOpen(false);
-                            }}
-                        >
-                            {scopeLabel(scope)}
-                        </button>
-                    );
-                })}
+                {OPTIONS.map((scope) => (
+                    <DropdownOption
+                        key={scope}
+                        active={scope === value}
+                        onClick={() => {
+                            onChange(scope);
+                            setOpen(false);
+                        }}
+                    >
+                        {scopeLabel(scope)}
+                    </DropdownOption>
+                ))}
             </div>
         </div>
     );
