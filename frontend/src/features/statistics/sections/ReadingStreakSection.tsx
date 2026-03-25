@@ -50,7 +50,7 @@ export function ReadingStreakSection({
                     selectedYear={selectedYear}
                     onSelect={onSelectYear}
                     iconColorClass="text-gray-600 dark:text-gray-300 sm:text-green-400 sm:dark:text-green-400"
-                    optionActiveClass="bg-dark-700 text-white"
+                    optionActiveClass="bg-dark-700/50 text-white"
                     mobileFallback="No data"
                 />
             }

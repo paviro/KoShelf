@@ -73,7 +73,7 @@ export function RecapHeaderControls({
                     selectedYear={selectedYear}
                     onSelect={onSelectYear}
                     iconColorClass="text-gray-600 dark:text-gray-300 sm:text-green-400 sm:dark:text-green-400"
-                    optionActiveClass="bg-green-50 dark:bg-dark-700 text-green-900 dark:text-white"
+                    optionActiveClass="bg-green-50/50 dark:bg-dark-700/50 text-green-900 dark:text-white"
                     mobileFallback={translation.get('recap')}
                 />
             )}

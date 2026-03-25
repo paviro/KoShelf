@@ -7,13 +7,13 @@ import {
 } from 'react-icons/lu';
 
 import type { StatisticsIndexWeek } from '../api/statistics-data';
-import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import { DateFormatter } from '../lib/formatters';
 import { getWeekYearOrder } from '../model/statistics-model';
 import {
     DROPDOWN_PANEL_BASE_CLASSNAME,
     DROPDOWN_TRIGGER_BASE_CLASSNAME,
 } from '../../../shared/ui/dropdown/dropdown-styles';
+import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
 
 type WeekSelectorProps = {
     weeks: StatisticsIndexWeek[];
@@ -26,7 +26,7 @@ export function WeekSelector({
     selectedWeekKey,
     onSelect,
 }: WeekSelectorProps) {
-    const wrapperRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<'years' | 'weeks'>('years');
     const yearOrder = useMemo(() => getWeekYearOrder(weeks), [weeks]);
@@ -54,8 +54,6 @@ export function WeekSelector({
         }
     }
 
-    useClickOutside(wrapperRef, () => setOpen(false), open);
-
     const selectedText = selectedWeek
         ? DateFormatter.formatDateRange(
               selectedWeek.start_date,
@@ -68,8 +66,9 @@ export function WeekSelector({
     );
 
     return (
-        <div className="relative" ref={wrapperRef}>
+        <>
             <button
+                ref={triggerRef}
                 id="weekSelectorWrapper"
                 type="button"
                 aria-haspopup="menu"
@@ -93,11 +92,7 @@ export function WeekSelector({
                         className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm truncate"
                     >
                         {selectedWeek ? (
-                            <>
-                                <span className="font-bold">
-                                    {selectedText}
-                                </span>
-                            </>
+                            <span className="font-bold">{selectedText}</span>
                         ) : (
                             'No weeks available'
                         )}
@@ -110,9 +105,12 @@ export function WeekSelector({
                 />
             </button>
 
-            <div
-                id="weekOptions"
-                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} w-56 sm:w-64 max-w-[calc(100vw-1rem)] ${open ? '' : 'hidden'}`}
+            <DropdownPortal
+                triggerRef={triggerRef}
+                open={open}
+                onClose={() => setOpen(false)}
+                closeOnScroll
+                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} w-56 sm:w-64 max-w-[calc(100vw-1rem)]`}
             >
                 <div
                     id="weekYearList"
@@ -126,7 +124,7 @@ export function WeekSelector({
                                 type="button"
                                 className={`week-year-option w-full text-left px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 transition-colors duration-200 ${
                                     active
-                                        ? 'bg-primary-50 dark:bg-dark-700 text-primary-900 dark:text-white'
+                                        ? 'bg-primary-50/50 dark:bg-dark-700/50 text-primary-900 dark:text-white'
                                         : 'text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white'
                                 }`}
                                 data-week-year={year}
@@ -159,7 +157,7 @@ export function WeekSelector({
                     id="weekYearWeeksView"
                     className={view === 'weeks' ? '' : 'hidden'}
                 >
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200/60 dark:border-dark-700/60 bg-gray-50/70 dark:bg-dark-900/40">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200/60 dark:border-dark-700/60 bg-gray-50/50 dark:bg-dark-900/30">
                         <button
                             id="weekYearBackButton"
                             type="button"
@@ -194,7 +192,7 @@ export function WeekSelector({
                                     type="button"
                                     className={`week-option w-full text-left px-4 py-2.5 cursor-pointer hover:bg-gray-100/60 dark:hover:bg-dark-700/60 transition-colors duration-200 ${
                                         active
-                                            ? 'bg-primary-50 dark:bg-dark-700 text-primary-900 dark:text-white'
+                                            ? 'bg-primary-50/50 dark:bg-dark-700/50 text-primary-900 dark:text-white'
                                             : 'text-gray-600 dark:text-dark-200 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                                     data-week-key={week.week_key}
@@ -230,7 +228,7 @@ export function WeekSelector({
                         })}
                     </div>
                 </div>
-            </div>
-        </div>
+            </DropdownPortal>
+        </>
     );
 }
