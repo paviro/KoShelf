@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { LuCalendarDays, LuChevronDown } from 'react-icons/lu';
 
-import { useClickOutside } from '../../lib/dom/useClickOutside';
 import {
     DROPDOWN_PANEL_BASE_CLASSNAME,
     DROPDOWN_TRIGGER_BASE_CLASSNAME,
 } from '../dropdown/dropdown-styles';
+import { DropdownPortal } from '../dropdown/DropdownPortal';
 
 type YearSelectorProps = {
     idPrefix: string;
@@ -26,13 +26,13 @@ export function YearSelector({
     optionActiveClass,
     mobileFallback,
 }: YearSelectorProps) {
-    const wrapperRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
-    useClickOutside(wrapperRef, () => setOpen(false), open);
 
     return (
-        <div className="relative" ref={wrapperRef}>
+        <>
             <button
+                ref={triggerRef}
                 id={`${idPrefix}SelectorWrapper`}
                 type="button"
                 aria-haspopup="menu"
@@ -63,9 +63,12 @@ export function YearSelector({
                 />
             </button>
 
-            <div
-                id={`${idPrefix}Options`}
-                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} max-h-60 overflow-y-auto w-40 ${open ? '' : 'hidden'}`}
+            <DropdownPortal
+                triggerRef={triggerRef}
+                open={open}
+                onClose={() => setOpen(false)}
+                closeOnScroll
+                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} max-h-60 overflow-y-auto w-40`}
             >
                 {years.map((year) => {
                     const active = year === selectedYear;
@@ -93,7 +96,7 @@ export function YearSelector({
                         </button>
                     );
                 })}
-            </div>
-        </div>
+            </DropdownPortal>
+        </>
     );
 }

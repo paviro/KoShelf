@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { LuChevronDown, LuFilter } from 'react-icons/lu';
 
-import { useClickOutside } from '../../lib/dom/useClickOutside';
 import {
     DROPDOWN_PANEL_BASE_CLASSNAME,
     DROPDOWN_TRIGGER_BASE_CLASSNAME,
 } from '../dropdown/dropdown-styles';
 import { DropdownOption } from '../dropdown/DropdownOption';
+import { DropdownPortal } from '../dropdown/DropdownPortal';
 
 export type FilterDropdownOption<T extends string> = {
     value: T;
@@ -32,16 +32,15 @@ export function FilterDropdown<T extends string>({
     separateOptions = false,
     optionClassName,
 }: FilterDropdownProps<T>) {
-    const wrapperRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
-
-    useClickOutside(wrapperRef, () => setOpen(false), open);
 
     const activeLabel = options.find((o) => o.value === value)?.label ?? value;
 
     return (
-        <div className="relative" ref={wrapperRef}>
+        <>
             <button
+                ref={triggerRef}
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={open}
@@ -63,9 +62,11 @@ export function FilterDropdown<T extends string>({
                 />
             </button>
 
-            <div
-                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} right-0 ${panelClassName} ${open ? '' : 'hidden'}`}
-                role="menu"
+            <DropdownPortal
+                triggerRef={triggerRef}
+                open={open}
+                onClose={() => setOpen(false)}
+                className={`${DROPDOWN_PANEL_BASE_CLASSNAME} ${panelClassName}`}
             >
                 {options.map((option, index) => (
                     <DropdownOption
@@ -83,7 +84,7 @@ export function FilterDropdown<T extends string>({
                         {option.label}
                     </DropdownOption>
                 ))}
-            </div>
-        </div>
+            </DropdownPortal>
+        </>
     );
 }
