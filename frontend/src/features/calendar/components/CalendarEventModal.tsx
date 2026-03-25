@@ -12,6 +12,7 @@ import { createDetailReturnState } from '../../../shared/lib/navigation/detail-r
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { Button } from '../../../shared/ui/button/Button';
 import { CloseButton } from '../../../shared/ui/button/CloseButton';
+import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import type {
     CalendarEventResponse,
@@ -118,45 +119,24 @@ export function CalendarEventModal({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3">
-                        <div className="flex flex-col @[120px]:flex-row items-center @[120px]:items-center gap-2 @[120px]:gap-3 h-full">
-                            <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
-                                <LuClock3
-                                    className="w-5 h-5 text-green-600 dark:text-white"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <div className="text-center @[120px]:text-left">
-                                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {formatDuration(event.reading_time_sec, {
-                                        includeSeconds: true,
-                                    })}
-                                </div>
-                                <div className="text-xs font-medium text-gray-500 dark:text-dark-400">
-                                    {translation.get('reading-time')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3">
-                        <div className="flex flex-col @[120px]:flex-row items-center @[120px]:items-center gap-2 @[120px]:gap-3 h-full">
-                            <div className="w-10 h-10 bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600 rounded-lg flex items-center justify-center shrink-0">
-                                <LuFileText
-                                    className="w-5 h-5 text-blue-600 dark:text-white"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <div className="text-center @[120px]:text-left">
-                                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {formatNumber(event.pages_read)}
-                                </div>
-                                <div className="text-xs font-medium text-gray-500 dark:text-dark-400">
-                                    {translation.get('pages-read')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <MetricCard
+                        size="sm"
+                        icon={LuClock3}
+                        iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
+                        iconClassName="text-green-600 dark:text-white"
+                        value={formatDuration(event.reading_time_sec, {
+                            includeSeconds: true,
+                        })}
+                        label={translation.get('reading-time')}
+                    />
+                    <MetricCard
+                        size="sm"
+                        icon={LuFileText}
+                        iconContainerClassName="bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600"
+                        iconClassName="text-blue-600 dark:text-white"
+                        value={formatNumber(event.pages_read)}
+                        label={translation.get('pages-read')}
+                    />
                 </div>
 
                 {canViewDetails && (

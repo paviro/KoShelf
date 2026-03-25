@@ -17,6 +17,7 @@ import type { IconType } from 'react-icons';
 import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { Button } from '../../../shared/ui/button/Button';
+import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type {
@@ -117,7 +118,7 @@ function StatusCard({
                         {title}
                     </div>
                     {subtitle && (
-                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
+                        <div className="-mt-0.5 text-sm font-medium text-gray-500 dark:text-dark-400">
                             {subtitle}
                         </div>
                     )}
@@ -278,94 +279,55 @@ export function LibraryOverviewSection({
 
                     <div className="lg:col-span-3 space-y-6">
                         <div className="flex flex-wrap gap-3 sm:gap-4">
-                            <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-                                <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                    <div className="w-10 h-10 bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600 rounded-lg flex items-center justify-center shrink-0">
-                                        <LuFileText
-                                            className="w-5 h-5 text-primary-600 dark:text-white"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="text-center @[140px]:text-left">
-                                        <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                            {cardValueOrUnknown(pagesCount)}
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                                            {translation.get(
-                                                'pages-label',
-                                                pagesCount ?? 0,
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <MetricCard
+                                className="flex-1 min-w-[120px] sm:min-w-[140px]"
+                                icon={LuFileText}
+                                iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
+                                iconClassName="text-primary-600 dark:text-white"
+                                value={cardValueOrUnknown(pagesCount)}
+                                label={translation.get(
+                                    'pages-label',
+                                    pagesCount ?? 0,
+                                )}
+                            />
 
                             {isBook && (
-                                <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-                                    <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                        <div className="w-10 h-10 bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600 rounded-lg flex items-center justify-center shrink-0">
-                                            <BsHighlighter
-                                                className="w-5 h-5 text-amber-600 dark:text-white"
-                                                aria-hidden="true"
-                                            />
-                                        </div>
-                                        <div className="text-center @[140px]:text-left">
-                                            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                                {formatNumber(highlightCount)}
-                                            </div>
-                                            <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                                                {translation.get(
-                                                    'highlights-label',
-                                                    highlightCount,
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <MetricCard
+                                    className="flex-1 min-w-[120px] sm:min-w-[140px]"
+                                    icon={BsHighlighter}
+                                    iconContainerClassName="bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-amber-600"
+                                    iconClassName="text-amber-600 dark:text-white"
+                                    value={formatNumber(highlightCount)}
+                                    label={translation.get(
+                                        'highlights-label',
+                                        highlightCount,
+                                    )}
+                                />
                             )}
 
                             {isBook && (
-                                <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-                                    <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                        <div className="w-10 h-10 bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600 rounded-lg flex items-center justify-center shrink-0">
-                                            <LuNotebookPen
-                                                className="w-5 h-5 text-indigo-600 dark:text-white"
-                                                aria-hidden="true"
-                                            />
-                                        </div>
-                                        <div className="text-center @[140px]:text-left">
-                                            <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                                                {formatNumber(noteCount)}
-                                            </div>
-                                            <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                                                {translation.get(
-                                                    'notes-label',
-                                                    noteCount,
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <MetricCard
+                                    className="flex-1 min-w-[120px] sm:min-w-[140px]"
+                                    icon={LuNotebookPen}
+                                    iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
+                                    iconClassName="text-indigo-600 dark:text-white"
+                                    value={formatNumber(noteCount)}
+                                    label={translation.get(
+                                        'notes-label',
+                                        noteCount,
+                                    )}
+                                />
                             )}
 
-                            <div className="@container flex-1 min-w-[120px] sm:min-w-[140px] bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-                                <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
-                                    <div className="w-10 h-10 bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 rounded-lg flex items-center justify-center shrink-0">
-                                        <LuLanguages
-                                            className="w-5 h-5 text-green-600 dark:text-white"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="text-center @[140px]:text-left">
-                                        <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
-                                            {languageDisplay}
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                                            {translation.get('language')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <MetricCard
+                                className="flex-1 min-w-[120px] sm:min-w-[140px]"
+                                size="sm"
+                                icon={LuLanguages}
+                                iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
+                                iconClassName="text-green-600 dark:text-white"
+                                value={languageDisplay}
+                                label={translation.get('language')}
+                            />
                         </div>
 
                         {sanitizedDescription && (

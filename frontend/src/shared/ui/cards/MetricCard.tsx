@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 
 type MetricCardVariant = 'responsive' | 'compact';
+type MetricCardSize = 'default' | 'sm';
 
 type MetricCardProps = {
     icon: IconType;
@@ -11,6 +12,8 @@ type MetricCardProps = {
     label: ReactNode;
     valueId?: string;
     variant?: MetricCardVariant;
+    size?: MetricCardSize;
+    className?: string;
 };
 
 export function MetricCard({
@@ -21,38 +24,37 @@ export function MetricCard({
     label,
     valueId,
     variant = 'responsive',
+    size = 'default',
+    className,
 }: MetricCardProps) {
-    if (variant === 'compact') {
-        return (
-            <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-                <div className="flex items-center gap-3">
-                    <div
-                        className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center shrink-0`}
-                    >
-                        <Icon
-                            className={`w-5 h-5 ${iconClassName}`}
-                            aria-hidden="true"
-                        />
-                    </div>
-                    <div>
-                        <div
-                            id={valueId}
-                            className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-                        >
-                            {value}
-                        </div>
-                        <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                            {label}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const sm = size === 'sm';
+    const valueClass = sm
+        ? 'text-lg font-bold text-gray-900 dark:text-white'
+        : 'text-xl md:text-2xl font-bold text-gray-900 dark:text-white';
+    const labelClass = sm
+        ? '-mt-0.5 text-xs font-medium text-gray-500 dark:text-dark-400'
+        : '-mt-0.5 text-sm font-medium text-gray-500 dark:text-dark-400';
+    const paddingClass = sm ? 'p-3' : 'p-3 sm:p-4';
+
+    const layoutClass =
+        variant === 'compact'
+            ? 'flex items-center gap-3'
+            : sm
+              ? 'flex flex-col @[120px]:flex-row items-center gap-2 @[120px]:gap-3 h-full'
+              : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3 h-full';
+
+    const textAlignClass =
+        variant === 'compact'
+            ? ''
+            : sm
+              ? 'text-center @[120px]:text-left'
+              : 'text-center @[140px]:text-left';
 
     return (
-        <div className="@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-3 sm:p-4">
-            <div className="flex flex-col @[140px]:flex-row items-center @[140px]:items-center gap-2 @[140px]:gap-3 h-full">
+        <div
+            className={`@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg ${paddingClass}${className ? ` ${className}` : ''}`}
+        >
+            <div className={layoutClass}>
                 <div
                     className={`w-10 h-10 rounded-lg ${iconContainerClassName} flex items-center justify-center shrink-0`}
                 >
@@ -61,16 +63,11 @@ export function MetricCard({
                         aria-hidden="true"
                     />
                 </div>
-                <div className="text-center @[140px]:text-left">
-                    <div
-                        id={valueId}
-                        className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-                    >
+                <div className={textAlignClass || undefined}>
+                    <div id={valueId} className={valueClass}>
                         {value}
                     </div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                        {label}
-                    </div>
+                    <div className={labelClass}>{label}</div>
                 </div>
             </div>
         </div>
