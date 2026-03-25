@@ -274,6 +274,9 @@ error-state =
     .file-unavailable-description = Les détails du livre ont été trouvés, mais le fichier du livre est manquant.
     .retry = Réessayer
     .go-to-list = Voir {$collection}
+    .crash-title = Une erreur est survenue
+    .crash-description = Une erreur inattendue s'est produite lors du rendu de cette page.
+    .crash-report = Signaler un problème
 
 # Navigation and sorting
 sort-order =
@@ -394,6 +397,7 @@ units =
     .d = j
     .h = h
     .m = min
+    .s = s
 today = Aujourd’hui
 of-the-year = de l’année
 of = de

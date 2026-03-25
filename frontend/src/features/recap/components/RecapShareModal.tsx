@@ -10,11 +10,8 @@ import type { IconType } from 'react-icons';
 
 import { ApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
-import {
-    Button,
-    buttonVariants,
-    type ButtonColor,
-} from '../../../shared/ui/button/Button';
+import { Button } from '../../../shared/ui/button/Button';
+import { buttonVariants, type ButtonColor } from '../../../shared/ui/button/button-variants';
 import { CloseButton } from '../../../shared/ui/button/CloseButton';
 import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import type { CompletionsShareAssets } from '../api/recap-data';

@@ -15,13 +15,13 @@ import {
 } from '../../../app/routes/route-registry';
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
+import { formatDurationParts } from '../../../shared/lib/intl/formatDuration';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import type { CompletionItem } from '../api/recap-data';
 import {
     buildStarDisplay,
     formatRecapDateRange,
-    formatRecapDurationParts,
     resolveRecapSearchBasePath,
 } from '../lib/recap-formatters';
 
@@ -232,8 +232,9 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                                     </div>
                                     <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
                                         <MetricCardUnitValue
-                                            value={formatRecapDurationParts(
+                                            value={formatDurationParts(
                                                 item.reading_time_sec,
+                                                { includeDays: true },
                                             )}
                                             size="compact"
                                         />

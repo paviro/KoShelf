@@ -6,10 +6,6 @@ import {
     parsePlainDate,
 } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
-import {
-    joinUnitValueParts,
-    type UnitValuePart,
-} from '../../../shared/lib/intl/unit-value';
 import type { LibrarySeries } from '../api/library-data';
 
 function isFiniteNumber(value: unknown): value is number {
@@ -47,39 +43,6 @@ export function formatSeriesDisplay(
     }
 
     return `${normalizedName} #${normalizedIndex}`;
-}
-
-export function formatDurationFromSeconds(
-    seconds: number | null | undefined,
-): string {
-    return joinUnitValueParts(formatDurationFromSecondsParts(seconds));
-}
-
-export function formatDurationFromSecondsParts(
-    seconds: number | null | undefined,
-): UnitValuePart[] {
-    if (!isFiniteNumber(seconds)) {
-        return [{ amount: '--' }];
-    }
-
-    const normalizedSeconds = Math.max(0, Math.floor(seconds));
-    const totalMinutes = Math.floor(normalizedSeconds / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours > 0) {
-        return [
-            { amount: formatNumber(hours), unit: translation.get('units.h') },
-            { amount: formatNumber(minutes), unit: translation.get('units.m') },
-        ];
-    }
-
-    return [
-        {
-            amount: formatNumber(totalMinutes),
-            unit: translation.get('units.m'),
-        },
-    ];
 }
 
 export function formatCompletionDateRange(

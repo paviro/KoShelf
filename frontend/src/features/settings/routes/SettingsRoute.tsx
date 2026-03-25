@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PasswordChangeSection } from '../../auth/components/PasswordChangeSection';
 import { SessionManagementSection } from '../../auth/components/SessionManagementSection';
-import { api } from '../../../shared/api';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
 import { translation } from '../../../shared/i18n';
 import { formatDateObject } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
@@ -58,10 +59,7 @@ function SettingsSection({
 }
 
 export function SettingsRoute() {
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery } = useSiteQuery();
     const languageOptionsQuery = useQuery({
         queryKey: ['settings', 'language-options'],
         queryFn: getSupportedLanguageOptions,
@@ -155,13 +153,7 @@ export function SettingsRoute() {
         [],
     );
 
-    useEffect(() => {
-        if (!siteQuery.data?.title) {
-            return;
-        }
-
-        document.title = `${translation.get('settings')} - ${siteQuery.data.title}`;
-    }, [currentUiLocale, siteQuery.data?.title]);
+    useDocumentTitle(translation.get('settings'), siteQuery.data?.title);
     useEffect(() => {
         const handleThemePreferenceChange = () => {
             setSelectedThemePreference(getThemePreference());

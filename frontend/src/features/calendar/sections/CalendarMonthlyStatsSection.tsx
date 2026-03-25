@@ -7,7 +7,7 @@ import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import type { CalendarMonthlyStats } from '../api/calendar-data';
-import { formatDurationParts } from '../model/calendar-model';
+import { formatDurationParts } from '../../../shared/lib/intl/formatDuration';
 
 type CalendarMonthlyStatsSectionProps = {
     stats: CalendarMonthlyStats;
@@ -45,7 +45,9 @@ export function CalendarMonthlyStatsSection({
                 iconClassName="text-purple-600 dark:text-white"
                 value={
                     <MetricCardUnitValue
-                        value={formatDurationParts(stats.reading_time_sec)}
+                        value={formatDurationParts(stats.reading_time_sec, {
+                            includeSeconds: true,
+                        })}
                     />
                 }
                 label={translation.get('total-read-time')}

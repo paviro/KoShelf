@@ -252,6 +252,9 @@ error-state =
     .file-unavailable-description = A könyv adatai megvannak, de a könyvfájl hiányzik.
     .retry = Újrapróbálkozás
     .go-to-list = Ugrás ide: {$collection}
+    .crash-title = Valami hiba történt
+    .crash-description = Váratlan hiba történt az oldal megjelenítése közben.
+    .crash-report = Hiba jelentése
 
 # Navigation and sorting
 sort-order =
@@ -372,6 +375,7 @@ units =
     .d = n
     .h = ó
     .m = p
+    .s = s
 today = Ma
 of-the-year = az évből
 of = /

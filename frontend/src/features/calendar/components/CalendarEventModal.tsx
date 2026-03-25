@@ -17,7 +17,7 @@ import type {
     CalendarEventResponse,
     CalendarItemResponse,
 } from '../api/calendar-data';
-import { formatDuration } from '../model/calendar-model';
+import { formatDuration } from '../../../shared/lib/intl/formatDuration';
 
 type CalendarEventModalProps = {
     open: boolean;
@@ -128,7 +128,9 @@ export function CalendarEventModal({
                             </div>
                             <div className="text-center @[120px]:text-left">
                                 <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {formatDuration(event.reading_time_sec)}
+                                    {formatDuration(event.reading_time_sec, {
+                                        includeSeconds: true,
+                                    })}
                                 </div>
                                 <div className="text-xs font-medium text-gray-500 dark:text-dark-400">
                                     {translation.get('reading-time')}
