@@ -1,6 +1,7 @@
 import { LuArrowUpRight, LuBuilding2, LuHash } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import type { ExternalIdentifier } from '../api/library-data';
 
@@ -29,24 +30,15 @@ export function LibraryAdditionalInfoSection({
         >
             <div className="space-y-6">
                 {publisher !== null && (
-                    <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600 rounded-lg flex items-center justify-center">
-                                <LuBuilding2
-                                    className="w-5 h-5 text-indigo-600 dark:text-white"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <div>
-                                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {publisher}
-                                </div>
-                                <div className="text-sm font-medium text-gray-500 dark:text-dark-400">
-                                    {translation.get('publisher')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <MetricCard
+                        variant="compact"
+                        size="sm"
+                        icon={LuBuilding2}
+                        iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
+                        iconClassName="text-indigo-600 dark:text-white"
+                        value={publisher}
+                        label={translation.get('publisher')}
+                    />
                 )}
 
                 {identifiers.length > 0 && (

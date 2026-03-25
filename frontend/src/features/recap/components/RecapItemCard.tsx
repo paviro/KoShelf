@@ -17,6 +17,7 @@ import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { formatDurationParts } from '../../../shared/lib/intl/formatDuration';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
+import { MetricCardCompact } from '../../../shared/ui/cards/MetricCardCompact';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
 import type { CompletionItem } from '../api/recap-data';
 import {
@@ -205,73 +206,48 @@ export function RecapItemCard({ item }: RecapItemCardProps) {
                         </div>
 
                         <div className="mt-3 grid grid-cols-2 xl:grid-cols-4 gap-2">
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600 flex items-center justify-center mr-2.5 shrink-0">
-                                    <LuCalendarDays className="w-4 h-4 text-blue-600 dark:text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                        {translation.get('period')}
-                                    </div>
-                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                                        {formatRecapDateRange(
-                                            item.start_date,
-                                            item.end_date,
+                            <MetricCardCompact
+                                icon={LuCalendarDays}
+                                iconContainerClassName="bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600"
+                                iconClassName="text-blue-600 dark:text-white"
+                                label={translation.get('period')}
+                                value={formatRecapDateRange(
+                                    item.start_date,
+                                    item.end_date,
+                                )}
+                            />
+                            <MetricCardCompact
+                                icon={LuClock3}
+                                iconContainerClassName="bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600"
+                                iconClassName="text-purple-600 dark:text-white"
+                                label={translation.get('reading-time')}
+                                value={
+                                    <MetricCardUnitValue
+                                        value={formatDurationParts(
+                                            item.reading_time_sec,
+                                            { includeDays: true },
                                         )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 flex items-center justify-center mr-2.5 shrink-0">
-                                    <LuClock3 className="w-4 h-4 text-purple-600 dark:text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                        {translation.get('reading-time')}
-                                    </div>
-                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                                        <MetricCardUnitValue
-                                            value={formatDurationParts(
-                                                item.reading_time_sec,
-                                                { includeDays: true },
-                                            )}
-                                            size="compact"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600 flex items-center justify-center mr-2.5 shrink-0">
-                                    <LuFileText className="w-4 h-4 text-green-600 dark:text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                        {translation.get(
-                                            'pages-label',
-                                            item.pages_read,
-                                        )}
-                                    </div>
-                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                                        {item.pages_read}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 dark:bg-dark-800/60 border border-gray-200/70 dark:border-dark-700/50 rounded-lg px-3 py-3 flex items-center">
-                                <div className="w-8 h-8 rounded-lg bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-orange-600 flex items-center justify-center mr-2.5 shrink-0">
-                                    <HiOutlineBookOpen className="w-4 h-4 text-orange-600 dark:text-white" />
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                        {translation.get('sessions')}
-                                    </div>
-                                    <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                                        {item.session_count}
-                                    </div>
-                                </div>
-                            </div>
+                                        size="compact"
+                                    />
+                                }
+                            />
+                            <MetricCardCompact
+                                icon={LuFileText}
+                                iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
+                                iconClassName="text-green-600 dark:text-white"
+                                label={translation.get(
+                                    'pages-label',
+                                    item.pages_read,
+                                )}
+                                value={item.pages_read}
+                            />
+                            <MetricCardCompact
+                                icon={HiOutlineBookOpen}
+                                iconContainerClassName="bg-orange-500/20 dark:bg-linear-to-br dark:from-orange-500 dark:to-orange-600"
+                                iconClassName="text-orange-600 dark:text-white"
+                                label={translation.get('sessions')}
+                                value={item.session_count}
+                            />
                         </div>
 
                         {hasReviewNote && (
