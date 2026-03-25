@@ -1,17 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router';
 
-import { PageContent } from '../../../shared/ui/layout/PageContent';
-import { PageHeader } from '../../../shared/ui/layout/PageHeader';
-import { OverallStatsSection } from '../sections/OverallStatsSection';
-import { ReadingStreakSection } from '../sections/ReadingStreakSection';
-import { ScopeFilter } from '../components/ScopeFilter';
-import { StatisticsEmptyState } from '../sections/StatisticsEmptyState';
-import { WeeklyStatsSection } from '../sections/WeeklyStatsSection';
-import { YearlyStatsSection } from '../sections/YearlyStatsSection';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
+import { translation } from '../../../shared/i18n';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
+import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
+import { PageContent } from '../../../shared/ui/layout/PageContent';
+import { PageHeader } from '../../../shared/ui/layout/PageHeader';
+import type { StatisticsWeekResponse } from '../api/statistics-data';
+import { ScopeFilter } from '../components/ScopeFilter';
 import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
@@ -28,11 +27,11 @@ import {
     type YearlySummaryStats,
     type SectionName,
 } from '../model/statistics-model';
-import { api } from '../../../shared/api';
-import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
-import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
-import type { StatisticsWeekResponse } from '../api/statistics-data';
-import { translation } from '../../../shared/i18n';
+import { OverallStatsSection } from '../sections/OverallStatsSection';
+import { ReadingStreakSection } from '../sections/ReadingStreakSection';
+import { StatisticsEmptyState } from '../sections/StatisticsEmptyState';
+import { WeeklyStatsSection } from '../sections/WeeklyStatsSection';
+import { YearlyStatsSection } from '../sections/YearlyStatsSection';
 
 const emptyMonthlyStats: MonthlyReadStats[] = Array.from(
     { length: 12 },
@@ -65,10 +64,7 @@ export function StatisticsRoute() {
     const [initialViewState] = useState(() => readStoredStatisticsViewState());
     const [scope, setScope] = useState(() => initialViewState.scope);
 
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery, showTypeFilter } = useSiteQuery();
 
     const statsIndexQuery = useStatisticsIndexQuery(scope);
     const statsIndexTransition = useQueryTransitionState({
@@ -147,11 +143,10 @@ export function StatisticsRoute() {
         };
     }, [scope]);
 
-    useEffect(() => {
-        if (siteQuery.data?.title) {
-            document.title = `${translation.get('reading-statistics')} - ${siteQuery.data.title}`;
-        }
-    }, [siteQuery.data]);
+    useDocumentTitle(
+        translation.get('reading-statistics'),
+        siteQuery.data?.title,
+    );
 
     useEffect(() => {
         if (!statsIndexTransition.hasFreshData) {
@@ -236,10 +231,6 @@ export function StatisticsRoute() {
         return streak;
     }, [statsIndex]);
 
-    const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books &&
-        siteQuery.data?.capabilities.has_comics,
-    );
     const showPageEmptyState =
         statsIndexTransition.hasFreshData &&
         availableYears.length === 0 &&
@@ -267,42 +258,25 @@ export function StatisticsRoute() {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {!statsIndexQuery.isError &&
-                    statsIndexTransition.showBlockingSpinner && (
-                        <section className="page-centered-state">
-                            <LoadingSpinner
-                                size="lg"
-                                srLabel="Loading statistics"
-                            />
-                        </section>
-                    )}
-
-                {statsIndexQuery.isError && (
-                    <PageErrorState
-                        error={statsIndexQuery.error}
-                        onRetry={() => statsIndexQuery.refetch()}
-                    />
-                )}
-
-                {statsIndex && (
-                    <div className="relative space-y-6 md:space-y-8">
-                        {statsIndexTransition.showOverlaySpinner && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner
-                                    size="md"
-                                    srLabel="Loading statistics"
-                                />
-                            </div>
-                        )}
-
-                        {showPageEmptyState ? (
+                <QueryStateLayout
+                    isError={statsIndexQuery.isError}
+                    error={statsIndexQuery.error}
+                    onRetry={() => statsIndexQuery.refetch()}
+                    showBlockingSpinner={
+                        statsIndexTransition.showBlockingSpinner
+                    }
+                    showOverlaySpinner={statsIndexTransition.showOverlaySpinner}
+                    hasData={Boolean(statsIndex)}
+                    srLabel="Loading statistics"
+                    renderContent={() =>
+                        showPageEmptyState ? (
                             <StatisticsEmptyState />
                         ) : (
                             <>
                                 <OverallStatsSection
                                     visible={sectionState['overall-stats']}
                                     onToggle={toggleSection}
-                                    overview={statsIndex.overview}
+                                    overview={statsIndex!.overview}
                                 />
 
                                 <ReadingStreakSection
@@ -318,7 +292,7 @@ export function StatisticsRoute() {
                                     loading={heatmapLoading}
                                     animationSeed={location.key}
                                     currentStreak={validatedCurrentStreak}
-                                    longestStreak={statsIndex.streaks.longest}
+                                    longestStreak={statsIndex!.streaks.longest}
                                 />
 
                                 <YearlyStatsSection
@@ -342,9 +316,9 @@ export function StatisticsRoute() {
                                     loading={weeklyLoading}
                                 />
                             </>
-                        )}
-                    </div>
-                )}
+                        )
+                    }
+                />
             </PageContent>
         </>
     );

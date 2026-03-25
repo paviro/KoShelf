@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { listRouteIdForCollection } from '../../../app/routes/route-registry';
-import { api } from '../../../shared/api';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
 import { translation } from '../../../shared/i18n';
 import { useBookCardTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
 import {
@@ -12,8 +12,7 @@ import {
 } from '../../../shared/lib/state/route-state-storage';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
-import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
-import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
+import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
 import { LibraryHeader } from '../components/LibraryHeader';
@@ -104,10 +103,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
         );
     });
 
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery } = useSiteQuery();
     const listQuery = useLibraryListQuery(collection);
     const listTransition = useQueryTransitionState({
         data: listQuery.data,
@@ -334,11 +330,7 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
 
     const pageTitle = translation.get(libraryTitleTranslationKey(collection));
 
-    useEffect(() => {
-        if (siteQuery.data?.title) {
-            document.title = `${pageTitle} - ${siteQuery.data.title}`;
-        }
-    }, [pageTitle, siteQuery.data]);
+    useDocumentTitle(pageTitle, siteQuery.data?.title);
 
     return (
         <>
@@ -360,63 +352,52 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {!listQuery.isError && listTransition.showBlockingSpinner && (
-                    <section className="page-centered-state">
-                        <LoadingSpinner size="lg" srLabel="Loading library" />
-                    </section>
-                )}
-
-                {listQuery.isError && (
-                    <PageErrorState
-                        error={listQuery.error}
-                        onRetry={() => listQuery.refetch()}
-                    />
-                )}
-
-                {!listQuery.isError && listTransition.hasDisplayData && (
-                    <div className="relative space-y-6 md:space-y-8">
-                        {listTransition.showOverlaySpinner && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner
-                                    size="md"
-                                    srLabel="Loading library"
-                                />
-                            </div>
-                        )}
-
-                        {visibleItemCount === 0 ? (
+                <QueryStateLayout
+                    isError={listQuery.isError}
+                    error={listQuery.error}
+                    onRetry={() => listQuery.refetch()}
+                    showBlockingSpinner={listTransition.showBlockingSpinner}
+                    showOverlaySpinner={listTransition.showOverlaySpinner}
+                    hasData={listTransition.hasDisplayData}
+                    srLabel="Loading library"
+                    renderContent={() =>
+                        visibleItemCount === 0 ? (
                             <LibraryEmptyState />
                         ) : (
-                            sectionRows.map((section) => {
-                                if (section.items.length === 0) {
-                                    return null;
-                                }
+                            <>
+                                {sectionRows.map((section) => {
+                                    if (section.items.length === 0) {
+                                        return null;
+                                    }
 
-                                const visible = normalizedSearch
-                                    ? true
-                                    : sectionState[section.sectionKey];
+                                    const visible = normalizedSearch
+                                        ? true
+                                        : sectionState[section.sectionKey];
 
-                                return (
-                                    <LibrarySection
-                                        key={section.sectionKey}
-                                        sectionKey={section.sectionKey}
-                                        title={translation.get(
-                                            SECTION_TITLE_KEYS[
-                                                section.sectionKey
-                                            ],
-                                        )}
-                                        items={section.items}
-                                        collection={collection}
-                                        visible={visible}
-                                        onToggle={() =>
-                                            toggleSection(section.sectionKey)
-                                        }
-                                    />
-                                );
-                            })
-                        )}
-                    </div>
-                )}
+                                    return (
+                                        <LibrarySection
+                                            key={section.sectionKey}
+                                            sectionKey={section.sectionKey}
+                                            title={translation.get(
+                                                SECTION_TITLE_KEYS[
+                                                    section.sectionKey
+                                                ],
+                                            )}
+                                            items={section.items}
+                                            collection={collection}
+                                            visible={visible}
+                                            onToggle={() =>
+                                                toggleSection(
+                                                    section.sectionKey,
+                                                )
+                                            }
+                                        />
+                                    );
+                                })}
+                            </>
+                        )
+                    }
+                />
             </PageContent>
         </>
     );

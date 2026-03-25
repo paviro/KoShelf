@@ -299,6 +299,9 @@ error-state =
     .file-unavailable-description = Данные книги найдены, но файл книги отсутствует.
     .retry = Попробовать снова
     .go-to-list = Открыть {$collection}
+    .crash-title = Что-то пошло не так
+    .crash-description = При отображении этой страницы произошла непредвиденная ошибка.
+    .crash-report = Сообщить о проблеме
 
 # Navigation and sorting
 sort-order =
@@ -419,6 +422,7 @@ units =
     .d = д
     .h = ч
     .m = мин
+    .s = s
 today = Сегодня
 of-the-year = года
 of = из

@@ -1,12 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
-import { api } from '../../../shared/api';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
 import { translation } from '../../../shared/i18n';
 import { useRecapCoverTiltEffect } from '../../../shared/lib/dom/useTiltEffect';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
+import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 import { RecapHeaderControls } from '../components/RecapHeaderControls';
@@ -40,10 +41,7 @@ export function RecapRoute() {
         null,
     );
 
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery, showTypeFilter } = useSiteQuery();
 
     const recapIndexQuery = useRecapIndexQuery(scope);
     const recapIndexTransition = useQueryTransitionState({
@@ -113,20 +111,11 @@ export function RecapRoute() {
         });
     }, [recapIndexQuery.isSuccess, scope, yearForQuery]);
 
-    useEffect(() => {
-        if (!siteQuery.data?.title) {
-            return;
-        }
-
-        const titleYear = yearForQuery ?? recapYear?.year;
-        const yearSuffix = titleYear ? ` ${titleYear}` : '';
-        document.title = `${translation.get('recap')}${yearSuffix} - ${siteQuery.data.title}`;
-    }, [recapYear?.year, siteQuery.data?.title, yearForQuery]);
-
-    const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books &&
-        siteQuery.data?.capabilities.has_comics,
-    );
+    const titleYear = yearForQuery ?? recapYear?.year;
+    const recapPageTitle = titleYear
+        ? `${translation.get('recap')} ${titleYear}`
+        : translation.get('recap');
+    useDocumentTitle(recapPageTitle, siteQuery.data?.title);
 
     const showPageLevelEmptyState =
         recapIndexTransition.hasFreshData &&
@@ -185,86 +174,75 @@ export function RecapRoute() {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {!recapIndexQuery.isError &&
-                    recapIndexTransition.showBlockingSpinner && (
-                        <section className="page-centered-state">
-                            <LoadingSpinner size="lg" srLabel="Loading recap" />
-                        </section>
-                    )}
-
-                {recapIndexQuery.isError && (
-                    <PageErrorState
-                        error={recapIndexQuery.error}
-                        onRetry={() => recapIndexQuery.refetch()}
-                    />
-                )}
-
-                {!recapIndexQuery.isError && recapIndex && (
-                    <div className="relative space-y-6 md:space-y-8">
-                        {recapIndexTransition.showOverlaySpinner && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner
-                                    size="md"
-                                    srLabel="Loading recap"
-                                />
-                            </div>
-                        )}
-
-                        {showPageLevelEmptyState && (
-                            <RecapEmptyState hasYearContext={false} />
-                        )}
-
-                        {yearForQuery !== null &&
-                            recapYearTransition.showBlockingSpinner && (
-                                <section className="page-centered-state">
-                                    <LoadingSpinner
-                                        size="lg"
-                                        srLabel="Loading recap year"
-                                    />
-                                </section>
+                <QueryStateLayout
+                    isError={recapIndexQuery.isError}
+                    error={recapIndexQuery.error}
+                    onRetry={() => recapIndexQuery.refetch()}
+                    showBlockingSpinner={
+                        recapIndexTransition.showBlockingSpinner
+                    }
+                    showOverlaySpinner={recapIndexTransition.showOverlaySpinner}
+                    hasData={Boolean(recapIndex)}
+                    srLabel="Loading recap"
+                    renderContent={() => (
+                        <>
+                            {showPageLevelEmptyState && (
+                                <RecapEmptyState hasYearContext={false} />
                             )}
 
-                        {yearForQuery !== null && recapYearQuery.isError && (
-                            <PageErrorState
-                                error={recapYearQuery.error}
-                                onRetry={() => recapYearQuery.refetch()}
-                            />
-                        )}
-
-                        {showYearEmptyState && (
-                            <RecapEmptyState hasYearContext={true} />
-                        )}
-
-                        {showTimeline && recapYear && (
-                            <div className="relative">
-                                {recapYearTransition.showOverlaySpinner && (
-                                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                            {yearForQuery !== null &&
+                                recapYearTransition.showBlockingSpinner && (
+                                    <section className="page-centered-state">
                                         <LoadingSpinner
-                                            size="md"
+                                            size="lg"
                                             srLabel="Loading recap year"
                                         />
-                                    </div>
+                                    </section>
                                 )}
-                                <div
-                                    className="recap-timeline space-y-6"
-                                    id="recapTimeline"
-                                >
-                                    {recapYear.summary && (
-                                        <RecapSummarySection
-                                            year={recapYear.year}
-                                            scope={scope}
-                                            summary={recapYear.summary}
-                                        />
-                                    )}
-                                    <RecapTimelineSection
-                                        months={orderedMonths}
-                                        scope={scope}
+
+                            {yearForQuery !== null &&
+                                recapYearQuery.isError && (
+                                    <PageErrorState
+                                        error={recapYearQuery.error}
+                                        onRetry={() => recapYearQuery.refetch()}
                                     />
+                                )}
+
+                            {showYearEmptyState && (
+                                <RecapEmptyState hasYearContext={true} />
+                            )}
+
+                            {showTimeline && recapYear && (
+                                <div className="relative">
+                                    {recapYearTransition.showOverlaySpinner && (
+                                        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
+                                            <LoadingSpinner
+                                                size="md"
+                                                srLabel="Loading recap year"
+                                            />
+                                        </div>
+                                    )}
+                                    <div
+                                        className="recap-timeline space-y-6"
+                                        id="recapTimeline"
+                                    >
+                                        {recapYear.summary && (
+                                            <RecapSummarySection
+                                                year={recapYear.year}
+                                                scope={scope}
+                                                summary={recapYear.summary}
+                                            />
+                                        )}
+                                        <RecapTimelineSection
+                                            months={orderedMonths}
+                                            scope={scope}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </>
+                    )}
+                />
             </PageContent>
 
             <RecapShareModal

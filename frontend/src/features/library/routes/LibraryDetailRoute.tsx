@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 
 import {
@@ -8,14 +7,14 @@ import {
     listRouteIdForCollection,
     readerRouteIdForCollection,
 } from '../../../app/routes/route-registry';
-import { api } from '../../../shared/api';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
 import { translation } from '../../../shared/i18n';
 import { resolveDetailReturnPath } from '../../../shared/lib/navigation/detail-return-state';
 import { useSectionVisibilityState } from '../../../shared/lib/state/useSectionVisibilityState';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
-import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
-import { buttonVariants } from '../../../shared/ui/button/Button';
-import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
+import { buttonVariants } from '../../../shared/ui/button/button-variants';
+import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { EditWarningModal } from '../components/EditWarningModal';
@@ -53,10 +52,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const location = useLocation();
     const id = params.id;
 
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery } = useSiteQuery();
 
     const detailQuery = useLibraryDetailQuery(collection, id);
     const detailTransition = useQueryTransitionState({
@@ -176,18 +172,10 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             defaults: sectionDefaults,
         });
 
-    useEffect(() => {
-        if (!siteQuery.data?.title) {
-            return;
-        }
-
-        if (item?.title) {
-            document.title = `${item.title} - ${siteQuery.data.title}`;
-            return;
-        }
-
-        document.title = `${collectionTitle(collection)} - ${siteQuery.data.title}`;
-    }, [collection, item?.title, siteQuery.data?.title]);
+    useDocumentTitle(
+        item?.title ?? collectionTitle(collection),
+        siteQuery.data?.title,
+    );
 
     if (!id) {
         return (
@@ -224,21 +212,15 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             />
 
             <PageContent className="space-y-6 md:space-y-8">
-                {!detailQuery.isError &&
-                    detailTransition.showBlockingSpinner && (
-                        <section className="page-centered-state">
-                            <LoadingSpinner
-                                size="lg"
-                                srLabel="Loading item details"
-                            />
-                        </section>
-                    )}
-
-                {detailQuery.isError && (
-                    <PageErrorState
-                        error={detailQuery.error}
-                        onRetry={() => detailQuery.refetch()}
-                    >
+                <QueryStateLayout
+                    isError={detailQuery.isError}
+                    error={detailQuery.error}
+                    onRetry={() => detailQuery.refetch()}
+                    showBlockingSpinner={detailTransition.showBlockingSpinner}
+                    showOverlaySpinner={detailTransition.showOverlaySpinner}
+                    hasData={Boolean(item)}
+                    srLabel="Loading item details"
+                    errorChildren={
                         <Link
                             to={backHref}
                             className={buttonVariants({ variant: 'neutral' })}
@@ -247,98 +229,90 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                 collection: collectionTitle(collection),
                             })}
                         </Link>
-                    </PageErrorState>
-                )}
-
-                {!detailQuery.isError && item && (
-                    <div className="relative space-y-6 md:space-y-8">
-                        {detailTransition.showOverlaySpinner && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                <LoadingSpinner
-                                    size="md"
-                                    srLabel="Loading item details"
-                                />
-                            </div>
-                        )}
-
-                        <LibraryOverviewSection
-                            item={item}
-                            itemStats={itemStats}
-                            completions={completions}
-                            highlightCount={highlightCount}
-                            noteCount={noteCount}
-                            visible={sectionState['book-overview']}
-                            onToggle={() => toggle('book-overview')}
-                            canWrite={canWrite}
-                            onStatusChange={handleStatusChange}
-                            guardedAction={guardedAction}
-                        />
-
-                        {sessionStats && (
-                            <LibraryReadingStatsSection
+                    }
+                    renderContent={() => (
+                        <>
+                            <LibraryOverviewSection
+                                item={item!}
                                 itemStats={itemStats}
-                                sessionStats={sessionStats}
                                 completions={completions}
-                                visible={sectionState['reading-stats']}
-                                onToggle={() => toggle('reading-stats')}
-                            />
-                        )}
-
-                        {(hasReview || canWrite) && (
-                            <LibraryReviewSection
-                                note={reviewNote}
-                                rating={item.rating ?? null}
-                                visible={sectionState.review}
-                                onToggle={() => toggle('review')}
+                                highlightCount={highlightCount}
+                                noteCount={noteCount}
+                                visible={sectionState['book-overview']}
+                                onToggle={() => toggle('book-overview')}
                                 canWrite={canWrite}
-                                onSave={handleReviewSave}
-                                onDelete={handleReviewDelete}
-                                saving={updateItemMutation.isPending}
+                                onStatusChange={handleStatusChange}
                                 guardedAction={guardedAction}
                             />
-                        )}
 
-                        {item.content_type === 'book' &&
-                            highlightAnnotations.length > 0 && (
-                                <LibraryHighlightsSection
-                                    annotations={highlightAnnotations}
-                                    visible={sectionState.highlights}
-                                    onToggle={() => toggle('highlights')}
-                                    readerBaseHref={readerBaseHref}
+                            {sessionStats && (
+                                <LibraryReadingStatsSection
+                                    itemStats={itemStats}
+                                    sessionStats={sessionStats}
+                                    completions={completions}
+                                    visible={sectionState['reading-stats']}
+                                    onToggle={() => toggle('reading-stats')}
+                                />
+                            )}
+
+                            {(hasReview || canWrite) && (
+                                <LibraryReviewSection
+                                    note={reviewNote}
+                                    rating={item!.rating ?? null}
+                                    visible={sectionState.review}
+                                    onToggle={() => toggle('review')}
                                     canWrite={canWrite}
-                                    onSaveNote={handleAnnotationNoteUpdate}
-                                    onColorChange={handleAnnotationColorChange}
-                                    onDrawerChange={
-                                        handleAnnotationDrawerChange
-                                    }
-                                    onDelete={handleAnnotationDelete}
+                                    onSave={handleReviewSave}
+                                    onDelete={handleReviewDelete}
+                                    saving={updateItemMutation.isPending}
                                     guardedAction={guardedAction}
                                 />
                             )}
 
-                        {item.content_type === 'book' &&
-                            bookmarkAnnotations.length > 0 && (
-                                <LibraryBookmarksSection
-                                    annotations={bookmarkAnnotations}
-                                    visible={sectionState.bookmarks}
-                                    onToggle={() => toggle('bookmarks')}
-                                    readerBaseHref={readerBaseHref}
-                                    canWrite={canWrite}
-                                    onDelete={handleAnnotationDelete}
-                                    guardedAction={guardedAction}
+                            {item!.content_type === 'book' &&
+                                highlightAnnotations.length > 0 && (
+                                    <LibraryHighlightsSection
+                                        annotations={highlightAnnotations}
+                                        visible={sectionState.highlights}
+                                        onToggle={() => toggle('highlights')}
+                                        readerBaseHref={readerBaseHref}
+                                        canWrite={canWrite}
+                                        onSaveNote={handleAnnotationNoteUpdate}
+                                        onColorChange={
+                                            handleAnnotationColorChange
+                                        }
+                                        onDrawerChange={
+                                            handleAnnotationDrawerChange
+                                        }
+                                        onDelete={handleAnnotationDelete}
+                                        guardedAction={guardedAction}
+                                    />
+                                )}
+
+                            {item!.content_type === 'book' &&
+                                bookmarkAnnotations.length > 0 && (
+                                    <LibraryBookmarksSection
+                                        annotations={bookmarkAnnotations}
+                                        visible={sectionState.bookmarks}
+                                        onToggle={() => toggle('bookmarks')}
+                                        readerBaseHref={readerBaseHref}
+                                        canWrite={canWrite}
+                                        onDelete={handleAnnotationDelete}
+                                        guardedAction={guardedAction}
+                                    />
+                                )}
+
+                            {(hasPublisher || item!.identifiers.length > 0) && (
+                                <LibraryAdditionalInfoSection
+                                    publisher={item!.publisher ?? null}
+                                    identifiers={item!.identifiers}
+                                    visible={sectionState['additional-info']}
+                                    onToggle={() => toggle('additional-info')}
                                 />
                             )}
-
-                        {(hasPublisher || item.identifiers.length > 0) && (
-                            <LibraryAdditionalInfoSection
-                                publisher={item.publisher ?? null}
-                                identifiers={item.identifiers}
-                                visible={sectionState['additional-info']}
-                                onToggle={() => toggle('additional-info')}
-                            />
-                        )}
-                    </div>
-                )}
+                        </>
+                    )}
+                />
             </PageContent>
 
             {canWrite && (

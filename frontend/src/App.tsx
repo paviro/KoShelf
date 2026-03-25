@@ -9,6 +9,7 @@ import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
 import type { SiteData } from './shared/contracts';
 import { I18N_LANGUAGE_CHANGE_EVENT, translation } from './shared/i18n';
+import { RouteErrorBoundary } from './shared/ui/feedback/RouteErrorBoundary';
 import { ToastContainer } from './shared/ui/toast';
 
 function resolveDefaultRoute(
@@ -67,15 +68,17 @@ export function App() {
     const isLoginRoute = routeMatch.routeId === 'login';
 
     const routes = (
-        <div className="min-h-full">
-            <AppRoutes
-                defaultRoute={defaultRoute}
-                siteTitle={siteTitle}
-                authEnabled={authEnabled}
-                authenticated={authenticated}
-                siteLoaded={siteQuery.isSuccess || siteQuery.isError}
-            />
-        </div>
+        <RouteErrorBoundary>
+            <div className="min-h-full">
+                <AppRoutes
+                    defaultRoute={defaultRoute}
+                    siteTitle={siteTitle}
+                    authEnabled={authEnabled}
+                    authenticated={authenticated}
+                    siteLoaded={siteQuery.isSuccess || siteQuery.isError}
+                />
+            </div>
+        </RouteErrorBoundary>
     );
 
     if (isLoginRoute) {

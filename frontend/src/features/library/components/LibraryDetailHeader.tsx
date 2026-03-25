@@ -11,7 +11,8 @@ import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
-import { Button, buttonVariants } from '../../../shared/ui/button/Button';
+import { Button } from '../../../shared/ui/button/Button';
+import { buttonVariants } from '../../../shared/ui/button/button-variants';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
 

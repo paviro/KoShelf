@@ -2,6 +2,10 @@ import { HiOutlineBookOpen } from 'react-icons/hi2';
 import { LuCalendarDays, LuClock3, LuInfo, LuZap } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import {
+    formatDuration,
+    formatDurationParts,
+} from '../../../shared/lib/intl/formatDuration';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
 import { MetricCardUnitValue } from '../../../shared/ui/cards/MetricCardUnitValue';
@@ -15,8 +19,6 @@ import {
     calculateAverageReadingSpeed,
     calculateCalendarLengthDays,
     formatCompletionDateRange,
-    formatDurationFromSeconds,
-    formatDurationFromSecondsParts,
     formatIsoDate,
     formatReadingSpeed,
 } from '../lib/library-detail-formatters';
@@ -53,7 +55,7 @@ export function LibraryReadingStatsSection({
                     iconClassName="text-primary-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
-                            value={formatDurationFromSecondsParts(
+                            value={formatDurationParts(
                                 itemStats?.total_reading_time_sec,
                             )}
                         />
@@ -78,7 +80,7 @@ export function LibraryReadingStatsSection({
                     iconClassName="text-green-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
-                            value={formatDurationFromSecondsParts(
+                            value={formatDurationParts(
                                 sessionStats.average_session_duration_sec,
                             )}
                         />
@@ -92,7 +94,7 @@ export function LibraryReadingStatsSection({
                     iconClassName="text-pink-600 dark:text-white"
                     value={
                         <MetricCardUnitValue
-                            value={formatDurationFromSecondsParts(
+                            value={formatDurationParts(
                                 sessionStats.longest_session_duration_sec,
                             )}
                         />
@@ -169,7 +171,7 @@ export function LibraryReadingStatsSection({
                                                         className="w-3.5 h-3.5 mr-1"
                                                         aria-hidden="true"
                                                     />
-                                                    {formatDurationFromSeconds(
+                                                    {formatDuration(
                                                         entry.reading_time_sec,
                                                     )}
                                                 </span>
@@ -192,7 +194,7 @@ export function LibraryReadingStatsSection({
                                                             className="w-3.5 h-3.5 mr-1"
                                                             aria-hidden="true"
                                                         />
-                                                        {formatDurationFromSeconds(
+                                                        {formatDuration(
                                                             averageSessionDuration,
                                                         )}
                                                         {translation.get(

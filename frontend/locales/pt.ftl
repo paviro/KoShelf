@@ -273,6 +273,9 @@ error-state =
     .file-unavailable-description = Os detalhes do livro foram encontrados, mas o arquivo do livro está ausente.
     .retry = Tentar novamente
     .go-to-list = Ir para {$collection}
+    .crash-title = Algo deu errado
+    .crash-description = Ocorreu um erro inesperado ao renderizar esta página.
+    .crash-report = Reportar problema
 
 # Navigation and sorting
 sort-order =
@@ -393,6 +396,7 @@ units =
     .d = d
     .h = h
     .m = m
+    .s = s
 today = Hoje
 of-the-year = do ano
 of = de

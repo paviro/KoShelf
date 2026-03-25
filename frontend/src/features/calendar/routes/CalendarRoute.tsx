@@ -1,13 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import '../../../styles/calendar.css';
+import type { ScopeValue } from '../../../shared/api';
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
+import { translation } from '../../../shared/i18n';
+import { formatDateObjectToParts } from '../../../shared/lib/intl/formatDate';
+import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
+import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
+import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
+import type { CalendarEventResponse } from '../api/calendar-data';
 import { CalendarEventModal } from '../components/CalendarEventModal';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { CalendarHeader } from '../components/CalendarHeader';
 import { CalendarMonthPickerModal } from '../components/CalendarMonthPickerModal';
 import { CalendarYearPickerModal } from '../components/CalendarYearPickerModal';
-import { CalendarMonthlyStatsSection } from '../sections/CalendarMonthlyStatsSection';
+import {
+    useCalendarMonthQuery,
+    useCalendarMonthsQuery,
+} from '../hooks/useCalendarQueries';
 import {
     aggregateCalendarData,
     eventMatchesScope,
@@ -21,19 +32,7 @@ import {
     shiftMonth,
     shiftMonthKey,
 } from '../model/calendar-model';
-import { formatDateObjectToParts } from '../../../shared/lib/intl/formatDate';
-import {
-    useCalendarMonthQuery,
-    useCalendarMonthsQuery,
-} from '../hooks/useCalendarQueries';
-import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
-import type { CalendarEventResponse } from '../api/calendar-data';
-import type { ScopeValue } from '../../../shared/api';
-import { api } from '../../../shared/api';
-import { translation } from '../../../shared/i18n';
-import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
-import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
-import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
+import { CalendarMonthlyStatsSection } from '../sections/CalendarMonthlyStatsSection';
 
 export function CalendarRoute() {
     const [initialCalendarView] = useState(() =>
@@ -59,10 +58,7 @@ export function CalendarRoute() {
         useState<CalendarEventResponse | null>(null);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
-    const siteQuery = useQuery({
-        queryKey: ['site'],
-        queryFn: () => api.getSite(),
-    });
+    const { siteQuery, showTypeFilter } = useSiteQuery();
 
     const displayedMonthKey = monthKey(displayedMonth);
     const previousMonthKey = shiftMonthKey(displayedMonthKey, -1);
@@ -130,11 +126,7 @@ export function CalendarRoute() {
         });
     }, [displayedMonthKey, persistMonthSelection, scope]);
 
-    useEffect(() => {
-        if (siteQuery.data?.title) {
-            document.title = `${translation.get('calendar')} - ${siteQuery.data.title}`;
-        }
-    }, [siteQuery.data]);
+    useDocumentTitle(translation.get('calendar'), siteQuery.data?.title);
 
     const locale = translation.getLanguage() || 'en-US';
 
@@ -181,11 +173,6 @@ export function CalendarRoute() {
     const monthlyStats = resolveMonthlyStats(
         currentMonthData ?? undefined,
         scope,
-    );
-
-    const showTypeFilter = Boolean(
-        siteQuery.data?.capabilities.has_books &&
-        siteQuery.data?.capabilities.has_comics,
     );
 
     const handleDisplayedMonthChange = useCallback((nextDate: Date) => {
@@ -260,50 +247,41 @@ export function CalendarRoute() {
                 />
 
                 <main className="relative flex-1 flex flex-col pt-[88px] md:pt-24 pb-28 lg:pb-4 px-4 md:px-6 space-y-4">
-                    {initialLoading && (
-                        <section className="flex-1 flex items-center justify-center">
-                            <LoadingSpinner
-                                size="lg"
-                                srLabel="Loading calendar"
-                            />
-                        </section>
-                    )}
+                    <QueryStateLayout
+                        isError={
+                            currentMonthQuery.isError && currentMonthEnabled
+                        }
+                        error={currentMonthQuery.error}
+                        onRetry={() => currentMonthQuery.refetch()}
+                        showBlockingSpinner={initialLoading}
+                        showOverlaySpinner={
+                            currentMonthTransition.showOverlaySpinner
+                        }
+                        hasData={!initialLoading}
+                        srLabel="Loading calendar"
+                        blockingSpinnerClassName="flex-1 flex items-center justify-center"
+                        overlayClassName="absolute inset-0 z-20 flex items-center justify-center bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]"
+                        wrapperClassName="flex-1 flex flex-col space-y-4"
+                        renderContent={() => (
+                            <>
+                                <CalendarMonthlyStatsSection
+                                    stats={monthlyStats}
+                                    scope={scope}
+                                />
 
-                    {currentMonthQuery.isError && currentMonthEnabled && (
-                        <PageErrorState
-                            error={currentMonthQuery.error}
-                            onRetry={() => currentMonthQuery.refetch()}
-                        />
-                    )}
-
-                    {!currentMonthQuery.isError && !initialLoading && (
-                        <>
-                            {currentMonthTransition.showOverlaySpinner && (
-                                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 dark:bg-dark-900/70 backdrop-blur-[1px]">
-                                    <LoadingSpinner
-                                        size="md"
-                                        srLabel="Loading calendar"
-                                    />
-                                </div>
-                            )}
-
-                            <CalendarMonthlyStatsSection
-                                stats={monthlyStats}
-                                scope={scope}
-                            />
-
-                            <CalendarGrid
-                                locale={locale}
-                                displayedMonth={displayedMonth}
-                                events={filteredEvents}
-                                items={mergedCalendarData.items}
-                                onDisplayedMonthChange={
-                                    handleDisplayedMonthChange
-                                }
-                                onEventSelect={handleEventSelect}
-                            />
-                        </>
-                    )}
+                                <CalendarGrid
+                                    locale={locale}
+                                    displayedMonth={displayedMonth}
+                                    events={filteredEvents}
+                                    items={mergedCalendarData.items}
+                                    onDisplayedMonthChange={
+                                        handleDisplayedMonthChange
+                                    }
+                                    onEventSelect={handleEventSelect}
+                                />
+                            </>
+                        )}
+                    />
                 </main>
             </div>
 

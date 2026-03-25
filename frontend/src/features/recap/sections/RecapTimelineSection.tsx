@@ -2,8 +2,9 @@ import { HiOutlineBookOpen } from 'react-icons/hi2';
 import { LuClock3 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { formatDuration } from '../../../shared/lib/intl/formatDuration';
 import type { CompletionGroup, RecapScope } from '../api/recap-data';
-import { formatRecapDuration, formatRecapMonth } from '../lib/recap-formatters';
+import { formatRecapMonth } from '../lib/recap-formatters';
 import { RecapItemCard } from '../components/RecapItemCard';
 
 type RecapTimelineSectionProps = {
@@ -58,8 +59,9 @@ export function RecapTimelineSection({
                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-br from-purple-500/10 to-purple-400/5 dark:from-purple-500/20 dark:to-purple-400/10 border border-purple-200/50 dark:border-purple-700/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
                                     <LuClock3 className="w-4 h-4" aria-hidden />
                                     <span className="month-hours-display font-semibold">
-                                        {formatRecapDuration(
+                                        {formatDuration(
                                             month.reading_time_sec,
+                                            { includeDays: true },
                                         )}
                                     </span>
                                 </div>

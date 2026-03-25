@@ -12,7 +12,10 @@ import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
 import type { LibraryListItem } from '../api/library-data';
-import { formatSeriesDisplay } from '../lib/library-detail-formatters';
+import {
+    formatSeriesDisplay,
+    toProgressPercentage,
+} from '../lib/library-detail-formatters';
 import type {
     LibraryCollection,
     LibrarySectionKey,
@@ -33,15 +36,6 @@ const NOTES_COLOR_CLASSES: Record<LibrarySectionKey, string> = {
         'bg-linear-to-br from-emerald-500 to-emerald-600 border border-emerald-400/30',
     unread: 'bg-linear-to-br from-orange-500 to-orange-600 border border-orange-400/30',
 };
-
-function toProgressPercentage(progress: number | null | undefined): number {
-    if (!Number.isFinite(progress)) {
-        return 0;
-    }
-
-    const percent = (progress ?? 0) * 100;
-    return Math.min(100, Math.max(0, Math.round(percent)));
-}
 
 export function LibraryCard({
     item,
