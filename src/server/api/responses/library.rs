@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
-use crate::shelf::models::ReaderPresentation as LibraryReaderPresentation;
+use crate::shelf::models::{ChapterEntry, ReaderPresentation as LibraryReaderPresentation};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
@@ -148,6 +148,8 @@ pub struct LibraryDetailData {
     pub completions: Option<LibraryCompletions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reader_presentation: Option<Json<LibraryReaderPresentation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chapters: Option<Vec<ChapterEntry>>,
 }
 
 // ── Statistics (non-DB, mapped in service layer) ──────────────────────

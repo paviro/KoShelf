@@ -86,6 +86,17 @@ pub async fn detail(
         None
     };
 
+    let chapters = if includes.has(IncludeToken::Chapters) {
+        let entries = repo.get_item_chapters(&query.id).await?;
+        if entries.is_empty() {
+            None
+        } else {
+            Some(entries)
+        }
+    } else {
+        None
+    };
+
     Ok(Some(LibraryDetailData {
         item,
         highlights,
@@ -93,6 +104,7 @@ pub async fn detail(
         statistics,
         completions,
         reader_presentation,
+        chapters,
     }))
 }
 
