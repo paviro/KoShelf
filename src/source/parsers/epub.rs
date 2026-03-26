@@ -617,8 +617,8 @@ impl EpubParser {
         }
 
         // Fall back to EPUB2 NCX if no EPUB3 TOC was found.
-        if toc_entries.is_empty() {
-            if let Some(ref ncx_rel) = ncx_path {
+        if toc_entries.is_empty()
+            && let Some(ref ncx_rel) = ncx_path {
                 let resolved = Self::resolve_relative_path(opf_parent, ncx_rel);
                 let ncx_parent = Path::new(ncx_rel.as_str()).parent().map(Path::to_path_buf);
                 if let Ok(mut f) = zip.by_name(&resolved) {
@@ -636,7 +636,6 @@ impl EpubParser {
                     }
                 }
             }
-        }
 
         if toc_entries.is_empty() {
             return Vec::new();
@@ -667,11 +666,10 @@ impl EpubParser {
                     } else if local.as_ref() == b"spine" {
                         in_spine = true;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"toc" {
-                                if let Ok(v) = attr.unescape_value() {
+                            if attr.key.as_ref() == b"toc"
+                                && let Ok(v) = attr.unescape_value() {
                                     ncx_toc_id = Some(v.into_owned());
                                 }
-                            }
                         }
                     } else if in_manifest && local.as_ref() == b"item" {
                         let mut id = None;
@@ -696,11 +694,10 @@ impl EpubParser {
                         }
                     } else if in_spine && local.as_ref() == b"itemref" {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"idref" {
-                                if let Ok(v) = attr.unescape_value() {
+                            if attr.key.as_ref() == b"idref"
+                                && let Ok(v) = attr.unescape_value() {
                                     spine_idrefs.push(v.into_owned());
                                 }
-                            }
                         }
                     }
                 }
@@ -778,11 +775,10 @@ impl EpubParser {
                         // Extract href and text from anchors at any nesting depth.
                         let mut href = None;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"href" {
-                                if let Ok(v) = attr.unescape_value() {
+                            if attr.key.as_ref() == b"href"
+                                && let Ok(v) = attr.unescape_value() {
                                     href = Some(v.into_owned());
                                 }
-                            }
                         }
                         if let (Some(href), Ok(text)) = (href, reader.read_text(e.name())) {
                             let title =
@@ -836,8 +832,8 @@ impl EpubParser {
                         nav_point_depth += 1;
                         current_title = None;
                         current_src = None;
-                    } else if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"text" {
-                        if let Ok(text) = reader.read_text(e.name()) {
+                    } else if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"text"
+                        && let Ok(text) = reader.read_text(e.name()) {
                             current_title = Some(
                                 unescape(&text)
                                     .unwrap_or(Cow::Borrowed(&text))
@@ -845,17 +841,15 @@ impl EpubParser {
                                     .to_string(),
                             );
                         }
-                    }
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
                     if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"content" {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"src" {
-                                if let Ok(v) = attr.unescape_value() {
+                            if attr.key.as_ref() == b"src"
+                                && let Ok(v) = attr.unescape_value() {
                                     current_src = Some(v.into_owned());
                                 }
-                            }
                         }
                     }
                 }
@@ -865,11 +859,9 @@ impl EpubParser {
                         in_nav_map = false;
                     } else if in_nav_map && local.as_ref() == b"navPoint" {
                         if let (Some(src), Some(title)) = (current_src.take(), current_title.take())
-                        {
-                            if !title.is_empty() {
+                            && !title.is_empty() {
                                 entries.push((src, title));
                             }
-                        }
                         nav_point_depth = nav_point_depth.saturating_sub(1);
                     }
                 }

@@ -102,11 +102,10 @@ pub async fn page_activity(
     // Aggregate per-page totals, optionally filtered by completion date range.
     let mut page_map: HashMap<i64, (i64, i64)> = HashMap::new();
     for ev in &events {
-        if let Some((start, end)) = time_range {
-            if ev.start_time < start || ev.start_time > end {
+        if let Some((start, end)) = time_range
+            && (ev.start_time < start || ev.start_time > end) {
                 continue;
             }
-        }
         let entry = page_map.entry(ev.page).or_insert((0, 0));
         entry.0 += ev.duration;
         entry.1 += 1;
