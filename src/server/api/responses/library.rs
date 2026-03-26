@@ -224,7 +224,6 @@ pub struct PageActivityData {
     pub pages: Vec<PageActivityPage>,
     pub annotations: Vec<PageActivityAnnotation>,
     pub completions: Vec<PageActivityCompletion>,
-    pub chapters: Vec<PageActivityChapter>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -252,10 +251,4 @@ pub struct PageActivityEvent {
     pub page: i64,
     pub start_time: i64,
     pub duration: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PageActivityChapter {
-    pub title: String,
-    pub page: i64,
 }

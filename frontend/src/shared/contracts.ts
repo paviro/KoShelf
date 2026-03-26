@@ -318,6 +318,12 @@ export interface LibraryDetailData {
     statistics?: LibraryDetailStatistics | null;
     completions?: LibraryCompletions | null;
     reader_presentation?: LibraryReaderPresentation | null;
+    chapters?: ChapterEntry[] | null;
+}
+
+export interface ChapterEntry {
+    title: string;
+    position: number;
 }
 
 // ── PageActivity ─────────────────────────────────────────────────────────
@@ -339,17 +345,11 @@ export interface PageActivityCompletion {
     end_date: string;
 }
 
-export interface PageActivityChapter {
-    title: string;
-    page: number;
-}
-
 export interface PageActivityData {
     total_pages: number;
     pages: PageActivityPage[];
     annotations: PageActivityAnnotation[];
     completions: PageActivityCompletion[];
-    chapters: PageActivityChapter[];
 }
 
 // ── Static export types ──────────────────────────────────────────────────

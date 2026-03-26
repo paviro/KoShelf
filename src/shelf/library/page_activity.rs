@@ -6,8 +6,8 @@ use anyhow::Result;
 use chrono::NaiveDate;
 
 use crate::server::api::responses::library::{
-    PageActivityAnnotation, PageActivityAnnotationKind, PageActivityChapter,
-    PageActivityCompletion, PageActivityData, PageActivityEvent, PageActivityPage,
+    PageActivityAnnotation, PageActivityAnnotationKind, PageActivityCompletion, PageActivityData,
+    PageActivityEvent, PageActivityPage,
 };
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
@@ -139,23 +139,12 @@ pub async fn page_activity(
         })
         .collect();
 
-    // Map chapter fractional positions to page numbers.
-    let chapter_entries = repo.get_item_chapters(item_id).await?;
-    let chapters: Vec<PageActivityChapter> = chapter_entries
-        .into_iter()
-        .map(|c| PageActivityChapter {
-            title: c.title,
-            page: (c.position.clamp(0.0, 1.0) * total_pages as f64).round() as i64,
-        })
-        .collect();
-
     Ok(Some(PageActivityResult {
         data: PageActivityData {
             total_pages,
             pages,
             annotations,
             completions,
-            chapters,
         },
         events,
     }))

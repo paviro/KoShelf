@@ -8,6 +8,7 @@ import {
     FilterDropdown,
     type FilterDropdownOption,
 } from '../../../shared/ui/selectors/FilterDropdown';
+import type { ChapterEntry } from '../../../shared/contracts';
 import { PageActivityGrid } from '../components/PageActivityGrid';
 import { usePageActivityQuery } from '../hooks/usePageActivityQuery';
 import type { AggregatedPage } from '../lib/page-activity-data';
@@ -15,6 +16,7 @@ import { formatCompletionDateRange } from '../lib/library-detail-formatters';
 
 type LibraryPageActivitySectionProps = {
     itemId: string;
+    chapters: ChapterEntry[];
     visible: boolean;
     onToggle: () => void;
 };
@@ -23,6 +25,7 @@ const ALL_READINGS_KEY = '__all__';
 
 export function LibraryPageActivitySection({
     itemId,
+    chapters,
     visible,
     onToggle,
 }: LibraryPageActivitySectionProps) {
@@ -137,7 +140,7 @@ export function LibraryPageActivitySection({
                         totalPages={data.total_pages}
                         pageData={pageData}
                         annotations={data.annotations}
-                        chapters={data.chapters}
+                        chapters={chapters}
                         animationSeed={animationSeed}
                     />
                 )}
