@@ -1,4 +1,4 @@
-use crate::shelf::models::{BookInfo, Identifier};
+use crate::shelf::models::{BookInfo, ChapterEntry, Identifier};
 use crate::shelf::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use base64::{Engine as _, engine::general_purpose};
@@ -9,7 +9,7 @@ use quick_xml::events::Event;
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use zip::ZipArchive;
 
 /// Extracts metadata and cover images from FB2 files (plain XML or `.fb2.zip`).
@@ -35,11 +35,12 @@ impl Fb2Parser {
             .with_context(|| "Task join error")?
     }
 
-    fn parse_sync(fb2_path: &PathBuf) -> Result<BookInfo> {
+    fn parse_sync(fb2_path: &Path) -> Result<BookInfo> {
         debug!("Opening FB2: {:?}", fb2_path);
 
         let xml_content = Self::read_fb2_content(fb2_path)?;
         let (fb2_info, cover_href) = Self::parse_fb2_metadata(&xml_content)?;
+        let chapters = Self::extract_chapters(&xml_content);
 
         let (cover_data, cover_mime_type) = if let Some(ref cover_href) = cover_href {
             Self::extract_cover_image(&xml_content, cover_href)?
@@ -48,6 +49,7 @@ impl Fb2Parser {
         };
 
         Ok(BookInfo {
+            chapters,
             cover_data,
             cover_mime_type,
             ..fb2_info
@@ -339,10 +341,149 @@ impl Fb2Parser {
             series,
             series_number,
             pages: None,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         };
         Ok((info, cover_href))
+    }
+
+    /// Extract chapter entries from `<body>` sections.
+    ///
+    /// Proper FB2 files use `<section><title><p>…</p></title>…</section>`.
+    /// Sections may be nested (parts containing chapters). We collect every
+    /// `<title>` element at any section depth. When no `<title>` elements exist
+    /// (e.g. Calibre-converted FB2s), we fall back to the first short `<p>` of
+    /// each top-level section.
+    fn extract_chapters(fb2_xml: &str) -> Vec<ChapterEntry> {
+        let mut reader = Reader::from_str(fb2_xml);
+        reader.config_mut().trim_text(true);
+        let mut buf = Vec::new();
+
+        let mut in_body = false;
+        let mut body_done = false; // ignore <body name="notes"> etc.
+        let mut body_start: u64 = 0;
+        let mut body_end: u64 = 0;
+        let mut section_depth: u32 = 0;
+
+        // Collected from <title> elements at any depth.
+        let mut titled_entries: Vec<(u64, String)> = Vec::new();
+        // Fallback: first short <p> per top-level section (depth 1).
+        let mut fallback_entries: Vec<(u64, String)> = Vec::new();
+
+        // State for the current top-level section (fallback path only).
+        let mut current_section_pos: u64 = 0;
+        let mut current_first_p: Option<String> = None;
+        let mut awaiting_first_p = false;
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    let name = e.local_name();
+                    match name.as_ref() {
+                        b"body" if !in_body && !body_done => {
+                            in_body = true;
+                            body_start = reader.buffer_position();
+                        }
+                        b"section" if in_body => {
+                            section_depth += 1;
+                            if section_depth == 1 {
+                                current_section_pos = reader.buffer_position();
+                                current_first_p = None;
+                                awaiting_first_p = true;
+                            }
+                        }
+                        b"title" if in_body && section_depth >= 1 => {
+                            let pos = reader.buffer_position();
+                            if let Ok(inner) = reader.read_text(e.name()) {
+                                let text = Self::strip_xml_tags(
+                                    &unescape(&inner).unwrap_or(Cow::Borrowed(&inner)),
+                                );
+                                if !text.is_empty() {
+                                    titled_entries.push((pos, text));
+                                }
+                            }
+                            awaiting_first_p = false;
+                        }
+                        b"p" if in_body && section_depth == 1 && awaiting_first_p => {
+                            if let Ok(inner) = reader.read_text(e.name()) {
+                                let text = Self::strip_xml_tags(
+                                    &unescape(&inner).unwrap_or(Cow::Borrowed(&inner)),
+                                );
+                                if !text.is_empty() && text.len() <= 80 {
+                                    current_first_p = Some(text);
+                                }
+                            }
+                            awaiting_first_p = false;
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    let name = e.local_name();
+                    match name.as_ref() {
+                        b"body" if in_body => {
+                            in_body = false;
+                            body_done = true;
+                            body_end = reader.buffer_position();
+                        }
+                        b"section" if in_body => {
+                            if section_depth == 1
+                                && let Some(text) = current_first_p.take()
+                            {
+                                fallback_entries.push((current_section_pos, text));
+                            }
+                            section_depth = section_depth.saturating_sub(1);
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+
+        let body_len = body_end.saturating_sub(body_start);
+        if body_len == 0 {
+            return Vec::new();
+        }
+        let body_len_f = body_len as f64;
+
+        let entries = if !titled_entries.is_empty() {
+            &titled_entries
+        } else {
+            &fallback_entries
+        };
+
+        entries
+            .iter()
+            .map(|(pos, title)| {
+                let position = (pos.saturating_sub(body_start) as f64 / body_len_f).clamp(0.0, 1.0);
+                ChapterEntry {
+                    title: title.clone(),
+                    position,
+                }
+            })
+            .collect()
+    }
+
+    /// Strip all XML/HTML tags from a string, returning only text content.
+    fn strip_xml_tags(input: &str) -> String {
+        let mut out = String::with_capacity(input.len());
+        let mut in_tag = false;
+        for ch in input.chars() {
+            if ch == '<' {
+                in_tag = true;
+            } else if ch == '>' {
+                in_tag = false;
+            } else if !in_tag {
+                out.push(ch);
+            }
+        }
+        // Collapse internal whitespace runs into single spaces.
+        out.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     fn extract_cover_image(
@@ -403,5 +544,120 @@ impl Fb2Parser {
         }
 
         Ok((None, None))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strip_xml_tags_basic() {
+        assert_eq!(Fb2Parser::strip_xml_tags("<p>Hello</p>"), "Hello");
+        assert_eq!(
+            Fb2Parser::strip_xml_tags("<p>Part <strong>One</strong></p>"),
+            "Part One"
+        );
+        assert_eq!(
+            Fb2Parser::strip_xml_tags("<p>  spaced  out  </p>"),
+            "spaced out"
+        );
+    }
+
+    #[test]
+    fn chapters_from_title_elements() {
+        let xml = r#"<?xml version="1.0"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Test</book-title></title-info></description>
+<body>
+<section><title><p>Chapter 1</p></title><p>Some content here.</p></section>
+<section><title><p>Chapter 2</p></title><p>More content here.</p></section>
+</body>
+</FictionBook>"#;
+
+        let chapters = Fb2Parser::extract_chapters(xml);
+        assert_eq!(chapters.len(), 2);
+        assert_eq!(chapters[0].title, "Chapter 1");
+        assert_eq!(chapters[1].title, "Chapter 2");
+        assert!(chapters[0].position < chapters[1].position);
+        assert!(chapters[0].position >= 0.0);
+        assert!(chapters[1].position <= 1.0);
+    }
+
+    #[test]
+    fn chapters_fallback_to_first_p() {
+        let xml = r#"<?xml version="1.0"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Test</book-title></title-info></description>
+<body>
+<section><p>Part One</p><p>Long content paragraph that is definitely not a title.</p></section>
+<section><p>1</p><p>Another long content paragraph here.</p></section>
+<section><p>2</p><p>Yet more content follows.</p></section>
+</body>
+</FictionBook>"#;
+
+        let chapters = Fb2Parser::extract_chapters(xml);
+        assert_eq!(chapters.len(), 3);
+        assert_eq!(chapters[0].title, "Part One");
+        assert_eq!(chapters[1].title, "1");
+        assert_eq!(chapters[2].title, "2");
+    }
+
+    #[test]
+    fn chapters_from_nested_sections() {
+        let xml = r#"<?xml version="1.0"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Test</book-title></title-info></description>
+<body>
+<section><title><p>Part One</p></title>
+  <section><title><p>Chapter 1</p></title><p>Content A.</p></section>
+  <section><title><p>Chapter 2</p></title><p>Content B.</p></section>
+</section>
+<section><title><p>Part Two</p></title>
+  <section><title><p>Chapter 3</p></title><p>Content C.</p></section>
+</section>
+</body>
+</FictionBook>"#;
+
+        let chapters = Fb2Parser::extract_chapters(xml);
+        assert_eq!(chapters.len(), 5);
+        assert_eq!(chapters[0].title, "Part One");
+        assert_eq!(chapters[1].title, "Chapter 1");
+        assert_eq!(chapters[4].title, "Chapter 3");
+    }
+
+    #[test]
+    fn ignores_notes_body() {
+        let xml = r#"<?xml version="1.0"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Test</book-title></title-info></description>
+<body>
+<section><title><p>Chapter 1</p></title><p>Content.</p></section>
+</body>
+<body name="notes">
+<section><title><p>Note 1</p></title><p>Footnote text.</p></section>
+<section><title><p>Note 2</p></title><p>More footnotes.</p></section>
+</body>
+</FictionBook>"#;
+
+        let chapters = Fb2Parser::extract_chapters(xml);
+        assert_eq!(chapters.len(), 1);
+        assert_eq!(chapters[0].title, "Chapter 1");
+    }
+
+    #[test]
+    fn skips_sections_without_titles_when_titles_exist() {
+        let xml = r#"<?xml version="1.0"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Test</book-title></title-info></description>
+<body>
+<section><p>Just an image section with no title element.</p></section>
+<section><title><p>Real Chapter</p></title><p>Content.</p></section>
+</body>
+</FictionBook>"#;
+
+        let chapters = Fb2Parser::extract_chapters(xml);
+        assert_eq!(chapters.len(), 1);
+        assert_eq!(chapters[0].title, "Real Chapter");
     }
 }

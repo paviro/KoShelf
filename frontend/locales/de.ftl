@@ -457,3 +457,34 @@ toast-dismiss-label = Schließen
 toast-update-item-error = Änderungen konnten nicht gespeichert werden. Deine Bearbeitungen wurden zurückgesetzt.
 toast-update-annotation-error = Anmerkung konnte nicht aktualisiert werden. Deine Änderungen wurden zurückgesetzt.
 toast-delete-annotation-error = Anmerkung konnte nicht gelöscht werden. Sie wurde wiederhergestellt.
+
+# -----------------------------------
+#            Page Activity
+# -----------------------------------
+page-activity = Seitenaktivität
+    .reading-number = Lesung { $number }
+    .select-reading = Lesevorgang auswählen
+    .page = Seite { $page }
+    .unread = ungelesen
+    .visits = { $count ->
+        [one] { $count } Besuch
+       *[other] { $count } Besuche
+    }
+    .highlights = { $count ->
+        [one] { $count } Markierung
+       *[other] { $count } Markierungen
+    }
+    .bookmarks = { $count ->
+        [one] { $count } Lesezeichen
+       *[other] { $count } Lesezeichen
+    }
+    .notes = { $count ->
+        [one] { $count } Notiz
+       *[other] { $count } Notizen
+    }
+    .of = von { $total }
+    .pages-read = gelesenen Seiten
+    .no-data = Für dieses Element sind keine seitenbezogenen Lesedaten verfügbar.
+    .legend-bookmark = Lesezeichen
+    .legend-chapter = Kapitel
+    .info = Die Seitenzahlen werden durch die aktuellen Formatierungsoptionen des Dokuments beeinflusst. Im Gegensatz zu anderen Bereichen von KoShelf unterstützt diese Ansicht keine synthetische Seitenskalierung.

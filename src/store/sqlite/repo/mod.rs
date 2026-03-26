@@ -78,6 +78,7 @@ pub(crate) mod tests {
             partial_md5_checksum: Some(id.to_string()),
             hidden_flow_pages: None,
             reader_presentation: None,
+            chapters_json: "[]".to_string(),
             last_open_at: None,
             total_reading_time_sec: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),

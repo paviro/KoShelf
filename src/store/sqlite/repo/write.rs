@@ -16,7 +16,7 @@ impl LibraryRepository {
                 doc_pages, pagemap_doc_pages, has_synthetic_pagination, parser_pages,
                 cover_url, search_base_path, annotation_count, bookmark_count,
                 highlight_count, partial_md5_checksum, hidden_flow_pages,
-                reader_presentation,
+                reader_presentation, chapters_json,
                 last_open_at, total_reading_time_sec, created_at, updated_at
             ) VALUES (
                 ?1, ?2, ?3, ?4, ?5,
@@ -26,7 +26,8 @@ impl LibraryRepository {
                 ?17, ?18, ?19, ?20,
                 ?21, ?22, ?23, ?24,
                 ?25, ?26, ?27, ?28,
-                ?29, ?30, ?31, ?32
+                ?29,
+                ?30, ?31, ?32, ?33
             )
             ON CONFLICT(id) DO UPDATE SET
                 file_path = excluded.file_path,
@@ -56,6 +57,7 @@ impl LibraryRepository {
                 partial_md5_checksum = excluded.partial_md5_checksum,
                 hidden_flow_pages = excluded.hidden_flow_pages,
                 reader_presentation = excluded.reader_presentation,
+                chapters_json = excluded.chapters_json,
                 last_open_at = excluded.last_open_at,
                 total_reading_time_sec = excluded.total_reading_time_sec,
                 updated_at = excluded.updated_at",
@@ -88,6 +90,7 @@ impl LibraryRepository {
         .bind(&item.partial_md5_checksum)
         .bind(item.hidden_flow_pages)
         .bind(&item.reader_presentation)
+        .bind(&item.chapters_json)
         .bind(&item.last_open_at)
         .bind(item.total_reading_time_sec)
         .bind(&item.created_at)

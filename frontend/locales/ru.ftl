@@ -489,3 +489,38 @@ toast-dismiss-label = Закрыть
 toast-update-item-error = Не удалось сохранить изменения. Ваши правки были отменены.
 toast-update-annotation-error = Не удалось обновить аннотацию. Ваши изменения были отменены.
 toast-delete-annotation-error = Не удалось удалить аннотацию. Она была восстановлена.
+
+# -----------------------------------
+#            Page Activity
+# -----------------------------------
+page-activity = Активность по страницам
+    .reading-number = Чтение { $number }
+    .select-reading = Выбрать прочтение
+    .page = Страница { $page }
+    .unread = не прочитано
+    .visits = { $count ->
+        [one] { $count } посещение
+        [few] { $count } посещения
+       *[other] { $count } посещений
+    }
+    .highlights = { $count ->
+        [one] { $count } выделение
+        [few] { $count } выделения
+       *[other] { $count } выделений
+    }
+    .bookmarks = { $count ->
+        [one] { $count } закладка
+        [few] { $count } закладки
+       *[other] { $count } закладок
+    }
+    .notes = { $count ->
+        [one] { $count } заметка
+        [few] { $count } заметки
+       *[other] { $count } заметок
+    }
+    .of = из { $total }
+    .pages-read = прочитано страниц
+    .no-data = Для этого элемента отсутствуют данные о чтении на уровне страниц.
+    .legend-bookmark = Закладка
+    .legend-chapter = Глава
+    .info = Номера страниц зависят от текущих параметров форматирования документа. В отличие от других разделов KoShelf, это представление не поддерживает синтетическое масштабирование страниц.

@@ -19,6 +19,7 @@ pub(crate) fn library_item(id: &str, metadata: Option<KoReaderMetadata>) -> Libr
             series: None,
             series_number: None,
             pages: Some(123),
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         },

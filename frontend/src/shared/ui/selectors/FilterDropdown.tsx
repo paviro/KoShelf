@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import { LuChevronDown, LuFilter } from 'react-icons/lu';
 
@@ -10,7 +11,7 @@ import { DropdownPortal } from '../dropdown/DropdownPortal';
 
 export type FilterDropdownOption<T extends string> = {
     value: T;
-    label: string;
+    label: ReactNode;
 };
 
 type FilterDropdownProps<T extends string> = {

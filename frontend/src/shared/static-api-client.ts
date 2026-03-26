@@ -8,6 +8,7 @@ import type {
 import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
+    PageActivityData,
     ExportDayMetrics,
     ExportDayMetricsByScope,
     ExportMonthMetrics,
@@ -236,6 +237,16 @@ export class StaticApiClient implements ApiClient {
             `/data/reading/completions/${year}.json`,
         )) as ReadingCompletionsData;
         return filterCompletionsByScope(data, selectedScope);
+    }
+
+    async getItemPageActivity(id: string): Promise<PageActivityData> {
+        try {
+            return (await fetchJson(
+                `/data/items/page-activity/${id}.json`,
+            )) as PageActivityData;
+        } catch {
+            return { total_pages: 0, pages: [], annotations: [], completions: [], events: [], chapters: [] };
+        }
     }
 
     getItemDownloadHref(id: string): string {

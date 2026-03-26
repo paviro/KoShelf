@@ -97,6 +97,7 @@ export const api: ApiClient = {
     logout: () => getClient().logout(),
     getItems: (scope?: ScopeValue) => getClient().getItems(scope),
     getItem: (id: string) => getClient().getItem(id),
+    getItemPageActivity: (id: string) => getClient().getItemPageActivity(id),
     getReadingSummary: (scope: ScopeValue, from?: string, to?: string) =>
         getClient().getReadingSummary(scope, from, to),
     getReadingMetrics: (

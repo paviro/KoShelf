@@ -37,6 +37,7 @@ import { LibraryBookmarksSection } from '../sections/LibraryBookmarksSection';
 import { LibraryHighlightsSection } from '../sections/LibraryHighlightsSection';
 import { LibraryOverviewSection } from '../sections/LibraryOverviewSection';
 import { LibraryReadingStatsSection } from '../sections/LibraryReadingStatsSection';
+import { LibraryPageActivitySection } from '../sections/LibraryPageActivitySection';
 import { LibraryReviewSection } from '../sections/LibraryReviewSection';
 
 type LibraryDetailRouteProps = {
@@ -252,6 +253,14 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                     completions={completions}
                                     visible={sectionState['reading-stats']}
                                     onToggle={() => toggle('reading-stats')}
+                                />
+                            )}
+
+                            {sessionStats && (
+                                <LibraryPageActivitySection
+                                    itemId={id}
+                                    visible={sectionState['page-activity']}
+                                    onToggle={() => toggle('page-activity')}
                                 />
                             )}
 

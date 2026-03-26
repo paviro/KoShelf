@@ -433,3 +433,34 @@ toast-dismiss-label = Elvetés
 toast-update-item-error = A módosítások mentése sikertelen. A szerkesztések visszaállítva.
 toast-update-annotation-error = A jegyzet frissítése sikertelen. A módosítások visszaállítva.
 toast-delete-annotation-error = A jegyzet törlése sikertelen. Visszaállítva.
+
+# -----------------------------------
+#            Page Activity
+# -----------------------------------
+page-activity = Oldalaktivitás
+    .reading-number = { $number }. olvasás
+    .select-reading = Olvasás kiválasztása
+    .page = { $page }. oldal
+    .unread = olvasatlan
+    .visits = { $count ->
+        [one] { $count } látogatás
+       *[other] { $count } látogatás
+    }
+    .highlights = { $count ->
+        [one] { $count } kiemelés
+       *[other] { $count } kiemelés
+    }
+    .bookmarks = { $count ->
+        [one] { $count } könyvjelző
+       *[other] { $count } könyvjelző
+    }
+    .notes = { $count ->
+        [one] { $count } jegyzet
+       *[other] { $count } jegyzet
+    }
+    .of = { $total } oldalból
+    .pages-read = oldal elolvasva
+    .no-data = Ehhez az elemhez nem állnak rendelkezésre oldalszintű olvasási adatok.
+    .legend-bookmark = Könyvjelző
+    .legend-chapter = Fejezet
+    .info = Az oldalszámokat a dokumentum aktuális formázási beállításai befolyásolják. A KoShelf többi részétől eltérően ez a nézet nem támogatja a szintetikus oldalszámozást.

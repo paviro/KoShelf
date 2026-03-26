@@ -9,6 +9,7 @@ import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
     ApiResponse,
+    PageActivityData,
     LibraryDetailData,
     LibraryListData,
     ReadingAvailablePeriodsData,
@@ -193,6 +194,13 @@ export class HttpApiClient implements ApiClient {
         const response = (await fetchJson(
             url,
         )) as ApiResponse<ReadingCompletionsData>;
+        return response.data;
+    }
+
+    async getItemPageActivity(id: string): Promise<PageActivityData> {
+        const response = (await fetchJson(
+            `/api/items/${encodeURIComponent(id)}/page-activity`,
+        )) as ApiResponse<PageActivityData>;
         return response.data;
     }
 

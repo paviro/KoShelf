@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     highlight_count INTEGER NOT NULL DEFAULT 0 CHECK (highlight_count >= 0),
     partial_md5_checksum TEXT,
     reader_presentation JSON,
+    chapters_json TEXT NOT NULL DEFAULT '[]',
     last_open_at TEXT,
     total_reading_time_sec INTEGER CHECK (total_reading_time_sec IS NULL OR total_reading_time_sec >= 0),
     created_at TEXT NOT NULL,
