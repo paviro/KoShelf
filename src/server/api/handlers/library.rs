@@ -1,7 +1,8 @@
 use crate::server::ServerState;
 use crate::server::api::error::{ApiResponseError, ApiResult};
 use crate::server::api::params::{
-    DetailQuery, ScopeQuery, parse_include, parse_item_sort, parse_scope, parse_sort_order,
+    DetailQuery, PageActivityParams, ScopeQuery, parse_include, parse_item_sort,
+    parse_page_activity_completion, parse_scope, parse_sort_order,
 };
 use crate::server::api::responses::common::ApiResponse;
 use crate::server::api::responses::error::ApiErrorCode;
@@ -79,18 +80,25 @@ pub(crate) async fn item_detail(
 pub(crate) async fn item_page_activity(
     State(state): State<ServerState>,
     Path(id): Path<String>,
+    Query(params): Query<PageActivityParams>,
 ) -> ApiResult<impl IntoResponse> {
+    let completion_filter = parse_page_activity_completion(params.completion.as_deref())?;
     let reading_data = state.reading_data_store.get();
 
-    let payload = library::page_activity(&state.library_repo, &id, reading_data.as_deref())
-        .await
-        .map_err(|e| {
-            warn!("Failed to build page-activity for item {}: {}", id, e);
-            ApiResponseError::internal_server_error()
-        })?
-        .ok_or_else(ApiResponseError::not_found)?;
+    let result = library::page_activity(
+        &state.library_repo,
+        &id,
+        reading_data.as_deref(),
+        completion_filter,
+    )
+    .await
+    .map_err(|e| {
+        warn!("Failed to build page-activity for item {}: {}", id, e);
+        ApiResponseError::internal_server_error()
+    })?
+    .ok_or_else(ApiResponseError::not_found)?;
 
-    Ok(Json(ApiResponse::new(payload)))
+    Ok(Json(ApiResponse::new(result.data)))
 }
 
 // ── Write handlers (requires enable_writeback) ───────────────────────────

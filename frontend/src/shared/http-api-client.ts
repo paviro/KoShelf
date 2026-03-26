@@ -197,9 +197,16 @@ export class HttpApiClient implements ApiClient {
         return response.data;
     }
 
-    async getItemPageActivity(id: string): Promise<PageActivityData> {
-        const response = (await fetchJson(
+    async getItemPageActivity(
+        id: string,
+        completion?: string,
+    ): Promise<PageActivityData> {
+        const url = appendParams(
             `/api/items/${encodeURIComponent(id)}/page-activity`,
+            { completion },
+        );
+        const response = (await fetchJson(
+            url,
         )) as ApiResponse<PageActivityData>;
         return response.data;
     }

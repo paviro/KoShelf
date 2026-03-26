@@ -10,12 +10,7 @@ import {
 } from '../../../shared/ui/selectors/FilterDropdown';
 import { PageActivityGrid } from '../components/PageActivityGrid';
 import { usePageActivityQuery } from '../hooks/usePageActivityQuery';
-import {
-    type AggregatedPage,
-    aggregatePageData,
-    isoDateToEndOfDayUnix,
-    isoDateToUnix,
-} from '../lib/page-activity-data';
+import type { AggregatedPage } from '../lib/page-activity-data';
 import { formatCompletionDateRange } from '../lib/library-detail-formatters';
 
 type LibraryPageActivitySectionProps = {
@@ -31,9 +26,18 @@ export function LibraryPageActivitySection({
     visible,
     onToggle,
 }: LibraryPageActivitySectionProps) {
-    const { data, isLoading } = usePageActivityQuery(itemId, visible);
     const [selectedCompletion, setSelectedCompletion] =
         useState(ALL_READINGS_KEY);
+
+    const completionParam =
+        selectedCompletion === ALL_READINGS_KEY
+            ? undefined
+            : selectedCompletion;
+    const { data, isLoading } = usePageActivityQuery(
+        itemId,
+        visible,
+        completionParam,
+    );
 
     // Build completion selector options.
     const completionOptions = useMemo((): FilterDropdownOption<string>[] => {
@@ -49,9 +53,16 @@ export function LibraryPageActivitySection({
                     value: String(c.index),
                     label: (
                         <span>
-                            {translation.get('page-activity.reading-number', { number: c.index + 1 })}{' '}
+                            {translation.get('page-activity.reading-number', {
+                                number: c.index + 1,
+                            })}{' '}
                             <span className="text-[0.8em] font-normal opacity-60">
-                                ({formatCompletionDateRange(c.start_date, c.end_date)})
+                                (
+                                {formatCompletionDateRange(
+                                    c.start_date,
+                                    c.end_date,
+                                )}
+                                )
                             </span>
                         </span>
                     ),
@@ -61,32 +72,19 @@ export function LibraryPageActivitySection({
         return options;
     }, [data]);
 
-    // Aggregate page data based on selected completion.
+    // Convert server-aggregated pages to the Map the grid expects.
     const pageData = useMemo(() => {
-        if (!data) return new Map();
-
-        if (selectedCompletion === ALL_READINGS_KEY) {
-            // Use pre-aggregated totals from the API.
-            const map = new Map<number, AggregatedPage>();
-            for (const p of data.pages) {
-                map.set(p.page, {
-                    page: p.page,
-                    totalDuration: p.total_duration,
-                    readCount: p.read_count,
-                });
-            }
-            return map;
+        if (!data) return new Map<number, AggregatedPage>();
+        const map = new Map<number, AggregatedPage>();
+        for (const p of data.pages) {
+            map.set(p.page, {
+                page: p.page,
+                totalDuration: p.total_duration,
+                readCount: p.read_count,
+            });
         }
-
-        // Filter events by completion date range.
-        const completionIndex = Number(selectedCompletion);
-        const completion = data.completions[completionIndex];
-        if (!completion) return new Map();
-
-        const startTime = isoDateToUnix(completion.start_date);
-        const endTime = isoDateToEndOfDayUnix(completion.end_date);
-        return aggregatePageData(data.events, startTime, endTime);
-    }, [data, selectedCompletion]);
+        return map;
+    }, [data]);
 
     const hasData = data && data.total_pages > 0 && data.pages.length > 0;
     const hasCompletions =
@@ -110,7 +108,9 @@ export function LibraryPageActivitySection({
                         value={selectedCompletion}
                         options={completionOptions}
                         onChange={setSelectedCompletion}
-                        ariaLabel={translation.get('page-activity.select-reading')}
+                        ariaLabel={translation.get(
+                            'page-activity.select-reading',
+                        )}
                         panelClassName="w-64"
                     />
                 ) : undefined
@@ -150,9 +150,7 @@ export function LibraryPageActivitySection({
                             className="w-4 h-4 mr-2 shrink-0 text-primary-400"
                             aria-hidden="true"
                         />
-                        <span>
-                            {translation.get('page-activity.info')}
-                        </span>
+                        <span>{translation.get('page-activity.info')}</span>
                     </div>
                 </div>
             )}

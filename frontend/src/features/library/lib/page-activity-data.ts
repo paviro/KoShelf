@@ -1,37 +1,9 @@
-import type { PageActivityAnnotation, PageActivityEvent } from '../../../shared/contracts';
+import type { PageActivityAnnotation } from '../../../shared/contracts';
 
 export interface AggregatedPage {
     page: number;
     totalDuration: number;
     readCount: number;
-}
-
-/**
- * Aggregate raw page events into per-page totals.
- * Optionally filter by a time range (unix timestamps, inclusive).
- */
-export function aggregatePageData(
-    events: PageActivityEvent[],
-    startTime?: number,
-    endTime?: number,
-): Map<number, AggregatedPage> {
-    const map = new Map<number, AggregatedPage>();
-    for (const ev of events) {
-        if (startTime !== undefined && ev.start_time < startTime) continue;
-        if (endTime !== undefined && ev.start_time > endTime) continue;
-        const existing = map.get(ev.page);
-        if (existing) {
-            existing.totalDuration += ev.duration;
-            existing.readCount += 1;
-        } else {
-            map.set(ev.page, {
-                page: ev.page,
-                totalDuration: ev.duration,
-                readCount: 1,
-            });
-        }
-    }
-    return map;
 }
 
 /**
@@ -67,18 +39,4 @@ export function percentileDuration(
     if (durations.length === 0) return 0;
     const index = Math.ceil((percentile / 100) * durations.length) - 1;
     return durations[Math.max(0, index)];
-}
-
-/**
- * Convert an ISO date string (YYYY-MM-DD) to a unix timestamp at the start of that day (UTC).
- */
-export function isoDateToUnix(dateStr: string): number {
-    return Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-}
-
-/**
- * Convert an ISO date string (YYYY-MM-DD) to a unix timestamp at the end of that day (UTC).
- */
-export function isoDateToEndOfDayUnix(dateStr: string): number {
-    return Math.floor(new Date(dateStr + 'T23:59:59Z').getTime() / 1000);
 }

@@ -246,6 +246,14 @@ async fn export_item_details(
 
 // ── Page activity export ────────────────────────────────────────────────
 
+/// Static export includes raw events so the static client can filter in-memory.
+#[derive(Serialize)]
+struct ExportPageActivityData {
+    #[serde(flatten)]
+    data: crate::server::api::responses::library::PageActivityData,
+    events: Vec<crate::server::api::responses::library::PageActivityEvent>,
+}
+
 async fn export_page_activity(
     data_dir: &Path,
     library_repo: &LibraryRepository,
@@ -260,10 +268,19 @@ async fn export_page_activity(
             continue;
         }
 
-        if let Some(data) = library::page_activity(library_repo, &item.id, reading_data).await?
-            && data.total_pages > 0 && !data.pages.is_empty()
+        if let Some(result) =
+            library::page_activity(library_repo, &item.id, reading_data, None).await?
+            && result.data.total_pages > 0
+            && !result.data.pages.is_empty()
         {
-            write_json(&page_activity_dir.join(format!("{}.json", item.id)), &data)?;
+            let export = ExportPageActivityData {
+                data: result.data,
+                events: result.events,
+            };
+            write_json(
+                &page_activity_dir.join(format!("{}.json", item.id)),
+                &export,
+            )?;
             exported_ids.insert(item.id.clone());
         }
     }

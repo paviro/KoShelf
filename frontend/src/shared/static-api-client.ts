@@ -9,6 +9,7 @@ import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
     PageActivityData,
+    PageActivityEvent,
     ExportDayMetrics,
     ExportDayMetricsByScope,
     ExportMonthMetrics,
@@ -27,6 +28,11 @@ import type {
     SessionInfo,
     SiteData,
 } from './contracts';
+
+/** Static export JSON includes raw events for in-memory completion filtering. */
+interface ExportPageActivityData extends PageActivityData {
+    events: PageActivityEvent[];
+}
 
 function authUnavailableError(): Error {
     return new Error('Authentication is unavailable in static mode.');
@@ -239,14 +245,63 @@ export class StaticApiClient implements ApiClient {
         return filterCompletionsByScope(data, selectedScope);
     }
 
-    async getItemPageActivity(id: string): Promise<PageActivityData> {
+    async getItemPageActivity(
+        id: string,
+        completion?: string,
+    ): Promise<PageActivityData> {
+        let exported: ExportPageActivityData;
         try {
-            return (await fetchJson(
+            exported = (await fetchJson(
                 `/data/items/page-activity/${id}.json`,
-            )) as PageActivityData;
+            )) as ExportPageActivityData;
         } catch {
-            return { total_pages: 0, pages: [], annotations: [], completions: [], events: [], chapters: [] };
+            return {
+                total_pages: 0,
+                pages: [],
+                annotations: [],
+                completions: [],
+                chapters: [],
+            };
         }
+
+        if (completion !== undefined && completion !== 'all') {
+            const comp = exported.completions[Number(completion)];
+            if (comp) {
+                const startTime = Math.floor(
+                    new Date(comp.start_date + 'T00:00:00Z').getTime() / 1000,
+                );
+                const endTime = Math.floor(
+                    new Date(comp.end_date + 'T23:59:59Z').getTime() / 1000,
+                );
+                const pageMap = new Map<
+                    number,
+                    { total_duration: number; read_count: number }
+                >();
+                for (const ev of exported.events) {
+                    if (ev.start_time < startTime || ev.start_time > endTime)
+                        continue;
+                    const entry = pageMap.get(ev.page);
+                    if (entry) {
+                        entry.total_duration += ev.duration;
+                        entry.read_count += 1;
+                    } else {
+                        pageMap.set(ev.page, {
+                            total_duration: ev.duration,
+                            read_count: 1,
+                        });
+                    }
+                }
+                return {
+                    ...exported,
+                    pages: [...pageMap.entries()]
+                        .sort(([a], [b]) => a - b)
+                        .map(([page, stats]) => ({ page, ...stats })),
+                };
+            }
+            return { ...exported, pages: [] };
+        }
+
+        return exported;
     }
 
     getItemDownloadHref(id: string): string {
