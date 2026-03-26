@@ -4,8 +4,8 @@ import { translation } from '../../../shared/i18n';
 import { formatDuration } from '../../../shared/lib/intl/formatDuration';
 import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
 import type {
+    ChapterEntry,
     PageActivityAnnotation,
-    PageActivityChapter,
 } from '../../../shared/contracts';
 import {
     type AggregatedPage,
@@ -125,7 +125,7 @@ type PageActivityGridProps = {
     totalPages: number;
     pageData: Map<number, AggregatedPage>;
     annotations: PageActivityAnnotation[];
-    chapters: PageActivityChapter[];
+    chapters: ChapterEntry[];
     animationSeed: string;
 };
 
@@ -143,21 +143,33 @@ export function PageActivityGrid({
         [annotations],
     );
 
+    // Convert fractional chapter positions to page numbers.
+    const chaptersWithPages = useMemo(
+        () =>
+            chapters.map((ch) => ({
+                title: ch.title,
+                page: Math.round(
+                    Math.min(1, Math.max(0, ch.position)) * totalPages,
+                ),
+            })),
+        [chapters, totalPages],
+    );
+
     // Build page → chapter title lookup for chapter boundary gaps.
     const chapterMap = useMemo(() => {
         const map = new Map<number, string>();
-        for (const ch of chapters) {
+        for (const ch of chaptersWithPages) {
             if (ch.page >= 1 && ch.page <= totalPages) {
                 map.set(ch.page, ch.title);
             }
         }
         return map;
-    }, [chapters, totalPages]);
+    }, [chaptersWithPages, totalPages]);
 
     // Build sorted chapter ranges for background bands and bottom strip.
     const chapterRanges = useMemo((): ChapterRange[] => {
-        if (chapters.length === 0) return [];
-        const sorted = [...chapters]
+        if (chaptersWithPages.length === 0) return [];
+        const sorted = [...chaptersWithPages]
             .filter((ch) => ch.page >= 1 && ch.page <= totalPages)
             .sort((a, b) => a.page - b.page);
         if (sorted.length === 0) return [];
@@ -178,7 +190,7 @@ export function PageActivityGrid({
             });
         }
         return ranges;
-    }, [chapters, totalPages]);
+    }, [chaptersWithPages, totalPages]);
 
     // Raw max for height scaling (outliers keep their tall bars).
     const maxDuration = useMemo(() => {
