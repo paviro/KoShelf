@@ -6,20 +6,20 @@ use anyhow::Result;
 use chrono::NaiveDate;
 
 use crate::server::api::responses::library::{
-    PageActivityAnnotation, PageActivityAnnotationKind, PageActivityCompletion, PageActivityData,
-    PageActivityEvent, PageActivityPage,
+    PageActivityAnnotation, PageActivityAnnotationKind, PageActivityCompletion, PageActivityEvent,
+    PageActivityPage, PageActivityResponse,
 };
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
 
 /// The full result of building page-activity data.
 ///
-/// `data` is the API response (no raw events).  `events` are the raw page
-/// visits, included only so the static export can write them for the
-/// in-memory-filtering static client.
-pub struct PageActivityResult {
-    pub data: PageActivityData,
+/// `response` is the API payload.  `events` and `completions` are internal
+/// fields used only by the static export pipeline.
+pub struct PageActivityData {
+    pub response: PageActivityResponse,
     pub events: Vec<PageActivityEvent>,
+    pub completions: Vec<PageActivityCompletion>,
 }
 
 /// Build the page-activity payload for a single library item.
@@ -33,7 +33,7 @@ pub async fn page_activity(
     item_id: &str,
     reading_data: Option<&ReadingData>,
     completion_filter: Option<usize>,
-) -> Result<Option<PageActivityResult>> {
+) -> Result<Option<PageActivityData>> {
     let Some(item) = repo.get_item(item_id).await? else {
         return Ok(None);
     };
@@ -139,13 +139,13 @@ pub async fn page_activity(
         })
         .collect();
 
-    Ok(Some(PageActivityResult {
-        data: PageActivityData {
+    Ok(Some(PageActivityData {
+        response: PageActivityResponse {
             total_pages,
             pages,
             annotations,
-            completions,
         },
         events,
+        completions,
     }))
 }

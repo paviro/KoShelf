@@ -8,7 +8,10 @@ import {
     FilterDropdown,
     type FilterDropdownOption,
 } from '../../../shared/ui/selectors/FilterDropdown';
-import type { ChapterEntry } from '../../../shared/contracts';
+import type {
+    ChapterEntry,
+    LibraryCompletions,
+} from '../../../shared/contracts';
 import { PageActivityGrid } from '../components/PageActivityGrid';
 import { usePageActivityQuery } from '../hooks/usePageActivityQuery';
 import type { AggregatedPage } from '../lib/page-activity-data';
@@ -17,6 +20,7 @@ import { formatCompletionDateRange } from '../lib/library-detail-formatters';
 type LibraryPageActivitySectionProps = {
     itemId: string;
     chapters: ChapterEntry[];
+    completions: LibraryCompletions | null;
     visible: boolean;
     onToggle: () => void;
 };
@@ -26,6 +30,7 @@ const ALL_READINGS_KEY = '__all__';
 export function LibraryPageActivitySection({
     itemId,
     chapters,
+    completions,
     visible,
     onToggle,
 }: LibraryPageActivitySectionProps) {
@@ -50,14 +55,14 @@ export function LibraryPageActivitySection({
                 label: translation.get('filter.all'),
             },
         ];
-        if (data?.completions) {
-            for (const c of data.completions) {
+        if (completions?.entries) {
+            for (const [i, c] of completions.entries.entries()) {
                 options.push({
-                    value: String(c.index),
+                    value: String(i),
                     label: (
                         <span>
                             {translation.get('page-activity.reading-number', {
-                                number: c.index + 1,
+                                number: i + 1,
                             })}{' '}
                             <span className="text-[0.8em] font-normal opacity-60">
                                 (
@@ -73,7 +78,7 @@ export function LibraryPageActivitySection({
             }
         }
         return options;
-    }, [data]);
+    }, [completions]);
 
     // Convert server-aggregated pages to the Map the grid expects.
     const pageData = useMemo(() => {
@@ -91,7 +96,7 @@ export function LibraryPageActivitySection({
 
     const hasData = data && data.total_pages > 0 && data.pages.length > 0;
     const hasCompletions =
-        data?.completions !== undefined && data.completions.length > 0;
+        completions !== null && completions.entries.length > 0;
 
     // Animation seed changes when completion selection changes to re-trigger animation.
     const animationSeed = `${itemId}-${selectedCompletion}`;

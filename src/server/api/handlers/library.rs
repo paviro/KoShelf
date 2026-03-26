@@ -98,7 +98,7 @@ pub(crate) async fn item_page_activity(
     })?
     .ok_or_else(ApiResponseError::not_found)?;
 
-    Ok(Json(ApiResponse::new(result.data)))
+    Ok(Json(ApiResponse::new(result.response)))
 }
 
 // ── Write handlers (requires enable_writeback) ───────────────────────────

@@ -339,17 +339,10 @@ export interface PageActivityAnnotation {
     kind: 'highlight' | 'bookmark' | 'note';
 }
 
-export interface PageActivityCompletion {
-    index: number;
-    start_date: string;
-    end_date: string;
-}
-
 export interface PageActivityData {
     total_pages: number;
     pages: PageActivityPage[];
     annotations: PageActivityAnnotation[];
-    completions: PageActivityCompletion[];
 }
 
 // ── Static export types ──────────────────────────────────────────────────

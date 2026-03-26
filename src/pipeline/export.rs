@@ -236,7 +236,7 @@ async fn export_item_details(
 #[derive(Serialize)]
 struct ExportPageActivityData {
     #[serde(flatten)]
-    data: crate::server::api::responses::library::PageActivityData,
+    response: crate::server::api::responses::library::PageActivityResponse,
     /// Aggregated pages per completion index (key = completion index as string).
     /// Includes an "all" key for the unfiltered view.
     by_completion: BTreeMap<String, Vec<crate::server::api::responses::library::PageActivityPage>>,
@@ -259,22 +259,22 @@ async fn export_page_activity(
         // Fetch the "all completions" view (no filter).
         if let Some(result) =
             library::page_activity(library_repo, &item.id, reading_data, None).await?
-            && result.data.total_pages > 0
-            && !result.data.pages.is_empty()
+            && result.response.total_pages > 0
+            && !result.response.pages.is_empty()
         {
             // Pre-compute pages for each individual completion.
             let mut by_completion = BTreeMap::new();
-            for comp in &result.data.completions {
+            for comp in &result.completions {
                 if let Some(comp_result) =
                     library::page_activity(library_repo, &item.id, reading_data, Some(comp.index))
                         .await?
                 {
-                    by_completion.insert(comp.index.to_string(), comp_result.data.pages);
+                    by_completion.insert(comp.index.to_string(), comp_result.response.pages);
                 }
             }
 
             let export = ExportPageActivityData {
-                data: result.data,
+                response: result.response,
                 by_completion,
             };
             write_json(

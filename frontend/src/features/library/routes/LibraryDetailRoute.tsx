@@ -260,6 +260,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                 <LibraryPageActivitySection
                                     itemId={id}
                                     chapters={detail?.chapters ?? []}
+                                    completions={completions}
                                     visible={sectionState['page-activity']}
                                     onToggle={() => toggle('page-activity')}
                                 />
