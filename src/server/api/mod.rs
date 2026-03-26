@@ -14,6 +14,10 @@ pub fn routes() -> Router<ServerState> {
         .route("/api/site", get(handlers::site))
         .route("/api/items", get(handlers::items))
         .route("/api/items/{id}", get(handlers::item_detail))
+        .route(
+            "/api/items/{id}/page-activity",
+            get(handlers::item_page_activity),
+        )
         .route("/api/reading/summary", get(handlers::reading_summary))
         .route("/api/reading/metrics", get(handlers::reading_metrics))
         .route(
@@ -38,6 +42,7 @@ pub fn route_paths() -> &'static [&'static str] {
         "/api/site",
         "/api/items",
         "/api/items/{id}",
+        "/api/items/{id}/page-activity",
         "/api/reading/summary",
         "/api/reading/metrics",
         "/api/reading/available-periods",

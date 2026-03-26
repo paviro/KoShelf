@@ -334,6 +334,7 @@ impl ComicParser {
             series,
             series_number: number,
             pages: None,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         })
@@ -358,6 +359,7 @@ impl ComicParser {
             series: None,
             series_number: None,
             pages: None,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         }

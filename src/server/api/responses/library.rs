@@ -205,3 +205,58 @@ pub struct LibraryCompletions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_completion_date: Option<String>,
 }
+
+// ── PageActivity ──────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PageActivityAnnotationKind {
+    Highlight,
+    Bookmark,
+    Note,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityData {
+    pub total_pages: i64,
+    pub pages: Vec<PageActivityPage>,
+    pub annotations: Vec<PageActivityAnnotation>,
+    pub completions: Vec<PageActivityCompletion>,
+    pub events: Vec<PageActivityEvent>,
+    pub chapters: Vec<PageActivityChapter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityPage {
+    pub page: i64,
+    pub total_duration: i64,
+    pub read_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityAnnotation {
+    pub page: i64,
+    pub kind: PageActivityAnnotationKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityCompletion {
+    pub index: usize,
+    pub start_date: String,
+    pub end_date: String,
+    pub reading_time_sec: i64,
+    pub pages_read: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityEvent {
+    pub page: i64,
+    pub start_time: i64,
+    pub duration: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageActivityChapter {
+    pub title: String,
+    pub page: i64,
+}

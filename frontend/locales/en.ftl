@@ -457,3 +457,34 @@ toast-dismiss-label = Dismiss
 toast-update-item-error = Failed to save changes. Your edits have been reverted.
 toast-update-annotation-error = Failed to update annotation. Your changes have been reverted.
 toast-delete-annotation-error = Failed to delete annotation. It has been restored.
+
+# -----------------------------------
+#            Page Activity
+# -----------------------------------
+page-activity = Page Activity
+    .reading-number = Completion { $number }
+    .select-reading = Select reading
+    .page = Page { $page }
+    .unread = unread
+    .visits = { $count ->
+        [one] { $count } visit
+       *[other] { $count } visits
+    }
+    .highlights = { $count ->
+        [one] { $count } highlight
+       *[other] { $count } highlights
+    }
+    .bookmarks = { $count ->
+        [one] { $count } bookmark
+       *[other] { $count } bookmarks
+    }
+    .notes = { $count ->
+        [one] { $count } note
+       *[other] { $count } notes
+    }
+    .of = of { $total }
+    .pages-read = pages read
+    .no-data = No page-level reading data available for this item.
+    .legend-bookmark = Bookmark
+    .legend-chapter = Chapter
+    .info = Page numbers are affected by the current formatting options of the document. Unlike other parts of KoShelf, this view does not support synthetic page scaling.

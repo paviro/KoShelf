@@ -1,4 +1,5 @@
 import type {
+    PageActivityData,
     LibraryDetailData,
     LibraryListData,
     ReadingAvailablePeriodsData,
@@ -66,6 +67,7 @@ export interface ApiClient {
         scope: ScopeValue,
         params: CompletionsParams,
     ): Promise<ReadingCompletionsData>;
+    getItemPageActivity(id: string): Promise<PageActivityData>;
     getItemDownloadHref(id: string): string;
     getItemFileHref(id: string, format?: string | null): string | null;
     updateItem(id: string, payload: UpdateItemPayload): Promise<void>;

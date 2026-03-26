@@ -480,6 +480,14 @@ mod tests {
     }
 }
 
+/// A single chapter entry from a book table of contents.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChapterEntry {
+    pub title: String,
+    /// Fractional position within the book (0.0–1.0), estimated from spine byte sizes.
+    pub position: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BookInfo {
     pub title: String,
@@ -492,6 +500,7 @@ pub struct BookInfo {
     pub series: Option<String>,
     pub series_number: Option<String>,
     pub pages: Option<u32>, // Page count from format (EPUB page-list, comic images)
+    pub chapters: Vec<ChapterEntry>, // Table of contents (EPUB, FB2)
     pub cover_data: Option<Vec<u8>>,
     pub cover_mime_type: Option<String>,
 }

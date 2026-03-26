@@ -1,4 +1,4 @@
-use crate::shelf::models::{BookInfo, Identifier};
+use crate::shelf::models::{BookInfo, ChapterEntry, Identifier};
 use crate::shelf::utils::sanitize_html;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
@@ -85,21 +85,13 @@ impl EpubParser {
 
         let (mut book_info, cover_id, nav_path) = Self::parse_opf_metadata(&opf_xml)?;
 
+        let opf_parent = Path::new(&opf_path).parent();
+
         // If no page count from OPF metadata, try the nav document's page-list.
         if book_info.pages.is_none()
             && let Some(ref nav_rel_path) = nav_path
         {
-            let opf_parent = Path::new(&opf_path).parent();
-            let resolved_nav_path = if let Some(parent) = opf_parent {
-                Self::normalize_zip_path(
-                    &parent
-                        .join(nav_rel_path)
-                        .to_string_lossy()
-                        .replace('\\', "/"),
-                )
-            } else {
-                Self::normalize_zip_path(nav_rel_path)
-            };
+            let resolved_nav_path = Self::resolve_relative_path(opf_parent, nav_rel_path);
 
             if let Ok(mut nav_file) = zip.by_name(&resolved_nav_path) {
                 let mut nav_xml = String::new();
@@ -109,25 +101,19 @@ impl EpubParser {
             }
         }
 
+        // Extract chapter TOC entries with fractional positions.
+        book_info.chapters =
+            Self::extract_chapters(&mut zip, opf_parent, &opf_xml, nav_path.as_deref());
+
         let (cover_path, cover_mime_type) = Self::find_cover_path(&opf_xml, &cover_id)?;
         debug!(
             "Cover image path: {:?}, MIME type: {:?}",
             cover_path, cover_mime_type
         );
 
-        let resolved_cover_path = if let Some(ref cover_path) = cover_path {
-            let opf_parent = Path::new(&opf_path).parent();
-            let joined = if let Some(parent) = opf_parent {
-                parent.join(cover_path)
-            } else {
-                Path::new(cover_path).to_path_buf()
-            };
-            Some(Self::normalize_zip_path(
-                &joined.to_string_lossy().replace('\\', "/"),
-            ))
-        } else {
-            None
-        };
+        let resolved_cover_path = cover_path
+            .as_deref()
+            .map(|p| Self::resolve_relative_path(opf_parent, p));
 
         let cover_data = if let Some(ref cover_path) = resolved_cover_path {
             match zip.by_name(cover_path) {
@@ -463,6 +449,7 @@ impl EpubParser {
             series,
             series_number,
             pages: number_of_pages,
+            chapters: Vec::new(),
             cover_data: None,
             cover_mime_type: None,
         };
@@ -527,6 +514,16 @@ impl EpubParser {
         Ok((None, None))
     }
 
+    /// Resolve a relative path against the OPF parent directory inside the ZIP.
+    fn resolve_relative_path(opf_parent: Option<&Path>, rel_path: &str) -> String {
+        let joined = if let Some(parent) = opf_parent {
+            parent.join(rel_path)
+        } else {
+            Path::new(rel_path).to_path_buf()
+        };
+        Self::normalize_zip_path(&joined.to_string_lossy().replace('\\', "/"))
+    }
+
     /// Parse page-list from EPUB3 navigation document to get page count
     /// The page-list is a nav element with epub:type="page-list" containing anchor elements
     fn parse_page_list(nav_xml: &str) -> Option<u32> {
@@ -578,5 +575,350 @@ impl EpubParser {
         } else {
             None
         }
+    }
+
+    // ── Chapter / TOC extraction ─────────────────────────────────────────
+
+    /// Orchestrate chapter extraction from an EPUB: parse spine, try EPUB3
+    /// nav TOC first, fall back to NCX, and compute byte-weighted fractions.
+    fn extract_chapters(
+        zip: &mut ZipArchive<File>,
+        opf_parent: Option<&Path>,
+        opf_xml: &str,
+        nav_path: Option<&str>,
+    ) -> Vec<ChapterEntry> {
+        let (spine_hrefs, ncx_path) = Self::parse_opf_spine(opf_xml);
+        if spine_hrefs.is_empty() {
+            return Vec::new();
+        }
+
+        let spine_byte_map = Self::build_spine_byte_map(zip, opf_parent, &spine_hrefs);
+
+        // Try EPUB3 nav document TOC first.
+        let mut toc_entries: Vec<(String, String)> = Vec::new();
+        if let Some(nav_rel) = nav_path {
+            let resolved = Self::resolve_relative_path(opf_parent, nav_rel);
+            let nav_parent = Path::new(nav_rel).parent().map(Path::to_path_buf);
+            if let Ok(mut f) = zip.by_name(&resolved) {
+                let mut xml = String::new();
+                if f.read_to_string(&mut xml).is_ok() {
+                    toc_entries = Self::parse_nav_toc(&xml);
+                    // Nav hrefs are relative to the nav document — resolve them
+                    // to be relative to the OPF (same base as spine hrefs).
+                    if let Some(ref nav_dir) = nav_parent {
+                        for entry in &mut toc_entries {
+                            entry.0 = Self::normalize_zip_path(
+                                &nav_dir.join(&entry.0).to_string_lossy().replace('\\', "/"),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fall back to EPUB2 NCX if no EPUB3 TOC was found.
+        if toc_entries.is_empty() {
+            if let Some(ref ncx_rel) = ncx_path {
+                let resolved = Self::resolve_relative_path(opf_parent, ncx_rel);
+                let ncx_parent = Path::new(ncx_rel.as_str()).parent().map(Path::to_path_buf);
+                if let Ok(mut f) = zip.by_name(&resolved) {
+                    let mut xml = String::new();
+                    if f.read_to_string(&mut xml).is_ok() {
+                        toc_entries = Self::parse_ncx_toc(&xml);
+                        // NCX hrefs are relative to the NCX file location.
+                        if let Some(ref ncx_dir) = ncx_parent {
+                            for entry in &mut toc_entries {
+                                entry.0 = Self::normalize_zip_path(
+                                    &ncx_dir.join(&entry.0).to_string_lossy().replace('\\', "/"),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if toc_entries.is_empty() {
+            return Vec::new();
+        }
+
+        Self::map_toc_to_fractions(&toc_entries, &spine_byte_map)
+    }
+
+    /// Parse the OPF spine to get the ordered list of content document hrefs
+    /// and the NCX path (for EPUB2 fallback).
+    fn parse_opf_spine(opf_xml: &str) -> (Vec<String>, Option<String>) {
+        let mut reader = Reader::from_str(opf_xml);
+        reader.config_mut().trim_text(true);
+        let mut buf = Vec::new();
+
+        let mut manifest_map: HashMap<String, String> = HashMap::new(); // id -> href
+        let mut spine_idrefs: Vec<String> = Vec::new();
+        let mut ncx_toc_id: Option<String> = None;
+        let mut in_manifest = false;
+        let mut in_spine = false;
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"manifest" {
+                        in_manifest = true;
+                    } else if local.as_ref() == b"spine" {
+                        in_spine = true;
+                        for attr in e.attributes().flatten() {
+                            if attr.key.as_ref() == b"toc" {
+                                if let Ok(v) = attr.unescape_value() {
+                                    ncx_toc_id = Some(v.into_owned());
+                                }
+                            }
+                        }
+                    } else if in_manifest && local.as_ref() == b"item" {
+                        let mut id = None;
+                        let mut href = None;
+                        for attr in e.attributes().flatten() {
+                            match attr.key.as_ref() {
+                                b"id" => {
+                                    if let Ok(v) = attr.unescape_value() {
+                                        id = Some(v.into_owned());
+                                    }
+                                }
+                                b"href" => {
+                                    if let Ok(v) = attr.unescape_value() {
+                                        href = Some(v.into_owned());
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        if let (Some(id), Some(href)) = (id, href) {
+                            manifest_map.insert(id, href);
+                        }
+                    } else if in_spine && local.as_ref() == b"itemref" {
+                        for attr in e.attributes().flatten() {
+                            if attr.key.as_ref() == b"idref" {
+                                if let Ok(v) = attr.unescape_value() {
+                                    spine_idrefs.push(v.into_owned());
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"manifest" {
+                        in_manifest = false;
+                    } else if local.as_ref() == b"spine" {
+                        in_spine = false;
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+
+        // Resolve spine idrefs to hrefs via manifest.
+        let spine_hrefs: Vec<String> = spine_idrefs
+            .iter()
+            .filter_map(|idref| manifest_map.get(idref).cloned())
+            .collect();
+
+        // Resolve NCX toc id to href.
+        let ncx_path = ncx_toc_id.and_then(|id| manifest_map.get(&id).cloned());
+
+        (spine_hrefs, ncx_path)
+    }
+
+    /// Look up each spine item's uncompressed byte size from the ZIP directory.
+    fn build_spine_byte_map(
+        zip: &mut ZipArchive<File>,
+        opf_parent: Option<&Path>,
+        spine_hrefs: &[String],
+    ) -> Vec<(String, u64)> {
+        spine_hrefs
+            .iter()
+            .map(|href| {
+                let resolved = Self::resolve_relative_path(opf_parent, href);
+                let size = zip.by_name(&resolved).map(|f| f.size()).unwrap_or(0);
+                (href.clone(), size)
+            })
+            .collect()
+    }
+
+    /// Parse `<nav epub:type="toc">` from an EPUB3 navigation document.
+    /// Returns (href, title) pairs for all anchors (including nested chapters).
+    fn parse_nav_toc(nav_xml: &str) -> Vec<(String, String)> {
+        let mut reader = Reader::from_str(nav_xml);
+        reader.config_mut().trim_text(true);
+        let mut buf = Vec::new();
+
+        let mut in_toc = false;
+        let mut depth = 0u32;
+        let mut entries: Vec<(String, String)> = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"nav" {
+                        for attr in e.attributes().flatten() {
+                            let key = attr.key.as_ref();
+                            if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
+                                && let Ok(val) = attr.unescape_value()
+                                && val.contains("toc")
+                            {
+                                in_toc = true;
+                            }
+                        }
+                    } else if in_toc && local.as_ref() == b"ol" {
+                        depth += 1;
+                    } else if in_toc && depth >= 1 && local.as_ref() == b"a" {
+                        // Extract href and text from anchors at any nesting depth.
+                        let mut href = None;
+                        for attr in e.attributes().flatten() {
+                            if attr.key.as_ref() == b"href" {
+                                if let Ok(v) = attr.unescape_value() {
+                                    href = Some(v.into_owned());
+                                }
+                            }
+                        }
+                        if let (Some(href), Ok(text)) = (href, reader.read_text(e.name())) {
+                            let title =
+                                unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                            let title = title.trim().to_string();
+                            if !title.is_empty() {
+                                entries.push((href, title));
+                            }
+                        }
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"nav" {
+                        in_toc = false;
+                        depth = 0;
+                    } else if in_toc && local.as_ref() == b"ol" {
+                        depth = depth.saturating_sub(1);
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+
+        entries
+    }
+
+    /// Parse `<navMap>` from an EPUB2 NCX file.
+    /// Returns (src, title) pairs for all navPoints (including nested).
+    fn parse_ncx_toc(ncx_xml: &str) -> Vec<(String, String)> {
+        let mut reader = Reader::from_str(ncx_xml);
+        reader.config_mut().trim_text(true);
+        let mut buf = Vec::new();
+
+        let mut in_nav_map = false;
+        let mut nav_point_depth = 0u32;
+        let mut current_title: Option<String> = None;
+        let mut current_src: Option<String> = None;
+        let mut entries: Vec<(String, String)> = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"navMap" {
+                        in_nav_map = true;
+                    } else if in_nav_map && local.as_ref() == b"navPoint" {
+                        nav_point_depth += 1;
+                        current_title = None;
+                        current_src = None;
+                    } else if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"text" {
+                        if let Ok(text) = reader.read_text(e.name()) {
+                            current_title = Some(
+                                unescape(&text)
+                                    .unwrap_or(Cow::Borrowed(&text))
+                                    .trim()
+                                    .to_string(),
+                            );
+                        }
+                    }
+                }
+                Ok(Event::Empty(ref e)) => {
+                    let local = e.local_name();
+                    if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"content" {
+                        for attr in e.attributes().flatten() {
+                            if attr.key.as_ref() == b"src" {
+                                if let Ok(v) = attr.unescape_value() {
+                                    current_src = Some(v.into_owned());
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    let local = e.local_name();
+                    if local.as_ref() == b"navMap" {
+                        in_nav_map = false;
+                    } else if in_nav_map && local.as_ref() == b"navPoint" {
+                        if let (Some(src), Some(title)) = (current_src.take(), current_title.take())
+                        {
+                            if !title.is_empty() {
+                                entries.push((src, title));
+                            }
+                        }
+                        nav_point_depth = nav_point_depth.saturating_sub(1);
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+            buf.clear();
+        }
+
+        entries
+    }
+
+    /// Map TOC entries to fractional positions using spine byte-size weighting.
+    fn map_toc_to_fractions(
+        toc_entries: &[(String, String)],
+        spine_byte_map: &[(String, u64)],
+    ) -> Vec<ChapterEntry> {
+        let total_bytes: u64 = spine_byte_map.iter().map(|(_, s)| s).sum();
+        if total_bytes == 0 {
+            return Vec::new();
+        }
+
+        // Build cumulative byte offsets and an index for fast href lookup.
+        let mut cumulative: Vec<u64> = Vec::with_capacity(spine_byte_map.len());
+        let mut running = 0u64;
+        for (_, size) in spine_byte_map {
+            cumulative.push(running);
+            running += size;
+        }
+        let spine_index: HashMap<&str, usize> = spine_byte_map
+            .iter()
+            .enumerate()
+            .map(|(i, (href, _))| (href.as_str(), i))
+            .collect();
+
+        let mut chapters = Vec::new();
+        for (href, title) in toc_entries {
+            // Strip fragment (e.g. "chapter.xhtml#sec1" → "chapter.xhtml").
+            let file_part = href.split('#').next().unwrap_or(href);
+            if let Some(&idx) = spine_index.get(file_part) {
+                let position = cumulative[idx] as f64 / total_bytes as f64;
+                chapters.push(ChapterEntry {
+                    title: title.clone(),
+                    position,
+                });
+            }
+        }
+
+        chapters
     }
 }

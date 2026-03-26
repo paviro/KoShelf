@@ -88,6 +88,7 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
             .as_ref()
             .and_then(|m| m.reader_presentation.as_ref())
             .and_then(|presentation| serde_json::to_string(presentation).ok()),
+        chapters_json: serde_json::to_string(&item.book_info.chapters).unwrap_or_default(),
         last_open_at: None,
         total_reading_time_sec: None,
         created_at: now.clone(),

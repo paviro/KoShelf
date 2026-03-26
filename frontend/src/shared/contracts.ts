@@ -320,6 +320,47 @@ export interface LibraryDetailData {
     reader_presentation?: LibraryReaderPresentation | null;
 }
 
+// ── PageActivity ─────────────────────────────────────────────────────────
+
+export interface PageActivityPage {
+    page: number;
+    total_duration: number;
+    read_count: number;
+}
+
+export interface PageActivityAnnotation {
+    page: number;
+    kind: 'highlight' | 'bookmark' | 'note';
+}
+
+export interface PageActivityCompletion {
+    index: number;
+    start_date: string;
+    end_date: string;
+    reading_time_sec: number;
+    pages_read: number;
+}
+
+export interface PageActivityEvent {
+    page: number;
+    start_time: number;
+    duration: number;
+}
+
+export interface PageActivityChapter {
+    title: string;
+    page: number;
+}
+
+export interface PageActivityData {
+    total_pages: number;
+    pages: PageActivityPage[];
+    annotations: PageActivityAnnotation[];
+    completions: PageActivityCompletion[];
+    events: PageActivityEvent[];
+    chapters: PageActivityChapter[];
+}
+
 // ── Static export aggregate types (for client-side scope extraction) ────
 
 export interface ExportSite {

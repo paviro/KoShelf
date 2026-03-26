@@ -453,3 +453,34 @@ toast-dismiss-label = Cerrar
 toast-update-item-error = No se pudieron guardar los cambios. Tus ediciones han sido revertidas.
 toast-update-annotation-error = No se pudo actualizar la anotación. Tus cambios han sido revertidos.
 toast-delete-annotation-error = No se pudo eliminar la anotación. Ha sido restaurada.
+
+# -----------------------------------
+#            Page Activity
+# -----------------------------------
+page-activity = Actividad de páginas
+    .reading-number = Lectura { $number }
+    .select-reading = Seleccionar lectura
+    .page = Página { $page }
+    .unread = sin leer
+    .visits = { $count ->
+        [one] { $count } visita
+       *[other] { $count } visitas
+    }
+    .highlights = { $count ->
+        [one] { $count } subrayado
+       *[other] { $count } subrayados
+    }
+    .bookmarks = { $count ->
+        [one] { $count } marcador
+       *[other] { $count } marcadores
+    }
+    .notes = { $count ->
+        [one] { $count } nota
+       *[other] { $count } notas
+    }
+    .of = de { $total }
+    .pages-read = páginas leídas
+    .no-data = No hay datos de lectura a nivel de página disponibles para este elemento.
+    .legend-bookmark = Marcador
+    .legend-chapter = Capítulo
+    .info = Los números de página se ven afectados por las opciones de formato actuales del documento. A diferencia de otras partes de KoShelf, esta vista no admite el escalado sintético de páginas.

@@ -3,11 +3,13 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
+use log::warn;
 
 use crate::server::api::responses::library::{
     LibraryAnnotation, LibraryDetailItem, LibraryListItem,
 };
 use crate::shelf::library::queries::LibraryListQuery;
+use crate::shelf::models::ChapterEntry;
 use crate::shelf::models::ContentType;
 
 use super::LibraryRepository;
@@ -87,6 +89,26 @@ impl LibraryRepository {
         .fetch_all(&self.pool)
         .await
         .context("Failed to get annotations")
+    }
+
+    /// Load chapter entries (fractional positions) for an item.
+    pub async fn get_item_chapters(&self, item_id: &str) -> Result<Vec<ChapterEntry>> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT chapters_json FROM library_items WHERE id = ?1")
+                .bind(item_id)
+                .fetch_optional(&self.pool)
+                .await
+                .context("Failed to get item chapters")?;
+        match row {
+            Some((json,)) => match serde_json::from_str(&json) {
+                Ok(chapters) => Ok(chapters),
+                Err(e) => {
+                    warn!("Failed to parse chapters_json for {}: {}", item_id, e);
+                    Ok(Vec::new())
+                }
+            },
+            None => Ok(Vec::new()),
+        }
     }
 
     /// Count annotations grouped by KoShelf type for a given item.
