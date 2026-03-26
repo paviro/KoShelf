@@ -325,10 +325,6 @@ Returns page-level reading heatmap data for a single library item.
 | `annotations` | object[] | Annotations with page numbers |
 | `annotations[].page` | number | Page number |
 | `annotations[].kind` | string | One of: `highlight`, `bookmark`, `note` |
-| `completions` | object[] | Completion records (always returned for building the selector) |
-| `completions[].index` | number | 0-based completion index |
-| `completions[].start_date` | string | ISO 8601 date |
-| `completions[].end_date` | string | ISO 8601 date |
 
 **Status Codes:** 200, 400 (invalid completion param), 404 (item not found or no reading data)
 

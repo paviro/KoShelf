@@ -219,11 +219,10 @@ pub enum PageActivityAnnotationKind {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PageActivityData {
+pub struct PageActivityResponse {
     pub total_pages: i64,
     pub pages: Vec<PageActivityPage>,
     pub annotations: Vec<PageActivityAnnotation>,
-    pub completions: Vec<PageActivityCompletion>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

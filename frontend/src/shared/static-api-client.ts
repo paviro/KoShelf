@@ -192,7 +192,6 @@ export class StaticApiClient implements ApiClient {
                 total_pages: 0,
                 pages: [],
                 annotations: [],
-                completions: [],
             };
         }
 
