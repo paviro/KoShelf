@@ -339,12 +339,6 @@ export interface PageActivityCompletion {
     end_date: string;
 }
 
-export interface PageActivityEvent {
-    page: number;
-    start_time: number;
-    duration: number;
-}
-
 export interface PageActivityChapter {
     title: string;
     page: number;
@@ -358,7 +352,7 @@ export interface PageActivityData {
     chapters: PageActivityChapter[];
 }
 
-// ── Static export aggregate types (for client-side scope extraction) ────
+// ── Static export types ──────────────────────────────────────────────────
 
 export interface ExportSite {
     name: string;
@@ -368,27 +362,15 @@ export interface ExportSite {
     capabilities: SiteCapabilities;
 }
 
-export interface ExportReadingSummary {
-    all: ReadingSummaryData;
-    books: ReadingSummaryData;
-    comics: ReadingSummaryData;
-}
-
-export interface ExportPeriodsByScope {
-    all: ReadingAvailablePeriodsData;
-    books: ReadingAvailablePeriodsData;
-    comics: ReadingAvailablePeriodsData;
-}
-
 export interface ExportReadingPeriods {
     reading_data: {
-        week: ExportPeriodsByScope;
-        month: ExportPeriodsByScope;
-        year: ExportPeriodsByScope;
+        week: ReadingAvailablePeriodsData;
+        month: ReadingAvailablePeriodsData;
+        year: ReadingAvailablePeriodsData;
     };
     completions: {
-        month: ExportPeriodsByScope;
-        year: ExportPeriodsByScope;
+        month: ReadingAvailablePeriodsData;
+        year: ReadingAvailablePeriodsData;
     };
 }
 
@@ -402,13 +384,11 @@ export interface ExportDayMetrics {
     average_session_duration_sec: number;
 }
 
-export interface ExportDayMetricsByScope {
-    all: ExportDayMetrics;
-    books: ExportDayMetrics;
-    comics: ExportDayMetrics;
-}
-
 export interface ExportMonthMetrics {
     month: string;
-    days: Record<string, ExportDayMetricsByScope>;
+    days: Record<string, ExportDayMetrics>;
+}
+
+export interface ExportPageActivityData extends PageActivityData {
+    by_completion: Record<string, PageActivityPage[]>;
 }

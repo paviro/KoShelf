@@ -16,7 +16,7 @@ use serde::Serialize;
 use crate::pipeline::media;
 use crate::server::api::responses::common::ContentTypeFilter;
 use crate::server::api::responses::library::LibraryContentType;
-use crate::server::api::responses::reading::{ReadingAvailablePeriodsData, ReadingSummaryData};
+use crate::server::api::responses::reading::ReadingAvailablePeriodsData;
 use crate::server::api::responses::site::SiteCapabilities;
 use crate::shelf::library::queries::IncludeSet;
 use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
@@ -41,53 +41,33 @@ struct ExportSite {
     capabilities: SiteCapabilities,
 }
 
-/// `data/reading/summary.json` — keyed by scope.
-#[derive(Serialize)]
-struct ExportReadingSummary {
-    all: ReadingSummaryData,
-    books: ReadingSummaryData,
-    comics: ReadingSummaryData,
-}
+// Summary is exported directly as ReadingSummaryData per scope — no wrapper needed.
 
-/// `data/reading/periods.json` — all source/group_by/scope combos.
+/// `data/reading/periods/{scope}.json` — all source/group_by combos for one scope.
 #[derive(Serialize)]
-struct ExportReadingPeriods {
+struct ExportPeriods {
     reading_data: ExportPeriodsReadingData,
     completions: ExportPeriodsCompletions,
 }
 
 #[derive(Serialize)]
 struct ExportPeriodsReadingData {
-    week: ExportPeriodsByScope,
-    month: ExportPeriodsByScope,
-    year: ExportPeriodsByScope,
+    week: ReadingAvailablePeriodsData,
+    month: ReadingAvailablePeriodsData,
+    year: ReadingAvailablePeriodsData,
 }
 
 #[derive(Serialize)]
 struct ExportPeriodsCompletions {
-    month: ExportPeriodsByScope,
-    year: ExportPeriodsByScope,
+    month: ReadingAvailablePeriodsData,
+    year: ReadingAvailablePeriodsData,
 }
 
-#[derive(Serialize)]
-struct ExportPeriodsByScope {
-    all: ReadingAvailablePeriodsData,
-    books: ReadingAvailablePeriodsData,
-    comics: ReadingAvailablePeriodsData,
-}
-
-/// `data/reading/metrics/{YYYY-MM}.json`
+/// `data/reading/metrics/{YYYY-MM}/{scope}.json`
 #[derive(Serialize)]
 struct ExportMonthMetrics {
     month: String,
-    days: BTreeMap<String, ExportDayMetricsByScope>,
-}
-
-#[derive(Serialize)]
-struct ExportDayMetricsByScope {
-    all: ExportDayMetrics,
-    books: ExportDayMetrics,
-    comics: ExportDayMetrics,
+    days: BTreeMap<String, ExportDayMetrics>,
 }
 
 #[derive(Default, Serialize)]
@@ -100,6 +80,12 @@ struct ExportDayMetrics {
     longest_session_duration_sec: i64,
     average_session_duration_sec: i64,
 }
+
+const SCOPES: [ContentTypeFilter; 3] = [
+    ContentTypeFilter::All,
+    ContentTypeFilter::Books,
+    ContentTypeFilter::Comics,
+];
 
 // ── Configuration ───────────────────────────────────────────────────────
 
@@ -246,12 +232,14 @@ async fn export_item_details(
 
 // ── Page activity export ────────────────────────────────────────────────
 
-/// Static export includes raw events so the static client can filter in-memory.
+/// Pre-computed page-activity data with per-completion aggregated pages.
 #[derive(Serialize)]
 struct ExportPageActivityData {
     #[serde(flatten)]
     data: crate::server::api::responses::library::PageActivityData,
-    events: Vec<crate::server::api::responses::library::PageActivityEvent>,
+    /// Aggregated pages per completion index (key = completion index as string).
+    /// Includes an "all" key for the unfiltered view.
+    by_completion: BTreeMap<String, Vec<crate::server::api::responses::library::PageActivityPage>>,
 }
 
 async fn export_page_activity(
@@ -268,14 +256,26 @@ async fn export_page_activity(
             continue;
         }
 
+        // Fetch the "all completions" view (no filter).
         if let Some(result) =
             library::page_activity(library_repo, &item.id, reading_data, None).await?
             && result.data.total_pages > 0
             && !result.data.pages.is_empty()
         {
+            // Pre-compute pages for each individual completion.
+            let mut by_completion = BTreeMap::new();
+            for comp in &result.data.completions {
+                if let Some(comp_result) =
+                    library::page_activity(library_repo, &item.id, reading_data, Some(comp.index))
+                        .await?
+                {
+                    by_completion.insert(comp.index.to_string(), comp_result.data.pages);
+                }
+            }
+
             let export = ExportPageActivityData {
                 data: result.data,
-                events: result.events,
+                by_completion,
             };
             write_json(
                 &page_activity_dir.join(format!("{}.json", item.id)),
@@ -294,80 +294,63 @@ async fn export_page_activity(
 // ── Reading summary export ──────────────────────────────────────────────
 
 fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
-    let summary = ExportReadingSummary {
-        all: statistics::summary(
+    let summary_dir = data_dir.join("reading").join("summary");
+    for scope in SCOPES {
+        let data = statistics::summary(
             reading_data,
             ReadingSummaryQuery {
-                scope: ContentTypeFilter::All,
+                scope,
                 range: None,
                 tz: None,
             },
-        ),
-        books: statistics::summary(
-            reading_data,
-            ReadingSummaryQuery {
-                scope: ContentTypeFilter::Books,
-                range: None,
-                tz: None,
-            },
-        ),
-        comics: statistics::summary(
-            reading_data,
-            ReadingSummaryQuery {
-                scope: ContentTypeFilter::Comics,
-                range: None,
-                tz: None,
-            },
-        ),
-    };
-
-    write_json(&data_dir.join("reading").join("summary.json"), &summary)
+        );
+        write_json(&summary_dir.join(format!("{}.json", scope.as_str())), &data)?;
+    }
+    Ok(())
 }
 
 // ── Reading periods export ──────────────────────────────────────────────
 
 fn export_reading_periods(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
-    let periods = ExportReadingPeriods {
-        reading_data: ExportPeriodsReadingData {
-            week: periods_by_scope(reading_data, PeriodSource::ReadingData, PeriodGroupBy::Week),
-            month: periods_by_scope(
-                reading_data,
-                PeriodSource::ReadingData,
-                PeriodGroupBy::Month,
-            ),
-            year: periods_by_scope(reading_data, PeriodSource::ReadingData, PeriodGroupBy::Year),
-        },
-        completions: ExportPeriodsCompletions {
-            month: periods_by_scope(
-                reading_data,
-                PeriodSource::Completions,
-                PeriodGroupBy::Month,
-            ),
-            year: periods_by_scope(reading_data, PeriodSource::Completions, PeriodGroupBy::Year),
-        },
-    };
+    let periods_dir = data_dir.join("reading").join("periods");
+    for scope in SCOPES {
+        let query = |source, group_by| ReadingAvailablePeriodsQuery {
+            scope,
+            source,
+            group_by,
+            range: None,
+            tz: None,
+        };
 
-    write_json(&data_dir.join("reading").join("periods.json"), &periods)
-}
-
-fn periods_by_scope(
-    reading_data: &ReadingData,
-    source: PeriodSource,
-    group_by: PeriodGroupBy,
-) -> ExportPeriodsByScope {
-    let query = |scope| ReadingAvailablePeriodsQuery {
-        scope,
-        source,
-        group_by,
-        range: None,
-        tz: None,
-    };
-
-    ExportPeriodsByScope {
-        all: statistics::available_periods(reading_data, query(ContentTypeFilter::All)),
-        books: statistics::available_periods(reading_data, query(ContentTypeFilter::Books)),
-        comics: statistics::available_periods(reading_data, query(ContentTypeFilter::Comics)),
+        let data = ExportPeriods {
+            reading_data: ExportPeriodsReadingData {
+                week: statistics::available_periods(
+                    reading_data,
+                    query(PeriodSource::ReadingData, PeriodGroupBy::Week),
+                ),
+                month: statistics::available_periods(
+                    reading_data,
+                    query(PeriodSource::ReadingData, PeriodGroupBy::Month),
+                ),
+                year: statistics::available_periods(
+                    reading_data,
+                    query(PeriodSource::ReadingData, PeriodGroupBy::Year),
+                ),
+            },
+            completions: ExportPeriodsCompletions {
+                month: statistics::available_periods(
+                    reading_data,
+                    query(PeriodSource::Completions, PeriodGroupBy::Month),
+                ),
+                year: statistics::available_periods(
+                    reading_data,
+                    query(PeriodSource::Completions, PeriodGroupBy::Year),
+                ),
+            },
+        };
+        write_json(&periods_dir.join(format!("{}.json", scope.as_str())), &data)?;
     }
+    Ok(())
 }
 
 // ── Reading metrics export ──────────────────────────────────────────────
@@ -390,11 +373,6 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
     }
 
     let metrics_dir = data_dir.join("reading").join("metrics");
-    let scopes = [
-        ContentTypeFilter::All,
-        ContentTypeFilter::Books,
-        ContentTypeFilter::Comics,
-    ];
     let metrics = [
         ReadingMetric::ReadingTimeSec,
         ReadingMetric::PagesRead,
@@ -405,11 +383,11 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
         ReadingMetric::AverageSessionDurationSec,
     ];
 
-    // For each (scope, metric), get all daily points and partition into months.
-    let mut months: BTreeMap<String, BTreeMap<String, ExportDayMetricsByScope>> = BTreeMap::new();
+    // For each scope, get all daily points for all metrics and partition into months.
+    let mut exported_month_dirs = HashSet::new();
 
-    for &scope in &scopes {
-        let scope_name = scope.as_str();
+    for scope in SCOPES {
+        let mut months: BTreeMap<String, BTreeMap<String, ExportDayMetrics>> = BTreeMap::new();
 
         for &metric in &metrics {
             let result = statistics::metrics(
@@ -428,21 +406,7 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
             for point in &result.points {
                 let month_key = point.key[..7].to_string();
                 let day_map = months.entry(month_key).or_default();
-                let by_scope =
-                    day_map
-                        .entry(point.key.clone())
-                        .or_insert_with(|| ExportDayMetricsByScope {
-                            all: ExportDayMetrics::default(),
-                            books: ExportDayMetrics::default(),
-                            comics: ExportDayMetrics::default(),
-                        });
-
-                let day_metrics = match scope_name {
-                    "all" => &mut by_scope.all,
-                    "books" => &mut by_scope.books,
-                    "comics" => &mut by_scope.comics,
-                    _ => unreachable!(),
-                };
+                let day_metrics = day_map.entry(point.key.clone()).or_default();
 
                 let value = point.values.get(metric_name).copied().unwrap_or(0);
                 match metric {
@@ -460,24 +424,25 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
                 }
             }
         }
+
+        let scope_name = scope.as_str();
+
+        for (month_key, days) in months {
+            let file = ExportMonthMetrics {
+                month: month_key.clone(),
+                days,
+            };
+            let month_dir = metrics_dir.join(&month_key);
+            write_json(&month_dir.join(format!("{scope_name}.json")), &file)?;
+            exported_month_dirs.insert(month_key);
+        }
     }
 
-    let mut exported_stems = HashSet::new();
-
-    for (month_key, days) in months {
-        let file = ExportMonthMetrics {
-            month: month_key.clone(),
-            days,
-        };
-        write_json(&metrics_dir.join(format!("{month_key}.json")), &file)?;
-        exported_stems.insert(month_key);
-    }
-
-    cleanup_stale_json(&metrics_dir, &exported_stems, &[])?;
+    cleanup_stale_dirs(&metrics_dir, &exported_month_dirs)?;
 
     info!(
         "Exported reading metrics for {} months",
-        exported_stems.len()
+        exported_month_dirs.len()
     );
 
     Ok(())
@@ -503,29 +468,31 @@ async fn export_reading_calendar(
     );
 
     let calendar_dir = data_dir.join("reading").join("calendar");
-    let mut exported_stems = HashSet::new();
+    let mut exported_month_dirs = HashSet::new();
 
     for period in &month_periods.periods {
-        // Calendar uses scope=All; stats_by_scope is always included for all three scopes.
-        let data = statistics::calendar(
-            reading_data,
-            repo,
-            ReadingCalendarQuery {
-                month: period.key.clone(),
-                scope: ContentTypeFilter::All,
-                tz: None,
-            },
-        )
-        .await;
-        write_json(&calendar_dir.join(format!("{}.json", period.key)), &data)?;
-        exported_stems.insert(period.key.clone());
+        for scope in SCOPES {
+            let data = statistics::calendar(
+                reading_data,
+                repo,
+                ReadingCalendarQuery {
+                    month: period.key.clone(),
+                    scope,
+                    tz: None,
+                },
+            )
+            .await;
+            let month_dir = calendar_dir.join(&period.key);
+            write_json(&month_dir.join(format!("{}.json", scope.as_str())), &data)?;
+        }
+        exported_month_dirs.insert(period.key.clone());
     }
 
-    cleanup_stale_json(&calendar_dir, &exported_stems, &[])?;
+    cleanup_stale_dirs(&calendar_dir, &exported_month_dirs)?;
 
     info!(
         "Exported reading calendar for {} months",
-        exported_stems.len()
+        exported_month_dirs.len()
     );
 
     Ok(())
@@ -551,7 +518,7 @@ async fn export_reading_completions(
     );
 
     let completions_dir = data_dir.join("reading").join("completions");
-    let mut exported_stems = HashSet::new();
+    let mut exported_year_dirs = HashSet::new();
 
     for period in &year_periods.periods {
         let year: i32 = match period.key.parse() {
@@ -559,30 +526,31 @@ async fn export_reading_completions(
             Err(_) => continue,
         };
 
-        // Export with scope=all, group_by=month, all includes.
-        // The StaticApiClient filters by scope and trims includes client-side.
-        let data = statistics::completions(
-            reading_data,
-            repo,
-            ReadingCompletionsQuery {
-                scope: ContentTypeFilter::All,
-                selector: CompletionsSelector::Year(year),
-                group_by: CompletionsGroupBy::Month,
-                includes: CompletionsIncludeSet::parse(Some("summary,share_assets"))
-                    .expect("known-valid include tokens"),
-                tz: None,
-            },
-        )
-        .await;
-        write_json(&completions_dir.join(format!("{}.json", period.key)), &data)?;
-        exported_stems.insert(period.key.clone());
+        for scope in SCOPES {
+            let data = statistics::completions(
+                reading_data,
+                repo,
+                ReadingCompletionsQuery {
+                    scope,
+                    selector: CompletionsSelector::Year(year),
+                    group_by: CompletionsGroupBy::Month,
+                    includes: CompletionsIncludeSet::parse(Some("summary,share_assets"))
+                        .expect("known-valid include tokens"),
+                    tz: None,
+                },
+            )
+            .await;
+            let year_dir = completions_dir.join(&period.key);
+            write_json(&year_dir.join(format!("{}.json", scope.as_str())), &data)?;
+        }
+        exported_year_dirs.insert(period.key.clone());
     }
 
-    cleanup_stale_json(&completions_dir, &exported_stems, &[])?;
+    cleanup_stale_dirs(&completions_dir, &exported_year_dirs)?;
 
     info!(
         "Exported reading completions for {} years",
-        exported_stems.len()
+        exported_year_dirs.len()
     );
 
     Ok(())
@@ -702,6 +670,29 @@ fn cleanup_stale_json(
             && !protected.contains(&stem)
         {
             fs::remove_file(&path)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Remove subdirectories from `directory` whose name is not in `valid_names`.
+fn cleanup_stale_dirs(directory: &Path, valid_names: &HashSet<String>) -> Result<()> {
+    if !directory.exists() {
+        return Ok(());
+    }
+
+    media::ensure_plain_directory(directory)?;
+
+    for entry in fs::read_dir(directory)?.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        if let Some(name) = path.file_name().and_then(|s| s.to_str())
+            && !valid_names.contains(name)
+        {
+            fs::remove_dir_all(&path)?;
         }
     }
 
