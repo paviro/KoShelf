@@ -92,9 +92,6 @@ CREATE INDEX IF NOT EXISTS idx_library_items_scope_last_open_at
 CREATE INDEX IF NOT EXISTS idx_library_items_partial_md5_checksum
     ON library_items (partial_md5_checksum);
 
-CREATE INDEX IF NOT EXISTS idx_library_annotations_item_kind
-    ON library_annotations (item_id, annotation_kind);
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_library_annotations_item_lua_index
     ON library_annotations (item_id, lua_index);
 
