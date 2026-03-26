@@ -23,6 +23,11 @@ pub struct DetailQuery {
     pub include: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PageActivityParams {
+    pub completion: Option<String>,
+}
+
 // ── Reading endpoint query params ─────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
@@ -112,6 +117,18 @@ pub(crate) fn parse_sort_order(value: Option<&str>) -> ApiResult<Option<SortOrde
 
 pub(crate) fn parse_include(value: Option<&str>) -> ApiResult<IncludeSet> {
     Ok(IncludeSet::parse(value)?)
+}
+
+pub(crate) fn parse_page_activity_completion(value: Option<&str>) -> ApiResult<Option<usize>> {
+    match value {
+        None | Some("all") => Ok(None),
+        Some(v) => v.parse::<usize>().map(Some).map_err(|_| {
+            ApiResponseError::bad_request_with_message(
+                ApiErrorCode::InvalidQuery,
+                "completion must be 'all' or a non-negative integer index",
+            )
+        }),
+    }
 }
 
 // ── Reading endpoint parsing ──────────────────────────────────────────────
@@ -556,5 +573,33 @@ mod tests {
             tz: None,
         };
         assert!(parse_reading_completions_query(&params).is_err());
+    }
+
+    // ── Page-activity completion parsing ──────────────────────────────
+
+    #[test]
+    fn parse_page_activity_completion_none_returns_none() {
+        assert_eq!(parse_page_activity_completion(None).unwrap(), None);
+    }
+
+    #[test]
+    fn parse_page_activity_completion_all_returns_none() {
+        assert_eq!(parse_page_activity_completion(Some("all")).unwrap(), None);
+    }
+
+    #[test]
+    fn parse_page_activity_completion_valid_index() {
+        assert_eq!(parse_page_activity_completion(Some("0")).unwrap(), Some(0));
+        assert_eq!(parse_page_activity_completion(Some("2")).unwrap(), Some(2));
+    }
+
+    #[test]
+    fn parse_page_activity_completion_rejects_negative() {
+        assert!(parse_page_activity_completion(Some("-1")).is_err());
+    }
+
+    #[test]
+    fn parse_page_activity_completion_rejects_non_numeric() {
+        assert!(parse_page_activity_completion(Some("abc")).is_err());
     }
 }

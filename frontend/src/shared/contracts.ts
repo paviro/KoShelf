@@ -337,8 +337,6 @@ export interface PageActivityCompletion {
     index: number;
     start_date: string;
     end_date: string;
-    reading_time_sec: number;
-    pages_read: number;
 }
 
 export interface PageActivityEvent {
@@ -357,7 +355,6 @@ export interface PageActivityData {
     pages: PageActivityPage[];
     annotations: PageActivityAnnotation[];
     completions: PageActivityCompletion[];
-    events: PageActivityEvent[];
     chapters: PageActivityChapter[];
 }
 

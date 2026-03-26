@@ -263,6 +263,46 @@ Each identifier:
 
 ---
 
+### `GET /api/items/{id}/page-activity`
+
+Returns page-level reading heatmap data for a single library item.
+
+**Path Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | string | Yes | Library item ID |
+
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `completion` | string | No | `all` | Filter by completion. `all` aggregates all readings; `0`, `1`, etc. filter by completion index |
+
+**Response:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_pages` | number | Total page count of the book |
+| `pages` | object[] | Per-page aggregated reading data |
+| `pages[].page` | number | Page number |
+| `pages[].total_duration` | number | Total reading time on this page (seconds) |
+| `pages[].read_count` | number | Number of times this page was visited |
+| `annotations` | object[] | Annotations with page numbers |
+| `annotations[].page` | number | Page number |
+| `annotations[].kind` | string | One of: `highlight`, `bookmark`, `note` |
+| `completions` | object[] | Completion records (always returned for building the selector) |
+| `completions[].index` | number | 0-based completion index |
+| `completions[].start_date` | string | ISO 8601 date |
+| `completions[].end_date` | string | ISO 8601 date |
+| `chapters` | object[] | Chapter boundary positions |
+| `chapters[].title` | string | Chapter title |
+| `chapters[].page` | number | Page number |
+
+**Status Codes:** 200, 400 (invalid completion param), 404 (item not found or no reading data)
+
+---
+
 ### `GET /api/reading/summary`
 
 Returns aggregate reading statistics for a time period.
