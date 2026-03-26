@@ -146,8 +146,10 @@ pub async fn targeted_rebuild(
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
+    let needs_stats_reload =
+        stats_changed || ingest_stats.stats_invalidated > 0 || deleted_count > 0;
 
-    if stats_changed {
+    if needs_stats_reload {
         match load_reading_data(config, repo).await {
             Ok(Some(rd)) => {
                 if let Some(store) = reading_data_store {

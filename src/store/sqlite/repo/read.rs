@@ -230,6 +230,26 @@ impl LibraryRepository {
             .collect())
     }
 
+    /// Load stats-relevant fields for a single item.
+    ///
+    /// Returns `(hidden_flow_pages, pagemap_doc_pages, has_synthetic_pagination)`,
+    /// or `None` if the item doesn't exist.  Used by ingest to detect whether
+    /// a re-parsed sidecar changed any field that feeds into statistics.
+    pub async fn load_stats_influencing_fields(
+        &self,
+        item_id: &str,
+    ) -> Result<Option<(Option<i32>, Option<i32>, bool)>> {
+        let row: Option<(Option<i32>, Option<i32>, bool)> = sqlx::query_as(
+            "SELECT hidden_flow_pages, pagemap_doc_pages, has_synthetic_pagination
+             FROM library_items WHERE id = ?1",
+        )
+        .bind(item_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to load stats fields")?;
+        Ok(row)
+    }
+
     /// Load hidden flow page counts keyed by item ID (MD5).
     ///
     /// Only returns entries where `hidden_flow_pages` is set (i.e., the user has
