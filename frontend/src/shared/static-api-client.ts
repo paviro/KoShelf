@@ -9,13 +9,10 @@ import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
     PageActivityData,
-    PageActivityEvent,
     ExportDayMetrics,
-    ExportDayMetricsByScope,
     ExportMonthMetrics,
-    ExportPeriodsByScope,
+    ExportPageActivityData,
     ExportReadingPeriods,
-    ExportReadingSummary,
     ExportSite,
     LibraryDetailData,
     LibraryListData,
@@ -29,60 +26,12 @@ import type {
     SiteData,
 } from './contracts';
 
-/** Static export JSON includes raw events for in-memory completion filtering. */
-interface ExportPageActivityData extends PageActivityData {
-    events: PageActivityEvent[];
-}
-
 function authUnavailableError(): Error {
     return new Error('Authentication is unavailable in static mode.');
 }
 
 function writeUnavailableError(): Error {
     return new Error('Write operations are unavailable in static mode.');
-}
-
-function pickScope<T>(
-    byScope: { all: T; books: T; comics: T },
-    scope: ScopeValue,
-): T {
-    return byScope[scope];
-}
-
-// ── Completions scope filter ────────────────────────────────────────────
-
-function filterCompletionsByScope(
-    data: ReadingCompletionsData,
-    scope: ScopeValue,
-): ReadingCompletionsData {
-    if (scope === 'all') return data;
-
-    const expected = scope === 'books' ? 'book' : 'comic';
-    const matchesScope = (item: { content_type?: string | null }) =>
-        item.content_type === expected;
-
-    const filteredGroups = data.groups
-        ?.map((group) => {
-            const items = group.items.filter(matchesScope);
-            return {
-                ...group,
-                items,
-                items_finished: items.length,
-                reading_time_sec: items.reduce(
-                    (sum, i) => sum + i.reading_time_sec,
-                    0,
-                ),
-            };
-        })
-        .filter((g) => g.items.length > 0);
-
-    const filteredItems = data.items?.filter(matchesScope);
-
-    return {
-        ...data,
-        groups: filteredGroups,
-        items: filteredItems,
-    };
 }
 
 // ── Date helpers ────────────────────────────────────────────────────────
@@ -173,10 +122,9 @@ export class StaticApiClient implements ApiClient {
 
         // Full-range: return the pre-computed summary.
         if (!from && !to) {
-            const exported = await this.fetchCached<ExportReadingSummary>(
-                '/data/reading/summary.json',
+            return this.fetchCached<ReadingSummaryData>(
+                `/data/reading/summary/${selectedScope}.json`,
             );
-            return pickScope(exported, selectedScope);
         }
 
         return this.computeRangedSummary(selectedScope, from, to);
@@ -200,37 +148,23 @@ export class StaticApiClient implements ApiClient {
     ): Promise<ReadingAvailablePeriodsData> {
         const selectedScope = normalizeScope(scope);
         const exported = await this.fetchCached<ExportReadingPeriods>(
-            '/data/reading/periods.json',
+            `/data/reading/periods/${selectedScope}.json`,
         );
 
         const sourceData = exported[source as keyof ExportReadingPeriods];
-        const groupData = sourceData[
+        return sourceData[
             groupBy as keyof typeof sourceData
-        ] as ExportPeriodsByScope;
-        return pickScope(groupData, selectedScope);
+        ] as ReadingAvailablePeriodsData;
     }
 
     async getReadingCalendar(
         month: string,
         scope: ScopeValue,
     ): Promise<ReadingCalendarData> {
-        const data = (await fetchJson(
-            `/data/reading/calendar/${month}.json`,
+        const selectedScope = normalizeScope(scope);
+        return (await fetchJson(
+            `/data/reading/calendar/${month}/${selectedScope}.json`,
         )) as ReadingCalendarData;
-
-        if (scope === 'all') return data;
-
-        const expected = scope === 'books' ? 'book' : 'comic';
-        const matchingRefs = new Set(
-            Object.entries(data.items)
-                .filter(([, item]) => item.content_type === expected)
-                .map(([ref]) => ref),
-        );
-
-        return {
-            ...data,
-            events: data.events.filter((e) => matchingRefs.has(e.item_ref)),
-        };
     }
 
     async getReadingCompletions(
@@ -239,10 +173,9 @@ export class StaticApiClient implements ApiClient {
     ): Promise<ReadingCompletionsData> {
         const selectedScope = normalizeScope(scope);
         const year = params.year ?? new Date().getFullYear();
-        const data = (await fetchJson(
-            `/data/reading/completions/${year}.json`,
+        return (await fetchJson(
+            `/data/reading/completions/${year}/${selectedScope}.json`,
         )) as ReadingCompletionsData;
-        return filterCompletionsByScope(data, selectedScope);
     }
 
     async getItemPageActivity(
@@ -265,40 +198,11 @@ export class StaticApiClient implements ApiClient {
         }
 
         if (completion !== undefined && completion !== 'all') {
-            const comp = exported.completions[Number(completion)];
-            if (comp) {
-                const startTime = Math.floor(
-                    new Date(comp.start_date + 'T00:00:00Z').getTime() / 1000,
-                );
-                const endTime = Math.floor(
-                    new Date(comp.end_date + 'T23:59:59Z').getTime() / 1000,
-                );
-                const pageMap = new Map<
-                    number,
-                    { total_duration: number; read_count: number }
-                >();
-                for (const ev of exported.events) {
-                    if (ev.start_time < startTime || ev.start_time > endTime)
-                        continue;
-                    const entry = pageMap.get(ev.page);
-                    if (entry) {
-                        entry.total_duration += ev.duration;
-                        entry.read_count += 1;
-                    } else {
-                        pageMap.set(ev.page, {
-                            total_duration: ev.duration,
-                            read_count: 1,
-                        });
-                    }
-                }
-                return {
-                    ...exported,
-                    pages: [...pageMap.entries()]
-                        .sort(([a], [b]) => a - b)
-                        .map(([page, stats]) => ({ page, ...stats })),
-                };
-            }
-            return { ...exported, pages: [] };
+            const pages = exported.by_completion[completion];
+            return {
+                ...exported,
+                pages: pages ?? [],
+            };
         }
 
         return exported;
@@ -351,10 +255,9 @@ export class StaticApiClient implements ApiClient {
         to?: string,
     ): Promise<ReadingSummaryData> {
         const periods = await this.fetchCached<ExportReadingPeriods>(
-            '/data/reading/periods.json',
+            `/data/reading/periods/${scope}.json`,
         );
-        const monthPeriods = pickScope(periods.reading_data.month, scope);
-        const relevantMonths = monthPeriods.periods
+        const relevantMonths = periods.reading_data.month.periods
             .map((p) => p.key)
             .filter((mk) => {
                 if (from && mk < from.substring(0, 7)) return false;
@@ -374,17 +277,16 @@ export class StaticApiClient implements ApiClient {
             let monthData: ExportMonthMetrics;
             try {
                 monthData = await this.fetchCached<ExportMonthMetrics>(
-                    `/data/reading/metrics/${mk}.json`,
+                    `/data/reading/metrics/${mk}/${scope}.json`,
                 );
             } catch {
                 continue;
             }
 
-            for (const [dayKey, byScope] of Object.entries(monthData.days)) {
+            for (const [dayKey, d] of Object.entries(monthData.days)) {
                 if (from && dayKey < from) continue;
                 if (to && dayKey > to) continue;
 
-                const d: ExportDayMetrics = byScope[scope];
                 totalTime += d.reading_time_sec;
                 totalPages += d.pages_read;
                 totalSessions += d.sessions;
@@ -398,10 +300,9 @@ export class StaticApiClient implements ApiClient {
         }
 
         // Grab heatmap_config from the full-range summary (global, not range-dependent).
-        const fullSummary = await this.fetchCached<ExportReadingSummary>(
-            '/data/reading/summary.json',
+        const fullSummary = await this.fetchCached<ReadingSummaryData>(
+            `/data/reading/summary/${scope}.json`,
         );
-        const heatmap_config = pickScope(fullSummary, scope).heatmap_config;
 
         return {
             range: {
@@ -427,7 +328,7 @@ export class StaticApiClient implements ApiClient {
                 current: { days: 0 },
                 longest: { days: 0 },
             },
-            heatmap_config,
+            heatmap_config: fullSummary.heatmap_config,
         };
     }
 
@@ -448,10 +349,9 @@ export class StaticApiClient implements ApiClient {
 
         // Determine which month files to load from the periods index.
         const periods = await this.fetchCached<ExportReadingPeriods>(
-            '/data/reading/periods.json',
+            `/data/reading/periods/${scope}.json`,
         );
-        const monthPeriods = pickScope(periods.reading_data.month, scope);
-        const monthKeys = monthPeriods.periods.map((p) => p.key);
+        const monthKeys = periods.reading_data.month.periods.map((p) => p.key);
 
         // Filter to months that overlap with the requested date range.
         const relevantMonths = monthKeys.filter((mk) => {
@@ -460,7 +360,7 @@ export class StaticApiClient implements ApiClient {
             return true;
         });
 
-        // Load month files and extract metric+scope data.
+        // Load month files and extract metric data.
         const allPoints: Array<{
             key: string;
             values: Record<string, number>;
@@ -470,24 +370,21 @@ export class StaticApiClient implements ApiClient {
             let monthData: ExportMonthMetrics;
             try {
                 monthData = await this.fetchCached<ExportMonthMetrics>(
-                    `/data/reading/metrics/${mk}.json`,
+                    `/data/reading/metrics/${mk}/${scope}.json`,
                 );
             } catch {
                 continue;
             }
 
-            for (const [dayKey, byScope] of Object.entries(monthData.days)) {
+            for (const [dayKey, dayMetrics] of Object.entries(monthData.days)) {
                 if (from && dayKey < from) continue;
                 if (to && dayKey > to) continue;
 
-                const scopeMetrics: ExportDayMetricsByScope[keyof ExportDayMetricsByScope] =
-                    byScope[scope];
                 const values: Record<string, number> = {};
                 for (const m of metricNames) {
                     values[m] =
-                        (scopeMetrics[
-                            m as keyof typeof scopeMetrics
-                        ] as number) ?? 0;
+                        (dayMetrics[m as keyof ExportDayMetrics] as number) ??
+                        0;
                 }
                 allPoints.push({ key: dayKey, values });
             }
