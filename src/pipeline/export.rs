@@ -178,6 +178,9 @@ pub async fn export_data_files(
     // items/{id}.json — per-item with all includes expanded
     export_item_details(data_dir, library_repo, reading_data, items).await?;
 
+    // items/page-activity/{id}.json — per-item page-level reading heatmap data
+    export_page_activity(data_dir, library_repo, reading_data, items).await?;
+
     info!(
         "Exported {} library items ({} detail files)",
         items.len(),
@@ -238,6 +241,36 @@ async fn export_item_details(
 
     cleanup_stale_json(&items_dir, &exported_ids, &["index", "books", "comics"])?;
 
+    Ok(())
+}
+
+// ── Page activity export ────────────────────────────────────────────────
+
+async fn export_page_activity(
+    data_dir: &Path,
+    library_repo: &LibraryRepository,
+    reading_data: Option<&ReadingData>,
+    items: &[crate::server::api::responses::library::LibraryListItem],
+) -> Result<()> {
+    let page_activity_dir = data_dir.join("items").join("page-activity");
+    let mut exported_ids = HashSet::new();
+
+    for item in items {
+        if !media::is_canonical_item_id(&item.id) {
+            continue;
+        }
+
+        if let Some(data) = library::page_activity(library_repo, &item.id, reading_data).await?
+            && data.total_pages > 0 && !data.pages.is_empty()
+        {
+            write_json(&page_activity_dir.join(format!("{}.json", item.id)), &data)?;
+            exported_ids.insert(item.id.clone());
+        }
+    }
+
+    cleanup_stale_json(&page_activity_dir, &exported_ids, &[])?;
+
+    info!("Exported page activity for {} items", exported_ids.len());
     Ok(())
 }
 
@@ -669,6 +702,7 @@ mod tests {
         "/api/site",
         "/api/items",
         "/api/items/{id}",
+        "/api/items/{id}/page-activity",
         "/api/reading/summary",
         "/api/reading/metrics",
         "/api/reading/available-periods",

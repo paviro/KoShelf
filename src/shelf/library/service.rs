@@ -56,7 +56,7 @@ pub async fn detail(
         if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
             reading_data
                 .zip(item.partial_md5_checksum.as_deref())
-                .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
+                .and_then(|(rd, md5)| super::lookup_stat_book(&rd.stats_data, md5))
         } else {
             None
         };
@@ -94,18 +94,6 @@ pub async fn detail(
         completions,
         reader_presentation,
     }))
-}
-
-/// Case-insensitive lookup into `stats_by_md5`.
-fn lookup_stat_book<'a>(
-    stats_data: &'a crate::source::koreader::types::StatisticsData,
-    md5: &str,
-) -> Option<&'a StatBook> {
-    stats_data
-        .stats_by_md5
-        .get(md5)
-        .or_else(|| stats_data.stats_by_md5.get(&md5.to_lowercase()))
-        .or_else(|| stats_data.stats_by_md5.get(&md5.to_uppercase()))
 }
 
 // ── Statistics mapping ──────────────────────────────────────────────────

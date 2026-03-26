@@ -76,6 +76,23 @@ pub(crate) async fn item_detail(
     Ok(Json(ApiResponse::new(payload)))
 }
 
+pub(crate) async fn item_page_activity(
+    State(state): State<ServerState>,
+    Path(id): Path<String>,
+) -> ApiResult<impl IntoResponse> {
+    let reading_data = state.reading_data_store.get();
+
+    let payload = library::page_activity(&state.library_repo, &id, reading_data.as_deref())
+        .await
+        .map_err(|e| {
+            warn!("Failed to build page-activity for item {}: {}", id, e);
+            ApiResponseError::internal_server_error()
+        })?
+        .ok_or_else(ApiResponseError::not_found)?;
+
+    Ok(Json(ApiResponse::new(payload)))
+}
+
 // ── Write handlers (requires enable_writeback) ───────────────────────────
 
 /// Three-state patch field: absent (don't change), null (clear), or value (set).

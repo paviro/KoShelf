@@ -1,6 +1,7 @@
 export const LIBRARY_DETAIL_SECTION_KEYS = [
     'book-overview',
     'reading-stats',
+    'page-activity',
     'review',
     'highlights',
     'bookmarks',
@@ -18,6 +19,7 @@ export type LibraryDetailSectionVisibilityState = Record<
 const DEFAULT_DETAIL_SECTION_STATE: LibraryDetailSectionVisibilityState = {
     'book-overview': true,
     'reading-stats': false,
+    'page-activity': false,
     review: true,
     highlights: true,
     bookmarks: true,
