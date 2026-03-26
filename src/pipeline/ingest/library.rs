@@ -42,6 +42,7 @@ pub struct IngestStats {
     pub skipped_duplicates: u64,
     pub skipped_unread: u64,
     pub errors: u64,
+    pub stats_invalidated: u64,
 }
 
 impl IngestStats {
@@ -51,6 +52,7 @@ impl IngestStats {
         self.skipped_duplicates += other.skipped_duplicates;
         self.skipped_unread += other.skipped_unread;
         self.errors += other.errors;
+        self.stats_invalidated += other.stats_invalidated;
     }
 }
 
@@ -427,6 +429,8 @@ async fn process_single_item(
         format,
     };
 
+    let stats_fields_changed = needs_stats_reload(&item, repo).await;
+
     if let Err(e) =
         upsert_single_item(repo, &item, metadata_path.as_deref(), &config.time_config).await
     {
@@ -436,6 +440,9 @@ async fn process_single_item(
     }
 
     stats.upserted = 1;
+    if stats_fields_changed {
+        stats.stats_invalidated = 1;
+    }
 
     if let Some(cover_data) = cover_data {
         let cover_path = covers_dir.join(format!("{}.webp", item_id));
@@ -762,4 +769,29 @@ pub async fn update_library(
     }
 
     Ok(result)
+}
+
+/// Check whether an ingested item requires a statistics reload.
+///
+/// A reload is needed when:
+/// - The item is new (its MD5 changes the `filter_to_library` set)
+/// - Any stats-influencing field changed (`hidden_flow_pages`,
+///   `pagemap_doc_pages`, or `has_synthetic_pagination`)
+async fn needs_stats_reload(item: &LibraryItem, repo: &LibraryRepository) -> bool {
+    let old_fields = match repo.load_stats_influencing_fields(&item.id).await {
+        Ok(Some(fields)) => fields,
+        // New item (changes the library filter set) or DB error.
+        Ok(None) | Err(_) => return true,
+    };
+
+    let new_fields = (
+        item.koreader_metadata
+            .as_ref()
+            .and_then(|m| m.hidden_flow_pages())
+            .map(|p| p as i32),
+        item.stable_display_page_total().map(|p| p as i32),
+        item.synthetic_scaling_page_total().is_some(),
+    );
+
+    old_fields != new_fields
 }
