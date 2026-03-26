@@ -22,6 +22,7 @@ Start the web server. Serves the embedded React app at `/` with API endpoints un
 
 - `-p, --port`: Port for web server (default: 3000)
 - `--enable-auth`: Enable password authentication
+- `--enable-writeback`: Enable metadata writeback — allows editing annotations, review notes, ratings, and reading status from the UI, with changes written back to KOReader sidecar files
 - `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries for forwarded client IP/proto resolution
 
 Requires `--data-path` for persistent data storage.
@@ -112,6 +113,7 @@ Common environment variables:
 - `KOSHELF_INCLUDE_FILES`
 - `KOSHELF_DATA_PATH`
 - `KOSHELF_ENABLE_AUTH`
+- `KOSHELF_ENABLE_WRITEBACK`
 - `KOSHELF_TRUSTED_PROXIES`
 - `KOSHELF_TITLE`
 - `KOSHELF_LANGUAGE`
@@ -134,6 +136,9 @@ koshelf serve -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path 
 
 # Start web server with authentication enabled (password generated on first run)
 koshelf serve -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data --enable-auth
+
+# Start web server with writeback enabled (edit annotations and metadata from the UI)
+koshelf serve -i ~/Library -s ~/KOReaderSettings/statistics.sqlite3 --data-path ~/koshelf-data --enable-writeback
 
 # ── Export mode ───────────────────────────────────────────────
 

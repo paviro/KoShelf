@@ -41,6 +41,7 @@ Error responses use a separate shape:
 | `password_too_short` | 400 | New password does not meet minimum length |
 | `unauthorized` | 401 | Missing, invalid, or expired session |
 | `rate_limited` | 429 | Too many authentication attempts |
+| `conflict` | 409 | Metadata file was modified externally; re-fetch and retry |
 | `not_found` | 404 | Requested resource does not exist |
 | `internal_server_error` | 500 | Server-side error |
 
@@ -89,7 +90,8 @@ Returns site metadata and capabilities.
     "has_comics": false,
     "has_reading_data": true,
     "has_files": false,
-    "auth_enabled": true
+    "auth_enabled": true,
+    "has_writeback": false
   }
 }
 ```
@@ -103,6 +105,7 @@ Capability flags:
 | `has_reading_data` | boolean | Reading statistics data is available |
 | `has_files` | boolean | Original item files are available at `/assets/files/{id}.{format}` |
 | `auth_enabled` | boolean | Serve-mode authentication is enabled |
+| `has_writeback` | boolean | Metadata writeback is enabled (`--enable-writeback`) |
 
 ---
 
@@ -190,6 +193,7 @@ Returns detailed information for a single library item.
 | `bookmarks` | Include bookmark annotations |
 | `statistics` | Include reading statistics |
 | `completions` | Include completion history |
+| `reader_presentation` | Include KOReader presentation settings (font, margins, etc.) |
 | `all` | Include everything (supersedes other tokens) |
 
 Unknown tokens return a 400 error. Duplicates and extra whitespace are ignored.
@@ -209,6 +213,7 @@ The `item` object extends the list item with additional fields:
 | `search_base_path` | string | Base path for external search links |
 | `subjects` | string[] | Genres / subjects |
 | `identifiers` | object[] | External identifiers (see below) |
+| `has_metadata` | boolean | Whether a KOReader sidecar file exists for this item |
 
 Each identifier:
 
@@ -225,11 +230,17 @@ Each identifier:
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `id` | string | Annotation identifier |
 | `chapter` | string? | Chapter title |
-| `datetime` | string? | Timestamp |
+| `datetime` | string? | Creation timestamp |
+| `datetime_updated` | string? | Last modification timestamp |
 | `pageno` | number? | Page number |
 | `text` | string? | Highlighted text |
 | `note` | string? | User note |
+| `pos0` | string? | Start position (CFI or XPointer) |
+| `pos1` | string? | End position (CFI or XPointer) |
+| `color` | string? | Highlight color name |
+| `drawer` | string? | Highlight style (e.g. `lighten`, `underscore`, `strikeout`, `invert`) |
 
 `statistics`:
 
@@ -245,6 +256,21 @@ Each identifier:
 | `session_stats.longest_session_duration_sec` | number? | Longest session length |
 | `session_stats.last_read_date` | string? | ISO 8601 date |
 | `session_stats.reading_speed` | number? | Pages per hour |
+
+`reader_presentation`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `font_face` | string? | Font name |
+| `font_size_pt` | number? | Font size in points |
+| `line_spacing_percentage` | number? | Line spacing percentage |
+| `horizontal_margins` | number[]? | Left and right margins `[left, right]` |
+| `top_margin` | number? | Top margin |
+| `bottom_margin` | number? | Bottom margin |
+| `embedded_fonts` | boolean? | Whether embedded fonts are used |
+| `hyphenation` | boolean? | Whether hyphenation is enabled |
+| `floating_punctuation` | boolean? | Whether floating punctuation is enabled |
+| `word_spacing` | number[]? | Word spacing range `[min, max]` |
 
 `completions`:
 
