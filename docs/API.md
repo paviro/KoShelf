@@ -194,6 +194,7 @@ Returns detailed information for a single library item.
 | `statistics` | Include reading statistics |
 | `completions` | Include completion history |
 | `reader_presentation` | Include KOReader presentation settings (font, margins, etc.) |
+| `chapters` | Include table of contents entries |
 | `all` | Include everything (supersedes other tokens) |
 
 Unknown tokens return a 400 error. Duplicates and extra whitespace are ignored.
@@ -285,6 +286,13 @@ Each identifier:
 | `total_completions` | number | Total times completed |
 | `last_completion_date` | string? | ISO 8601 date |
 
+`chapters`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Chapter title |
+| `position` | number | Fractional position within the book (0.0–1.0) |
+
 **Status Codes:** 200, 400 (invalid include), 404 (item not found)
 
 ---
@@ -321,9 +329,6 @@ Returns page-level reading heatmap data for a single library item.
 | `completions[].index` | number | 0-based completion index |
 | `completions[].start_date` | string | ISO 8601 date |
 | `completions[].end_date` | string | ISO 8601 date |
-| `chapters` | object[] | Chapter boundary positions |
-| `chapters[].title` | string | Chapter title |
-| `chapters[].page` | number | Page number |
 
 **Status Codes:** 200, 400 (invalid completion param), 404 (item not found or no reading data)
 
