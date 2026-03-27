@@ -29,7 +29,7 @@ pub struct RebuildResult {
 }
 
 /// Targeted rebuild: process only changed paths using the library DB.
-pub async fn targeted_rebuild(
+pub async fn rebuild(
     accumulated_paths: HashSet<PathBuf>,
     config: &SiteConfig,
     repo: &LibraryRepository,
