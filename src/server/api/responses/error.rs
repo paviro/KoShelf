@@ -5,7 +5,6 @@ use serde_json::Value;
 #[serde(rename_all = "snake_case")]
 pub enum ApiErrorCode {
     InvalidQuery,
-    InvalidWeekKey,
     InvalidMonthKey,
     InvalidYear,
     InvalidCredentials,
@@ -21,7 +20,6 @@ impl ApiErrorCode {
     pub fn default_message(self) -> &'static str {
         match self {
             Self::InvalidQuery => "invalid query parameter",
-            Self::InvalidWeekKey => "week_key must be a valid Monday date in YYYY-MM-DD format",
             Self::InvalidMonthKey => "month_key must be in YYYY-MM format",
             Self::InvalidYear => "year must be a valid YYYY value",
             Self::InvalidCredentials => "invalid credentials",

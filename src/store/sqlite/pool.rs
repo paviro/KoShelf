@@ -8,17 +8,16 @@ use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, S
 pub const TABLE_LIBRARY_ITEMS: &str = "library_items";
 pub const TABLE_LIBRARY_ANNOTATIONS: &str = "library_annotations";
 pub const TABLE_LIBRARY_ITEM_FINGERPRINTS: &str = "library_item_fingerprints";
-pub const TABLE_LIBRARY_COLLISION_DIAGNOSTICS: &str = "library_collision_diagnostics";
 pub const TABLE_SHARE_IMAGE_FINGERPRINTS: &str = "share_image_fingerprints";
 
 pub const LIBRARY_DB_REQUIRED_TABLES: &[&str] = &[
     TABLE_LIBRARY_ITEMS,
     TABLE_LIBRARY_ANNOTATIONS,
     TABLE_LIBRARY_ITEM_FINGERPRINTS,
-    TABLE_LIBRARY_COLLISION_DIAGNOSTICS,
     TABLE_SHARE_IMAGE_FINGERPRINTS,
 ];
 
+#[cfg(test)]
 pub const LIBRARY_DB_REQUIRED_INDEXES: &[&str] = &[
     "idx_library_items_scope_status",
     "idx_library_items_scope_progress",
@@ -29,7 +28,6 @@ pub const LIBRARY_DB_REQUIRED_INDEXES: &[&str] = &[
     "idx_library_annotations_item_lua_index",
     "idx_library_item_fingerprints_book_path",
     "idx_library_item_fingerprints_metadata_path",
-    "idx_library_collision_diagnostics_winner_item_id",
 ];
 
 /// Open a SQLite connection pool for the library cache at the given file path.
@@ -67,6 +65,7 @@ pub async fn open_koshelf_pool(path: &Path) -> Result<SqlitePool> {
 /// Open an in-memory SQLite pool for ephemeral / test usage.
 ///
 /// Uses a single connection so the in-memory database is shared across queries.
+#[cfg(test)]
 pub async fn open_library_pool_in_memory() -> Result<SqlitePool> {
     let options = SqliteConnectOptions::from_str("sqlite::memory:")
         .context("Failed to parse in-memory SQLite URL")?

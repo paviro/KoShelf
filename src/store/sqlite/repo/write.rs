@@ -3,9 +3,7 @@
 use anyhow::{Context, Result};
 
 use crate::store::sqlite::repo::LibraryRepository;
-use crate::store::sqlite::repo::rows::{
-    AnnotationRow, CollisionDiagnosticRow, FingerprintRow, LibraryItemRow,
-};
+use crate::store::sqlite::repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
 
 impl LibraryRepository {
     pub async fn upsert_item(&self, item: &LibraryItemRow) -> Result<()> {
@@ -175,42 +173,12 @@ impl LibraryRepository {
         Ok(())
     }
 
-    pub async fn upsert_collision_diagnostic(&self, diag: &CollisionDiagnosticRow) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO library_collision_diagnostics
-                (canonical_id, file_path, winner_item_id, reason, detected_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)
-             ON CONFLICT(canonical_id, file_path) DO UPDATE SET
-                winner_item_id = excluded.winner_item_id,
-                reason = excluded.reason,
-                detected_at = excluded.detected_at",
-        )
-        .bind(&diag.canonical_id)
-        .bind(&diag.file_path)
-        .bind(&diag.winner_item_id)
-        .bind(&diag.reason)
-        .bind(&diag.detected_at)
-        .execute(&self.pool)
-        .await
-        .context("Failed to upsert collision diagnostic")?;
-        Ok(())
-    }
-
     pub async fn delete_item(&self, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM library_items WHERE id = ?1")
             .bind(id)
             .execute(&self.pool)
             .await
             .context("Failed to delete library item")?;
-        Ok(())
-    }
-
-    /// Remove all collision diagnostics.
-    pub async fn clear_collision_diagnostics(&self) -> Result<()> {
-        sqlx::query("DELETE FROM library_collision_diagnostics")
-            .execute(&self.pool)
-            .await
-            .context("Failed to clear collision diagnostics")?;
         Ok(())
     }
 
@@ -372,7 +340,6 @@ impl LibraryRepository {
 #[cfg(test)]
 mod tests {
     use crate::server::api::responses::library::LibraryStatus;
-    use crate::store::sqlite::repo::rows::CollisionDiagnosticRow;
     use crate::store::sqlite::repo::tests::{
         sample_annotation, sample_fingerprint, sample_item, test_repo,
     };
@@ -498,23 +465,6 @@ mod tests {
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].item_id, "fff");
         assert_eq!(all[0].book_size_bytes, 1024);
-    }
-
-    #[tokio::test]
-    async fn upsert_collision_diagnostic() {
-        let repo = test_repo().await;
-        repo.upsert_item(&sample_item("winner")).await.unwrap();
-
-        let diag = CollisionDiagnosticRow {
-            canonical_id: "shared-md5".to_string(),
-            file_path: "/books/loser.epub".to_string(),
-            winner_item_id: "winner".to_string(),
-            reason: "earlier path".to_string(),
-            detected_at: "2026-01-01T00:00:00Z".to_string(),
-        };
-        repo.upsert_collision_diagnostic(&diag)
-            .await
-            .expect("upsert diagnostic should work");
     }
 
     #[tokio::test]

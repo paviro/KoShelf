@@ -20,14 +20,6 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Summary of a rebuild pass, returned to the caller for logging/observability.
-pub struct RebuildResult {
-    pub upserted: u64,
-    pub deleted: u64,
-    pub stats_reloaded: bool,
-    pub published_revision: Option<u64>,
-}
-
 /// Targeted rebuild: process only changed paths using the library DB.
 pub async fn rebuild(
     accumulated_paths: HashSet<PathBuf>,
@@ -36,7 +28,7 @@ pub async fn rebuild(
     site_store: Option<&SharedSiteStore>,
     reading_data_store: Option<&SharedReadingDataStore>,
     update_notifier: Option<&UpdateNotifier>,
-) -> Result<RebuildResult> {
+) -> Result<()> {
     info!(
         "Starting targeted rebuild for {} changed paths",
         accumulated_paths.len()
@@ -211,13 +203,10 @@ pub async fn rebuild(
 
     // ── 6. SSE broadcast (only when something actually changed) ────
     let data_changed = ingest_stats.upserted > 0 || deleted_count > 0 || stats_reloaded;
-    let published_revision = if data_changed && let Some(notifier) = update_notifier {
+    if data_changed && let Some(notifier) = update_notifier {
         let update = notifier.publish(generated_at.clone());
         info!("Published data_changed event, revision {}", update.revision);
-        Some(update.revision)
-    } else {
-        None
-    };
+    }
 
     // ── 7. Static data re-export ────────────────────────────────────
     if !config.is_internal_server {
@@ -244,12 +233,7 @@ pub async fn rebuild(
 
     info!("Targeted rebuild completed successfully");
 
-    Ok(RebuildResult {
-        upserted: ingest_stats.upserted,
-        deleted: deleted_count,
-        stats_reloaded,
-        published_revision,
-    })
+    Ok(())
 }
 
 // ── Fingerprint helpers ──────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -72,41 +72,6 @@ impl ContentTypeFilter {
 impl fmt::Display for ContentTypeFilter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct WeekKey(String);
-
-impl WeekKey {
-    pub fn parse(value: &str) -> Result<Self, ApiErrorCode> {
-        let date = NaiveDate::parse_from_str(value, "%Y-%m-%d")
-            .map_err(|_| ApiErrorCode::InvalidWeekKey)?;
-
-        if date.weekday() != Weekday::Mon {
-            return Err(ApiErrorCode::InvalidWeekKey);
-        }
-
-        Ok(Self(value.to_string()))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Display for WeekKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for WeekKey {
-    type Err = ApiErrorCode;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse(s)
     }
 }
 
@@ -191,7 +156,7 @@ impl FromStr for YearKey {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContentTypeFilter, MonthKey, WeekKey, YearKey};
+    use super::{ContentTypeFilter, MonthKey, YearKey};
 
     #[test]
     fn content_type_filter_serializes_as_lowercase_values() {
@@ -210,13 +175,6 @@ mod tests {
                 .expect("content type filter should serialize"),
             "\"comics\""
         );
-    }
-
-    #[test]
-    fn week_key_accepts_monday_and_rejects_other_days() {
-        assert!(WeekKey::parse("2026-03-02").is_ok()); // Monday
-        assert!(WeekKey::parse("2026-03-03").is_err()); // Tuesday
-        assert!(WeekKey::parse("2026-13-01").is_err());
     }
 
     #[test]
