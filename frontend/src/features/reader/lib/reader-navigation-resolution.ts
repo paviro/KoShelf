@@ -43,7 +43,7 @@ function flattenTocEntries(
     return result;
 }
 
-export function resolveChapterHref(
+function resolveChapterHref(
     toc: TocLookupEntry[],
     chapter: string,
 ): string | null {
@@ -80,7 +80,7 @@ export function resolveChapterHref(
     return fuzzy?.href ?? null;
 }
 
-export function resolvePageHref(
+function resolvePageHref(
     pageList: TocLookupEntry[],
     pageno: number,
 ): string | null {

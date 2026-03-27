@@ -13,21 +13,18 @@ import {
     type StatisticsScope,
 } from '../api/statistics-data';
 
-export function statisticsIndexQueryKey(scope: StatisticsScope) {
+function statisticsIndexQueryKey(scope: StatisticsScope) {
     return ['statistics-index', scope] as const;
 }
 
-export function statisticsWeekQueryKey(
+function statisticsWeekQueryKey(
     scope: StatisticsScope,
     weekKey: string | null,
 ) {
     return ['statistics-week', scope, weekKey] as const;
 }
 
-export function statisticsYearQueryKey(
-    scope: StatisticsScope,
-    year: number | null,
-) {
+function statisticsYearQueryKey(scope: StatisticsScope, year: number | null) {
     return ['statistics-year', scope, year] as const;
 }
 
@@ -83,7 +80,7 @@ export function useStatisticsYearQuery(
     });
 }
 
-export function statisticsYearlySectionQueryKey(
+function statisticsYearlySectionQueryKey(
     scope: StatisticsScope,
     year: number | null,
 ) {

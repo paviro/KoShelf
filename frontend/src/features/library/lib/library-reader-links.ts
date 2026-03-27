@@ -1,4 +1,4 @@
-export type AnnotationReaderTarget = 'highlight' | 'bookmark';
+type AnnotationReaderTarget = 'highlight' | 'bookmark';
 
 export function annotationReaderHref(
     readerBaseHref: string | null | undefined,

@@ -74,10 +74,6 @@ regex = "1.12.2"
 resvg = "0.47"
 base64 = "0.22"
 include_dir = "0.7.4"
-unic-langid = "0.9"
-fluent = "0.17"
-fluent-bundle = "0.16"
-intl-memoizer = "0.5"
 argon2 = "0.5"
 rand = "0.10"
 rusty_paseto = "0.9"
@@ -98,8 +94,6 @@ ureq = "3.3.0"
 
 [dev-dependencies]
 ureq = { version = "3.3.0", features = ["json"] }
-rayon = "1.11.0"
-fluent-syntax = "0.12"
 
 [profile.release]
 opt-level = 3

@@ -5,7 +5,7 @@ import {
     type MainRouteId,
 } from '../../../app/routes/route-registry';
 
-export type DetailReturnState = {
+type DetailReturnState = {
     detailReturnRouteId?: MainRouteId;
     detailReturnSearch?: string;
 };

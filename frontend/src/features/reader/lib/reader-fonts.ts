@@ -224,7 +224,7 @@ async function loadFontFaceCss(entries: FontEntry[]): Promise<string> {
     return fontFaceCssPromise;
 }
 
-export type ResolvedReaderFont = {
+type ResolvedReaderFont = {
     requestedFamily: string;
     fallbackFamily: string;
     fontFamilyCssValue: string;

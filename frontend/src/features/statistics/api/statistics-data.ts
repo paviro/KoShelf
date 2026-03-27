@@ -38,7 +38,7 @@ export interface StatisticsIndexWeek {
     end_date: string;
 }
 
-export interface StatisticsIndexResponse {
+interface StatisticsIndexResponse {
     available_years: number[];
     available_weeks: StatisticsIndexWeek[];
     overview: ReadingOverview;
@@ -140,7 +140,7 @@ export async function loadStatisticsYear(
     };
 }
 
-export interface StatisticsYearlySectionResponse {
+interface StatisticsYearlySectionResponse {
     year: number;
     monthlyStats: MonthlyReadStats[];
     yearlySummary: YearlySummaryStats;

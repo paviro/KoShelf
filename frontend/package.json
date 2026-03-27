@@ -42,7 +42,6 @@
         "@tailwindcss/postcss": "^4.2.2",
         "@tailwindcss/typography": "^0.5.19",
         "@testing-library/jest-dom": "^6.9.1",
-        "@testing-library/react": "^16.3.2",
         "@types/event-calendar__core": "^5.0.0",
         "@types/node": "^25.5.0",
         "@types/react": "^19.2.14",

@@ -138,7 +138,8 @@ export function LibraryAnnotationCard({
         DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
 
     const hasWriteCapabilities =
-        showEditingControls && (onSaveNote || onColorChange || onDrawerChange || onDelete);
+        showEditingControls &&
+        (onSaveNote || onColorChange || onDrawerChange || onDelete);
     const showToolbar = hasWriteCapabilities && !editingNote;
 
     const stopEditingNote = () => {

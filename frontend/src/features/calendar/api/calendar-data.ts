@@ -5,8 +5,6 @@ import type {
     ReadingCalendarEvent,
 } from '../../../shared/contracts';
 
-export type CalendarContentType = 'book' | 'comic';
-
 export type CalendarEventResponse = ReadingCalendarEvent;
 
 export type CalendarItemResponse = CalendarItemRef;
@@ -25,7 +23,7 @@ export interface CalendarMonthResponse {
     stats: CalendarScopedMonthlyStats;
 }
 
-export interface CalendarMonthsResponse {
+interface CalendarMonthsResponse {
     months: string[];
 }
 

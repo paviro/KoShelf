@@ -15,12 +15,12 @@ export type {
     CompletionsSummary,
 };
 
-export interface RecapIndexResponse {
+interface RecapIndexResponse {
     available_years: number[];
     latest_year?: number | null;
 }
 
-export interface RecapYearResponse {
+interface RecapYearResponse {
     year: number;
     summary: CompletionsSummary | null;
     months: CompletionGroup[];

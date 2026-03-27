@@ -41,7 +41,7 @@ export async function sectionDocumentAt(
     return load;
 }
 
-export function resolveCfiFromParsedPositionsInDocument(
+function resolveCfiFromParsedPositionsInDocument(
     view: ReaderTargetingView,
     start: KoReaderPosition,
     end: KoReaderPosition | null,

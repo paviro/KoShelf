@@ -351,32 +351,6 @@ select-month = Seleccionar mes
 # -----------------------------------
 #           Time & Dates
 # -----------------------------------
-january = Enero
-    .short = Ene
-february = Febrero
-    .short = Feb
-march = Marzo
-    .short = Mar
-april = Abril
-    .short = Abr
-may = Mayo
-    .short = May
-june = Junio
-    .short = Jun
-july = Julio
-    .short = Jul
-august = Agosto
-    .short = Ago
-september = Septiembre
-    .short = Sep
-october = Octubre
-    .short = Oct
-november = Noviembre
-    .short = Nov
-december = Diciembre
-    .short = Dic
-
-# Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = Lun
     .tue = Mar
@@ -386,7 +360,6 @@ weekday =
     .sat = Sáb
     .sun = Dom
 
-# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
     .w = sem
     .d = d

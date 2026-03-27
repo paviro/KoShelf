@@ -11,7 +11,7 @@ export const LIBRARY_DETAIL_SECTION_KEYS = [
 export type LibraryDetailSectionKey =
     (typeof LIBRARY_DETAIL_SECTION_KEYS)[number];
 
-export type LibraryDetailSectionVisibilityState = Record<
+type LibraryDetailSectionVisibilityState = Record<
     LibraryDetailSectionKey,
     boolean
 >;

@@ -4,7 +4,7 @@ import {
 } from '../../../shared/lib/state/route-state-storage';
 import type { CompletionGroup, RecapScope } from '../api/recap-data';
 
-export type RecapViewState = {
+type RecapViewState = {
     scope: RecapScope;
     year: number | null;
 };
@@ -22,7 +22,7 @@ function normalizeRecapYear(value: unknown): number | null {
     return rounded;
 }
 
-export function normalizeRecapScope(scopeParam: unknown): RecapScope {
+function normalizeRecapScope(scopeParam: unknown): RecapScope {
     if (scopeParam === 'books' || scopeParam === 'comics') {
         return scopeParam;
     }
@@ -30,7 +30,7 @@ export function normalizeRecapScope(scopeParam: unknown): RecapScope {
     return 'all';
 }
 
-export function readStoredRecapViewState(): RecapViewState {
+function readStoredRecapViewState(): RecapViewState {
     const persisted = readRouteState('recap', 'session');
     return {
         scope: normalizeRecapScope(persisted.scope),

@@ -381,32 +381,6 @@ select-month = Вибрати місяць
 # -----------------------------------
 #           Time & Dates
 # -----------------------------------
-january = Січень
-    .short = Січ
-february = Лютий
-    .short = Лют
-march = Березень
-    .short = Бер
-april = Квітень
-    .short = Кві
-may = Травень
-    .short = Тра
-june = Червень
-    .short = Чер
-july = Липень
-    .short = Лип
-august = Серпень
-    .short = Сер
-september = Вересень
-    .short = Вер
-october = Жовтень
-    .short = Жов
-november = Листопад
-    .short = Лис
-december = Грудень
-    .short = Гру
-
-# Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = Пн
     .tue = Вт
@@ -416,7 +390,6 @@ weekday =
     .sat = Сб
     .sun = Нд
 
-# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
     .w = тиж
     .d = дн

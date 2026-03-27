@@ -129,7 +129,7 @@ export function resolveMonthlyStats(
     return monthData.stats.all;
 }
 
-export type CalendarViewState = {
+type CalendarViewState = {
     scope: ScopeValue;
     monthKey: string | null;
 };

@@ -41,7 +41,7 @@ export type SupportedLanguageOption = {
     dialect: string | null;
 };
 
-export type RegionOption = {
+type RegionOption = {
     code: string;
     label: string;
 };
@@ -458,7 +458,7 @@ export async function getSupportedLanguageOptions(): Promise<
         .sort((left, right) => left.code.localeCompare(right.code));
 }
 
-export function getLikelyRegionCodes(
+function getLikelyRegionCodes(
     languageCode: string,
     preferredDefaultRegion?: string | null,
 ): string[] {

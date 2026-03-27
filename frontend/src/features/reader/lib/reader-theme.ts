@@ -10,18 +10,18 @@ export function toFiniteNonNegativeNumber(value: unknown): number | null {
     return value;
 }
 
-export const READER_LAYOUT_SETTINGS = {
+const READER_LAYOUT_SETTINGS = {
     gap: '4.5%',
     maxInlineSize: '840px',
 } as const;
 
 export const DEFAULT_READER_FONT_SIZE_PT = 20;
 export const DEFAULT_READER_LINE_SPACING = 1.3;
-export const DEFAULT_READER_LEFT_MARGIN = 12;
-export const DEFAULT_READER_RIGHT_MARGIN = 12;
+const DEFAULT_READER_LEFT_MARGIN = 12;
+const DEFAULT_READER_RIGHT_MARGIN = 12;
 export const DEFAULT_READER_TOP_MARGIN = 20;
 export const DEFAULT_READER_BOTTOM_MARGIN = 20;
-export const DEFAULT_READER_WORD_SPACING_PERCENT = 100;
+const DEFAULT_READER_WORD_SPACING_PERCENT = 100;
 
 const CSS_ROOT_FONT_SIZE_PX = 16;
 const KOREADER_TO_BROWSER_FONT_SCALE = 0.95;
@@ -282,7 +282,7 @@ ${fontOverrideStyles}
 `;
 }
 
-export function buildReaderThemeStyles(isDarkMode: boolean): string {
+function buildReaderThemeStyles(isDarkMode: boolean): string {
     const colors = isDarkMode
         ? READER_THEME_COLORS.dark
         : READER_THEME_COLORS.light;

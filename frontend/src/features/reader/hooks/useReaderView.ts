@@ -41,11 +41,11 @@ import type {
 
 const READER_POSITION_KEY_PREFIX = 'reader_position_';
 
-export type ReaderActiveNote = {
+type ReaderActiveNote = {
     note: string;
 };
 
-export type UseReaderViewResult = {
+type UseReaderViewResult = {
     containerRef: RefObject<HTMLDivElement | null>;
     loading: boolean;
     error: unknown | null;

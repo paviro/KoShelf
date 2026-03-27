@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export interface TiltOptions {
+interface TiltOptions {
     selector: string;
     maxRotation?: number;
     transitionDuration?: number;
@@ -235,15 +235,6 @@ function initTilt(options: TiltOptions): Cleanup {
     return () => {
         cleanupHandlers.forEach((cleanup) => cleanup());
     };
-}
-
-export function useTiltEffect(options: TiltOptions, refreshKey: string): void {
-    useEffect(() => {
-        const teardownTilt = initTilt(options);
-        return () => {
-            teardownTilt();
-        };
-    }, [options, refreshKey]);
 }
 
 export function useBookCardTiltEffect(refreshKey: string): void {

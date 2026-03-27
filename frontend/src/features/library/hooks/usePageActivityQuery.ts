@@ -3,10 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../../shared/api';
 import type { PageActivityData } from '../../../shared/contracts';
 
-export function pageActivityQueryKey(
-    id: string | undefined,
-    completion?: string,
-) {
+function pageActivityQueryKey(id: string | undefined, completion?: string) {
     return ['page-activity', id, completion ?? 'all'] as const;
 }
 

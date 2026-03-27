@@ -12,26 +12,26 @@ use crate::shelf::statistics::queries::{
 // ── Query params ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
-pub struct ScopeQuery {
+pub(crate) struct ScopeQuery {
     pub scope: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DetailQuery {
+pub(crate) struct DetailQuery {
     pub include: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PageActivityParams {
+pub(crate) struct PageActivityParams {
     pub completion: Option<String>,
 }
 
 // ── Reading endpoint query params ─────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
-pub struct ReadingSummaryParams {
+pub(crate) struct ReadingSummaryParams {
     pub scope: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
@@ -39,7 +39,7 @@ pub struct ReadingSummaryParams {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReadingMetricsParams {
+pub(crate) struct ReadingMetricsParams {
     pub scope: Option<String>,
     pub metric: Option<String>,
     pub group_by: Option<String>,
@@ -49,7 +49,7 @@ pub struct ReadingMetricsParams {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReadingAvailablePeriodsParams {
+pub(crate) struct ReadingAvailablePeriodsParams {
     pub scope: Option<String>,
     pub source: Option<String>,
     pub group_by: Option<String>,
@@ -59,14 +59,14 @@ pub struct ReadingAvailablePeriodsParams {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReadingCalendarParams {
+pub(crate) struct ReadingCalendarParams {
     pub month: Option<String>,
     pub scope: Option<String>,
     pub tz: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ReadingCompletionsParams {
+pub(crate) struct ReadingCompletionsParams {
     pub scope: Option<String>,
     pub year: Option<String>,
     pub from: Option<String>,

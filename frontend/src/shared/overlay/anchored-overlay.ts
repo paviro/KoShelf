@@ -1,6 +1,6 @@
-export type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
+type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
 
-export type OverlayPositioningOptions = {
+type OverlayPositioningOptions = {
     padding?: number;
     gap?: number;
     arrowSize?: number;
@@ -182,7 +182,7 @@ export function computeOverlayPosition(
     };
 }
 
-export type AnchoredOverlayOptions = OverlayPositioningOptions & {
+type AnchoredOverlayOptions = OverlayPositioningOptions & {
     className: string;
     role?: string;
     hideClassName?: string;
@@ -194,7 +194,7 @@ export type AnchoredOverlayOptions = OverlayPositioningOptions & {
     onVisibilityChange?: (visible: boolean, anchor: HTMLElement | null) => void;
 };
 
-export type AnchoredOverlayRuntimeOptions = Pick<
+type AnchoredOverlayRuntimeOptions = Pick<
     AnchoredOverlayOptions,
     'padding' | 'gap' | 'arrowSize' | 'placementOrder' | 'maxWidthPadding'
 >;
