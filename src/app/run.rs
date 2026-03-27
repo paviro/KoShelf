@@ -6,7 +6,7 @@ use crate::pipeline::export::{ExportConfig, export_data_files};
 use crate::pipeline::frontend;
 use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
-use crate::pipeline::recap::generate_recap_share_images;
+use crate::pipeline::recap::regenerate_share_images;
 use crate::pipeline::watcher::FileWatcher;
 use crate::server::api::responses::site::{PasswordPolicy, SiteCapabilities, SiteData};
 use crate::server::auth::AuthState;
@@ -226,13 +226,13 @@ async fn initialize_pipeline(
 
     // ── 5. Generate recap images ─────────────────────────────────────
     if let Some(ref rd) = reading_data {
-        generate_recap_share_images(
+        regenerate_share_images(
             &rd.stats_data,
             &repo,
             &rd.page_scaling,
             &media_dirs.recap_dir,
-            config.statistics_db_path.as_deref(),
             &config.time_config,
+            true,
         )
         .await?;
     }

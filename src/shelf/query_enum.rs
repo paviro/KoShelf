@@ -72,4 +72,3 @@ macro_rules! query_enum_bare {
         }
     };
 }
-

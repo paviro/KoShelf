@@ -103,3 +103,8 @@ CREATE INDEX IF NOT EXISTS idx_library_item_fingerprints_metadata_path
 
 CREATE INDEX IF NOT EXISTS idx_library_collision_diagnostics_winner_item_id
     ON library_collision_diagnostics (winner_item_id);
+
+CREATE TABLE IF NOT EXISTS share_image_fingerprints (
+    year INTEGER PRIMARY KEY,
+    fingerprint TEXT NOT NULL
+);
