@@ -29,6 +29,7 @@ pub async fn load_reading_data(
     };
 
     let mut data = StatisticsParser::parse(stats_path).await?;
+    let total_books = data.books.len();
 
     if config.min_pages_per_day.is_some() || config.min_time_per_day.is_some() {
         StatisticsCalculator::filter_stats(
@@ -62,9 +63,11 @@ pub async fn load_reading_data(
         PageScaling::disabled()
     };
 
+    let ignored = total_books - data.books.len();
     info!(
-        "Statistics: {} books, {} with completions",
+        "Statistics: {} books ({} ignored), {} with completions",
         data.books.len(),
+        ignored,
         data.books
             .iter()
             .filter(|b| b.completions.is_some())
