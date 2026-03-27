@@ -1,7 +1,5 @@
-use std::collections::HashSet;
-
 use crate::server::api::responses::common::ContentTypeFilter;
-use crate::server::api::responses::error::ApiErrorCode;
+use crate::shelf::token_set::{self, SetToken};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemSort {
@@ -15,20 +13,19 @@ pub enum ItemSort {
     LastOpenAt,
 }
 
-impl ItemSort {
-    pub fn parse(value: &str) -> Result<Self, ApiErrorCode> {
-        match value {
-            "title" => Ok(Self::Title),
-            "author" => Ok(Self::Author),
-            "status" => Ok(Self::Status),
-            "progress" => Ok(Self::Progress),
-            "rating" => Ok(Self::Rating),
-            "annotations" => Ok(Self::Annotations),
-            "last_open_at" => Ok(Self::LastOpenAt),
-            _ => Err(ApiErrorCode::InvalidQuery),
-        }
+query_enum_bare! {
+    pub enum ItemSort {
+        Title => "title",
+        Author => "author",
+        Status => "status",
+        Progress => "progress",
+        Rating => "rating",
+        Annotations => "annotations",
+        LastOpenAt => "last_open_at",
     }
+}
 
+impl ItemSort {
     pub fn sql_column(self) -> &'static str {
         match self {
             Self::Title => "LOWER(title)",
@@ -55,15 +52,14 @@ pub enum SortOrder {
     Desc,
 }
 
-impl SortOrder {
-    pub fn parse(value: &str) -> Result<Self, ApiErrorCode> {
-        match value {
-            "asc" => Ok(Self::Asc),
-            "desc" => Ok(Self::Desc),
-            _ => Err(ApiErrorCode::InvalidQuery),
-        }
+query_enum_bare! {
+    pub enum SortOrder {
+        Asc => "asc",
+        Desc => "desc",
     }
+}
 
+impl SortOrder {
     pub fn sql_keyword(self) -> &'static str {
         match self {
             Self::Asc => "ASC",
@@ -93,8 +89,10 @@ impl IncludeToken {
         IncludeToken::ReaderPresentation,
         IncludeToken::Chapters,
     ];
+}
 
-    fn parse(value: &str) -> Option<Self> {
+impl SetToken for IncludeToken {
+    fn parse_token(value: &str) -> Option<Self> {
         match value {
             "highlights" => Some(Self::Highlights),
             "bookmarks" => Some(Self::Bookmarks),
@@ -105,70 +103,17 @@ impl IncludeToken {
             _ => None,
         }
     }
-}
 
-#[derive(Debug, Clone, Default)]
-pub struct IncludeSet {
-    tokens: HashSet<IncludeToken>,
-}
-
-impl IncludeSet {
-    /// Parse a comma-separated include string with strict validation.
-    ///
-    /// Rules per API contract:
-    /// - comma-separated lowercase tokens
-    /// - duplicates ignored
-    /// - `all` supersedes any other token
-    /// - unknown token returns `Err` with a descriptive message
-    pub fn parse(value: Option<&str>) -> Result<Self, (ApiErrorCode, String)> {
-        let Some(value) = value else {
-            return Ok(Self::default());
-        };
-
-        let value = value.trim();
-        if value.is_empty() {
-            return Ok(Self::default());
-        }
-
-        let mut tokens = HashSet::new();
-
-        for raw in value.split(',') {
-            let token = raw.trim();
-            if token.is_empty() {
-                continue;
-            }
-            if token == "all" {
-                return Ok(Self::all());
-            }
-            match IncludeToken::parse(token) {
-                Some(t) => {
-                    tokens.insert(t);
-                }
-                None => {
-                    return Err((
-                        ApiErrorCode::InvalidQuery,
-                        format!(
-                            "unknown include token '{token}'; \
-                             valid tokens are: highlights, bookmarks, statistics, completions, reader_presentation, chapters, all"
-                        ),
-                    ));
-                }
-            }
-        }
-
-        Ok(Self { tokens })
+    fn valid_tokens() -> &'static str {
+        "highlights, bookmarks, statistics, completions, reader_presentation, chapters, all"
     }
 
-    pub fn all() -> Self {
-        Self {
-            tokens: IncludeToken::ALL.iter().copied().collect(),
-        }
-    }
-
-    pub fn has(&self, token: IncludeToken) -> bool {
-        self.tokens.contains(&token)
+    fn all_variants() -> Option<&'static [Self]> {
+        Some(Self::ALL)
     }
 }
+
+pub type IncludeSet = token_set::TokenSet<IncludeToken>;
 
 // ── Query types ───────────────────────────────────────────────────────────
 
@@ -197,6 +142,7 @@ impl LibraryDetailQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::api::responses::error::ApiErrorCode;
 
     #[test]
     fn include_set_none_returns_empty() {

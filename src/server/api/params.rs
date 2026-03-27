@@ -156,10 +156,6 @@ fn parse_reading_tz(value: Option<&str>) -> ApiResult<Option<chrono_tz::Tz>> {
     Ok(rq::parse_timezone(value)?)
 }
 
-fn parse_reading_scope(value: Option<&str>) -> ApiResult<rq::ReadingScope> {
-    parse_scope(value)
-}
-
 fn require_param<'a>(value: Option<&'a str>, name: &str) -> ApiResult<&'a str> {
     value.filter(|v| !v.is_empty()).ok_or_else(|| {
         ApiResponseError::bad_request_with_message(
@@ -172,7 +168,7 @@ fn require_param<'a>(value: Option<&'a str>, name: &str) -> ApiResult<&'a str> {
 pub(crate) fn parse_reading_summary_query(
     params: &ReadingSummaryParams,
 ) -> ApiResult<rq::ReadingSummaryQuery> {
-    let scope = parse_reading_scope(params.scope.as_deref())?;
+    let scope = parse_scope(params.scope.as_deref())?;
     let range = parse_optional_date_range(params.from.as_deref(), params.to.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
     Ok(rq::ReadingSummaryQuery { scope, range, tz })
@@ -181,7 +177,7 @@ pub(crate) fn parse_reading_summary_query(
 pub(crate) fn parse_reading_metrics_query(
     params: &ReadingMetricsParams,
 ) -> ApiResult<rq::ReadingMetricsQuery> {
-    let scope = parse_reading_scope(params.scope.as_deref())?;
+    let scope = parse_scope(params.scope.as_deref())?;
     let metric_str = require_param(params.metric.as_deref(), "metric")?;
     let metrics = rq::parse_metrics(metric_str)?;
     let group_by_str = require_param(params.group_by.as_deref(), "group_by")?;
@@ -200,7 +196,7 @@ pub(crate) fn parse_reading_metrics_query(
 pub(crate) fn parse_reading_available_periods_query(
     params: &ReadingAvailablePeriodsParams,
 ) -> ApiResult<rq::ReadingAvailablePeriodsQuery> {
-    let scope = parse_reading_scope(params.scope.as_deref())?;
+    let scope = parse_scope(params.scope.as_deref())?;
     let source_str = require_param(params.source.as_deref(), "source")?;
     let source = PeriodSource::parse(source_str)?;
     let group_by_str = require_param(params.group_by.as_deref(), "group_by")?;
@@ -227,7 +223,7 @@ pub(crate) fn parse_reading_calendar_query(
             "'month' must be in YYYY-MM format",
         )
     })?;
-    let scope = parse_reading_scope(params.scope.as_deref())?;
+    let scope = parse_scope(params.scope.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
     Ok(rq::ReadingCalendarQuery {
         month: month_key.as_str().to_string(),
@@ -239,7 +235,7 @@ pub(crate) fn parse_reading_calendar_query(
 pub(crate) fn parse_reading_completions_query(
     params: &ReadingCompletionsParams,
 ) -> ApiResult<rq::ReadingCompletionsQuery> {
-    let scope = parse_reading_scope(params.scope.as_deref())?;
+    let scope = parse_scope(params.scope.as_deref())?;
     let tz = parse_reading_tz(params.tz.as_deref())?;
 
     // year and from/to are mutually exclusive
