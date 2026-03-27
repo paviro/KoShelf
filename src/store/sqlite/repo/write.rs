@@ -205,26 +205,7 @@ impl LibraryRepository {
         Ok(())
     }
 
-    /// Remove all items, annotations, fingerprints, and collision diagnostics.
-    pub async fn clear_all(&self) -> Result<()> {
-        let mut tx = self.pool.begin().await.context("begin tx")?;
-        sqlx::query("DELETE FROM library_collision_diagnostics")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("DELETE FROM library_annotations")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("DELETE FROM library_item_fingerprints")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("DELETE FROM library_items")
-            .execute(&mut *tx)
-            .await?;
-        tx.commit().await.context("commit clear_all")?;
-        Ok(())
-    }
-
-    /// Remove all collision diagnostics (used before a full rebuild).
+    /// Remove all collision diagnostics.
     pub async fn clear_collision_diagnostics(&self) -> Result<()> {
         sqlx::query("DELETE FROM library_collision_diagnostics")
             .execute(&self.pool)
@@ -645,20 +626,4 @@ mod tests {
         assert_eq!(counts, (0, 0, 1));
     }
 
-    #[tokio::test]
-    async fn clear_all_removes_everything() {
-        let repo = test_repo().await;
-        repo.upsert_item(&sample_item("ggg")).await.unwrap();
-        repo.replace_annotations("ggg", &[sample_annotation("ggg", "highlight", 0)])
-            .await
-            .unwrap();
-        repo.upsert_fingerprint(&sample_fingerprint("ggg"))
-            .await
-            .unwrap();
-
-        repo.clear_all().await.unwrap();
-
-        assert_eq!(repo.count_items().await.unwrap(), 0);
-        assert!(repo.load_all_fingerprints().await.unwrap().is_empty());
-    }
 }
