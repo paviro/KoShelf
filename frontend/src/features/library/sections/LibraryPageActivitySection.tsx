@@ -59,21 +59,7 @@ export function LibraryPageActivitySection({
             for (const [i, c] of completions.entries.entries()) {
                 options.push({
                     value: String(i),
-                    label: (
-                        <span>
-                            {translation.get('page-activity.reading-number', {
-                                number: i + 1,
-                            })}{' '}
-                            <span className="text-[0.8em] font-normal opacity-60">
-                                (
-                                {formatCompletionDateRange(
-                                    c.start_date,
-                                    c.end_date,
-                                )}
-                                )
-                            </span>
-                        </span>
-                    ),
+                    label: formatCompletionDateRange(c.start_date, c.end_date),
                 });
             }
         }
