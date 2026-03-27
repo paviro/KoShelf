@@ -2,8 +2,10 @@
 
 use anyhow::{Context, Result};
 
-use super::LibraryRepository;
-use super::rows::{AnnotationRow, CollisionDiagnosticRow, FingerprintRow, LibraryItemRow};
+use crate::store::sqlite::repo::LibraryRepository;
+use crate::store::sqlite::repo::rows::{
+    AnnotationRow, CollisionDiagnosticRow, FingerprintRow, LibraryItemRow,
+};
 
 impl LibraryRepository {
     pub async fn upsert_item(&self, item: &LibraryItemRow) -> Result<()> {
@@ -345,9 +347,11 @@ impl LibraryRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::super::rows::CollisionDiagnosticRow;
-    use super::super::tests::{sample_annotation, sample_fingerprint, sample_item, test_repo};
     use crate::server::api::responses::library::LibraryStatus;
+    use crate::store::sqlite::repo::rows::CollisionDiagnosticRow;
+    use crate::store::sqlite::repo::tests::{
+        sample_annotation, sample_fingerprint, sample_item, test_repo,
+    };
 
     #[tokio::test]
     async fn upsert_and_get_item() {

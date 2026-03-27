@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-use super::library::LibraryContentType;
+use crate::server::api::responses::library::LibraryContentType;
 
 // ── GET /api/reading/summary ──────────────────────────────────────────────
 

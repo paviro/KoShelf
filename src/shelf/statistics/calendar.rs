@@ -2,14 +2,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::NaiveDate;
 
-use super::compute::scaling::PageScaling;
-use super::queries::ReadingCalendarQuery;
-use super::shared;
 use crate::server::api::responses::reading::{
     CalendarItemRef, CalendarScopeStats, CalendarStatsByScope, ReadingCalendarData,
     ReadingCalendarEvent,
 };
 use crate::shelf::models::ContentType;
+use crate::shelf::statistics::compute::scaling::{PageScaling, round_pages};
+use crate::shelf::statistics::queries::ReadingCalendarQuery;
+use crate::shelf::statistics::shared;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{PageStat, StatisticsData};
 use crate::store::memory::ReadingData;
@@ -136,7 +136,7 @@ fn compute_scope_stats(
         total_time += ps.duration;
     }
 
-    let total_pages = super::compute::scaling::round_pages(scaled_pages);
+    let total_pages = round_pages(scaled_pages);
 
     let active_days_percentage = if days_in_month > 0 {
         (unique_dates.len() as f64 / days_in_month as f64 * 100.0).round() as u8
@@ -258,7 +258,7 @@ struct DayAccumulator {
 
 impl DayAccumulator {
     fn pages_read(&self) -> i64 {
-        super::compute::scaling::round_pages(self.scaled_pages)
+        round_pages(self.scaled_pages)
     }
 }
 

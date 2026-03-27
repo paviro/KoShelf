@@ -12,8 +12,8 @@ use crate::shelf::library::queries::LibraryListQuery;
 use crate::shelf::models::ChapterEntry;
 use crate::shelf::models::ContentType;
 
-use super::LibraryRepository;
-use super::rows::FingerprintRow;
+use crate::store::sqlite::repo::LibraryRepository;
+use crate::store::sqlite::repo::rows::FingerprintRow;
 
 impl LibraryRepository {
     /// List items matching the given query, sorted with a deterministic
@@ -405,9 +405,9 @@ impl LibraryRepository {
 
 #[cfg(test)]
 mod tests {
-    use super::super::tests::{sample_annotation, sample_item, test_repo};
     use crate::server::api::responses::common::ContentTypeFilter;
     use crate::shelf::library::queries::{ItemSort, LibraryListQuery};
+    use crate::store::sqlite::repo::tests::{sample_annotation, sample_item, test_repo};
 
     #[tokio::test]
     async fn get_item_returns_none_for_missing_id() {

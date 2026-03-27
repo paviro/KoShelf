@@ -9,6 +9,7 @@ use crate::server::api::responses::library::{
     PageActivityAnnotation, PageActivityAnnotationKind, PageActivityCompletion, PageActivityEvent,
     PageActivityPage, PageActivityResponse,
 };
+use crate::shelf::library::lookup_stat_book;
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
 
@@ -46,7 +47,7 @@ pub async fn page_activity(
         return Ok(None);
     };
 
-    let Some(stat_book) = super::lookup_stat_book(&rd.stats_data, md5) else {
+    let Some(stat_book) = lookup_stat_book(&rd.stats_data, md5) else {
         return Ok(None);
     };
 

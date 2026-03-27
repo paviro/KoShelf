@@ -163,10 +163,7 @@ impl WebServer {
                 .route("/api/auth/login", post(auth::login::login_submit))
                 .route("/api/auth/logout", post(auth::login::logout))
                 .route("/api/auth/password", put(auth::login::change_password))
-                .route(
-                    "/api/auth/sessions",
-                    get(auth::login::list_sessions),
-                )
+                .route("/api/auth/sessions", get(auth::login::list_sessions))
                 .route(
                     "/api/auth/sessions/{session_id}",
                     delete(auth::login::revoke_session),

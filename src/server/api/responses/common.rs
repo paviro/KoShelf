@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-use super::error::ApiErrorCode;
+use crate::server::api::responses::error::ApiErrorCode;
 
 // ── Response envelope ─────────────────────────────────────────────────────
 

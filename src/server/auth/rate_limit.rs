@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use governor::{Quota, RateLimiter};
 
-use super::LoginRateLimiter;
+use crate::server::auth::LoginRateLimiter;
 
 /// 5 login attempts per IP per minute.
 pub fn login_rate_limiter() -> LoginRateLimiter {

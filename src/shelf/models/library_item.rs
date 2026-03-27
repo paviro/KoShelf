@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::koreader_metadata::KoReaderMetadata;
+use crate::shelf::models::koreader_metadata::{Annotation, KoReaderMetadata};
 use crate::source::koreader::merge::{resolve_language, resolve_page_total};
 
 /// Content type classification (broad category)
@@ -209,7 +209,7 @@ impl LibraryItem {
             .and_then(|m| m.percent_finished)
     }
 
-    pub fn annotations(&self) -> &[super::koreader_metadata::Annotation] {
+    pub fn annotations(&self) -> &[Annotation] {
         self.koreader_metadata
             .as_ref()
             .map(|m| m.annotations.as_slice())

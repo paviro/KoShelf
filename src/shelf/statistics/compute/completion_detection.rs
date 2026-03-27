@@ -36,7 +36,7 @@ use std::collections::{HashMap, HashSet};
 
 use log::debug;
 
-use super::sessions;
+use crate::shelf::statistics::compute::sessions;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{
     BookCompletions, PageStat, ReadCompletion, StatBook, StatisticsData,

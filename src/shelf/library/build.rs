@@ -7,7 +7,9 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use super::item_mapping::{capture_fingerprint_row, map_annotations_to_rows, map_item_to_row};
+use crate::shelf::library::item_mapping::{
+    capture_fingerprint_row, map_annotations_to_rows, map_item_to_row,
+};
 use crate::shelf::models::LibraryItem;
 use crate::shelf::time_config::TimeConfig;
 use crate::store::sqlite::repo::LibraryRepository;

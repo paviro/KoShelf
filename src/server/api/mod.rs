@@ -6,7 +6,7 @@ pub(crate) mod handlers;
 pub(crate) mod params;
 pub mod responses;
 
-use super::ServerState;
+use crate::server::ServerState;
 use axum::{Router, routing::get};
 
 pub fn routes() -> Router<ServerState> {

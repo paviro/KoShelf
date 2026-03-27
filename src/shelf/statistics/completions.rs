@@ -4,14 +4,16 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::NaiveDate;
 
-use super::compute::sessions;
-use super::queries::{CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery};
-use super::shared;
 use crate::server::api::responses::reading::{
     CompletionGroup, CompletionItem, CompletionsShareAssets, CompletionsSummary,
     ReadingCompletionsData,
 };
 use crate::shelf::statistics::compute::scaling::PageScaling;
+use crate::shelf::statistics::compute::sessions;
+use crate::shelf::statistics::queries::{
+    CompletionsGroupBy, CompletionsSelector, ReadingCompletionsQuery,
+};
+use crate::shelf::statistics::shared;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{PageStat, StatisticsData};
 use crate::store::memory::ReadingData;
