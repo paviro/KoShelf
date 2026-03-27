@@ -17,6 +17,7 @@ const QUERY_PREFIXES_TO_INVALIDATE: ReadonlyArray<readonly string[]> = [
     ['site'],
     ['library-list'],
     ['library-detail'],
+    ['page-activity'],
     ['statistics-index'],
     ['statistics-week'],
     ['statistics-year'],
