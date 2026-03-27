@@ -39,15 +39,6 @@ impl ReadCompletion {
         }
     }
 
-    /// Average reading speed in pages per hour
-    pub fn average_speed(&self) -> Option<f64> {
-        if self.reading_time > 0 && self.pages_read > 0 {
-            Some(self.pages_read as f64 / (self.reading_time as f64 / 3600.0))
-        } else {
-            None
-        }
-    }
-
     /// Average session duration in seconds
     pub fn avg_session_duration(&self) -> Option<i64> {
         if self.session_count > 0 {

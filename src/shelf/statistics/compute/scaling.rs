@@ -79,14 +79,6 @@ impl PageScaling {
         self.factor_by_book_id.get(&book_id).copied().unwrap_or(1.0)
     }
 
-    /// Scale a page count using the factor for the given stat book ID.
-    pub fn scale_pages_for_book_id(&self, book_id: i64, pages: i64) -> i64 {
-        match self.factor_by_book_id.get(&book_id) {
-            Some(&factor) => scale_pages_with_factor(pages, factor),
-            None => pages,
-        }
-    }
-
     /// Scale a page count using the factor for the given MD5.
     pub fn scale_pages_for_md5(&self, md5: &str, pages: i64) -> i64 {
         match self.factor_by_md5.get(&md5.to_lowercase()) {
@@ -139,8 +131,8 @@ mod tests {
 
         let scaling = PageScaling::from_db_inputs(&inputs, &stats_data);
 
-        assert_eq!(scaling.scale_pages_for_book_id(1, 1), 2); // 1 * 1.5 = 1.5 → 2
-        assert_eq!(scaling.scale_pages_for_book_id(2, 1), 1); // no factor
+        assert!((scaling.factor_for_book_id(1) - 1.5).abs() < f64::EPSILON);
+        assert!((scaling.factor_for_book_id(2) - 1.0).abs() < f64::EPSILON); // no factor
         assert_eq!(scaling.scale_pages_for_md5("md5-a", 10), 15); // 10 * 1.5 = 15
         assert_eq!(scaling.scale_pages_for_md5("md5-b", 10), 10); // no factor
     }
@@ -160,7 +152,6 @@ mod tests {
     #[test]
     fn disabled_performs_no_scaling() {
         let scaling = PageScaling::disabled();
-        assert_eq!(scaling.scale_pages_for_book_id(1, 5), 5);
         assert_eq!(scaling.scale_pages_for_md5("any", 5), 5);
         assert!((scaling.factor_for_book_id(1) - 1.0).abs() < f64::EPSILON);
     }
@@ -173,7 +164,7 @@ mod tests {
         inputs.insert("md5-zero".to_string(), (300, None));
 
         let scaling = PageScaling::from_db_inputs(&inputs, &stats_data);
-        assert_eq!(scaling.scale_pages_for_book_id(1, 5), 5);
+        assert!((scaling.factor_for_book_id(1) - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]

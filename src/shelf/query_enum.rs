@@ -34,6 +34,7 @@ macro_rules! query_enum {
                 }
             }
 
+            #[allow(dead_code)]
             pub fn as_str(self) -> &'static str {
                 match self {
                     $( Self::$Variant => $str, )+
@@ -64,6 +65,7 @@ macro_rules! query_enum_bare {
                 }
             }
 
+            #[allow(dead_code)]
             pub fn as_str(self) -> &'static str {
                 match self {
                     $( Self::$Variant => $str, )+

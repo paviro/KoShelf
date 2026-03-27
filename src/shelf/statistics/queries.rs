@@ -189,13 +189,6 @@ impl CompletionsGroupBy {
             )),
         }
     }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::Month => "month",
-        }
-    }
 }
 
 // ── Completions year-or-range selector ────────────────────────────────────

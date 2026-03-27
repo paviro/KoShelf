@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::shelf::models::koreader_metadata::{Annotation, KoReaderMetadata};
-use crate::source::koreader::merge::{resolve_language, resolve_page_total};
+use crate::source::koreader::merge::resolve_language;
 
 /// Content type classification (broad category)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -164,11 +164,6 @@ impl Identifier {
             _ => None,
         }
     }
-
-    /// Check if this identifier can be linked to an external service
-    pub fn is_linkable(&self) -> bool {
-        self.url().is_some()
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,19 +232,6 @@ impl LibraryItem {
             .unwrap_or(0)
     }
 
-    pub fn doc_pages(&self) -> Option<u32> {
-        self.doc_pages_with_stable_metadata(true)
-    }
-
-    pub fn doc_pages_with_stable_metadata(&self, use_stable_page_metadata: bool) -> Option<u32> {
-        resolve_page_total(
-            use_stable_page_metadata,
-            self.stable_display_page_total(),
-            self.koreader_metadata.as_ref().and_then(|m| m.doc_pages),
-            self.book_info.pages,
-        )
-    }
-
     /// Stable page total for display-only usage.
     ///
     /// Valid when `pagemap_doc_pages` is present.
@@ -267,15 +249,6 @@ impl LibraryItem {
         metadata.pagemap_chars_per_synthetic_page?;
 
         metadata.pagemap_doc_pages.filter(|pages| *pages > 0)
-    }
-
-    pub fn note_count(&self) -> usize {
-        self.koreader_metadata
-            .as_ref()
-            .and_then(|m| m.stats.as_ref())
-            .and_then(|s| s.notes)
-            .map(|n| n as usize)
-            .unwrap_or(0)
     }
 
     /// Get language, preferring EPUB metadata over KoReader metadata
@@ -379,60 +352,15 @@ impl LibraryItem {
         self.book_info.series_number.as_ref()
     }
 
-    /// Get formatted series display (e.g., "Series Name #1")
-    pub fn series_display(&self) -> Option<String> {
-        match (self.series(), self.series_number()) {
-            (Some(series), Some(number)) => Some(format!("{} #{}", series, number)),
-            (Some(series), None) => Some(series.clone()),
-            _ => None,
-        }
-    }
-
     /// Get the content type of this book
     pub fn content_type(&self) -> ContentType {
         self.format.content_type()
-    }
-
-    /// Check if this is a comic (CBZ/CBR)
-    pub fn is_comic(&self) -> bool {
-        self.content_type() == ContentType::Comic
-    }
-
-    /// Check if this is a book (EPUB/FB2/MOBI)
-    pub fn is_book(&self) -> bool {
-        self.content_type() == ContentType::Book
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::tests::fixtures;
-
-    #[test]
-    fn prefers_stable_display_pages_when_labels_enabled() {
-        let item = fixtures::library_item(
-            "id-1",
-            Some(fixtures::koreader_metadata_for_pages(
-                "md5", true, false, 300,
-            )),
-        );
-
-        assert_eq!(item.stable_display_page_total(), Some(300));
-        assert_eq!(item.synthetic_scaling_page_total(), None);
-        assert_eq!(item.doc_pages(), Some(300));
-    }
-
-    #[test]
-    fn can_disable_stable_page_metadata_for_display_totals() {
-        let item = fixtures::library_item(
-            "id-1",
-            Some(fixtures::koreader_metadata_for_pages(
-                "md5", true, false, 300,
-            )),
-        );
-
-        assert_eq!(item.doc_pages_with_stable_metadata(false), Some(200));
-    }
 
     #[test]
     fn enables_synthetic_scaling_only_when_synthetic_metadata_exists() {
@@ -445,17 +373,6 @@ mod tests {
 
         assert_eq!(item.stable_display_page_total(), Some(300));
         assert_eq!(item.synthetic_scaling_page_total(), Some(300));
-    }
-
-    #[test]
-    fn falls_back_to_rendered_doc_pages_when_stable_display_is_unavailable() {
-        let mut metadata = fixtures::koreader_metadata_for_pages("md5", true, true, 300);
-        metadata.pagemap_doc_pages = None;
-        let item = fixtures::library_item("id-1", Some(metadata));
-
-        assert_eq!(item.stable_display_page_total(), None);
-        assert_eq!(item.synthetic_scaling_page_total(), None);
-        assert_eq!(item.doc_pages(), Some(200));
     }
 
     #[test]

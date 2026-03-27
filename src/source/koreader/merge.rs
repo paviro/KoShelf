@@ -57,30 +57,11 @@ pub(crate) fn resolve_language<'a>(
     parser_language.or(metadata_text_lang)
 }
 
-/// Resolve page total using runtime precedence:
-/// stable page labels (optional) -> KOReader rendered pages -> parser pages.
-pub(crate) fn resolve_page_total(
-    use_stable_page_metadata: bool,
-    stable_page_total: Option<u32>,
-    rendered_page_total: Option<u32>,
-    parser_page_total: Option<u32>,
-) -> Option<u32> {
-    let stable_pages = if use_stable_page_metadata {
-        stable_page_total.filter(|pages| *pages > 0)
-    } else {
-        None
-    };
-
-    stable_pages
-        .or_else(|| rendered_page_total.filter(|pages| *pages > 0))
-        .or(parser_page_total)
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
         CanonicalPartialMd5Source, normalize_partial_md5, resolve_canonical_partial_md5,
-        resolve_language, resolve_page_total,
+        resolve_language,
     };
 
     const VALID_MD5_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -134,18 +115,5 @@ mod tests {
         let language = resolve_language(Some(&parser_language), Some(&metadata_text_lang));
 
         assert_eq!(language, Some(&parser_language));
-    }
-
-    #[test]
-    fn resolve_page_total_uses_stable_then_rendered_then_parser_fallback_order() {
-        assert_eq!(
-            resolve_page_total(true, Some(300), Some(250), Some(200)),
-            Some(300)
-        );
-        assert_eq!(
-            resolve_page_total(false, Some(300), Some(250), Some(200)),
-            Some(250)
-        );
-        assert_eq!(resolve_page_total(false, None, None, Some(200)), Some(200));
     }
 }

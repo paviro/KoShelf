@@ -15,11 +15,10 @@ use crate::store::sqlite::repo::LibraryRepository;
 
 /// The full result of building page-activity data.
 ///
-/// `response` is the API payload.  `events` and `completions` are internal
-/// fields used only by the static export pipeline.
+/// `response` is the API payload.  `completions` is an internal field used
+/// only by the static export pipeline.
 pub struct PageActivityData {
     pub response: PageActivityResponse,
-    pub events: Vec<PageActivityEvent>,
     pub completions: Vec<PageActivityCompletion>,
 }
 
@@ -146,7 +145,6 @@ pub async fn page_activity(
             pages,
             annotations,
         },
-        events,
         completions,
     }))
 }

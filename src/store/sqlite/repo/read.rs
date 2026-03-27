@@ -145,15 +145,6 @@ impl LibraryRepository {
         .context("Failed to load fingerprints")
     }
 
-    pub async fn item_exists(&self, id: &str) -> Result<bool> {
-        let row = sqlx::query("SELECT 1 FROM library_items WHERE id = ?1")
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .context("Failed to check item existence")?;
-        Ok(row.is_some())
-    }
-
     /// Query whether the library contains books and/or comics.
     pub async fn query_content_type_flags(&self) -> Result<(bool, bool)> {
         let row: (i32, i32) = sqlx::query_as(
@@ -288,14 +279,6 @@ impl LibraryRepository {
         Ok(rows)
     }
 
-    pub async fn count_items(&self) -> Result<i64> {
-        let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM library_items")
-            .fetch_one(&self.pool)
-            .await
-            .context("Failed to count items")?;
-        Ok(row.0)
-    }
-
     /// Find the lua_index and note-on-highlight state for an annotation.
     ///
     /// Returns `(lua_index, had_note)` where `had_note` is:
@@ -410,6 +393,26 @@ impl LibraryRepository {
                 Some((id, content_type))
             })
             .collect())
+    }
+}
+
+#[cfg(test)]
+impl LibraryRepository {
+    pub async fn item_exists(&self, id: &str) -> Result<bool> {
+        let row = sqlx::query("SELECT 1 FROM library_items WHERE id = ?1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to check item existence")?;
+        Ok(row.is_some())
+    }
+
+    pub async fn count_items(&self) -> Result<i64> {
+        let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM library_items")
+            .fetch_one(&self.pool)
+            .await
+            .context("Failed to count items")?;
+        Ok(row.0)
     }
 }
 

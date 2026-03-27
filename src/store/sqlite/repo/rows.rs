@@ -70,12 +70,3 @@ pub struct FingerprintRow {
     pub metadata_modified_unix_ms: Option<i64>,
     pub updated_at: String,
 }
-
-#[derive(Debug, Clone)]
-pub struct CollisionDiagnosticRow {
-    pub canonical_id: String,
-    pub file_path: String,
-    pub winner_item_id: String,
-    pub reason: String,
-    pub detected_at: String,
-}

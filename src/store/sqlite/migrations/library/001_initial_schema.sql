@@ -64,16 +64,6 @@ CREATE TABLE IF NOT EXISTS library_item_fingerprints (
     FOREIGN KEY (item_id) REFERENCES library_items(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS library_collision_diagnostics (
-    canonical_id TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    winner_item_id TEXT NOT NULL,
-    reason TEXT NOT NULL,
-    detected_at TEXT NOT NULL,
-    PRIMARY KEY (canonical_id, file_path),
-    FOREIGN KEY (winner_item_id) REFERENCES library_items(id) ON DELETE CASCADE
-);
-
 CREATE INDEX IF NOT EXISTS idx_library_items_scope_status
     ON library_items (content_type, status, id);
 
@@ -100,9 +90,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_library_item_fingerprints_book_path
 
 CREATE INDEX IF NOT EXISTS idx_library_item_fingerprints_metadata_path
     ON library_item_fingerprints (metadata_path);
-
-CREATE INDEX IF NOT EXISTS idx_library_collision_diagnostics_winner_item_id
-    ON library_collision_diagnostics (winner_item_id);
 
 CREATE TABLE IF NOT EXISTS share_image_fingerprints (
     year INTEGER PRIMARY KEY,

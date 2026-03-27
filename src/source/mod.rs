@@ -6,6 +6,5 @@ pub mod parsers;
 pub mod scanner;
 
 pub use fingerprints::{
-    FileFingerprint, FingerprintChange, ItemFingerprints, ReconcileAction, ReparseScope,
-    classify_reconcile_action,
+    FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };

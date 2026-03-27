@@ -3,18 +3,6 @@ use quick_xml::escape::unescape;
 use std::borrow::Cow;
 use std::collections::HashSet;
 
-/// Generates a URL-friendly ID from a book title
-pub fn generate_book_id(title: &str) -> String {
-    title
-        .chars()
-        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join("-")
-        .to_lowercase()
-}
-
 /// Sanitize HTML content, keeping only safe formatting tags.
 /// Used for book descriptions/annotations from EPUB and FB2 files.
 pub fn sanitize_html(input: &str) -> String {

@@ -150,30 +150,6 @@ pub fn generate_share_image(
     Ok(())
 }
 
-/// Generate a share SVG file from the given data and format
-/// Text is converted to paths for font-independent rendering
-pub fn generate_share_svg(
-    data: &ShareImageData,
-    format: ShareFormat,
-    output_path: &Path,
-) -> Result<()> {
-    let svg_content = fill_template(data, format);
-
-    let options = resvg::usvg::Options {
-        fontdb: FONT_DATABASE.clone(),
-        ..Default::default()
-    };
-
-    let tree = resvg::usvg::Tree::from_str(&svg_content, &options)
-        .context("Failed to parse SVG for path conversion")?;
-
-    let svg_output = tree.to_string(&resvg::usvg::WriteOptions::default());
-
-    fs::write(output_path, svg_output).context("Failed to write SVG file")?;
-
-    Ok(())
-}
-
 /// Fill the SVG template with actual data
 fn fill_template(data: &ShareImageData, format: ShareFormat) -> String {
     let template = format.template();

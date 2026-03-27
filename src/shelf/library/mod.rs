@@ -8,7 +8,7 @@ pub mod service;
 
 pub use build::upsert_single_item;
 pub use page_activity::page_activity;
-pub use queries::{IncludeSet, LibraryDetailQuery, LibraryListQuery};
+pub use queries::{LibraryDetailQuery, LibraryListQuery};
 pub use service::{detail, list};
 
 /// Case-insensitive lookup into `stats_by_md5`.

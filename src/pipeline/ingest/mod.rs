@@ -9,5 +9,5 @@
 pub mod library;
 pub mod statistics;
 
-pub use library::{IngestStats, UpdateResult, ingest_paths, update_library};
+pub use library::{ingest_paths, update_library};
 pub use statistics::load_reading_data;

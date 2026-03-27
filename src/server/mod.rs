@@ -11,7 +11,6 @@ use axum::Router;
 use axum::routing::{delete, get, patch, post, put};
 use dashmap::DashMap;
 use log::info;
-use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -72,7 +71,6 @@ pub struct ServerState {
     pub reading_data_store: SharedReadingDataStore,
     pub update_notifier: UpdateNotifier,
     pub library_repo: LibraryRepository,
-    pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
     pub timezone: Option<chrono_tz::Tz>,
@@ -86,7 +84,6 @@ pub struct WebServer {
     reading_data_store: SharedReadingDataStore,
     update_notifier: UpdateNotifier,
     library_repo: LibraryRepository,
-    koshelf_pool: SqlitePool,
     auth_state: Option<auth::AuthState>,
     write_coordinator: Option<WriteCoordinator>,
     timezone: Option<chrono_tz::Tz>,
@@ -99,7 +96,6 @@ pub struct WebServerOptions {
     pub reading_data_store: SharedReadingDataStore,
     pub update_notifier: UpdateNotifier,
     pub library_repo: LibraryRepository,
-    pub koshelf_pool: SqlitePool,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
     pub timezone: Option<chrono_tz::Tz>,
@@ -114,7 +110,6 @@ impl WebServer {
             reading_data_store,
             update_notifier,
             library_repo,
-            koshelf_pool,
             auth_state,
             write_coordinator,
             timezone,
@@ -127,7 +122,6 @@ impl WebServer {
             reading_data_store,
             update_notifier,
             library_repo,
-            koshelf_pool,
             auth_state,
             write_coordinator,
             timezone,
@@ -141,7 +135,6 @@ impl WebServer {
             reading_data_store: self.reading_data_store.clone(),
             update_notifier: self.update_notifier.clone(),
             library_repo: self.library_repo,
-            koshelf_pool: self.koshelf_pool,
             auth_state: self.auth_state,
             write_coordinator: self.write_coordinator,
             timezone: self.timezone,

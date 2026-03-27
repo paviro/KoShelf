@@ -63,11 +63,6 @@ impl RuntimeDataPolicy {
         self.resolved_data_dir = Some(path);
     }
 
-    /// The resolved directory where runtime data files reside.
-    pub fn resolved_data_dir(&self) -> Option<&Path> {
-        self.resolved_data_dir.as_deref()
-    }
-
     /// Path to the library SQLite cache inside the resolved data directory.
     pub fn library_db_path(&self) -> Option<PathBuf> {
         self.resolved_data_dir

@@ -506,7 +506,6 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         reading_data_store,
         update_notifier,
         library_repo: state.repo,
-        koshelf_pool,
         auth_state,
         write_coordinator,
         timezone,
