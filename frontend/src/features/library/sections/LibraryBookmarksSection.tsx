@@ -31,10 +31,10 @@ export function LibraryBookmarksSection({
         <CollapsibleSection
             sectionKey="bookmarks"
             defaultVisible
-            accentClass="bg-linear-to-b from-yellow-400 to-yellow-600"
+            accentClass="bg-linear-to-b from-orange-400 to-orange-600"
             title={translation.get('bookmarks')}
             titleBadge={
-                <span className="bg-linear-to-r from-yellow-500 to-yellow-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">
+                <span className="bg-linear-to-r from-orange-500 to-orange-600 text-white text-sm px-3 py-1 rounded-full shadow-md font-medium">
                     {annotations.length}
                 </span>
             }
@@ -47,7 +47,7 @@ export function LibraryBookmarksSection({
                 ) : undefined
             }
         >
-            <div className="space-y-6">
+            <div className="space-y-3">
                 {annotations.map((annotation, index) => (
                     <LibraryAnnotationCard
                         key={annotation.id}

@@ -80,7 +80,7 @@ export function LibraryAnnotationCard({
         useState(false);
 
     const hasNote = annotation.note !== null && annotation.note !== undefined;
-    const hasBody = (variant === 'highlight' && hasText) || hasNote;
+    const hasBody = hasText || hasNote;
 
     // Cancel in-progress note edit when section edit mode is toggled off,
     // and sync draft when entering edit mode or when the note changes.
@@ -147,12 +147,142 @@ export function LibraryAnnotationCard({
         stopEditingNote();
     };
 
+    if (variant === 'bookmark') {
+        return (
+            <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-xs border-l-3 border-l-orange-400 dark:border-l-orange-500">
+                <div className="flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-5 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        {annotation.chapter && (
+                            <span className="inline-flex items-center min-w-0">
+                                <LuFileText
+                                    className="w-4 h-4 mr-1.5 text-primary-400 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    {annotation.chapter}
+                                </span>
+                            </span>
+                        )}
+
+                        {typeof annotation.pageno === 'number' && (
+                            <span className="hidden sm:inline-flex items-center shrink-0">
+                                <LuHash
+                                    className="w-4 h-4 mr-1 text-primary-400"
+                                    aria-hidden="true"
+                                />
+                                {translation.get(
+                                    'page-number',
+                                    annotation.pageno,
+                                )}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                        {typeof annotation.pageno === 'number' && (
+                            <span className="sm:hidden inline-flex items-center">
+                                <LuHash
+                                    className="w-4 h-4 mr-1 text-primary-400"
+                                    aria-hidden="true"
+                                />
+                                {translation.get(
+                                    'page-number',
+                                    annotation.pageno,
+                                )}
+                            </span>
+                        )}
+
+                        {formattedDate && (
+                            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-gray-200/50 dark:bg-dark-700/50 text-gray-500 dark:text-dark-400">
+                                <LuClock3
+                                    className="w-3.5 h-3.5"
+                                    aria-hidden="true"
+                                />
+                                {formattedDate}
+                            </span>
+                        )}
+
+                        {readerHref && (
+                            <Link
+                                to={readerHref}
+                                title={translation.get('open-at-annotation')}
+                                aria-label={translation.get(
+                                    'open-at-annotation',
+                                )}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-primary-600 dark:text-primary-300 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/20 hover:border-primary-500/30 transition-colors"
+                            >
+                                <LuBookOpen
+                                    className="w-3.5 h-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span className="hidden sm:inline">
+                                    {translation.get('open-in-reader')}
+                                </span>
+                            </Link>
+                        )}
+
+                        {showEditingControls && onDelete && (
+                            <>
+                                {confirmingDelete ? (
+                                    <div className="inline-flex items-center gap-0.5">
+                                        <Button
+                                            variant="ghost"
+                                            color="danger"
+                                            size="xs"
+                                            icon={LuCheck}
+                                            onClick={() => {
+                                                onDelete();
+                                                setConfirmingDelete(false);
+                                            }}
+                                        >
+                                            {translation.get('delete')}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="xs"
+                                            onClick={() =>
+                                                setConfirmingDelete(false)
+                                            }
+                                        >
+                                            {translation.get('cancel')}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        variant="ghost"
+                                        color="danger"
+                                        size="xs"
+                                        icon={LuTrash2}
+                                        onClick={() =>
+                                            setConfirmingDelete(true)
+                                        }
+                                    >
+                                        {translation.get('delete-bookmark')}
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Note */}
+                {hasNote && (
+                    <div className="px-5 pb-4">
+                        <div className="bg-gray-100 dark:bg-dark-850/50 p-3 rounded-lg border border-gray-200 dark:border-dark-700/30">
+                            <p className="text-sm text-gray-700 dark:text-dark-200 leading-relaxed whitespace-pre-wrap">
+                                {annotation.note}
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </article>
+        );
+    }
+
     return (
         <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-xs">
             {/* Header — metadata only */}
-            <header
-                className={`flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 ${hasBody || editingNote || showToolbar ? 'border-b border-gray-200/50 dark:border-dark-700/50' : ''}`}
-            >
+            <header className="flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center gap-3">
                     {annotation.chapter && (
                         <span className="inline-flex items-center">
@@ -218,8 +348,7 @@ export function LibraryAnnotationCard({
             {/* Body */}
             {(hasBody || editingNote) && (
                 <div className="p-6">
-                    {/* Anchor text — highlights only */}
-                    {variant === 'highlight' && hasText && (
+                    {hasText && (
                         <div className="relative">
                             <div
                                 className={`absolute top-0 left-0 w-1 h-full bg-linear-to-b ${quoteBarClass} rounded-full`}
@@ -232,11 +361,7 @@ export function LibraryAnnotationCard({
                     )}
 
                     {(hasNote || editingNote) && (
-                        <div
-                            className={
-                                variant === 'highlight' && hasText ? 'mt-6' : ''
-                            }
-                        >
+                        <div className={hasText ? 'mt-6' : ''}>
                             <div className="flex items-center mb-3">
                                 <div className="h-px bg-gray-200 dark:bg-dark-700 grow mr-3"></div>
                                 <div className="flex items-center space-x-2">
@@ -350,15 +475,13 @@ export function LibraryAnnotationCard({
                                             setConfirmingDelete(true)
                                         }
                                     >
-                                        {variant === 'bookmark'
-                                            ? translation.get('delete-bookmark')
-                                            : hasNote
-                                              ? translation.get(
-                                                    'delete-highlight-and-note',
-                                                )
-                                              : translation.get(
-                                                    'delete-highlight',
-                                                )}
+                                        {hasNote
+                                            ? translation.get(
+                                                  'delete-highlight-and-note',
+                                              )
+                                            : translation.get(
+                                                  'delete-highlight',
+                                              )}
                                     </Button>
                                 )}
                             </div>
