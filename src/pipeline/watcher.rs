@@ -14,7 +14,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
-use tokio::time::sleep;
+use tokio::time::timeout;
 
 /// Events for paths written by the app within this window are suppressed.
 /// Must exceed the poll interval (1 s) to cover the gap between `mark_written()`
@@ -121,19 +121,34 @@ impl FileWatcher {
         let rebuild_task = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
             rt.block_on(async move {
-                let rebuild_delay = Duration::from_secs(1);
+                let settle = Duration::from_secs(2);
+                let max_wait = Duration::from_secs(30);
 
                 while let Some(initial_paths) = rebuild_rx.recv().await {
-                    // Accumulate paths across the debounce window.
+                    // Accumulate paths, waiting for events to settle before rebuilding.
                     let mut accumulated_paths: HashSet<PathBuf> =
                         initial_paths.into_iter().collect();
+                    let deadline = tokio::time::Instant::now() + max_wait;
 
-                    sleep(rebuild_delay).await;
+                    loop {
+                        let remaining = deadline - tokio::time::Instant::now();
+                        let wait = settle.min(remaining);
 
-                    // Drain any additional events that came in during the delay
-                    while let Ok(paths) = rebuild_rx.try_recv() {
-                        accumulated_paths.extend(paths);
+                        if wait.is_zero() {
+                            break;
+                        }
+
+                        match timeout(wait, rebuild_rx.recv()).await {
+                            Ok(Some(paths)) => accumulated_paths.extend(paths),
+                            Ok(None) => return, // channel closed
+                            Err(_) => break,    // settled — no events for the window
+                        }
                     }
+
+                    log_accumulated_paths(
+                        &accumulated_paths,
+                        config_clone.statistics_db_path.as_deref(),
+                    );
 
                     let result = if let Some(ref repo) = library_repo_clone {
                         rebuild(
@@ -167,8 +182,6 @@ impl FileWatcher {
                 if paths.is_empty() {
                     continue;
                 }
-
-                Self::log_paths(&paths, &event.kind, self.statistics_db_path.as_deref());
 
                 let _ = rebuild_tx.send(paths);
             }
@@ -258,41 +271,27 @@ impl FileWatcher {
             })
             .collect()
     }
+}
 
-    fn log_paths(
-        paths: &[PathBuf],
-        kind: &EventKind,
-        statistics_db_path: Option<&std::path::Path>,
-    ) {
-        for path in paths {
-            let filename = path.file_name().and_then(|s| s.to_str());
-            let action = match kind {
-                EventKind::Create(_) | EventKind::Modify(_) => "modified",
-                EventKind::Remove(_) => "removed",
-                _ => continue,
-            };
+/// Log accumulated unique paths once before a rebuild.
+fn log_accumulated_paths(paths: &HashSet<PathBuf>, statistics_db_path: Option<&std::path::Path>) {
+    for path in paths {
+        let filename = path.file_name().and_then(|s| s.to_str());
 
-            if let Some(format) = LibraryItemFormat::from_path(path) {
-                info!("{:?} file {}: {:?}", format, action, path);
-            }
-
-            if let Some(filename) = filename
-                && LibraryItemFormat::is_metadata_file(filename)
-            {
-                info!("Metadata file {}: {:?}", action, path);
-            }
-
-            if let Some(filename) = filename
-                && filename.ends_with(".sdr")
-            {
-                info!("KoReader metadata directory {}: {:?}", action, path);
-            }
-
-            if let Some(stats_path) = statistics_db_path
-                && path == stats_path
-            {
-                info!("Statistics database {}: {:?}", action, path);
-            }
+        if let Some(format) = LibraryItemFormat::from_path(path) {
+            info!("{:?} file changed: {:?}", format, path);
+        } else if let Some(filename) = filename
+            && LibraryItemFormat::is_metadata_file(filename)
+        {
+            info!("Metadata file changed: {:?}", path);
+        } else if let Some(filename) = filename
+            && filename.ends_with(".sdr")
+        {
+            info!("KoReader metadata directory changed: {:?}", path);
+        } else if let Some(stats_path) = statistics_db_path
+            && path == stats_path
+        {
+            info!("Statistics database changed: {:?}", path);
         }
     }
 }
