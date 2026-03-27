@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 
+import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteQuery } from '../../../shared/hooks/useSiteQuery';
 import { LoadingSpinner } from '../../../shared/ui/feedback/LoadingSpinner';
 import { PageErrorState } from '../../../shared/ui/feedback/PageErrorState';
 import { translation } from '../../../shared/i18n';
@@ -87,6 +89,8 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         effectivePresentation,
     );
 
+    const { siteQuery } = useSiteQuery();
+    useDocumentTitle(title, siteQuery.data?.title);
     useReaderKeyboardNav(handlePrev, handleNext);
     useReaderThemeObserver(
         viewRef,

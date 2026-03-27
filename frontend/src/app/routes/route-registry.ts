@@ -22,7 +22,7 @@ export type MainRouteId =
     | 'comics-list'
     | 'recap';
 export type DetailRouteId = 'books-detail' | 'comics-detail';
-type ReaderRouteId = 'books-read' | 'comics-read';
+export type ReaderRouteId = 'books-read' | 'comics-read';
 export type LibraryCollectionRoute = 'books' | 'comics';
 type LibraryContentTypeRoute = 'book' | 'comic';
 
@@ -62,6 +62,11 @@ const MAIN_ROUTE_IDS = [
 ] as const;
 
 export type ScrollableRouteId = MainRouteId | DetailRouteId;
+
+const READER_ROUTE_IDS: ReadonlySet<string> = new Set<string>([
+    'books-read',
+    'comics-read',
+]);
 
 const SCROLLABLE_ROUTE_IDS: ReadonlySet<string> = new Set<string>([
     ...MAIN_ROUTE_IDS,
@@ -150,6 +155,12 @@ export function matchRoute(pathname: string): RouteMatch {
         params: {},
         normalizedPathname,
     };
+}
+
+export function isReaderRouteId(
+    routeId: RouteId | null,
+): routeId is ReaderRouteId {
+    return routeId !== null && READER_ROUTE_IDS.has(routeId);
 }
 
 export function isMainRouteId(routeId: RouteId | null): routeId is MainRouteId {
