@@ -204,16 +204,19 @@ impl WebServer {
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 
-        if state.auth_state.is_some() {
-            info!("Authentication enabled");
-        }
-        if state.write_coordinator.is_some() {
-            info!("Metadata writeback enabled");
-        }
-
         info!(
-            "Web server running on http://localhost:{}, binding to: 0.0.0.0",
-            self.port
+            "Listening on http://0.0.0.0:{} (auth: {}, writeback: {})",
+            self.port,
+            if state.auth_state.is_some() {
+                "on"
+            } else {
+                "off"
+            },
+            if state.write_coordinator.is_some() {
+                "on"
+            } else {
+                "off"
+            },
         );
 
         axum::serve(
