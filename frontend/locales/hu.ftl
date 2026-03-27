@@ -369,7 +369,7 @@ minutes_label = { $count ->
 # -----------------------------------
 edit-warning =
     .title = Mielőtt szerkesztenél
-    .body = Győződj meg róla, hogy a könyv be van zárva a KoReaderben, és elég idő eltelt a bezárás óta, hogy az esetleges fájlszinkronizálás (pl. Syncthing) befejeződjön. A KoReader felülírja a metaadat-fájlt, amíg a könyv nyitva van. Ha itt mentesz módosításokat, amíg a könyv még nyitva van — vagy mielőtt a legfrissebb sidecar fájl szinkronizálódott volna — a módosításaid elvesznek.
+    .body = Győződj meg róla, hogy a könyv be van zárva a KoReaderben, és elég idő eltelt a bezárás óta, hogy az esetleges fájlszinkronizálás (pl. Syncthing) befejeződjön. A KoReader felülírja a metaadat-fájlt, amíg a könyv nyitva van. Ha itt mentesz módosításokat, amíg a könyv még nyitva van (vagy mielőtt a legfrissebb sidecar fájl szinkronizálódott volna) a módosításaid elvesznek.
     .dismiss = Ne jelenjen meg többé ez a figyelmeztetés
     .understood = Megértettem
 edit =
