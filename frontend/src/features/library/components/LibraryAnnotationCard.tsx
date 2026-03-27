@@ -220,61 +220,129 @@ export function LibraryAnnotationCard({
                                 </span>
                             </Link>
                         )}
-
-                        {showEditingControls && onDelete && (
-                            <>
-                                {confirmingDelete ? (
-                                    <div className="inline-flex items-center gap-0.5">
-                                        <Button
-                                            variant="ghost"
-                                            color="danger"
-                                            size="xs"
-                                            icon={LuCheck}
-                                            onClick={() => {
-                                                onDelete();
-                                                setConfirmingDelete(false);
-                                            }}
-                                        >
-                                            {translation.get('delete')}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="xs"
-                                            onClick={() =>
-                                                setConfirmingDelete(false)
-                                            }
-                                        >
-                                            {translation.get('cancel')}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <Button
-                                        variant="ghost"
-                                        color="danger"
-                                        size="xs"
-                                        icon={LuTrash2}
-                                        onClick={() =>
-                                            setConfirmingDelete(true)
-                                        }
-                                    >
-                                        {translation.get('delete-bookmark')}
-                                    </Button>
-                                )}
-                            </>
-                        )}
                     </div>
                 </div>
 
                 {/* Note */}
-                {hasNote && (
+                {(hasNote || editingNote) && (
                     <div className="px-5 pb-4">
-                        <div className="bg-gray-100 dark:bg-dark-850/50 p-3 rounded-lg border border-gray-200 dark:border-dark-700/30">
-                            <p className="text-sm text-gray-700 dark:text-dark-200 leading-relaxed whitespace-pre-wrap">
-                                {annotation.note}
-                            </p>
+                        {editingNote ? (
+                            <textarea
+                                ref={textareaRef}
+                                value={draftNote}
+                                onChange={(e) => setDraftNote(e.target.value)}
+                                rows={3}
+                                className="w-full rounded-lg border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-800 text-gray-900 dark:text-white p-3 text-sm leading-relaxed focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-y placeholder:text-gray-400 dark:placeholder:text-dark-500"
+                                placeholder={translation.get('add-note')}
+                            />
+                        ) : (
+                            <div className="bg-gray-100 dark:bg-dark-850/50 p-3 rounded-lg border border-gray-200 dark:border-dark-700/30">
+                                <p className="text-sm text-gray-700 dark:text-dark-200 leading-relaxed whitespace-pre-wrap">
+                                    {annotation.note}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Note editing footer */}
+                {editingNote && (
+                    <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200/50 dark:border-dark-700/50 bg-gray-50/50 dark:bg-dark-900/30">
+                        {hasNote ? (
+                            <Button
+                                color="danger"
+                                icon={LuTrash2}
+                                onClick={() => {
+                                    onSaveNote?.(null);
+                                    stopEditingNote();
+                                }}
+                            >
+                                {translation.get('delete-note')}
+                            </Button>
+                        ) : (
+                            <div />
+                        )}
+                        <div className="flex items-center gap-2">
+                            <Button color="secondary" onClick={stopEditingNote}>
+                                {translation.get('cancel')}
+                            </Button>
+                            <Button onClick={handleNoteSave}>
+                                {translation.get('save')}
+                            </Button>
                         </div>
                     </div>
                 )}
+
+                {/* Toolbar */}
+                <div
+                    className={`grid ${!editingNote && !suppressToolbarTransition ? 'transition-[grid-template-rows] duration-200 ease-in-out' : ''}`}
+                    style={{
+                        gridTemplateRows: showToolbar ? '1fr' : '0fr',
+                    }}
+                >
+                    <div className="overflow-hidden min-h-0">
+                        <footer className="flex items-center justify-between px-4 py-1.5 border-t border-gray-200/50 dark:border-dark-700/50 bg-gray-50/50 dark:bg-dark-900/30">
+                            {onDelete ? (
+                                <div className="flex items-center">
+                                    {confirmingDelete ? (
+                                        <div className="inline-flex items-center gap-0.5">
+                                            <Button
+                                                variant="ghost"
+                                                color="danger"
+                                                size="xs"
+                                                icon={LuCheck}
+                                                onClick={() => {
+                                                    onDelete();
+                                                    setConfirmingDelete(false);
+                                                }}
+                                            >
+                                                {translation.get('delete')}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="xs"
+                                                onClick={() =>
+                                                    setConfirmingDelete(false)
+                                                }
+                                            >
+                                                {translation.get('cancel')}
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            color="danger"
+                                            size="xs"
+                                            icon={LuTrash2}
+                                            onClick={() =>
+                                                setConfirmingDelete(true)
+                                            }
+                                        >
+                                            {translation.get('delete-bookmark')}
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div />
+                            )}
+
+                            {onSaveNote && (
+                                <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    icon={LuPencil}
+                                    label={
+                                        hasNote
+                                            ? translation.get('edit-note')
+                                            : translation.get('add-note')
+                                    }
+                                    onClick={() => setEditingNote(!editingNote)}
+                                    className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
+                                />
+                            )}
+                        </footer>
+                    </div>
+                </div>
             </article>
         );
     }

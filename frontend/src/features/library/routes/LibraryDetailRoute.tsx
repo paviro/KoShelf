@@ -308,6 +308,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                         onToggle={() => toggle('bookmarks')}
                                         readerBaseHref={readerBaseHref}
                                         canWrite={canWrite}
+                                        onSaveNote={handleAnnotationNoteUpdate}
                                         onDelete={handleAnnotationDelete}
                                         guardedAction={guardedAction}
                                     />

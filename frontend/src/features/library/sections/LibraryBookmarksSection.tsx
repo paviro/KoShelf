@@ -12,6 +12,7 @@ type LibraryBookmarksSectionProps = {
     onToggle: () => void;
     readerBaseHref?: string | null;
     canWrite?: boolean;
+    onSaveNote?: (annotationId: string, note: string | null) => void;
     onDelete?: (annotationId: string) => void;
     guardedAction?: (action: () => void) => void;
 };
@@ -22,6 +23,7 @@ export function LibraryBookmarksSection({
     onToggle,
     readerBaseHref,
     canWrite = false,
+    onSaveNote,
     onDelete,
     guardedAction,
 }: LibraryBookmarksSectionProps) {
@@ -59,6 +61,11 @@ export function LibraryBookmarksSection({
                             index,
                         )}
                         showEditingControls={canWrite && editing}
+                        onSaveNote={
+                            onSaveNote
+                                ? (note) => onSaveNote(annotation.id, note)
+                                : undefined
+                        }
                         onDelete={
                             onDelete ? () => onDelete(annotation.id) : undefined
                         }
