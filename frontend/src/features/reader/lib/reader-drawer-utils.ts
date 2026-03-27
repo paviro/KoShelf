@@ -21,7 +21,7 @@ export function resolveSectionCandidates(
         : [currentSectionIndex];
 }
 
-export function resolveAnnotationSectionIndex(
+function resolveAnnotationSectionIndex(
     annotation: LibraryAnnotation,
 ): number | null {
     if (!annotation.pos0) {
@@ -32,7 +32,7 @@ export function resolveAnnotationSectionIndex(
     return parsedPosition?.spineIndex ?? null;
 }
 
-export type AnnotationChapterGroup = {
+type AnnotationChapterGroup = {
     chapter: string;
     annotations: LibraryAnnotation[];
 };

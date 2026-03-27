@@ -6,11 +6,11 @@ import {
 
 import { loadCalendarMonth, loadCalendarMonths } from '../api/calendar-data';
 
-export function calendarMonthsQueryKey() {
+function calendarMonthsQueryKey() {
     return ['calendar-months'] as const;
 }
 
-export function calendarMonthQueryKey(monthKey: string) {
+function calendarMonthQueryKey(monthKey: string) {
     return ['calendar-month', monthKey] as const;
 }
 
@@ -21,7 +21,7 @@ function calendarMonthQueryOptions(monthKey: string) {
     };
 }
 
-export function prefetchCalendarMonthQuery(
+function prefetchCalendarMonthQuery(
     queryClient: QueryClient,
     monthKey: string,
 ): Promise<void> {

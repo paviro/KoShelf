@@ -10,11 +10,11 @@ import {
     type RecapScope,
 } from '../api/recap-data';
 
-export function recapIndexQueryKey(scope: RecapScope) {
+function recapIndexQueryKey(scope: RecapScope) {
     return ['recap-index', scope] as const;
 }
 
-export function recapYearQueryKey(scope: RecapScope, year: number | null) {
+function recapYearQueryKey(scope: RecapScope, year: number | null) {
     return ['recap-year', scope, year] as const;
 }
 

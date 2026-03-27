@@ -9,7 +9,7 @@ use include_dir::{Dir, include_dir};
 
 static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
 
-pub fn routes() -> Router {
+pub(crate) fn routes() -> Router {
     Router::new()
         .route("/", get(react_shell_index_handler))
         .route("/index.html", get(react_shell_index_handler))

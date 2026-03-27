@@ -56,7 +56,7 @@ export type ReaderToggleControl = {
     isOverridden: boolean;
 };
 
-export type UseReaderStyleResult = {
+type UseReaderStyleResult = {
     fontSize: ReaderStyleControl;
     lineSpacing: ReaderStyleControl;
     wordSpacing: ReaderStyleControl;

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { RouteId } from '../../../app/routes/route-registry';
 import { patchRouteState, readRouteState } from './route-state-storage';
 
-export type SectionVisibilityState<SectionKey extends string> = Record<
+type SectionVisibilityState<SectionKey extends string> = Record<
     SectionKey,
     boolean
 >;
@@ -38,7 +38,7 @@ function normalizeSectionState<SectionKey extends string>(
     return next;
 }
 
-export function readSectionVisibilityState<SectionKey extends string>({
+function readSectionVisibilityState<SectionKey extends string>({
     routeId,
     sectionKeys,
     defaults,
@@ -48,7 +48,7 @@ export function readSectionVisibilityState<SectionKey extends string>({
     return normalizeSectionState(persisted[fieldName], sectionKeys, defaults);
 }
 
-export function writeSectionVisibilityState<SectionKey extends string>(
+function writeSectionVisibilityState<SectionKey extends string>(
     {
         routeId,
         sectionKeys,

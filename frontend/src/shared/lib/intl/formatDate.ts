@@ -308,7 +308,7 @@ export function parsePlainDate(value: string): Date | null {
     );
 }
 
-export function parseMonthKey(value: string): Date | null {
+function parseMonthKey(value: string): Date | null {
     const parts = parseDateParts(value, MONTH_KEY_REGEX);
     if (!parts) {
         return null;
@@ -317,7 +317,7 @@ export function parseMonthKey(value: string): Date | null {
     return new Date(Date.UTC(parts.year, parts.month - 1, 1, 12, 0, 0, 0));
 }
 
-export function parseInstant(value: string): Date | null {
+function parseInstant(value: string): Date | null {
     const parsed = new Date(value.trim());
     return isValidDate(parsed) ? parsed : null;
 }

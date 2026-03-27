@@ -17,7 +17,7 @@ fn data_changed_event(update: &Update) -> Event {
     Event::default().event("data_changed").data(payload)
 }
 
-pub async fn events_stream(
+pub(crate) async fn events_stream(
     State(state): State<ServerState>,
 ) -> Sse<impl futures::Stream<Item = Result<Event, Infallible>>> {
     let receiver = state.update_notifier.subscribe();

@@ -116,7 +116,7 @@ export function preloadRoute(routeId: RouteId): Promise<void> {
     return promise;
 }
 
-export function routePathnameFromHref(href: string): string | null {
+function routePathnameFromHref(href: string): string | null {
     let url: URL;
     try {
         url = new URL(href, window.location.href);

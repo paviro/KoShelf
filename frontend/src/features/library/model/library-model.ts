@@ -11,12 +11,9 @@ export const LIBRARY_SECTION_KEYS = [
 
 export type LibrarySectionKey = (typeof LIBRARY_SECTION_KEYS)[number];
 
-export type LibrarySectionVisibilityState = Record<LibrarySectionKey, boolean>;
+type LibrarySectionVisibilityState = Record<LibrarySectionKey, boolean>;
 
-export type LibrarySectionBuckets = Record<
-    LibrarySectionKey,
-    LibraryListItem[]
->;
+type LibrarySectionBuckets = Record<LibrarySectionKey, LibraryListItem[]>;
 
 export const LIBRARY_FILTER_VALUES = [
     'all',
@@ -68,9 +65,7 @@ export function normalizeLibraryFilterValue(
     return value as LibraryFilterValue;
 }
 
-export function sectionFromLibraryItem(
-    item: LibraryListItem,
-): LibrarySectionKey {
+function sectionFromLibraryItem(item: LibraryListItem): LibrarySectionKey {
     if (item.status === 'reading') {
         return 'reading';
     }

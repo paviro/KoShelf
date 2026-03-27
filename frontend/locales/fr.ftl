@@ -356,32 +356,6 @@ select-month = Sélectionner le mois
 # -----------------------------------
 #           Time & Dates
 # -----------------------------------
-january = Janvier
-    .short = Jan
-february = Février
-    .short = Fév
-march = Mars
-    .short = Mar
-april = Avril
-    .short = Avr
-may = Mai
-    .short = Mai
-june = Juin
-    .short = Jun
-july = Juillet
-    .short = Jul
-august = Août
-    .short = Aoû
-september = Septembre
-    .short = Sep
-october = Octobre
-    .short = Oct
-november = Novembre
-    .short = Nov
-december = Décembre
-    .short = Déc
-
-# Weekday abbreviations (Mon/Thu/Sun)
 weekday =
     .mon = Lun
     .tue = Mar
@@ -391,7 +365,6 @@ weekday =
     .sat = Sam
     .sun = Dim
 
-# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
     .w = sem
     .d = j

@@ -19,7 +19,7 @@ use std::path::Path;
 ///
 /// `modified_date` is the caller-formatted date string (YYYY-MM-DD) stamped
 /// on `summary.modified`, matching KoReader's `filemanagerutil.saveSummary()`.
-pub fn write_item_metadata(
+pub(crate) fn write_item_metadata(
     metadata_path: &Path,
     review_note: Option<Option<&str>>,
     rating: Option<u32>,
@@ -39,7 +39,7 @@ pub fn write_item_metadata(
 ///
 /// `datetime_updated` is pre-computed by the caller so the Lua file and DB
 /// receive the same timestamp.
-pub fn write_annotation_metadata(
+pub(crate) fn write_annotation_metadata(
     metadata_path: &Path,
     lua_index: i32,
     note: Option<Option<&str>>,
@@ -66,7 +66,7 @@ pub fn write_annotation_metadata(
 /// `lua_index` is the 0-based position from the database.
 /// The correct stats counter is determined by reading the annotation's `drawer`
 /// and `note` fields, matching KOReader's `getBookmarkType` classification.
-pub fn delete_annotation(metadata_path: &Path, lua_index: i32) -> Result<()> {
+pub(crate) fn delete_annotation(metadata_path: &Path, lua_index: i32) -> Result<()> {
     let lua_array_index = (lua_index + 1) as i64;
     let writer = LuaWriter::new();
     writer.write(metadata_path, |lua, table| {

@@ -22,9 +22,9 @@ export type MainRouteId =
     | 'comics-list'
     | 'recap';
 export type DetailRouteId = 'books-detail' | 'comics-detail';
-export type ReaderRouteId = 'books-read' | 'comics-read';
+type ReaderRouteId = 'books-read' | 'comics-read';
 export type LibraryCollectionRoute = 'books' | 'comics';
-export type LibraryContentTypeRoute = 'book' | 'comic';
+type LibraryContentTypeRoute = 'book' | 'comic';
 
 type RouteDefinition = {
     id: RouteId;
@@ -32,7 +32,7 @@ type RouteDefinition = {
     mainRouteId: MainRouteId | null;
 };
 
-export const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
+const ROUTE_DEFINITIONS: readonly RouteDefinition[] = [
     { id: 'root', path: '/', mainRouteId: null },
     { id: 'login', path: '/login', mainRouteId: null },
     { id: 'statistics', path: '/statistics', mainRouteId: 'statistics' },
@@ -52,7 +52,7 @@ const ROUTE_DEFINITION_BY_ID: Record<RouteId, RouteDefinition> =
         ROUTE_DEFINITIONS.map((definition) => [definition.id, definition]),
     ) as Record<RouteId, RouteDefinition>;
 
-export const MAIN_ROUTE_IDS = [
+const MAIN_ROUTE_IDS = [
     'books-list',
     'comics-list',
     'statistics',
@@ -75,7 +75,7 @@ export function isScrollableRouteId(
     return routeId !== null && SCROLLABLE_ROUTE_IDS.has(routeId);
 }
 
-export type RouteMatch = {
+type RouteMatch = {
     routeId: RouteId | null;
     mainRouteId: MainRouteId | null;
     params: Record<string, string>;

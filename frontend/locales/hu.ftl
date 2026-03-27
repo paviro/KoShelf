@@ -334,32 +334,6 @@ select-month = Hónap kiválasztása
 # -----------------------------------
 #           Time & Dates
 # -----------------------------------
-january = Január
-    .short = Jan.
-february = Február
-    .short = Febr.
-march = Március
-    .short = Márc.
-april = Április
-    .short = Ápr.
-may = Május
-    .short = Máj.
-june = Június
-    .short = Jún.
-july = Július
-    .short = Júl.
-august = Augusztus
-    .short = Aug.
-september = Szeptember
-    .short = Szept.
-october = Október
-    .short = Okt.
-november = November
-    .short = Nov.
-december = December
-    .short = Dec.
-
-# Weekday abbreviations (only Mon/Thu/Sun for GitHub-style heatmap visualization)
 weekday =
     .mon = H
     .tue = K
@@ -369,7 +343,6 @@ weekday =
     .sat = Szo
     .sun = V
 
-# Time units: w=weeks, d=days, h=hours, m=minutes
 units =
     .w = h
     .d = n

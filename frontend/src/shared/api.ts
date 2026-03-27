@@ -13,7 +13,7 @@ export { ApiHttpError, isApiHttpError } from './api-fetch';
 
 // ── Server mode detection ───────────────────────────────────────────────
 
-export type ServerMode = 'internal' | 'external';
+type ServerMode = 'internal' | 'external';
 
 declare global {
     interface Window {
@@ -38,7 +38,7 @@ function parseStoredServerMode(raw: string | null): ServerMode | null {
     return null;
 }
 
-export function getServerMode(): ServerMode {
+function getServerMode(): ServerMode {
     if (
         window.__KOSHELF_SERVER_MODE === 'internal' ||
         window.__KOSHELF_SERVER_MODE === 'external'
@@ -85,7 +85,9 @@ export const api = new Proxy<ApiClient>({} as ApiClient, {
     get(_target, prop: string | symbol) {
         const client = getClient();
         const value = client[prop as keyof ApiClient];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-        return typeof value === 'function' ? (value as Function).bind(client) : value;
+        return typeof value === 'function'
+            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+              (value as Function).bind(client)
+            : value;
     },
 });

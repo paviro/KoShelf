@@ -22,9 +22,7 @@ function readDarkMode(): boolean {
 function useDarkMode(): boolean {
     const [dark, setDark] = useState(readDarkMode);
     useEffect(() => {
-        const observer = new MutationObserver(() =>
-            setDark(readDarkMode()),
-        );
+        const observer = new MutationObserver(() => setDark(readDarkMode()));
         observer.observe(document.documentElement, {
             attributes: true,
             attributeFilter: ['class'],
@@ -43,7 +41,7 @@ function barColor(ratio: number, dark: boolean): string {
     const chroma = dark ? 0.04 + ratio * 0.23 : 0.02 + ratio * 0.13;
     // Lightness: wider range for more contrast
     const lightness = dark
-        ? 0.30 + ratio * 0.34  // very dim → bright
+        ? 0.3 + ratio * 0.34 // very dim → bright
         : 0.87 - ratio * 0.27; // very pale → moderate
     return `oklch(${lightness} ${chroma} ${hue})`;
 }
@@ -61,16 +59,25 @@ type AnnotationDots = {
     note: string | null;
 };
 
-function annotationDots(annotations: PageActivityAnnotation[], dark: boolean): AnnotationDots {
+function annotationDots(
+    annotations: PageActivityAnnotation[],
+    dark: boolean,
+): AnnotationDots {
     return {
         highlight: annotations.some((a) => a.kind === 'highlight')
-            ? dark ? 'bg-yellow-400' : 'bg-yellow-500'
+            ? dark
+                ? 'bg-yellow-400'
+                : 'bg-yellow-500'
             : null,
         bookmark: annotations.some((a) => a.kind === 'bookmark')
-            ? dark ? 'bg-rose-400' : 'bg-rose-500'
+            ? dark
+                ? 'bg-rose-400'
+                : 'bg-rose-500'
             : null,
         note: annotations.some((a) => a.kind === 'note')
-            ? dark ? 'bg-fuchsia-400' : 'bg-fuchsia-500'
+            ? dark
+                ? 'bg-fuchsia-400'
+                : 'bg-fuchsia-500'
             : null,
     };
 }
@@ -100,10 +107,7 @@ function barHeightPercent(duration: number, maxDuration: number): number {
 // ── Component ───────────────────────────────────────────────────────────
 
 /** Alternating background tint classes for chapter bands. */
-const CHAPTER_BAND_CLASSES = [
-    '',
-    'bg-gray-500/[0.04] dark:bg-white/[0.03]',
-];
+const CHAPTER_BAND_CLASSES = ['', 'bg-gray-500/[0.04] dark:bg-white/[0.03]'];
 
 /** Alternating color classes for the bottom chapter strip segments. */
 const CHAPTER_STRIP_CLASSES = [
@@ -178,9 +182,7 @@ export function PageActivityGrid({
         for (let i = 0; i < sorted.length; i++) {
             const startPage = sorted[i].page;
             const endPage =
-                i + 1 < sorted.length
-                    ? sorted[i + 1].page - 1
-                    : totalPages;
+                i + 1 < sorted.length ? sorted[i + 1].page - 1 : totalPages;
             ranges.push({
                 title: sorted[i].title,
                 startPage,
@@ -237,7 +239,9 @@ export function PageActivityGrid({
 
             let tooltip: string;
             if (data) {
-                const duration = formatDuration(data.totalDuration, { includeSeconds: true });
+                const duration = formatDuration(data.totalDuration, {
+                    includeSeconds: true,
+                });
                 const visits = data.readCount;
                 tooltip = `${translation.get('page-activity.page', { page })} — ${duration}, ${translation.get('page-activity.visits', visits)}`;
             } else {
@@ -257,7 +261,10 @@ export function PageActivityGrid({
                 const parts: string[] = [];
                 if (highlightCount > 0)
                     parts.push(
-                        translation.get('page-activity.highlights', highlightCount),
+                        translation.get(
+                            'page-activity.highlights',
+                            highlightCount,
+                        ),
                     );
                 if (noteCount > 0)
                     parts.push(
@@ -265,7 +272,10 @@ export function PageActivityGrid({
                     );
                 if (bookmarkCount > 0)
                     parts.push(
-                        translation.get('page-activity.bookmarks', bookmarkCount),
+                        translation.get(
+                            'page-activity.bookmarks',
+                            bookmarkCount,
+                        ),
                     );
                 if (parts.length > 0) tooltip += ` (${parts.join(', ')})`;
             }
@@ -285,7 +295,15 @@ export function PageActivityGrid({
         }
 
         return result;
-    }, [totalPages, pageData, maxDuration, colorMax, annotationMap, chapterMap, dark]);
+    }, [
+        totalPages,
+        pageData,
+        maxDuration,
+        colorMax,
+        annotationMap,
+        chapterMap,
+        dark,
+    ]);
 
     // Track whether this is the first render or a data change (animate)
     // vs. a theme-only change (instant recolor).
@@ -348,7 +366,10 @@ export function PageActivityGrid({
                 element.animate(
                     [
                         { height: `${MIN_BAR_PCT}%`, backgroundColor: base },
-                        { height: `${targetHeight}%`, backgroundColor: bar.color },
+                        {
+                            height: `${targetHeight}%`,
+                            backgroundColor: bar.color,
+                        },
                     ],
                     {
                         duration: 350,
@@ -390,12 +411,25 @@ export function PageActivityGrid({
                     <div className="flex h-1 overflow-hidden mb-px bg-gray-200/40 dark:bg-dark-700/40">
                         {bars.map((bar) => {
                             const kinds: { cls: string; key: string }[] = [];
-                            if (bar.dots.bookmark) kinds.push({ cls: bar.dots.bookmark, key: 'b' });
-                            if (bar.dots.note) kinds.push({ cls: bar.dots.note, key: 'n' });
-                            if (bar.dots.highlight) kinds.push({ cls: bar.dots.highlight, key: 'h' });
-                            if (kinds.length === 0) return (
-                                <div key={bar.page} className="flex-1 min-w-0" />
-                            );
+                            if (bar.dots.bookmark)
+                                kinds.push({
+                                    cls: bar.dots.bookmark,
+                                    key: 'b',
+                                });
+                            if (bar.dots.note)
+                                kinds.push({ cls: bar.dots.note, key: 'n' });
+                            if (bar.dots.highlight)
+                                kinds.push({
+                                    cls: bar.dots.highlight,
+                                    key: 'h',
+                                });
+                            if (kinds.length === 0)
+                                return (
+                                    <div
+                                        key={bar.page}
+                                        className="flex-1 min-w-0"
+                                    />
+                                );
                             return (
                                 <div
                                     key={bar.page}
@@ -424,7 +458,11 @@ export function PageActivityGrid({
                                 {chapterRanges.map((range) => (
                                     <div
                                         key={range.startPage}
-                                        className={CHAPTER_BAND_CLASSES[range.bandIndex]}
+                                        className={
+                                            CHAPTER_BAND_CLASSES[
+                                                range.bandIndex
+                                            ]
+                                        }
                                         style={{ width: `${range.widthPct}%` }}
                                     />
                                 ))}
@@ -448,7 +486,10 @@ export function PageActivityGrid({
                                 <div
                                     data-page={bar.page}
                                     className="page-activity-bar w-full rounded-t-[1px] transition-colors hover:brightness-110 flex flex-col"
-                                    style={{ height: `${bar.heightPct}%`, backgroundColor: bar.color }}
+                                    style={{
+                                        height: `${bar.heightPct}%`,
+                                        backgroundColor: bar.color,
+                                    }}
                                 >
                                     {(bar.dots.bookmark || bar.dots.note) && (
                                         <div className="w-full shrink-0 flex flex-col rounded-t-[1px]">
@@ -483,7 +524,9 @@ export function PageActivityGrid({
                             {chapterRanges.map((range) => (
                                 <div
                                     key={range.startPage}
-                                    className={CHAPTER_STRIP_CLASSES[range.bandIndex]}
+                                    className={
+                                        CHAPTER_STRIP_CLASSES[range.bandIndex]
+                                    }
                                     style={{ width: `${range.widthPct}%` }}
                                     title={range.title}
                                 />
@@ -515,7 +558,9 @@ export function PageActivityGrid({
                         {hasBookmarks && (
                             <span className="flex items-center gap-1.5">
                                 <span className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-xs bg-rose-400" />
-                                {translation.get('page-activity.legend-bookmark')}
+                                {translation.get(
+                                    'page-activity.legend-bookmark',
+                                )}
                             </span>
                         )}
                         {hasNotes && (
@@ -530,7 +575,9 @@ export function PageActivityGrid({
                                     <span className="inline-block flex-1 h-2.5 sm:h-3 rounded-xs bg-gray-300 dark:bg-dark-600" />
                                     <span className="inline-block flex-1 h-2.5 sm:h-3 rounded-xs bg-gray-400 dark:bg-dark-500" />
                                 </span>
-                                {translation.get('page-activity.legend-chapter')}
+                                {translation.get(
+                                    'page-activity.legend-chapter',
+                                )}
                             </span>
                         )}
                     </div>

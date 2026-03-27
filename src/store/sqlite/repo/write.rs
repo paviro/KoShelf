@@ -625,5 +625,4 @@ mod tests {
         .unwrap();
         assert_eq!(counts, (0, 0, 1));
     }
-
 }

@@ -1,8 +1,8 @@
 import type { RouteId } from '../../../app/routes/route-registry';
 import { StorageManager } from '../../storage-manager';
 
-export type RouteStateStorage = 'local' | 'session';
-export type RouteStateRecord = Record<string, unknown>;
+type RouteStateStorage = 'local' | 'session';
+type RouteStateRecord = Record<string, unknown>;
 
 const ROUTE_STATE_KEY_PREFIX = 'route_state_';
 

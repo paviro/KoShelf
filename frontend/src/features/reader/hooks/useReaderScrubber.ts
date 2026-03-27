@@ -9,7 +9,7 @@ import {
 
 import type { FoliateView } from '../model/reader-model';
 
-export type UseReaderScrubberResult = {
+type UseReaderScrubberResult = {
     trackRef: RefObject<HTMLDivElement | null>;
     dragging: boolean;
     dragFraction: number | null;

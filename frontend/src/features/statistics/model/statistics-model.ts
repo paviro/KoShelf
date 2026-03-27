@@ -23,7 +23,7 @@ export const SECTION_NAMES = [
 
 export type SectionName = (typeof SECTION_NAMES)[number];
 
-export type SectionVisibilityState = Record<SectionName, boolean>;
+type SectionVisibilityState = Record<SectionName, boolean>;
 
 export type MonthlyReadStats = {
     reading_time_sec: number;
@@ -37,7 +37,7 @@ export type YearlySummaryStats = {
     active_days: number;
 };
 
-export type StatisticsViewState = {
+type StatisticsViewState = {
     scope: StatisticsScope;
     selectedWeekKey: string | null;
     selectedHeatmapYear: number | null;
@@ -66,7 +66,7 @@ function normalizeSelectedWeekKey(weekKey: unknown): string | null {
     return trimmed.length > 0 ? trimmed : null;
 }
 
-export function normalizeScope(scope: unknown): StatisticsScope {
+function normalizeScope(scope: unknown): StatisticsScope {
     if (scope === 'books' || scope === 'comics') {
         return scope;
     }

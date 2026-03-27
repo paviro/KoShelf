@@ -1,17 +1,9 @@
 import {
     formatMonthKey,
-    formatPlainDate,
     formatPlainDateRange,
 } from '../../../shared/lib/intl/formatDate';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import type { CompletionItem } from '../api/recap-data';
-
-export function formatRecapDate(dateIso: string): string {
-    return formatPlainDate(dateIso, {
-        monthStyle: 'short',
-        yearDisplay: 'auto',
-    });
-}
 
 export function formatRecapDateRange(
     startDateIso: string,
