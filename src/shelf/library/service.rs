@@ -2,11 +2,12 @@
 
 use anyhow::Result;
 
-use super::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::server::api::responses::library::{
     LibraryCompletionEntry, LibraryCompletions, LibraryDetailData, LibraryDetailStatistics,
     LibraryItemStats, LibraryListData, LibrarySessionStats,
 };
+use crate::shelf::library::lookup_stat_book;
+use crate::shelf::library::queries::{IncludeToken, LibraryDetailQuery, LibraryListQuery};
 use crate::shelf::statistics::BookStatistics;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{BookSessionStats, StatBook};
@@ -56,7 +57,7 @@ pub async fn detail(
         if includes.has(IncludeToken::Statistics) || includes.has(IncludeToken::Completions) {
             reading_data
                 .zip(item.partial_md5_checksum.as_deref())
-                .and_then(|(rd, md5)| super::lookup_stat_book(&rd.stats_data, md5))
+                .and_then(|(rd, md5)| lookup_stat_book(&rd.stats_data, md5))
         } else {
             None
         };

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{BookStatus, ReaderPresentation};
+use crate::shelf::models::{BookStatus, ReaderPresentation};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KoReaderMetadata {

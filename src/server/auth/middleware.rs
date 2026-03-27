@@ -9,8 +9,8 @@ use axum::response::{IntoResponse, Response};
 use crate::server::ServerState;
 use crate::server::api::responses::error::{ApiErrorCode, ApiErrorResponse};
 
-use super::session::validate_token;
-use super::{CurrentSessionId, SESSION_COOKIE_NAME};
+use crate::server::auth::session::validate_token;
+use crate::server::auth::{CurrentSessionId, SESSION_COOKIE_NAME};
 
 pub async fn auth_middleware(
     State(state): State<ServerState>,

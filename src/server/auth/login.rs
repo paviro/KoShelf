@@ -8,19 +8,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::IpAddr;
 
-use super::LoginRateLimiter;
-use super::client_addr::ClientContext;
-
 use crate::server::ServerState;
 use crate::server::api::responses::common::ApiResponse;
 use crate::server::api::responses::error::{ApiErrorCode, ApiErrorResponse};
-
-use super::password::{
+use crate::server::auth::LoginRateLimiter;
+use crate::server::auth::client_addr::ClientContext;
+use crate::server::auth::password::{
     PasswordLengthError, get_stored_auth, hash_password, set_password_hash_and_revoke_sessions,
     validate_password_length, verify_password,
 };
-use super::session::{SessionInfo, create_token, delete_session};
-use super::{CurrentSessionId, SESSION_COOKIE_NAME};
+use crate::server::auth::session::{self, SessionInfo, create_token, delete_session};
+use crate::server::auth::{CurrentSessionId, SESSION_COOKIE_NAME};
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -220,7 +218,7 @@ pub async fn list_sessions(
         return auth_not_configured_response();
     };
 
-    let sessions = match super::session::list_sessions(&auth_state.pool).await {
+    let sessions = match session::list_sessions(&auth_state.pool).await {
         Ok(sessions) => sessions,
         Err(err) => {
             error!("Failed to list sessions: {err}");

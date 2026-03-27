@@ -4,9 +4,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{Datelike, NaiveDate};
 
-use super::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
-use super::shared;
 use crate::server::api::responses::reading::{MetricPoint, ReadingMetricsData};
+use crate::shelf::statistics::compute::scaling::round_pages;
+use crate::shelf::statistics::queries::{MetricsGroupBy, ReadingMetric, ReadingMetricsQuery};
+use crate::shelf::statistics::shared;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::PageStat;
 use crate::store::memory::ReadingData;
@@ -66,7 +67,7 @@ pub fn metrics(reading_data: &ReadingData, query: ReadingMetricsQuery) -> Readin
                 }
                 scaled
                     .into_iter()
-                    .map(|(k, v)| (k, super::compute::scaling::round_pages(v)))
+                    .map(|(k, v)| (k, round_pages(v)))
                     .collect()
             }
             ReadingMetric::Sessions => {

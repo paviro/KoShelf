@@ -2,8 +2,10 @@ use chrono::{Datelike, Duration, NaiveDate};
 use log::debug;
 use std::collections::{HashMap, HashSet};
 
-use super::completion_detection::{CompletionConfig, ReadCompletionDetector};
-use super::sessions;
+use crate::shelf::statistics::compute::completion_detection::{
+    CompletionConfig, ReadCompletionDetector,
+};
+use crate::shelf::statistics::compute::sessions;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::{
     BookSessionStats, DailyStats, PageStat, ReadingStats, StatBook, StatisticsData, StreakInfo,

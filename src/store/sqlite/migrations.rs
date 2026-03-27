@@ -3,7 +3,7 @@ use log::warn;
 use sqlx::SqlitePool;
 use sqlx::migrate::MigrateError;
 
-use super::pool::LIBRARY_DB_REQUIRED_TABLES;
+use crate::store::sqlite::pool::LIBRARY_DB_REQUIRED_TABLES;
 
 /// Run all pending library DB migrations using sqlx's embedded migration system.
 ///

@@ -4,7 +4,7 @@
 //! knowledge (e.g. `summary.note`, `annotations[n].color`).
 //! HTTP handlers call into this module rather than using `LuaWriter` directly.
 
-use super::LuaWriter;
+use crate::source::koreader::LuaWriter;
 use anyhow::Result;
 use mlua::{Lua, Table, Value};
 use std::path::Path;

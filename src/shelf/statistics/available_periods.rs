@@ -4,10 +4,12 @@ use std::collections::BTreeMap;
 
 use chrono::NaiveDate;
 
-use super::compute::scaling::PageScaling;
-use super::queries::{DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery};
-use super::shared;
 use crate::server::api::responses::reading::{PeriodEntry, ReadingAvailablePeriodsData};
+use crate::shelf::statistics::compute::scaling::{PageScaling, round_pages};
+use crate::shelf::statistics::queries::{
+    DateRange, PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery,
+};
+use crate::shelf::statistics::shared;
 use crate::shelf::time_config::TimeConfig;
 use crate::source::koreader::types::StatisticsData;
 use crate::store::memory::ReadingData;
@@ -118,7 +120,7 @@ fn reading_data_periods(
                 start_date,
                 end_date,
                 reading_time_sec: Some(bucket.reading_time_sec),
-                pages_read: Some(super::compute::scaling::round_pages(bucket.scaled_pages)),
+                pages_read: Some(round_pages(bucket.scaled_pages)),
                 completions: Some(bucket.completions),
             }
         })
@@ -129,7 +131,7 @@ fn reading_data_periods(
 fn completions_periods(
     stats: &StatisticsData,
     group_by: PeriodGroupBy,
-    range: Option<&super::queries::DateRange>,
+    range: Option<&DateRange>,
 ) -> Vec<PeriodEntry> {
     let mut buckets: BTreeMap<String, i64> = BTreeMap::new();
 
