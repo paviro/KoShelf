@@ -8,7 +8,7 @@ import { translation } from '../../../shared/i18n';
 import { formatDateObjectToParts } from '../../../shared/lib/intl/formatDate';
 import { useQueryTransitionState } from '../../../shared/lib/state/useQueryTransitionState';
 import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
-import { MODAL_TRANSITION_DURATION_MS } from '../../../shared/ui/modal/ModalShell';
+import { OVERLAY_TRANSITION_DURATION_MS } from '../../../shared/lib/dom/useOverlayAnimation';
 import type { CalendarEventResponse } from '../api/calendar-data';
 import { CalendarEventModal } from '../components/CalendarEventModal';
 import { CalendarGrid } from '../components/CalendarGrid';
@@ -214,7 +214,7 @@ export function CalendarRoute() {
 
         const timerId = window.setTimeout(() => {
             setSelectedEvent(null);
-        }, MODAL_TRANSITION_DURATION_MS);
+        }, OVERLAY_TRANSITION_DURATION_MS);
 
         return () => {
             window.clearTimeout(timerId);
