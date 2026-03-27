@@ -449,12 +449,24 @@ export function useReaderView(
                 const isDark =
                     document.documentElement.classList.contains('dark');
 
+                const targetAnnotation =
+                    highlightIndex !== null
+                        ? resolveTargetAnnotation(
+                              highlights,
+                              bookmarks,
+                              highlightIndex,
+                              null,
+                          )
+                        : null;
+
                 const resolvedHighlightsPromise = resolveHighlightsBySection(
                     view,
                     highlights,
                     isDark,
                     {
                         prioritizeSectionIndexes: prioritySectionIndexes,
+                        targetAnnotationId:
+                            targetAnnotation?.annotation.id,
                         onSectionResolved: async (
                             sectionIndex,
                             sectionHighlights,

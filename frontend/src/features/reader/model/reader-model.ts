@@ -93,11 +93,13 @@ export type ReaderHighlightValue = {
     color?: string;
     drawer?: string;
     note?: string;
+    target?: boolean;
 };
 
 export type ResolveHighlightsBySectionOptions = {
     prioritizeSectionIndexes?: number[];
     maxConcurrentSections?: number;
+    targetAnnotationId?: string;
     onSectionResolved?: (
         sectionIndex: number,
         sectionHighlights: ReaderHighlightValue[],
