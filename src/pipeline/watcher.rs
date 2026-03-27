@@ -1,5 +1,5 @@
 use crate::app::config::SiteConfig;
-use crate::pipeline::rebuild::targeted_rebuild;
+use crate::pipeline::rebuild::rebuild;
 use crate::server::RecentWrites;
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::MetadataLocation;
@@ -136,7 +136,7 @@ impl FileWatcher {
                     }
 
                     let result = if let Some(ref repo) = library_repo_clone {
-                        targeted_rebuild(
+                        rebuild(
                             accumulated_paths,
                             &config_clone,
                             repo,
