@@ -435,7 +435,6 @@ toast-delete-annotation-error = Failed to delete annotation. It has been restore
 #            Page Activity
 # -----------------------------------
 page-activity = Page Activity
-    .reading-number = Completion { $number }
     .select-reading = Select reading
     .page = Page { $page }
     .unread = unread

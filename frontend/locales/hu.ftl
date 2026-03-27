@@ -411,7 +411,6 @@ toast-delete-annotation-error = A jegyzet törlése sikertelen. Visszaállítva.
 #            Page Activity
 # -----------------------------------
 page-activity = Oldalaktivitás
-    .reading-number = { $number }. olvasás
     .select-reading = Olvasás kiválasztása
     .page = { $page }. oldal
     .unread = olvasatlan

@@ -431,7 +431,6 @@ toast-delete-annotation-error = No se pudo eliminar la anotación. Ha sido resta
 #            Page Activity
 # -----------------------------------
 page-activity = Actividad de páginas
-    .reading-number = Lectura { $number }
     .select-reading = Seleccionar lectura
     .page = Página { $page }
     .unread = sin leer

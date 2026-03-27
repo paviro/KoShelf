@@ -435,7 +435,6 @@ toast-delete-annotation-error = Anmerkung konnte nicht gelöscht werden. Sie wur
 #            Page Activity
 # -----------------------------------
 page-activity = Seitenaktivität
-    .reading-number = Lesung { $number }
     .select-reading = Lesevorgang auswählen
     .page = Seite { $page }
     .unread = ungelesen
