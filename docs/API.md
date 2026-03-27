@@ -297,6 +297,92 @@ Each identifier:
 
 ---
 
+### `PATCH /api/items/{id}`
+
+Update item metadata. Only available when writeback is enabled (`--enable-writeback`).
+
+**Path Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | string | Yes | Library item ID |
+
+**Request Body:**
+
+All fields use three-state patch semantics: omit the field to leave it unchanged, set it to a value to update, or set it to `null` to clear.
+
+```json
+{
+  "review_note": "A thoughtful exploration of ...",
+  "rating": 4,
+  "status": "complete"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `review_note` | string? | User review / summary note. `null` clears it |
+| `rating` | number? | Rating 0–5. `0` or `null` clears the rating |
+| `status` | string? | One of: `reading`, `complete`, `abandoned` |
+
+**Response:** 204 No Content
+
+**Status Codes:** 204, 400 (invalid rating or status), 404 (item not found or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+
+---
+
+### `PATCH /api/items/{id}/annotations/{annotation_id}`
+
+Update an annotation's note, color, or highlight style. Only available when writeback is enabled (`--enable-writeback`).
+
+**Path Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | string | Yes | Library item ID |
+| `annotation_id` | string | Yes | Annotation identifier |
+
+**Request Body:**
+
+The `note` field uses three-state patch semantics (omit / value / `null` to clear). `color` and `drawer` are plain optional fields (omit to leave unchanged).
+
+```json
+{
+  "note": "Updated note text",
+  "color": "blue",
+  "drawer": "lighten"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `note` | string? | Note text. `null` clears the note |
+| `color` | string? | One of: `red`, `orange`, `yellow`, `green`, `olive`, `cyan`, `blue`, `purple`, `gray` |
+| `drawer` | string? | One of: `lighten`, `underscore`, `strikeout`, `invert` |
+
+**Response:** 204 No Content
+
+**Status Codes:** 204, 400 (invalid color or drawer), 404 (annotation or item not found, or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+
+---
+
+### `DELETE /api/items/{id}/annotations/{annotation_id}`
+
+Delete an annotation. Only available when writeback is enabled (`--enable-writeback`).
+
+**Path Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | string | Yes | Library item ID |
+| `annotation_id` | string | Yes | Annotation identifier |
+
+**Response:** 204 No Content
+
+**Status Codes:** 204, 404 (annotation or item not found, or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+
+---
+
 ### `GET /api/items/{id}/page-activity`
 
 Returns page-level reading heatmap data for a single library item.
