@@ -144,7 +144,6 @@ notes-label = { $count ->
 }
 bookmarks = Könyvjelzők
 page-bookmark = Oldal könyvjelző
-bookmark-anchor = Könyvjelző horgony
 highlights-quotes = Kiemelések és idézetek
 additional-information = További információk
 reading-progress = Olvasási folyamat
