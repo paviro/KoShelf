@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 
-type MetricCardVariant = 'responsive' | 'compact';
+type MetricCardVariant = 'responsive' | 'inline';
 type MetricCardSize = 'default' | 'sm';
 
 type MetricCardProps = {
@@ -37,14 +37,14 @@ export function MetricCard({
     const paddingClass = sm ? 'p-3' : 'p-3 sm:p-4';
 
     const layoutClass =
-        variant === 'compact'
+        variant === 'inline'
             ? 'flex items-center gap-3'
             : sm
               ? 'flex flex-col @[120px]:flex-row items-center gap-2 @[120px]:gap-3 h-full'
               : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3 h-full';
 
     const textAlignClass =
-        variant === 'compact'
+        variant === 'inline'
             ? ''
             : sm
               ? 'text-center @[120px]:text-left'
