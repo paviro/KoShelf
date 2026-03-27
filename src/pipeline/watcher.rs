@@ -11,7 +11,7 @@ use notify::event::ModifyKind;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::ops::Deref;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
@@ -74,25 +74,21 @@ impl FileWatcher {
             Config::default().with_poll_interval(Duration::from_secs(1)),
         )?;
 
+        let mut watched: Vec<String> = Vec::new();
+
         for library_path in &self.library_paths {
             watcher.watch(library_path, RecursiveMode::Recursive)?;
-            info!(
-                "File watcher started for library directory: {:?}",
-                library_path
-            );
+            watched.push(format!("{}", library_path.display()));
         }
 
         match &self.metadata_location {
             MetadataLocation::DocSettings(path) => {
                 watcher.watch(path, RecursiveMode::Recursive)?;
-                info!("File watcher started for docsettings directory: {:?}", path);
+                watched.push(format!("{}", path.display()));
             }
             MetadataLocation::HashDocSettings(path) => {
                 watcher.watch(path, RecursiveMode::Recursive)?;
-                info!(
-                    "File watcher started for hashdocsettings directory: {:?}",
-                    path
-                );
+                watched.push(format!("{}", path.display()));
             }
             MetadataLocation::InBookFolder => {
                 // Already watching books_path recursively
@@ -104,11 +100,14 @@ impl FileWatcher {
             && let Some(parent) = stats_path.parent()
         {
             watcher.watch(parent, RecursiveMode::NonRecursive)?;
-            info!(
-                "File watcher started for statistics database: {:?}",
-                stats_path
-            );
+            watched.push(format!("{}", stats_path.display()));
         }
+
+        info!(
+            "File watcher started for {} paths: {}",
+            watched.len(),
+            collapse_paths(&watched)
+        );
 
         let config_clone = self.config.clone();
         let site_store_clone = self.site_store.clone();
@@ -271,6 +270,36 @@ impl FileWatcher {
             })
             .collect()
     }
+}
+
+/// Format a list of paths by factoring out the longest common directory prefix.
+/// e.g. ["/a/b/Books", "/a/b/Comics", "/a/b/Stats/db"] → "/a/b/{Books, Comics, Stats/db}"
+fn collapse_paths(paths: &[String]) -> String {
+    if paths.len() <= 1 {
+        return paths.join(", ");
+    }
+
+    let first = Path::new(&paths[0]);
+    let prefix: PathBuf = first
+        .ancestors()
+        .find(|ancestor| {
+            ancestor.as_os_str() != first.as_os_str()
+                && paths.iter().all(|p| Path::new(p).starts_with(ancestor))
+        })
+        .unwrap_or(Path::new(""))
+        .to_path_buf();
+
+    if prefix == Path::new("") || prefix == Path::new("/") {
+        return paths.join(", ");
+    }
+
+    let suffixes: Vec<&str> = paths
+        .iter()
+        .map(|p| p.strip_prefix(prefix.to_str().unwrap_or("")).unwrap_or(p))
+        .map(|s| s.strip_prefix('/').unwrap_or(s))
+        .collect();
+
+    format!("{}/{{{}}}", prefix.display(), suffixes.join(", "))
 }
 
 /// Log accumulated unique paths once before a rebuild.
