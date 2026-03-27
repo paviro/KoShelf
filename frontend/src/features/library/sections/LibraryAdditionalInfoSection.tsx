@@ -31,7 +31,7 @@ export function LibraryAdditionalInfoSection({
             <div className="space-y-6">
                 {publisher !== null && (
                     <MetricCard
-                        variant="compact"
+                        variant="inline"
                         size="sm"
                         icon={LuBuilding2}
                         iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"

@@ -135,7 +135,7 @@ export function YearlyStatsSection({
         >
             <div className="mb-4 sm:mb-5 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <MetricCard
-                    variant="compact"
+                    variant="inline"
                     icon={LuClock3}
                     iconContainerClassName="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                     iconClassName="text-primary-600 dark:text-white"
@@ -151,7 +151,7 @@ export function YearlyStatsSection({
                 />
 
                 <MetricCard
-                    variant="compact"
+                    variant="inline"
                     icon={HiOutlineBookOpen}
                     iconContainerClassName="bg-indigo-500/20 dark:bg-linear-to-br dark:from-indigo-500 dark:to-indigo-600"
                     iconClassName="text-indigo-600 dark:text-white"
@@ -161,7 +161,7 @@ export function YearlyStatsSection({
                 />
 
                 <MetricCard
-                    variant="compact"
+                    variant="inline"
                     icon={LuCalendarDays}
                     iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
                     iconClassName="text-green-600 dark:text-white"
