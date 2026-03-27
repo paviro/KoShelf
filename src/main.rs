@@ -2,13 +2,24 @@
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
+mod app;
+mod i18n;
+mod pipeline;
+mod server;
+mod shelf;
+mod source;
+mod store;
+
+#[cfg(test)]
+mod tests;
+
 use anyhow::{Context, Result};
-use clap::{CommandFactory, FromArgMatches};
-use koshelf::app::config::{
-    CliCommand, FileConfig, merge_export_with_file_config, merge_serve_with_file_config,
+use app::config::{
+    Cli, CliCommand, FileConfig, merge_export_with_file_config, merge_serve_with_file_config,
     merge_set_password_data_path,
 };
-use koshelf::{Cli, dispatch};
+use app::dispatch;
+use clap::{CommandFactory, FromArgMatches};
 use std::path::Path;
 
 #[tokio::main]
