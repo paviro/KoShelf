@@ -21,7 +21,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::sync::mpsc;
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
 // ── Recap generation ────────────────────────────────────────────────────
 
@@ -360,99 +360,57 @@ fn cleanup_stale_recap_share_assets(valid_years: &HashSet<String>, recap_dir: &P
     Ok(())
 }
 
-/// Collect share image generation tasks for a single year.
+/// Spawn share image rendering tasks for a single year.
 ///
-/// Returns spawned `JoinHandle`s for images that need (re)generation.
-/// Each task sends `()` to `progress_tx` on completion for progress tracking.
-fn collect_share_tasks_for_year(
-    year: i32,
-    summary: &YearlySummary,
+/// All three formats are rendered — the caller has already determined
+/// this year needs regeneration via fingerprint comparison.
+fn spawn_share_tasks_for_year(
+    share_data: &ShareImageData,
     recap_dir: &Path,
-    stats_db_time: SystemTime,
     progress_tx: &mpsc::Sender<()>,
 ) -> Vec<tokio::task::JoinHandle<()>> {
-    let share_data = ShareImageData {
-        year,
-        books_read: summary.total_books as u32,
-        reading_time_hours: summary.total_time_hours as u32,
-        reading_time_days: summary.total_time_days as u32,
-        active_days: summary.active_days as u32,
-        active_days_percentage: summary.active_days_percentage,
-        longest_streak: summary.longest_streak as u32,
-        best_month: summary.best_month.clone(),
-    };
-
     let formats = [ShareFormat::Story, ShareFormat::Square, ShareFormat::Banner];
-
     let recap_dir_owned = recap_dir.to_path_buf();
+
     formats
         .into_iter()
-        .filter_map(|format| {
-            let output_path = recap_dir_owned.join(format!("{}_{}", year, format.filename()));
-
-            let should_generate = match fs::metadata(&output_path) {
-                Ok(img_meta) => {
-                    let img_time = img_meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    stats_db_time > img_time
+        .map(|format| {
+            let output_path =
+                recap_dir_owned.join(format!("{}_{}", share_data.year, format.filename()));
+            let share_data = share_data.clone();
+            let tx = progress_tx.clone();
+            tokio::task::spawn_blocking(move || {
+                if let Err(e) = generate_share_image(&share_data, format, &output_path) {
+                    log::warn!("Failed to generate share image {:?}: {}", output_path, e);
                 }
-                Err(_) => true,
-            };
-
-            if should_generate {
-                let share_data = share_data.clone();
-                let tx = progress_tx.clone();
-                Some(tokio::task::spawn_blocking(move || {
-                    if let Err(e) = generate_share_image(&share_data, format, &output_path) {
-                        log::warn!("Failed to generate share image {:?}: {}", output_path, e);
-                    }
-                    let _ = tx.send(());
-                }))
-            } else {
-                None
-            }
+                let _ = tx.send(());
+            })
         })
         .collect()
 }
 
-/// Generate recap share images for all completion years.
-///
-/// Computes yearly summaries from the "all" scope and renders share images
-/// to the recap assets directory.
-pub async fn generate_recap_share_images(
+/// Compute `ShareImageData` for each year that has completions.
+async fn compute_share_data_per_year(
     stats_data: &StatisticsData,
     repo: &LibraryRepository,
     page_scaling: &PageScaling,
-    recap_dir: &Path,
-    stats_db_path: Option<&Path>,
     time_config: &TimeConfig,
-) -> Result<()> {
+) -> HashMap<i32, ShareImageData> {
     let reading_stats_all = StatisticsCalculator::calculate_stats(stats_data, time_config);
 
     let (year_month_items, years) =
         group_completions_by_year_month(stats_data, repo, page_scaling).await;
 
     if years.is_empty() {
-        let empty: HashSet<String> = HashSet::new();
-        cleanup_stale_recap_share_assets(&empty, recap_dir)?;
-        return Ok(());
+        return HashMap::new();
     }
 
     let month_hours_all = month_hours_for(&reading_stats_all.daily_activity);
 
-    let stats_db_time = stats_db_path
-        .and_then(|p| fs::metadata(p).ok())
-        .and_then(|m| m.modified().ok())
-        .unwrap_or(SystemTime::UNIX_EPOCH);
-
-    fs::create_dir_all(recap_dir)?;
-
-    let (progress_tx, progress_rx) = mpsc::channel::<()>();
-    let mut all_tasks = Vec::new();
-
+    let mut result = HashMap::new();
     for year in &years {
         let months_map = year_month_items.get(year).cloned().unwrap_or_default();
         let monthly = build_monthly_recaps_all(months_map, &month_hours_all);
-
         let summary = compute_yearly_summary(
             *year,
             &monthly,
@@ -461,59 +419,146 @@ pub async fn generate_recap_share_images(
             &stats_data.page_stats,
         );
 
-        all_tasks.extend(collect_share_tasks_for_year(
+        result.insert(
             *year,
-            &summary,
-            recap_dir,
-            stats_db_time,
-            &progress_tx,
-        ));
+            ShareImageData {
+                year: *year,
+                books_read: summary.total_books as u32,
+                reading_time_hours: summary.total_time_hours as u32,
+                reading_time_days: summary.total_time_days as u32,
+                active_days: summary.active_days as u32,
+                active_days_percentage: summary.active_days_percentage,
+                longest_streak: summary.longest_streak as u32,
+                best_month: summary.best_month.clone(),
+            },
+        );
     }
 
-    let total_tasks = all_tasks.len();
+    result
+}
 
-    if total_tasks > 0 {
+/// Regenerate share images for years where the content fingerprint changed.
+///
+/// Compares computed `ShareImageData` fingerprints against DB-stored values.
+/// Only renders images for years with changed data. When `show_progress` is
+/// true, displays a progress bar (startup); otherwise logs silently (runtime).
+pub async fn regenerate_share_images(
+    stats_data: &StatisticsData,
+    repo: &LibraryRepository,
+    page_scaling: &PageScaling,
+    recap_dir: &Path,
+    time_config: &TimeConfig,
+    show_progress: bool,
+) -> Result<()> {
+    let share_data_by_year =
+        compute_share_data_per_year(stats_data, repo, page_scaling, time_config).await;
+
+    let valid_years: Vec<i32> = share_data_by_year.keys().copied().collect();
+
+    if share_data_by_year.is_empty() {
+        let empty: HashSet<String> = HashSet::new();
+        cleanup_stale_recap_share_assets(&empty, recap_dir)?;
+        if let Err(e) = repo.cleanup_stale_share_image_fingerprints(&[]).await {
+            warn!("Failed to cleanup stale share image fingerprints: {}", e);
+        }
+        return Ok(());
+    }
+
+    // Compare computed fingerprints with stored values to find years needing render
+    let stored_fingerprints = repo
+        .load_share_image_fingerprints()
+        .await
+        .unwrap_or_default();
+
+    let mut years_to_render: Vec<(i32, ShareImageData, String)> = Vec::new();
+    for (year, data) in &share_data_by_year {
+        let new_fp = data.fingerprint();
+        let needs_render = match stored_fingerprints.get(year) {
+            Some(stored_fp) => stored_fp != &new_fp,
+            None => true,
+        };
+        if needs_render {
+            years_to_render.push((*year, data.clone(), new_fp));
+        }
+    }
+
+    if !years_to_render.is_empty() {
+        fs::create_dir_all(recap_dir)?;
+
+        let (progress_tx, progress_rx) = mpsc::channel::<()>();
+        let mut all_tasks = Vec::new();
+
+        for (_, data, _) in &years_to_render {
+            all_tasks.extend(spawn_share_tasks_for_year(data, recap_dir, &progress_tx));
+        }
+
+        let total_tasks = all_tasks.len();
         let start = Instant::now();
-        info!("Rendering share images...");
-        let pb = ProgressBar::new(total_tasks as u64);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
-                .unwrap()
-                .progress_chars("━╸─"),
-        );
-        pb.set_message("Rendering share images:");
 
-        drop(progress_tx);
+        if show_progress {
+            info!("Rendering share images...");
+            let pb = ProgressBar::new(total_tasks as u64);
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
+                    .unwrap()
+                    .progress_chars("━╸─"),
+            );
+            pb.set_message("Rendering share images:");
 
-        let pb_clone = pb.clone();
-        let progress_task = tokio::task::spawn_blocking(move || {
-            while progress_rx.recv().is_ok() {
-                pb_clone.inc(1);
+            drop(progress_tx);
+
+            let pb_clone = pb.clone();
+            let progress_task = tokio::task::spawn_blocking(move || {
+                while progress_rx.recv().is_ok() {
+                    pb_clone.inc(1);
+                }
+            });
+
+            for task in all_tasks {
+                if let Err(e) = task.await {
+                    warn!("Share image task failed: {}", e);
+                }
             }
-        });
 
-        for task in all_tasks {
-            if let Err(e) = task.await {
-                warn!("Share image task failed: {}", e);
+            if let Err(e) = progress_task.await {
+                warn!("Progress tracking task failed: {}", e);
+            }
+            pb.finish_and_clear();
+        } else {
+            drop(progress_tx);
+            for task in all_tasks {
+                if let Err(e) = task.await {
+                    warn!("Share image task failed: {}", e);
+                }
             }
         }
-
-        if let Err(e) = progress_task.await {
-            warn!("Progress tracking task failed: {}", e);
-        }
-        pb.finish_and_clear();
 
         info!(
-            "Rendered share images in {:.1}s",
+            "Rendered {} share images in {:.1}s",
+            total_tasks,
             start.elapsed().as_secs_f64()
         );
-    } else {
-        drop(progress_tx);
+
+        for (year, _, fp) in &years_to_render {
+            if let Err(e) = repo.upsert_share_image_fingerprint(*year, fp).await {
+                warn!(
+                    "Failed to store share image fingerprint for {}: {}",
+                    year, e
+                );
+            }
+        }
     }
 
-    let current_years: HashSet<String> = years.iter().map(|y| y.to_string()).collect();
+    // Cleanup stale assets and fingerprints
+    let current_years: HashSet<String> = valid_years.iter().map(|y| y.to_string()).collect();
     cleanup_stale_recap_share_assets(&current_years, recap_dir)?;
+    if let Err(e) = repo
+        .cleanup_stale_share_image_fingerprints(&valid_years)
+        .await
+    {
+        warn!("Failed to cleanup stale share image fingerprints: {}", e);
+    }
 
     Ok(())
 }

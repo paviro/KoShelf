@@ -87,7 +87,7 @@ impl<T: SetToken> TokenSet<T> {
     /// Create a set containing all variants (requires `all_variants()` support).
     pub fn all() -> Self
     where
-        T: SetToken<>,
+        T: SetToken,
     {
         Self {
             tokens: T::all_variants()

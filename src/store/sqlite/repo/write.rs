@@ -233,6 +233,49 @@ impl LibraryRepository {
         Ok(())
     }
 
+    // ── Share image fingerprints ────────────────────────────────────────
+
+    /// Upsert a share image fingerprint for a given year.
+    pub async fn upsert_share_image_fingerprint(&self, year: i32, fingerprint: &str) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO share_image_fingerprints (year, fingerprint)
+             VALUES (?1, ?2)
+             ON CONFLICT(year) DO UPDATE SET fingerprint = excluded.fingerprint",
+        )
+        .bind(year)
+        .bind(fingerprint)
+        .execute(&self.pool)
+        .await
+        .context("Failed to upsert share image fingerprint")?;
+        Ok(())
+    }
+
+    /// Remove share image fingerprints for years not in the given set.
+    pub async fn cleanup_stale_share_image_fingerprints(&self, valid_years: &[i32]) -> Result<()> {
+        if valid_years.is_empty() {
+            sqlx::query("DELETE FROM share_image_fingerprints")
+                .execute(&self.pool)
+                .await
+                .context("Failed to clear share image fingerprints")?;
+        } else {
+            let placeholders: Vec<String> =
+                (1..=valid_years.len()).map(|i| format!("?{i}")).collect();
+            let sql = format!(
+                "DELETE FROM share_image_fingerprints WHERE year NOT IN ({})",
+                placeholders.join(", ")
+            );
+            let mut query = sqlx::query(&sql);
+            for year in valid_years {
+                query = query.bind(year);
+            }
+            query
+                .execute(&self.pool)
+                .await
+                .context("Failed to cleanup stale share image fingerprints")?;
+        }
+        Ok(())
+    }
+
     // ── Writeback helpers ────────────────────────────────────────────────
 
     /// Update the metadata fingerprint after a writeback operation.

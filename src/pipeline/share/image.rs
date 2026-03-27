@@ -39,6 +39,25 @@ pub struct ShareImageData {
     pub best_month: Option<String>,
 }
 
+impl ShareImageData {
+    /// Compute a deterministic content fingerprint for change detection.
+    ///
+    /// All fields that influence the rendered image are included so that
+    /// any data change produces a different fingerprint.
+    pub fn fingerprint(&self) -> String {
+        format!(
+            "{}:{}:{}:{}:{}:{}:{}",
+            self.books_read,
+            self.reading_time_hours,
+            self.reading_time_days,
+            self.active_days,
+            self.active_days_percentage,
+            self.longest_streak,
+            self.best_month.as_deref().unwrap_or(""),
+        )
+    }
+}
+
 /// Available share image formats
 #[derive(Debug, Clone, Copy)]
 pub enum ShareFormat {

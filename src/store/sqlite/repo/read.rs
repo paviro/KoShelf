@@ -266,6 +266,16 @@ impl LibraryRepository {
         Ok(rows.into_iter().collect())
     }
 
+    /// Load all share image fingerprints keyed by year.
+    pub async fn load_share_image_fingerprints(&self) -> Result<HashMap<i32, String>> {
+        let rows: Vec<(i32, String)> =
+            sqlx::query_as("SELECT year, fingerprint FROM share_image_fingerprints")
+                .fetch_all(&self.pool)
+                .await
+                .context("Failed to load share image fingerprints")?;
+        Ok(rows.into_iter().collect())
+    }
+
     /// Load `(id, file_path, format)` for every library item.
     ///
     /// Used by the static export pipeline to copy item files into the output.

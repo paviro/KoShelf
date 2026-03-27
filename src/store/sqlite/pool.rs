@@ -9,12 +9,14 @@ pub const TABLE_LIBRARY_ITEMS: &str = "library_items";
 pub const TABLE_LIBRARY_ANNOTATIONS: &str = "library_annotations";
 pub const TABLE_LIBRARY_ITEM_FINGERPRINTS: &str = "library_item_fingerprints";
 pub const TABLE_LIBRARY_COLLISION_DIAGNOSTICS: &str = "library_collision_diagnostics";
+pub const TABLE_SHARE_IMAGE_FINGERPRINTS: &str = "share_image_fingerprints";
 
 pub const LIBRARY_DB_REQUIRED_TABLES: &[&str] = &[
     TABLE_LIBRARY_ITEMS,
     TABLE_LIBRARY_ANNOTATIONS,
     TABLE_LIBRARY_ITEM_FINGERPRINTS,
     TABLE_LIBRARY_COLLISION_DIAGNOSTICS,
+    TABLE_SHARE_IMAGE_FINGERPRINTS,
 ];
 
 pub const LIBRARY_DB_REQUIRED_INDEXES: &[&str] = &[

@@ -8,6 +8,7 @@ use crate::pipeline::export::{ExportConfig, export_data_files};
 use crate::pipeline::frontend;
 use crate::pipeline::ingest::{ingest_paths, load_reading_data};
 use crate::pipeline::media::{self, resolve_media_dirs};
+use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::FileFingerprint;
@@ -162,6 +163,22 @@ pub async fn targeted_rebuild(
         }
     }
 
+    // ── 4b. Regenerate share images if stats changed ────────────────
+    if stats_reloaded
+        && let Some(rd) = reading_data_store.and_then(|s| s.get())
+        && let Err(e) = regenerate_share_images(
+            &rd.stats_data,
+            repo,
+            &rd.page_scaling,
+            &media_dirs.recap_dir,
+            &config.time_config,
+            false,
+        )
+        .await
+    {
+        warn!("Failed to regenerate share images: {}", e);
+    }
+
     // ── 5. Refresh SiteStore from DB ─────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
 
@@ -294,6 +311,20 @@ pub async fn full_rebuild(
         && let Some(ref rd) = reading_data
     {
         store.replace(rd.clone());
+    }
+
+    if let Some(ref rd) = reading_data
+        && let Err(e) = regenerate_share_images(
+            &rd.stats_data,
+            repo,
+            &rd.page_scaling,
+            &media_dirs.recap_dir,
+            &config.time_config,
+            false,
+        )
+        .await
+    {
+        warn!("Failed to regenerate share images: {}", e);
     }
 
     let generated_at = config.time_config.now_rfc3339();
