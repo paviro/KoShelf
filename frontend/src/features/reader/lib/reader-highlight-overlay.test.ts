@@ -125,4 +125,87 @@ describe('attachHighlightDrawListener', () => {
 
         detach();
     });
+
+    it('uses pulse renderer for targeted annotation', () => {
+        const view = new EventTarget();
+        const renderers = makeRenderers();
+        const draw = vi.fn();
+
+        const detach = attachHighlightDrawListener(view, renderers);
+
+        view.dispatchEvent(
+            new CustomEvent('draw-annotation', {
+                detail: {
+                    draw,
+                    annotation: {
+                        target: true,
+                        value: 'cfi-1',
+                        color: '#ff0000',
+                    },
+                },
+            }),
+        );
+
+        expect(draw).toHaveBeenCalledTimes(1);
+        const wrappedRenderer = draw.mock.calls[0][0];
+        expect(wrappedRenderer).not.toBe(renderers.highlight);
+        expect(draw.mock.calls[0][1]).toEqual({ color: '#ff0000' });
+
+        detach();
+    });
+
+    it('does not re-pulse targeted annotation on second draw', () => {
+        const view = new EventTarget();
+        const renderers = makeRenderers();
+        const draw = vi.fn();
+
+        const detach = attachHighlightDrawListener(view, renderers);
+
+        const annotation = {
+            target: true,
+            value: 'cfi-1',
+        };
+
+        view.dispatchEvent(
+            new CustomEvent('draw-annotation', {
+                detail: { draw, annotation },
+            }),
+        );
+        view.dispatchEvent(
+            new CustomEvent('draw-annotation', {
+                detail: { draw, annotation },
+            }),
+        );
+
+        expect(draw).toHaveBeenCalledTimes(2);
+        const firstRenderer = draw.mock.calls[0][0];
+        const secondRenderer = draw.mock.calls[1][0];
+        expect(firstRenderer).not.toBe(renderers.highlight);
+        expect(secondRenderer).toBe(renderers.highlight);
+
+        detach();
+    });
+
+    it('uses plain renderer for non-targeted annotations', () => {
+        const view = new EventTarget();
+        const renderers = makeRenderers();
+        const draw = vi.fn();
+
+        const detach = attachHighlightDrawListener(view, renderers);
+
+        view.dispatchEvent(
+            new CustomEvent('draw-annotation', {
+                detail: {
+                    draw,
+                    annotation: { value: 'cfi-2', color: '#00ff00' },
+                },
+            }),
+        );
+
+        expect(draw).toHaveBeenCalledWith(renderers.highlight, {
+            color: '#00ff00',
+        });
+
+        detach();
+    });
 });
