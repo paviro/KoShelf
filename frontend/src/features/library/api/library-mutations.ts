@@ -130,6 +130,9 @@ export function useDeleteAnnotation(
             void queryClient.invalidateQueries({
                 queryKey: libraryListQueryKey(collection),
             });
+            void queryClient.invalidateQueries({
+                queryKey: ['page-activity', itemId],
+            });
         },
     });
 }

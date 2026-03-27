@@ -305,27 +305,37 @@ export function PageActivityGrid({
         dark,
     ]);
 
-    // Track whether this is the first render or a data change (animate)
-    // vs. a theme-only change (instant recolor).
-    const prevDarkRef = useRef(dark);
+    // Animation seed tracked via ref to keep it out of the layout effect deps
+    // (avoids a race with placeholder data cancelling in-flight animations).
+    const animationSeedRef = useRef(animationSeed);
+    const mountAnimateRef = useRef(true);
     const prevAnimationSeedRef = useRef(animationSeed);
 
-    // Grow-up animation on mount / data change, instant recolor on theme switch.
+    useLayoutEffect(() => {
+        animationSeedRef.current = animationSeed;
+    });
+
+    useEffect(() => {
+        return () => {
+            mountAnimateRef.current = true;
+        };
+    }, []);
+
     useLayoutEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
-        const isThemeOnly =
-            prevDarkRef.current !== dark &&
-            prevAnimationSeedRef.current === animationSeed;
-        prevDarkRef.current = dark;
-        prevAnimationSeedRef.current = animationSeed;
+        const currentSeed = animationSeedRef.current;
+        const seedChanged = prevAnimationSeedRef.current !== currentSeed;
+        const shouldAnimate = mountAnimateRef.current || seedChanged;
+        mountAnimateRef.current = false;
+        prevAnimationSeedRef.current = currentSeed;
 
         const barElements =
             container.querySelectorAll<HTMLElement>('.page-activity-bar');
 
-        // Theme-only change: just update colors in place, no animation.
-        if (isThemeOnly) {
+        // Data refetch or theme change: update bar styles instantly.
+        if (!shouldAnimate) {
             barElements.forEach((element) => {
                 const pageStr = element.dataset.page;
                 if (!pageStr) return;
@@ -338,7 +348,7 @@ export function PageActivityGrid({
             return;
         }
 
-        // Data change or mount: animate bars growing up.
+        // Seed changed (mount or completion filter change): animate bars growing up.
         if (prefersReducedMotion()) return;
 
         const timeoutIds: number[] = [];
@@ -385,7 +395,7 @@ export function PageActivityGrid({
         return () => {
             timeoutIds.forEach((id) => window.clearTimeout(id));
         };
-    }, [bars, animationSeed, totalPages, dark]);
+    }, [bars, totalPages, dark]);
 
     const pagesRead = pageData.size;
     const readPercent =
