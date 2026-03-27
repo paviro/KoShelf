@@ -1,10 +1,4 @@
-import type {
-    ApiClient,
-    CompletionsParams,
-    ScopeValue,
-    UpdateAnnotationPayload,
-    UpdateItemPayload,
-} from './api-client';
+import type { ApiClient } from './api-client';
 import { HttpApiClient } from './http-api-client';
 import { StaticApiClient } from './static-api-client';
 
@@ -87,44 +81,11 @@ function getClient(): ApiClient {
     return _client;
 }
 
-export const api: ApiClient = {
-    getSite: () => getClient().getSite(),
-    login: (password: string) => getClient().login(password),
-    getSessions: () => getClient().getSessions(),
-    revokeSession: (sessionId: string) => getClient().revokeSession(sessionId),
-    changePassword: (currentPassword: string, newPassword: string) =>
-        getClient().changePassword(currentPassword, newPassword),
-    logout: () => getClient().logout(),
-    getItems: (scope?: ScopeValue) => getClient().getItems(scope),
-    getItem: (id: string) => getClient().getItem(id),
-    getItemPageActivity: (id: string, completion?: string) =>
-        getClient().getItemPageActivity(id, completion),
-    getReadingSummary: (scope: ScopeValue, from?: string, to?: string) =>
-        getClient().getReadingSummary(scope, from, to),
-    getReadingMetrics: (
-        scope: ScopeValue,
-        metric: string,
-        groupBy: string,
-        from?: string,
-        to?: string,
-    ) => getClient().getReadingMetrics(scope, metric, groupBy, from, to),
-    getAvailablePeriods: (source: string, groupBy: string, scope: ScopeValue) =>
-        getClient().getAvailablePeriods(source, groupBy, scope),
-    getReadingCalendar: (month: string, scope: ScopeValue) =>
-        getClient().getReadingCalendar(month, scope),
-    getReadingCompletions: (scope: ScopeValue, params: CompletionsParams) =>
-        getClient().getReadingCompletions(scope, params),
-    getItemDownloadHref: (id: string) => getClient().getItemDownloadHref(id),
-    getItemFileHref: (id: string, format?: string | null) =>
-        getClient().getItemFileHref(id, format),
-    updateItem: (id: string, payload: UpdateItemPayload) =>
-        getClient().updateItem(id, payload),
-    updateAnnotation: (
-        itemId: string,
-        annotationId: string,
-        payload: UpdateAnnotationPayload,
-    ) => getClient().updateAnnotation(itemId, annotationId, payload),
-    deleteAnnotation: (itemId: string, annotationId: string) =>
-        getClient().deleteAnnotation(itemId, annotationId),
-    clearCache: () => getClient().clearCache(),
-};
+export const api = new Proxy<ApiClient>({} as ApiClient, {
+    get(_target, prop: string | symbol) {
+        const client = getClient();
+        const value = client[prop as keyof ApiClient];
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+        return typeof value === 'function' ? (value as Function).bind(client) : value;
+    },
+});

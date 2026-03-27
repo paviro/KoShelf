@@ -6,7 +6,7 @@ export type ButtonColor =
     | 'purple'
     | 'blue'
     | 'green';
-export type ButtonSize = keyof typeof SIZE_CLASSES;
+type ButtonSize = keyof typeof SIZE_CLASSES;
 
 const COLOR_TOKENS: Record<
     ButtonColor,
@@ -84,17 +84,11 @@ function resolveVariantClasses(
     }
 }
 
-export const SIZE_CLASSES = {
+const SIZE_CLASSES = {
     sm: 'h-10 px-4 py-2 text-sm gap-2 rounded-lg',
     icon: 'w-10 h-10 p-2.5 rounded-lg',
     xs: 'h-auto px-2 py-1.5 text-sm gap-1.5 rounded-md',
 } as const;
-
-export const ICON_SIZE_CLASSES: Record<ButtonSize, string> = {
-    sm: 'w-4 h-4 shrink-0',
-    icon: 'w-5 h-5',
-    xs: 'w-3.5 h-3.5 shrink-0',
-};
 
 const BASE_CLASS =
     'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50 disabled:opacity-60 disabled:cursor-not-allowed';
