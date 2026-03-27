@@ -80,38 +80,17 @@ pub enum ReadingMetric {
     ActiveDays,
 }
 
-impl ReadingMetric {
-    pub fn parse(value: &str) -> Result<Self, (ApiErrorCode, String)> {
-        match value {
-            "reading_time_sec" => Ok(Self::ReadingTimeSec),
-            "pages_read" => Ok(Self::PagesRead),
-            "sessions" => Ok(Self::Sessions),
-            "completions" => Ok(Self::Completions),
-            "average_session_duration_sec" => Ok(Self::AverageSessionDurationSec),
-            "longest_session_duration_sec" => Ok(Self::LongestSessionDurationSec),
-            "active_days" => Ok(Self::ActiveDays),
-            _ => Err((
-                ApiErrorCode::InvalidQuery,
-                format!(
-                    "'metric' must be one of: reading_time_sec, pages_read, sessions, \
-                     completions, average_session_duration_sec, longest_session_duration_sec, \
-                     active_days; got '{value}'"
-                ),
-            )),
-        }
+query_enum! {
+    pub enum ReadingMetric {
+        ReadingTimeSec => "reading_time_sec",
+        PagesRead => "pages_read",
+        Sessions => "sessions",
+        Completions => "completions",
+        AverageSessionDurationSec => "average_session_duration_sec",
+        LongestSessionDurationSec => "longest_session_duration_sec",
+        ActiveDays => "active_days",
     }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::ReadingTimeSec => "reading_time_sec",
-            Self::PagesRead => "pages_read",
-            Self::Sessions => "sessions",
-            Self::Completions => "completions",
-            Self::AverageSessionDurationSec => "average_session_duration_sec",
-            Self::LongestSessionDurationSec => "longest_session_duration_sec",
-            Self::ActiveDays => "active_days",
-        }
-    }
+    field_name: "metric"
 }
 
 // ── Group-by for metrics endpoint ─────────────────────────────────────────
@@ -125,30 +104,15 @@ pub enum MetricsGroupBy {
     Year,
 }
 
-impl MetricsGroupBy {
-    pub fn parse(value: &str) -> Result<Self, (ApiErrorCode, String)> {
-        match value {
-            "total" => Ok(Self::Total),
-            "day" => Ok(Self::Day),
-            "week" => Ok(Self::Week),
-            "month" => Ok(Self::Month),
-            "year" => Ok(Self::Year),
-            _ => Err((
-                ApiErrorCode::InvalidQuery,
-                format!("'group_by' must be one of: total, day, week, month, year; got '{value}'"),
-            )),
-        }
+query_enum! {
+    pub enum MetricsGroupBy {
+        Total => "total",
+        Day => "day",
+        Week => "week",
+        Month => "month",
+        Year => "year",
     }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Total => "total",
-            Self::Day => "day",
-            Self::Week => "week",
-            Self::Month => "month",
-            Self::Year => "year",
-        }
-    }
+    field_name: "group_by"
 }
 
 // ── Available-periods source ──────────────────────────────────────────────
@@ -159,24 +123,12 @@ pub enum PeriodSource {
     Completions,
 }
 
-impl PeriodSource {
-    pub fn parse(value: &str) -> Result<Self, (ApiErrorCode, String)> {
-        match value {
-            "reading_data" => Ok(Self::ReadingData),
-            "completions" => Ok(Self::Completions),
-            _ => Err((
-                ApiErrorCode::InvalidQuery,
-                format!("'source' must be one of: reading_data, completions; got '{value}'"),
-            )),
-        }
+query_enum! {
+    pub enum PeriodSource {
+        ReadingData => "reading_data",
+        Completions => "completions",
     }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::ReadingData => "reading_data",
-            Self::Completions => "completions",
-        }
-    }
+    field_name: "source"
 }
 
 // ── Group-by for available-periods endpoint ───────────────────────────────
@@ -188,26 +140,13 @@ pub enum PeriodGroupBy {
     Year,
 }
 
-impl PeriodGroupBy {
-    pub fn parse(value: &str) -> Result<Self, (ApiErrorCode, String)> {
-        match value {
-            "week" => Ok(Self::Week),
-            "month" => Ok(Self::Month),
-            "year" => Ok(Self::Year),
-            _ => Err((
-                ApiErrorCode::InvalidQuery,
-                format!("'group_by' must be one of: week, month, year; got '{value}'"),
-            )),
-        }
+query_enum! {
+    pub enum PeriodGroupBy {
+        Week => "week",
+        Month => "month",
+        Year => "year",
     }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Week => "week",
-            Self::Month => "month",
-            Self::Year => "year",
-        }
-    }
+    field_name: "group_by"
 }
 
 /// Validate that a (source, group_by) combination is supported.
@@ -280,63 +219,23 @@ pub enum CompletionsIncludeToken {
     ShareAssets,
 }
 
-impl CompletionsIncludeToken {
-    fn parse(value: &str) -> Option<Self> {
+impl crate::shelf::token_set::SetToken for CompletionsIncludeToken {
+    fn parse_token(value: &str) -> Option<Self> {
         match value {
             "summary" => Some(Self::Summary),
             "share_assets" => Some(Self::ShareAssets),
             _ => None,
         }
     }
+
+    fn valid_tokens() -> &'static str {
+        "summary, share_assets"
+    }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct CompletionsIncludeSet {
-    tokens: HashSet<CompletionsIncludeToken>,
-}
+pub type CompletionsIncludeSet = crate::shelf::token_set::TokenSet<CompletionsIncludeToken>;
 
 impl CompletionsIncludeSet {
-    /// Parse a comma-separated include string with strict validation.
-    pub fn parse(value: Option<&str>) -> Result<Self, (ApiErrorCode, String)> {
-        let Some(value) = value else {
-            return Ok(Self::default());
-        };
-
-        let value = value.trim();
-        if value.is_empty() {
-            return Ok(Self::default());
-        }
-
-        let mut tokens = HashSet::new();
-
-        for raw in value.split(',') {
-            let token = raw.trim();
-            if token.is_empty() {
-                continue;
-            }
-            match CompletionsIncludeToken::parse(token) {
-                Some(t) => {
-                    tokens.insert(t);
-                }
-                None => {
-                    return Err((
-                        ApiErrorCode::InvalidQuery,
-                        format!(
-                            "unknown include token '{token}'; \
-                             valid tokens are: summary, share_assets"
-                        ),
-                    ));
-                }
-            }
-        }
-
-        Ok(Self { tokens })
-    }
-
-    pub fn has(&self, token: CompletionsIncludeToken) -> bool {
-        self.tokens.contains(&token)
-    }
-
     pub fn has_summary(&self) -> bool {
         self.has(CompletionsIncludeToken::Summary)
     }
