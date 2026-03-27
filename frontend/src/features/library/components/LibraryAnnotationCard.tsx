@@ -30,7 +30,7 @@ type LibraryAnnotationCardProps = {
     annotation: LibraryAnnotation;
     variant: LibraryAnnotationCardVariant;
     readerHref?: string | null;
-    canWrite?: boolean;
+    showEditingControls?: boolean;
     onSaveNote?: (note: string | null) => void;
     onColorChange?: (color: string) => void;
     onDrawerChange?: (drawer: string) => void;
@@ -60,7 +60,7 @@ export function LibraryAnnotationCard({
     annotation,
     variant,
     readerHref,
-    canWrite = false,
+    showEditingControls = false,
     onSaveNote,
     onColorChange,
     onDrawerChange,
@@ -81,25 +81,34 @@ export function LibraryAnnotationCard({
     const [editingNote, setEditingNote] = useState(false);
     const [draftNote, setDraftNote] = useState(annotation.note ?? '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
     const [suppressToolbarTransition, setSuppressToolbarTransition] =
         useState(false);
 
     const hasNote = annotation.note !== null && annotation.note !== undefined;
     const hasBody = hasText || hasNote;
 
-    // Sync draft when entering edit mode or when the note changes while editing.
+    // Cancel in-progress note edit when section edit mode is toggled off,
+    // and sync draft when entering edit mode or when the note changes.
+    const [prevShowEditingControls, setPrevShowEditingControls] =
+        useState(showEditingControls);
     const [prevEditingNote, setPrevEditingNote] = useState(false);
     const [prevAnnotationNote, setPrevAnnotationNote] = useState(
         annotation.note,
     );
     if (
+        showEditingControls !== prevShowEditingControls ||
         editingNote !== prevEditingNote ||
         annotation.note !== prevAnnotationNote
     ) {
+        if (showEditingControls !== prevShowEditingControls)
+            setPrevShowEditingControls(showEditingControls);
         if (editingNote !== prevEditingNote) setPrevEditingNote(editingNote);
         if (annotation.note !== prevAnnotationNote)
             setPrevAnnotationNote(annotation.note);
-        if (editingNote) {
+        if (!showEditingControls && editingNote) {
+            setEditingNote(false);
+        } else if (editingNote) {
             setDraftNote(annotation.note ?? '');
         }
     }
@@ -129,7 +138,7 @@ export function LibraryAnnotationCard({
         DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
 
     const hasWriteCapabilities =
-        canWrite && (onSaveNote || onColorChange || onDrawerChange || onDelete);
+        showEditingControls && (onSaveNote || onColorChange || onDrawerChange || onDelete);
     const showToolbar = hasWriteCapabilities && !editingNote;
 
     const stopEditingNote = () => {
