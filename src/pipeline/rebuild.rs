@@ -1,18 +1,17 @@
-//! Rebuild orchestration: targeted (incremental) and full rebuild pipelines.
+//! Rebuild orchestration: targeted (incremental) rebuild pipeline.
 //!
 //! Extracted from the file watcher so the rebuild logic is testable and
 //! the watcher module is limited to event setup, debouncing, and dispatch.
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
-use crate::pipeline::frontend;
 use crate::pipeline::ingest::{ingest_paths, load_reading_data};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::FileFingerprint;
-use crate::source::scanner::{MetadataLocation, collect_paths};
+use crate::source::scanner::MetadataLocation;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
@@ -249,146 +248,6 @@ pub async fn targeted_rebuild(
         upserted: ingest_stats.upserted,
         deleted: deleted_count,
         stats_reloaded,
-        published_revision,
-    })
-}
-
-/// Full rebuild: re-ingest everything from scratch.
-///
-/// Clears the DB, re-scans, and re-ingests all paths.
-pub async fn full_rebuild(
-    config: &SiteConfig,
-    repo: &LibraryRepository,
-    site_store: Option<&SharedSiteStore>,
-    reading_data_store: Option<&SharedReadingDataStore>,
-    update_notifier: Option<&UpdateNotifier>,
-) -> Result<RebuildResult> {
-    info!("Starting full rebuild");
-
-    let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
-
-    if let Err(e) = media::create_media_directories(&media_dirs) {
-        warn!("Failed to create media directories: {}", e);
-    }
-
-    repo.clear_all().await?;
-
-    let paths = collect_paths(&config.library_paths);
-    let ingest_stats = ingest_paths(
-        &paths,
-        config,
-        repo,
-        &media_dirs.covers_dir,
-        &media_dirs.files_dir,
-    )
-    .await?;
-
-    match repo.load_all_item_ids().await {
-        Ok(ids) => {
-            let id_set: HashSet<String> = ids.into_iter().collect();
-            if let Err(e) = media::cleanup_stale_covers_by_ids(&id_set, &media_dirs.covers_dir) {
-                warn!("Failed to cleanup stale covers: {}", e);
-            }
-            if config.is_internal_server
-                && let Err(e) = media::cleanup_stale_files_by_ids(&id_set, &media_dirs.files_dir)
-            {
-                warn!("Failed to cleanup stale file symlinks: {}", e);
-            }
-        }
-        Err(e) => warn!("Failed to load item IDs for cover cleanup: {}", e),
-    }
-
-    if !config.is_internal_server
-        && let Err(e) =
-            frontend::sync_static_frontend(&config.output_dir, config.statistics_db_path.is_some())
-    {
-        warn!("Failed to sync static frontend: {}", e);
-    }
-
-    let reading_data = load_reading_data(config, repo).await?;
-
-    if let Some(store) = reading_data_store
-        && let Some(ref rd) = reading_data
-    {
-        store.replace(rd.clone());
-    }
-
-    if let Some(ref rd) = reading_data
-        && let Err(e) = regenerate_share_images(
-            &rd.stats_data,
-            repo,
-            &rd.page_scaling,
-            &media_dirs.recap_dir,
-            &config.time_config,
-            false,
-        )
-        .await
-    {
-        warn!("Failed to regenerate share images: {}", e);
-    }
-
-    let generated_at = config.time_config.now_rfc3339();
-
-    let (has_books, has_comics) = repo
-        .query_content_type_flags()
-        .await
-        .unwrap_or((false, false));
-    let has_reading_data = reading_data
-        .as_ref()
-        .is_some_and(|rd| !rd.stats_data.page_stats.is_empty());
-
-    let site_data = SiteData {
-        title: config.site_title.clone(),
-        language: config.language.clone(),
-        capabilities: SiteCapabilities {
-            has_books,
-            has_comics,
-            has_reading_data,
-            has_files: config.is_internal_server || config.include_files,
-            auth_enabled: config.auth_enabled,
-            has_writeback: config.writeback_enabled,
-        },
-        authenticated: None,
-        password_policy: None,
-    };
-
-    if let Some(store) = site_store {
-        store.replace(site_data);
-    }
-
-    let published_revision = if let Some(notifier) = update_notifier {
-        let update = notifier.publish(generated_at);
-        info!("Published data_changed event, revision {}", update.revision);
-        Some(update.revision)
-    } else {
-        None
-    };
-
-    if !config.is_internal_server {
-        let export_config = ExportConfig {
-            site_title: config.site_title.clone(),
-            language: config.language.clone(),
-            include_files: config.include_files,
-        };
-        if let Err(e) = export_data_files(
-            &config.output_dir.join("data"),
-            &config.output_dir,
-            repo,
-            reading_data.as_ref(),
-            &export_config,
-        )
-        .await
-        {
-            warn!("Failed to re-export data files: {}", e);
-        }
-    }
-
-    info!("Full rebuild completed successfully");
-
-    Ok(RebuildResult {
-        upserted: ingest_stats.upserted,
-        deleted: 0,
-        stats_reloaded: reading_data.is_some(),
         published_revision,
     })
 }
