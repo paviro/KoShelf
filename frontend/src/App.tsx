@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 
 import { AppRoutes } from './app/routes/AppRoutes';
-import { matchRoute } from './app/routes/route-registry';
+import { isReaderRouteId, matchRoute } from './app/routes/route-registry';
 import { AppShell } from './app/shell/AppShell';
 import { buildNavItems } from './app/shell/shell-nav';
 import { api } from './shared/api';
@@ -66,6 +66,7 @@ export function App() {
     const authenticated = site?.authenticated === true;
     const routeMatch = matchRoute(location.pathname);
     const isLoginRoute = routeMatch.routeId === 'login';
+    const isReaderRoute = isReaderRouteId(routeMatch.routeId);
 
     const routes = (
         <RouteErrorBoundary>
@@ -84,6 +85,15 @@ export function App() {
     if (isLoginRoute) {
         return (
             <div className="min-h-full bg-gray-100 dark:bg-dark-925 text-gray-900 dark:text-white font-sans">
+                {routes}
+                <ToastContainer />
+            </div>
+        );
+    }
+
+    if (isReaderRoute) {
+        return (
+            <div className="min-h-full">
                 {routes}
                 <ToastContainer />
             </div>
