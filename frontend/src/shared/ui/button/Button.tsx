@@ -6,11 +6,13 @@ import {
     type SVGAttributes,
 } from 'react';
 
-import {
-    buttonVariants,
-    ICON_SIZE_CLASSES,
-    type ButtonVariantsOptions,
-} from './button-variants';
+import { buttonVariants, type ButtonVariantsOptions } from './button-variants';
+
+const ICON_SIZE_CLASSES: Record<string, string> = {
+    sm: 'w-4 h-4 shrink-0',
+    icon: 'w-5 h-5',
+    xs: 'w-3.5 h-3.5 shrink-0',
+};
 
 type IconComponent = ComponentType<SVGAttributes<SVGElement>>;
 

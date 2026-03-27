@@ -1,6 +1,6 @@
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export type FetchJsonOptions = {
+type FetchJsonOptions = {
     method?: HttpMethod;
     headers?: Record<string, string>;
     body?: string;
