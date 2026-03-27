@@ -158,7 +158,6 @@ notes-label = { $count ->
 }
 bookmarks = Bookmarks
 page-bookmark = Page Bookmark
-bookmark-anchor = Bookmark anchor
 highlights-quotes = Highlights & Quotes
 additional-information = Additional Information
 reading-progress = Reading Progress

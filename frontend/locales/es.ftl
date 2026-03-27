@@ -154,7 +154,6 @@ notes-label = { $count ->
 }
 bookmarks = Marcadores
 page-bookmark = Marcador de página
-bookmark-anchor = Ancla de marcador
 highlights-quotes = Subrayados y Citas
 additional-information = Información adicional
 reading-progress = Progreso de lectura

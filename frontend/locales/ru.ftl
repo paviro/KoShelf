@@ -170,7 +170,6 @@ notes-label = { $count ->
 }
 bookmarks = Закладки
 page-bookmark = Закладка страницы
-bookmark-anchor = Якорь закладки
 highlights-quotes = Выделения и цитаты
 additional-information = Дополнительная информация
 reading-progress = Прогресс чтения

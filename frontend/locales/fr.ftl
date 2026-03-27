@@ -158,7 +158,6 @@ notes-label = { $count ->
 }
 bookmarks = Signets
 page-bookmark = Signet de page
-bookmark-anchor = Ancre du signet
 highlights-quotes = Surlignages & Citations
 additional-information = Informations supplémentaires
 reading-progress = Progression de lecture
