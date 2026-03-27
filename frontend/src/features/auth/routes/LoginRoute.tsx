@@ -5,7 +5,7 @@ import { BRAND_ICON } from '../../../app/shell/shell-nav';
 import { api, isApiHttpError } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
 import { LoginPasswordField } from '../components/LoginPasswordField';
-import { LoginSubmitButton } from '../components/LoginSubmitButton';
+import { Button } from '../../../shared/ui/button/Button';
 
 type LoginRouteProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
@@ -139,12 +139,18 @@ export function LoginRoute({
                                 </p>
                             ) : null}
 
-                            <LoginSubmitButton
+                            <Button
+                                variant="gradient"
+                                size="sm"
+                                fullWidth
+                                type="submit"
                                 disabled={
                                     submitPending ||
                                     password.trim().length === 0
                                 }
-                            />
+                            >
+                                {translation.get('login.submit')}
+                            </Button>
                         </form>
                     </div>
                 </section>

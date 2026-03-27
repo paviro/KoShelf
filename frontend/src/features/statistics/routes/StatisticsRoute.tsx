@@ -10,7 +10,7 @@ import { QueryStateLayout } from '../../../shared/ui/feedback/QueryStateLayout';
 import { PageContent } from '../../../shared/ui/layout/PageContent';
 import { PageHeader } from '../../../shared/ui/layout/PageHeader';
 import type { StatisticsWeekResponse } from '../api/statistics-data';
-import { ScopeFilter } from '../components/ScopeFilter';
+import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
 import {
     useStatisticsIndexQuery,
     useStatisticsWeekQuery,
@@ -242,10 +242,10 @@ export function StatisticsRoute() {
             <PageHeader
                 title={translation.get('reading-statistics')}
                 controls={
-                    <ScopeFilter
-                        showTypeFilter={showTypeFilter}
-                        scope={scope}
-                        onScopeChange={(nextScope) => {
+                    <ContentScopeFilter
+                        visible={showTypeFilter}
+                        value={scope}
+                        onChange={(nextScope) => {
                             setScope(nextScope);
                             window.scrollTo({
                                 top: 0,
