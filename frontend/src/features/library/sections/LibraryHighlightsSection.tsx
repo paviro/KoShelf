@@ -64,7 +64,7 @@ export function LibraryHighlightsSection({
                             'highlight',
                             index,
                         )}
-                        canWrite={canWrite && editing}
+                        showEditingControls={canWrite && editing}
                         onSaveNote={
                             onSaveNote
                                 ? (note) => onSaveNote(annotation.id, note)
