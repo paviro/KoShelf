@@ -105,6 +105,8 @@ export function useReaderView(
         [detailData?.bookmarks],
     );
 
+    const annotationParamsConsumedRef = useRef(false);
+
     const fontSizePtRef = useRef(fontSizePt);
     fontSizePtRef.current = fontSizePt;
 
@@ -420,7 +422,8 @@ export function useReaderView(
                 );
 
                 const hasAnnotationTarget =
-                    highlightIndex !== null || bookmarkIndex !== null;
+                    !annotationParamsConsumedRef.current &&
+                    (highlightIndex !== null || bookmarkIndex !== null);
                 const savedCfi =
                     !hasAnnotationTarget && id
                         ? StorageManager.getSessionByKey<string>(
@@ -465,8 +468,7 @@ export function useReaderView(
                     isDark,
                     {
                         prioritizeSectionIndexes: prioritySectionIndexes,
-                        targetAnnotationId:
-                            targetAnnotation?.annotation.id,
+                        targetAnnotationId: targetAnnotation?.annotation.id,
                         onSectionResolved: async (
                             sectionIndex,
                             sectionHighlights,
@@ -494,6 +496,11 @@ export function useReaderView(
                     highlightIndex,
                     bookmarkIndex,
                 );
+
+                if (hasAnnotationTarget) {
+                    annotationParamsConsumedRef.current = true;
+                    stripAnnotationParams();
+                }
 
                 if (cancelled) {
                     return;
@@ -599,6 +606,25 @@ export function useReaderView(
         handlePrev,
         handleNext,
     };
+}
+
+function stripAnnotationParams(): void {
+    const hash = window.location.hash;
+    const qIndex = hash.indexOf('?');
+    if (qIndex === -1) {
+        return;
+    }
+
+    const params = new URLSearchParams(hash.slice(qIndex));
+    params.delete('highlight');
+    params.delete('bookmark');
+
+    const path = hash.slice(0, qIndex);
+    const remaining = params.toString();
+    const newHash = remaining ? `${path}?${remaining}` : path;
+
+    // Bypass React Router to avoid re-triggering the reader init effect.
+    window.history.replaceState(window.history.state, '', newHash);
 }
 
 function resolveTargetAnnotation(
