@@ -165,7 +165,7 @@ impl WebServer {
                 .route("/api/auth/password", put(auth::login::change_password))
                 .route(
                     "/api/auth/sessions",
-                    get(auth::login::list_sessions_handler),
+                    get(auth::login::list_sessions),
                 )
                 .route(
                     "/api/auth/sessions/{session_id}",

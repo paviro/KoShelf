@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::net::IpAddr;
 
+use super::LoginRateLimiter;
 use super::client_addr::ClientContext;
 
 use crate::server::ServerState;
@@ -18,7 +19,7 @@ use super::password::{
     PasswordLengthError, get_stored_auth, hash_password, set_password_hash_and_revoke_sessions,
     validate_password_length, verify_password,
 };
-use super::session::{SessionInfo, create_token, delete_session, list_sessions};
+use super::session::{SessionInfo, create_token, delete_session};
 use super::{CurrentSessionId, SESSION_COOKIE_NAME};
 
 #[derive(Debug, Deserialize)]
@@ -65,21 +66,8 @@ pub async fn login_submit(
         headers.get(HOST).and_then(|value| value.to_str().ok()),
     );
 
-    if let Err(not_until) = auth_state
-        .login_limiter
-        .check_key(&client_context.client_ip)
-    {
-        let retry_after = not_until
-            .wait_time_from(DefaultClock::default().now())
-            .as_secs()
-            .max(1);
-
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            [(RETRY_AFTER, retry_after.to_string())],
-            Json(ApiErrorResponse::from_code(ApiErrorCode::RateLimited)),
-        )
-            .into_response();
+    if let Some(response) = check_rate_limit(&auth_state.login_limiter, &client_context.client_ip) {
+        return response;
     }
 
     let auth_row = match get_stored_auth(&auth_state.pool).await {
@@ -163,21 +151,8 @@ pub async fn change_password(
         return auth_not_configured_response();
     };
 
-    if let Err(not_until) = auth_state
-        .login_limiter
-        .check_key(&client_context.client_ip)
-    {
-        let retry_after = not_until
-            .wait_time_from(DefaultClock::default().now())
-            .as_secs()
-            .max(1);
-
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            [(RETRY_AFTER, retry_after.to_string())],
-            Json(ApiErrorResponse::from_code(ApiErrorCode::RateLimited)),
-        )
-            .into_response();
+    if let Some(response) = check_rate_limit(&auth_state.login_limiter, &client_context.client_ip) {
+        return response;
     }
 
     if let Err(error) = validate_password_length(&payload.new_password) {
@@ -237,7 +212,7 @@ pub async fn change_password(
     (StatusCode::OK, Json(ApiResponse::new(AuthOk { ok: true }))).into_response()
 }
 
-pub async fn list_sessions_handler(
+pub async fn list_sessions(
     State(state): State<ServerState>,
     Extension(current_session): Extension<CurrentSessionId>,
 ) -> Response {
@@ -245,7 +220,7 @@ pub async fn list_sessions_handler(
         return auth_not_configured_response();
     };
 
-    let sessions = match list_sessions(&auth_state.pool).await {
+    let sessions = match super::session::list_sessions(&auth_state.pool).await {
         Ok(sessions) => sessions,
         Err(err) => {
             error!("Failed to list sessions: {err}");
@@ -286,6 +261,26 @@ pub async fn revoke_session(
             internal_error_response()
         }
     }
+}
+
+fn check_rate_limit(limiter: &LoginRateLimiter, ip: &IpAddr) -> Option<Response> {
+    let Err(not_until) = limiter.check_key(ip) else {
+        return None;
+    };
+
+    let retry_after = not_until
+        .wait_time_from(DefaultClock::default().now())
+        .as_secs()
+        .max(1);
+
+    Some(
+        (
+            StatusCode::TOO_MANY_REQUESTS,
+            [(RETRY_AFTER, retry_after.to_string())],
+            Json(ApiErrorResponse::from_code(ApiErrorCode::RateLimited)),
+        )
+            .into_response(),
+    )
 }
 
 fn auth_not_configured_response() -> Response {
