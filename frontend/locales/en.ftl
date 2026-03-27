@@ -393,7 +393,7 @@ minutes_label = { $count ->
 # -----------------------------------
 edit-warning =
     .title = Before you edit
-    .body = Make sure the book is closed in KoReader and has been closed long enough for any file sync (e.g. Syncthing) to complete. KoReader overwrites the metadata file when a book is open. If you save changes here while the book is still open — or before the latest sidecar file has synced — your changes will be lost.
+    .body = Make sure the book is closed in KoReader and has been closed long enough for any file sync (e.g. Syncthing) to complete. KoReader overwrites the metadata file when a book is open. If you save changes here while the book is still open (or before the latest sidecar file has synced) your changes will be lost.
     .dismiss = Don't show this warning again
     .understood = Understood
 edit =
