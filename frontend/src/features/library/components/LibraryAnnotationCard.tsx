@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { BsBookmarkFill } from 'react-icons/bs';
 import {
     LuBookOpen,
     LuCheck,
@@ -41,20 +40,15 @@ const VARIANT_STYLES: Record<
     LibraryAnnotationCardVariant,
     {
         noteLabelClass: string;
-        leadingBadgeClass: string;
     }
 > = {
     highlight: {
         noteLabelClass: 'text-primary-400',
-        leadingBadgeClass: 'text-amber-500',
     },
     bookmark: {
         noteLabelClass: 'text-primary-400',
-        leadingBadgeClass: 'text-yellow-500',
     },
 };
-
-const BOOKMARK_QUOTE_BAR = 'from-yellow-400 to-yellow-600';
 
 export function LibraryAnnotationCard({
     annotation,
@@ -86,7 +80,7 @@ export function LibraryAnnotationCard({
         useState(false);
 
     const hasNote = annotation.note !== null && annotation.note !== undefined;
-    const hasBody = hasText || hasNote;
+    const hasBody = (variant === 'highlight' && hasText) || hasNote;
 
     // Cancel in-progress note edit when section edit mode is toggled off,
     // and sync draft when entering edit mode or when the note changes.
@@ -129,10 +123,7 @@ export function LibraryAnnotationCard({
 
     const dotClass = colorDotClass(annotation.color);
 
-    const quoteBarClass =
-        variant === 'bookmark'
-            ? BOOKMARK_QUOTE_BAR
-            : colorQuoteBarGradient(annotation.color);
+    const quoteBarClass = colorQuoteBarGradient(annotation.color);
 
     const DrawerIcon =
         DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten;
@@ -159,20 +150,10 @@ export function LibraryAnnotationCard({
     return (
         <article className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden shadow-xs">
             {/* Header — metadata only */}
-            <header className="flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50">
+            <header
+                className={`flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 px-6 py-3 bg-gray-100/50 dark:bg-dark-850/50 ${hasBody || editingNote || showToolbar ? 'border-b border-gray-200/50 dark:border-dark-700/50' : ''}`}
+            >
                 <div className="flex items-center gap-3">
-                    {variant === 'bookmark' && (
-                        <span
-                            className={`inline-flex items-center ${styles.leadingBadgeClass}`}
-                        >
-                            <BsBookmarkFill
-                                className="w-4 h-4 mr-1"
-                                aria-hidden="true"
-                            />
-                            {translation.get('page-bookmark')}
-                        </span>
-                    )}
-
                     {annotation.chapter && (
                         <span className="inline-flex items-center">
                             <LuFileText
@@ -237,19 +218,12 @@ export function LibraryAnnotationCard({
             {/* Body */}
             {(hasBody || editingNote) && (
                 <div className="p-6">
-                    {hasText && (
+                    {/* Anchor text — highlights only */}
+                    {variant === 'highlight' && hasText && (
                         <div className="relative">
                             <div
                                 className={`absolute top-0 left-0 w-1 h-full bg-linear-to-b ${quoteBarClass} rounded-full`}
                             ></div>
-
-                            {variant === 'bookmark' && (
-                                <div className="pl-6 mb-1">
-                                    <span className="text-sm text-yellow-600 dark:text-yellow-300 uppercase tracking-wider font-semibold">
-                                        {translation.get('bookmark-anchor')}:
-                                    </span>
-                                </div>
-                            )}
 
                             <blockquote className="text-gray-900 dark:text-white text-lg leading-relaxed pl-6 font-light whitespace-pre-wrap">
                                 {annotation.text}
@@ -258,7 +232,11 @@ export function LibraryAnnotationCard({
                     )}
 
                     {(hasNote || editingNote) && (
-                        <div className={hasText ? 'mt-6' : ''}>
+                        <div
+                            className={
+                                variant === 'highlight' && hasText ? 'mt-6' : ''
+                            }
+                        >
                             <div className="flex items-center mb-3">
                                 <div className="h-px bg-gray-200 dark:bg-dark-700 grow mr-3"></div>
                                 <div className="flex items-center space-x-2">
