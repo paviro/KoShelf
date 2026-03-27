@@ -27,14 +27,17 @@ export function ReaderHeader({
 }: ReaderHeaderProps) {
     return (
         <header className="relative z-10 flex items-center justify-between h-[70px] md:h-[80px] px-4 md:px-6 border-b border-gray-200/50 dark:border-dark-700/50 bg-white/90 dark:bg-dark-950/75 backdrop-blur-xs shrink-0">
-            <div className="flex items-center space-x-3 min-w-0 flex-1">
+            <div className="flex items-center min-w-0 flex-1">
                 <Link
                     to={backHref}
                     onClick={onBackClick}
-                    className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 transition-colors cursor-pointer shrink-0"
+                    className="text-primary-400 hover:text-primary-300 transition-colors shrink-0"
                     aria-label={translation.get('go-back.aria-label')}
                 >
-                    <LuArrowLeft className="w-6 h-6" aria-hidden="true" />
+                    <LuArrowLeft
+                        className="w-7 h-7 md:-mr-1"
+                        aria-hidden="true"
+                    />
                 </Link>
 
                 <div className="h-8 w-px bg-gray-200 dark:bg-dark-700 mx-3 md:mx-6"></div>
