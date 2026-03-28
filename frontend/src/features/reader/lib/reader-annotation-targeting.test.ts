@@ -171,10 +171,14 @@ describe('reader annotation targeting', () => {
         );
 
         expect(bySection.get(0)).toEqual([
-            { value: 'cfi-0:first', color: '#eab308' },
+            { value: 'cfi-0:first', color: '#eab308', annotationId: 'test-id' },
         ]);
         expect(bySection.get(1)).toEqual([
-            { value: 'cfi-1:second', color: '#eab308' },
+            {
+                value: 'cfi-1:second',
+                color: '#eab308',
+                annotationId: 'test-id-1',
+            },
         ]);
         expect(bySection.size).toBe(2);
     });
@@ -226,9 +230,9 @@ describe('reader annotation targeting', () => {
 
         expect(createDocument).toHaveBeenCalledTimes(1);
         expect(bySection.get(0)).toEqual([
-            { value: 'cfi-0:ab', color: '#eab308' },
-            { value: 'cfi-0:cd', color: '#eab308' },
-            { value: 'cfi-0:ef', color: '#eab308' },
+            { value: 'cfi-0:ab', color: '#eab308', annotationId: 'test-id' },
+            { value: 'cfi-0:cd', color: '#eab308', annotationId: 'test-id-1' },
+            { value: 'cfi-0:ef', color: '#eab308', annotationId: 'test-id-2' },
         ]);
     });
 
@@ -267,10 +271,14 @@ describe('reader annotation targeting', () => {
 
         expect(resolvedSections).toEqual([1, 0]);
         expect(bySection.get(0)).toEqual([
-            { value: 'cfi-0:first', color: '#eab308' },
+            { value: 'cfi-0:first', color: '#eab308', annotationId: 'test-id' },
         ]);
         expect(bySection.get(1)).toEqual([
-            { value: 'cfi-1:second', color: '#eab308' },
+            {
+                value: 'cfi-1:second',
+                color: '#eab308',
+                annotationId: 'test-id-1',
+            },
         ]);
     });
 });

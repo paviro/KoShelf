@@ -44,18 +44,24 @@ function resolveSectionIndexForHighlight(
     return -1;
 }
 
+type HighlightValueOptions = {
+    color?: string;
+    drawer?: string | null;
+    note?: string | null;
+    target?: boolean;
+    annotationId?: string;
+};
+
 function buildHighlightValue(
     value: string,
-    color?: string,
-    drawer?: string | null,
-    note?: string | null,
-    target?: boolean,
+    opts?: HighlightValueOptions,
 ): ReaderHighlightValue {
     const highlight: ReaderHighlightValue = { value };
-    if (color) highlight.color = color;
-    if (drawer) highlight.drawer = drawer;
-    if (note) highlight.note = note;
-    if (target) highlight.target = true;
+    if (opts?.color) highlight.color = opts.color;
+    if (opts?.drawer) highlight.drawer = opts.drawer;
+    if (opts?.note) highlight.note = opts.note;
+    if (opts?.target) highlight.target = true;
+    if (opts?.annotationId) highlight.annotationId = opts.annotationId;
     return highlight;
 }
 
@@ -63,12 +69,9 @@ function appendHighlightValue(
     bySection: Map<number, ReaderHighlightValue[]>,
     sectionIndex: number,
     value: string,
-    color?: string,
-    drawer?: string | null,
-    note?: string | null,
-    target?: boolean,
+    opts?: HighlightValueOptions,
 ) {
-    const highlight = buildHighlightValue(value, color, drawer, note, target);
+    const highlight = buildHighlightValue(value, opts);
     const existing = bySection.get(sectionIndex);
     if (existing) {
         existing.push(highlight);
@@ -178,13 +181,13 @@ export async function resolveHighlightsBySection(
                     const isTarget =
                         annotation.id === options.targetAnnotationId;
                     sectionHighlights.push(
-                        buildHighlightValue(
-                            cfi,
+                        buildHighlightValue(cfi, {
                             color,
-                            annotation.drawer,
-                            annotation.note,
-                            isTarget,
-                        ),
+                            drawer: annotation.drawer,
+                            note: annotation.note,
+                            target: isTarget,
+                            annotationId: annotation.id,
+                        }),
                     );
                 } else {
                     unresolvedHinted.push(annotation);
@@ -227,15 +230,13 @@ export async function resolveHighlightsBySection(
 
         const color = highlightColor(annotation.color, isDark);
         const isTarget = annotation.id === options.targetAnnotationId;
-        appendHighlightValue(
-            bySection,
-            sectionIndex,
-            cfi,
+        appendHighlightValue(bySection, sectionIndex, cfi, {
             color,
-            annotation.drawer,
-            annotation.note,
-            isTarget,
-        );
+            drawer: annotation.drawer,
+            note: annotation.note,
+            target: isTarget,
+            annotationId: annotation.id,
+        });
     });
 
     return bySection;

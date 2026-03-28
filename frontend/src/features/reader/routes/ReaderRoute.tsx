@@ -69,6 +69,7 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
         activeNote,
         dismissNote,
         goTo,
+        pulseHighlight,
         handleBackClick,
         handlePrev,
         handleNext,
@@ -114,12 +115,13 @@ export function ReaderRoute({ collection }: ReaderRouteProps) {
             if (!view) {
                 return;
             }
+            await pulseHighlight(annotation.id);
             const target = await resolveAnnotationTarget(view, annotation);
             if (target !== null) {
                 goTo(target);
             }
         },
-        [goTo, viewRef],
+        [goTo, pulseHighlight, viewRef],
     );
 
     const settingsProps = useMemo<ReaderSettingsPanelProps>(

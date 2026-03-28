@@ -16,7 +16,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers, '#abc123');
+        const handle = attachHighlightDrawListener(view, renderers, '#abc123');
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -29,7 +29,7 @@ describe('attachHighlightDrawListener', () => {
             color: '#abc123',
         });
 
-        detach();
+        handle.detach();
     });
 
     it('uses per-annotation color when present', () => {
@@ -37,7 +37,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -49,7 +49,7 @@ describe('attachHighlightDrawListener', () => {
             color: '#ff0000',
         });
 
-        detach();
+        handle.detach();
     });
 
     it('selects underline renderer for underscore drawer', () => {
@@ -57,7 +57,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -69,7 +69,7 @@ describe('attachHighlightDrawListener', () => {
             color: '#eab308',
         });
 
-        detach();
+        handle.detach();
     });
 
     it('selects underline renderer for strikeout drawer', () => {
@@ -77,7 +77,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -89,7 +89,7 @@ describe('attachHighlightDrawListener', () => {
             color: '#eab308',
         });
 
-        detach();
+        handle.detach();
     });
 
     it('detaches listener cleanly', () => {
@@ -97,8 +97,8 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
-        detach();
+        const handle = attachHighlightDrawListener(view, renderers);
+        handle.detach();
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -112,7 +112,7 @@ describe('attachHighlightDrawListener', () => {
     it('ignores events without draw function', () => {
         const view = new EventTarget();
         const renderers = makeRenderers();
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         expect(() => {
             view.dispatchEvent(new CustomEvent('draw-annotation'));
@@ -123,7 +123,7 @@ describe('attachHighlightDrawListener', () => {
             );
         }).not.toThrow();
 
-        detach();
+        handle.detach();
     });
 
     it('uses pulse renderer for targeted annotation', () => {
@@ -131,7 +131,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -151,7 +151,7 @@ describe('attachHighlightDrawListener', () => {
         expect(wrappedRenderer).not.toBe(renderers.highlight);
         expect(draw.mock.calls[0][1]).toEqual({ color: '#ff0000' });
 
-        detach();
+        handle.detach();
     });
 
     it('does not re-pulse targeted annotation on second draw', () => {
@@ -159,7 +159,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         const annotation = {
             target: true,
@@ -183,7 +183,7 @@ describe('attachHighlightDrawListener', () => {
         expect(firstRenderer).not.toBe(renderers.highlight);
         expect(secondRenderer).toBe(renderers.highlight);
 
-        detach();
+        handle.detach();
     });
 
     it('uses plain renderer for non-targeted annotations', () => {
@@ -191,7 +191,7 @@ describe('attachHighlightDrawListener', () => {
         const renderers = makeRenderers();
         const draw = vi.fn();
 
-        const detach = attachHighlightDrawListener(view, renderers);
+        const handle = attachHighlightDrawListener(view, renderers);
 
         view.dispatchEvent(
             new CustomEvent('draw-annotation', {
@@ -206,6 +206,6 @@ describe('attachHighlightDrawListener', () => {
             color: '#00ff00',
         });
 
-        detach();
+        handle.detach();
     });
 });

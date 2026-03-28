@@ -8,6 +8,11 @@ export type HighlightRenderers = {
     underline: AnnotationRenderer;
 };
 
+export type HighlightDrawListenerHandle = {
+    detach: () => void;
+    clearAnimatedValue: (value: string) => void;
+};
+
 type DrawAnnotationDetail = {
     draw?: (
         renderer: AnnotationRenderer,
@@ -50,7 +55,7 @@ export function attachHighlightDrawListener(
     view: EventTarget,
     renderers: HighlightRenderers,
     defaultColor: string = '#eab308',
-): () => void {
+): HighlightDrawListenerHandle {
     const animatedValues = new Set<string>();
 
     const listener = (event: Event) => {
@@ -75,6 +80,9 @@ export function attachHighlightDrawListener(
         if (shouldAnimate) {
             animatedValues.add(annotationValue);
             detail.draw(withPulse(baseRenderer), { color });
+            if (detail.annotation) {
+                detail.annotation.target = false;
+            }
         } else {
             detail.draw(baseRenderer, { color });
         }
@@ -82,7 +90,15 @@ export function attachHighlightDrawListener(
 
     view.addEventListener('draw-annotation', listener as EventListener);
 
-    return () => {
-        view.removeEventListener('draw-annotation', listener as EventListener);
+    return {
+        detach: () => {
+            view.removeEventListener(
+                'draw-annotation',
+                listener as EventListener,
+            );
+        },
+        clearAnimatedValue: (value: string) => {
+            animatedValues.delete(value);
+        },
     };
 }

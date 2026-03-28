@@ -23,7 +23,10 @@ import type {
     LibraryReaderPresentation,
 } from '../../library/api/library-data';
 import type { LibraryCollection } from '../../library/model/library-model';
-import { attachHighlightDrawListener } from '../lib/reader-highlight-overlay';
+import {
+    attachHighlightDrawListener,
+    type HighlightDrawListenerHandle,
+} from '../lib/reader-highlight-overlay';
 import {
     isReaderFormatSupported,
     normalizeLibraryFormat,
@@ -60,6 +63,7 @@ type UseReaderViewResult = {
     activeNote: ReaderActiveNote | null;
     dismissNote: () => void;
     goTo: (target: string | number) => void;
+    pulseHighlight: (annotationId: string) => Promise<void>;
     handleBackClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
     handlePrev: () => void;
     handleNext: () => void;
@@ -122,6 +126,9 @@ export function useReaderView(
     const [activeNote, setActiveNote] = useState<ReaderActiveNote | null>(null);
     const [toc, setToc] = useState<TocEntry[]>([]);
     const noteMapRef = useRef(new Map<string, ReaderActiveNote>());
+    const pulseHighlightRef = useRef<
+        ((annotationId: string) => Promise<void>) | null
+    >(null);
 
     const dismissNote = useCallback(() => setActiveNote(null), []);
 
@@ -178,6 +185,10 @@ export function useReaderView(
         [viewRef],
     );
 
+    const pulseHighlight = useCallback(async (annotationId: string) => {
+        await pulseHighlightRef.current?.(annotationId);
+    }, []);
+
     useEffect(() => {
         const container = containerRef.current;
         if (!container) {
@@ -218,7 +229,7 @@ export function useReaderView(
 
         let cancelled = false;
         let currentView: FoliateView | null = null;
-        let detachHighlightDrawListener: (() => void) | null = null;
+        let highlightDrawHandle: HighlightDrawListenerHandle | null = null;
         let showAnnotationListener: EventListener | null = null;
         let applyPresentationLoadListener: EventListener | null = null;
 
@@ -377,10 +388,36 @@ export function useReaderView(
                         );
                     }
                 }) as EventListener);
-                detachHighlightDrawListener = attachHighlightDrawListener(
+                highlightDrawHandle = attachHighlightDrawListener(
                     view,
                     renderers,
                 );
+
+                pulseHighlightRef.current = async (annotationId: string) => {
+                    let target: ReaderHighlightValue | null = null;
+                    for (const sectionHighlights of highlightsBySection.values()) {
+                        for (const h of sectionHighlights) {
+                            if (h.annotationId === annotationId) {
+                                target = h;
+                                break;
+                            }
+                        }
+                        if (target) break;
+                    }
+
+                    if (!target) {
+                        return;
+                    }
+
+                    highlightDrawHandle?.clearAnimatedValue(target.value);
+                    target.target = true;
+
+                    try {
+                        await view.addAnnotation(target);
+                    } catch {
+                        // Section not loaded; pulse fires via create-overlay path.
+                    }
+                };
 
                 showAnnotationListener = ((e: CustomEvent) => {
                     const detail = e.detail as { value?: string } | undefined;
@@ -543,7 +580,8 @@ export function useReaderView(
 
         return () => {
             cancelled = true;
-            detachHighlightDrawListener?.();
+            pulseHighlightRef.current = null;
+            highlightDrawHandle?.detach();
             if (showAnnotationListener && currentView) {
                 currentView.removeEventListener(
                     'show-annotation',
@@ -602,6 +640,7 @@ export function useReaderView(
         activeNote,
         dismissNote,
         goTo,
+        pulseHighlight,
         handleBackClick,
         handlePrev,
         handleNext,

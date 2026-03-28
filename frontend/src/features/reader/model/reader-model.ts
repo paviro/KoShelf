@@ -45,6 +45,7 @@ export type FoliateView = HTMLElement &
         addAnnotation: (
             annotation: FoliateAnnotation,
         ) => Promise<FoliateAnnotationResult>;
+        deleteAnnotation: (annotation: FoliateAnnotation) => Promise<void>;
     };
 
 type ReaderSection = {
@@ -94,6 +95,7 @@ export type ReaderHighlightValue = {
     drawer?: string;
     note?: string;
     target?: boolean;
+    annotationId?: string;
 };
 
 export type ResolveHighlightsBySectionOptions = {
