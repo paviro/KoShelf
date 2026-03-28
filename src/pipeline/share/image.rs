@@ -13,8 +13,14 @@ const SQUARE_TEMPLATE: &str = include_str!("../../../assets/share_square.svg");
 const BANNER_TEMPLATE: &str = include_str!("../../../assets/share_banner.svg");
 
 // Embed fonts at compile time for cross-platform consistency
-const FONT_REGULAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Regular.ttf"));
-const FONT_ITALIC: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio-Italic.ttf"));
+const FONT_REGULAR: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/frontend/node_modules/@expo-google-fonts/gelasio/400Regular/Gelasio_400Regular.ttf"
+));
+const FONT_ITALIC: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/frontend/node_modules/@expo-google-fonts/gelasio/400Regular_Italic/Gelasio_400Regular_Italic.ttf"
+));
 
 /// Cached font database - initialized once and reused across all share image generations.
 static FONT_DATABASE: LazyLock<Arc<resvg::usvg::fontdb::Database>> = LazyLock::new(|| {

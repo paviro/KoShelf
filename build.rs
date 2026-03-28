@@ -19,12 +19,9 @@ fn main() {
     println!("cargo:rerun-if-changed=frontend/tailwind.config.cjs");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_NPM_INSTALL");
     println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_REACT_BUILD");
-    println!("cargo:rerun-if-env-changed=KOSHELF_SKIP_FONT_DOWNLOAD");
-    println!("cargo:rerun-if-env-changed=KOSHELF_FONT_CACHE_DIR");
 
     let skip_npm_install = env_flag("KOSHELF_SKIP_NPM_INSTALL");
     let skip_react_build = env_flag("KOSHELF_SKIP_REACT_BUILD");
-    let skip_font_download = env_flag("KOSHELF_SKIP_FONT_DOWNLOAD");
 
     let out_dir = std::env::var("OUT_DIR").unwrap();
 
@@ -33,9 +30,6 @@ fn main() {
 
     // Build React + Vite frontend.
     compile_react_frontend(skip_npm_install, skip_react_build);
-
-    // Download and embed fonts for SVG rendering
-    download_fonts(&out_dir, skip_font_download);
 }
 
 fn generate_locale_manifest(out_dir: &str) {
@@ -238,79 +232,4 @@ fn compile_react_frontend(skip_npm_install: bool, skip_react_build: bool) {
         panic!("frontend build completed but dist directory was not found");
     }
     eprintln!("React frontend build completed: {}", dist_dir.display());
-}
-
-/// Download Gelasio font files for SVG rendering
-/// Uses a shared cache directory so fonts are only downloaded once across all targets
-fn download_fonts(out_dir: &str, skip_download: bool) {
-    let fonts = [
-        (
-            "Gelasio-Regular.ttf",
-            "https://fonts.gstatic.com/s/gelasio/v14/cIfiMaFfvUQxTTqS3iKJkLGbI41wQL8Ilycs.ttf",
-        ),
-        (
-            "Gelasio-Italic.ttf",
-            "https://fonts.gstatic.com/s/gelasio/v14/cIfsMaFfvUQxTTqS9Cu7b2nySBfeR6rA1M9v8zQ.ttf",
-        ),
-    ];
-
-    // Use a shared cache directory in target/ so fonts are only downloaded once
-    // across all target architectures during cross-compilation
-    let cache_dir = std::env::var("KOSHELF_FONT_CACHE_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| Path::new("target").join(".font-cache"));
-    fs::create_dir_all(&cache_dir).expect("Failed to create font cache directory");
-
-    for (filename, url) in fonts {
-        let cache_path = cache_dir.join(filename);
-        let dest_path = Path::new(out_dir).join(filename);
-
-        // Check if font is already in shared cache
-        if cache_path.exists() {
-            eprintln!("Font {} found in cache, copying to build dir", filename);
-            let bytes = fs::read(&cache_path)
-                .unwrap_or_else(|e| panic!("Failed to read cached font {}: {}", filename, e));
-            let _wrote = write_if_changed(&dest_path, &bytes)
-                .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
-            continue;
-        }
-
-        if skip_download {
-            panic!(
-                "Font {} not found in cache and downloading is disabled (KOSHELF_SKIP_FONT_DOWNLOAD=1). \
-                 Either unset that env var, or pre-populate the cache at {:?}.",
-                filename, cache_dir
-            );
-        }
-
-        eprintln!("Downloading font: {}...", filename);
-
-        match ureq::get(url).call() {
-            Ok(response) => {
-                let bytes = match response.into_body().read_to_vec() {
-                    Ok(b) => b,
-                    Err(e) => panic!("Failed to read font data for {}: {}", filename, e),
-                };
-
-                // Save to shared cache
-                fs::write(&cache_path, &bytes)
-                    .unwrap_or_else(|e| panic!("Failed to cache font {}: {}", filename, e));
-
-                // Copy to build output directory (but avoid rewriting identical output).
-                let _wrote = write_if_changed(&dest_path, &bytes)
-                    .unwrap_or_else(|e| panic!("Failed to write font {}: {}", filename, e));
-
-                eprintln!(
-                    "Font {} downloaded and cached ({} bytes)",
-                    filename,
-                    bytes.len()
-                );
-            }
-            Err(e) => {
-                panic!("Failed to download font {}: {}", filename, e);
-            }
-        }
-    }
-
-    eprintln!("Font files downloaded/verified successfully");
 }
