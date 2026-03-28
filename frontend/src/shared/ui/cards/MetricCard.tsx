@@ -40,8 +40,8 @@ export function MetricCard({
         variant === 'inline'
             ? 'flex items-center gap-3'
             : sm
-              ? 'flex flex-col @[120px]:flex-row items-center gap-2 @[120px]:gap-3 h-full'
-              : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3 h-full';
+              ? 'flex flex-col @[120px]:flex-row items-center gap-2 @[120px]:gap-3'
+              : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3';
 
     const textAlignClass =
         variant === 'inline'
@@ -52,7 +52,7 @@ export function MetricCard({
 
     return (
         <div
-            className={`@container bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg ${paddingClass}${className ? ` ${className}` : ''}`}
+            className={`@container flex flex-col justify-center bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg ${paddingClass}${className ? ` ${className}` : ''}`}
         >
             <div className={layoutClass}>
                 <div
