@@ -39,7 +39,9 @@ export function useUpdateItem(itemId: string, collection: LibraryCollection) {
 
         onError: (error, _payload, context) => {
             console.error('[useUpdateItem] Failed to update item:', error);
-            addToast('error', translation.get('toast-update-item-error'));
+            addToast('error', translation.get('toast-update-item-error'), {
+                subtitle: translation.get('toast-update-item-error.subtitle'),
+            });
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }
@@ -83,7 +85,15 @@ export function useUpdateAnnotation(
                 '[useUpdateAnnotation] Failed to update annotation:',
                 error,
             );
-            addToast('error', translation.get('toast-update-annotation-error'));
+            addToast(
+                'error',
+                translation.get('toast-update-annotation-error'),
+                {
+                    subtitle: translation.get(
+                        'toast-update-annotation-error.subtitle',
+                    ),
+                },
+            );
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }
@@ -119,7 +129,15 @@ export function useDeleteAnnotation(
                 '[useDeleteAnnotation] Failed to delete annotation:',
                 error,
             );
-            addToast('error', translation.get('toast-delete-annotation-error'));
+            addToast(
+                'error',
+                translation.get('toast-delete-annotation-error'),
+                {
+                    subtitle: translation.get(
+                        'toast-delete-annotation-error.subtitle',
+                    ),
+                },
+            );
             if (context?.previous) {
                 queryClient.setQueryData(detailKey, context.previous);
             }

@@ -402,9 +402,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Elvetés
-toast-update-item-error = A módosítások mentése sikertelen. A szerkesztések visszaállítva.
-toast-update-annotation-error = A jegyzet frissítése sikertelen. A módosítások visszaállítva.
-toast-delete-annotation-error = A jegyzet törlése sikertelen. Visszaállítva.
+toast-update-item-error = A módosítások mentése sikertelen
+    .subtitle = A szerkesztések visszaállítva.
+toast-update-annotation-error = A jegyzet frissítése sikertelen
+    .subtitle = A módosítások visszaállítva.
+toast-delete-annotation-error = A jegyzet törlése sikertelen
+    .subtitle = Visszaállítva.
 
 # -----------------------------------
 #            Page Activity

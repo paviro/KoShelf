@@ -426,9 +426,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Schließen
-toast-update-item-error = Änderungen konnten nicht gespeichert werden. Deine Bearbeitungen wurden zurückgesetzt.
-toast-update-annotation-error = Anmerkung konnte nicht aktualisiert werden. Deine Änderungen wurden zurückgesetzt.
-toast-delete-annotation-error = Anmerkung konnte nicht gelöscht werden. Sie wurde wiederhergestellt.
+toast-update-item-error = Änderungen konnten nicht gespeichert werden
+    .subtitle = Deine Bearbeitungen wurden zurückgesetzt.
+toast-update-annotation-error = Anmerkung konnte nicht aktualisiert werden
+    .subtitle = Deine Änderungen wurden zurückgesetzt.
+toast-delete-annotation-error = Anmerkung konnte nicht gelöscht werden
+    .subtitle = Sie wurde wiederhergestellt.
 
 # -----------------------------------
 #            Page Activity

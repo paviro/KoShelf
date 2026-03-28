@@ -422,9 +422,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Cerrar
-toast-update-item-error = No se pudieron guardar los cambios. Tus ediciones han sido revertidas.
-toast-update-annotation-error = No se pudo actualizar la anotación. Tus cambios han sido revertidos.
-toast-delete-annotation-error = No se pudo eliminar la anotación. Ha sido restaurada.
+toast-update-item-error = No se pudieron guardar los cambios
+    .subtitle = Tus ediciones han sido revertidas.
+toast-update-annotation-error = No se pudo actualizar la anotación
+    .subtitle = Tus cambios han sido revertidos.
+toast-delete-annotation-error = No se pudo eliminar la anotación
+    .subtitle = Ha sido restaurada.
 
 # -----------------------------------
 #            Page Activity
