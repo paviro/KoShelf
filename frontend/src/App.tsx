@@ -62,8 +62,7 @@ export function App() {
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);
     const siteTitle = site?.title ?? 'KoShelf';
-    const authEnabled = site?.capabilities.auth_enabled === true;
-    const authenticated = site?.authenticated === true;
+    const authenticated = site?.authenticated;
     const routeMatch = matchRoute(location.pathname);
     const isLoginRoute = routeMatch.routeId === 'login';
     const isReaderRoute = isReaderRouteId(routeMatch.routeId);
@@ -74,7 +73,6 @@ export function App() {
                 <AppRoutes
                     defaultRoute={defaultRoute}
                     siteTitle={siteTitle}
-                    authEnabled={authEnabled}
                     authenticated={authenticated}
                     siteLoaded={siteQuery.isSuccess || siteQuery.isError}
                 />

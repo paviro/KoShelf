@@ -187,7 +187,7 @@ pub async fn rebuild(
                     has_comics,
                     has_reading_data,
                     has_files: config.is_internal_server || config.include_files,
-                    auth_enabled: config.auth_enabled,
+
                     has_writeback: config.writeback_enabled,
                 },
                 authenticated: None,

@@ -10,8 +10,7 @@ import { Button } from '../../../shared/ui/button/Button';
 type LoginRouteProps = {
     defaultRoute: '/books' | '/comics' | '/statistics';
     siteTitle: string;
-    authEnabled: boolean;
-    authenticated: boolean;
+    authenticated: boolean | undefined;
     siteLoaded: boolean;
 };
 
@@ -34,7 +33,6 @@ function resolveLoginErrorMessage(error: unknown): string {
 export function LoginRoute({
     defaultRoute,
     siteTitle,
-    authEnabled,
     authenticated,
     siteLoaded,
 }: LoginRouteProps) {
@@ -50,10 +48,10 @@ export function LoginRoute({
     }, [loginTitle]);
 
     useEffect(() => {
-        if (siteLoaded && authEnabled && authenticated) {
+        if (siteLoaded && authenticated === true) {
             navigate(defaultRoute, { replace: true });
         }
-    }, [authenticated, authEnabled, defaultRoute, navigate, siteLoaded]);
+    }, [authenticated, defaultRoute, navigate, siteLoaded]);
 
     const handleSubmit = useCallback(
         async (event: React.FormEvent<HTMLFormElement>) => {
@@ -78,7 +76,7 @@ export function LoginRoute({
         [defaultRoute, navigate, password, submitPending],
     );
 
-    if (!authEnabled) {
+    if (authenticated == null) {
         return <Navigate to={defaultRoute} replace />;
     }
 

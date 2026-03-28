@@ -256,7 +256,7 @@ async fn initialize_pipeline(
             has_comics,
             has_reading_data,
             has_files: is_internal_server || config.include_files,
-            auth_enabled: config.auth_enabled,
+
             has_writeback: config.writeback_enabled,
         },
         authenticated: None,

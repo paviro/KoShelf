@@ -3,7 +3,7 @@ export interface SiteCapabilities {
     has_comics: boolean;
     has_reading_data: boolean;
     has_files?: boolean;
-    auth_enabled: boolean;
+
     has_writeback?: boolean;
 }
 
