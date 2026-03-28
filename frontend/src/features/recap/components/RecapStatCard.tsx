@@ -22,8 +22,7 @@ const colorStyles: Record<
         iconClass: 'text-red-500 dark:text-white',
     },
     amber: {
-        hoverBorder:
-            'hover:border-amber-300/50 dark:hover:border-amber-700/40',
+        hoverBorder: 'hover:border-amber-300/50 dark:hover:border-amber-700/40',
         iconContainer:
             'bg-amber-500/20 dark:bg-linear-to-br dark:from-amber-500 dark:to-yellow-500',
         iconClass: 'text-amber-500 dark:text-white',
