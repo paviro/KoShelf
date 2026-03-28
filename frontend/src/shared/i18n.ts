@@ -56,6 +56,7 @@ function emitLanguageChanged(): void {
         return;
     }
 
+    document.documentElement.lang = loadedLanguage;
     window.dispatchEvent(new Event(I18N_LANGUAGE_CHANGE_EVENT));
 }
 

@@ -83,7 +83,7 @@ export function RecapFeaturedStatCard({
                 <div className="flex flex-col min-w-0">
                     {value}
                     <span
-                        className={`text-xs font-semibold ${styles.labelClass} uppercase tracking-wider`}
+                        className={`text-xs font-semibold ${styles.labelClass} uppercase tracking-wider break-words hyphens-auto`}
                     >
                         {label}
                     </span>
