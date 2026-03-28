@@ -1,10 +1,13 @@
+use std::io::Read as _;
+
 use axum::{
     Router,
     extract::Path,
-    http::{StatusCode, header, header::CONTENT_TYPE},
+    http::{HeaderMap, StatusCode, header, header::CONTENT_TYPE},
     response::{IntoResponse, Response},
     routing::get,
 };
+use flate2::read::GzDecoder;
 use include_dir::{Dir, include_dir};
 
 use crate::pipeline::embed::is_precompressed;
@@ -19,20 +22,20 @@ pub(crate) fn routes() -> Router {
         .route("/{path}", get(react_shell_root_asset_handler))
 }
 
-async fn react_shell_index_handler() -> Response {
-    serve_embedded_frontend_file("index.html")
+async fn react_shell_index_handler(headers: HeaderMap) -> Response {
+    serve_embedded_frontend_file("index.html", &headers)
 }
 
-async fn react_shell_root_asset_handler(Path(path): Path<String>) -> Response {
-    serve_embedded_frontend_file(&path)
+async fn react_shell_root_asset_handler(headers: HeaderMap, Path(path): Path<String>) -> Response {
+    serve_embedded_frontend_file(&path, &headers)
 }
 
-async fn react_shell_core_asset_handler(Path(path): Path<String>) -> Response {
+async fn react_shell_core_asset_handler(headers: HeaderMap, Path(path): Path<String>) -> Response {
     let full_path = format!("core/{}", path);
-    serve_embedded_frontend_file(&full_path)
+    serve_embedded_frontend_file(&full_path, &headers)
 }
 
-fn serve_embedded_frontend_file(path: &str) -> Response {
+fn serve_embedded_frontend_file(path: &str, headers: &HeaderMap) -> Response {
     if path.contains("..") {
         return StatusCode::NOT_FOUND.into_response();
     }
@@ -42,15 +45,29 @@ fn serve_embedded_frontend_file(path: &str) -> Response {
     };
 
     if is_precompressed(path) {
-        (
-            StatusCode::OK,
-            [
-                (CONTENT_TYPE, guess_content_type(path)),
-                (header::CONTENT_ENCODING, "gzip"),
-            ],
-            file.contents(),
-        )
-            .into_response()
+        if accepts_gzip(headers) {
+            (
+                StatusCode::OK,
+                [
+                    (CONTENT_TYPE, guess_content_type(path)),
+                    (header::CONTENT_ENCODING, "gzip"),
+                ],
+                file.contents().to_vec(),
+            )
+                .into_response()
+        } else {
+            let mut decoder = GzDecoder::new(file.contents());
+            let mut decompressed = Vec::new();
+            if decoder.read_to_end(&mut decompressed).is_err() {
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            (
+                StatusCode::OK,
+                [(CONTENT_TYPE, guess_content_type(path))],
+                decompressed,
+            )
+                .into_response()
+        }
     } else {
         (
             StatusCode::OK,
@@ -59,6 +76,13 @@ fn serve_embedded_frontend_file(path: &str) -> Response {
         )
             .into_response()
     }
+}
+
+fn accepts_gzip(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.contains("gzip"))
 }
 
 fn guess_content_type(path: &str) -> &'static str {
