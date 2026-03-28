@@ -442,7 +442,7 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
         cleanup_expired(&koshelf_pool).await?;
 
         let cleanup_pool = koshelf_pool.clone();
-        let cleanup_handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
             interval.tick().await;
             loop {
@@ -452,9 +452,6 @@ async fn run_serve(args: ServeArgs) -> Result<()> {
                 }
             }
         });
-        if cleanup_handle.is_finished() {
-            warn!("Session cleanup background task exited unexpectedly");
-        }
 
         let paseto_key = paseto_key_from_bytes(&token_key_bytes)?;
 

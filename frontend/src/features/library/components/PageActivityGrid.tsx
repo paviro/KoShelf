@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { translation } from '../../../shared/i18n';
+import { useDarkMode } from '../../../shared/lib/dom/useDarkMode';
 import { formatDuration } from '../../../shared/lib/intl/formatDuration';
 import { TooltipManager } from '../../../shared/overlay/tooltip-manager';
 import type {
@@ -12,25 +13,6 @@ import {
     buildAnnotationMap,
     percentileDuration,
 } from '../lib/page-activity-data';
-
-// ── Dark mode hook ───────────────────────────────────────────────────────
-
-function readDarkMode(): boolean {
-    return document.documentElement.classList.contains('dark');
-}
-
-function useDarkMode(): boolean {
-    const [dark, setDark] = useState(readDarkMode);
-    useEffect(() => {
-        const observer = new MutationObserver(() => setDark(readDarkMode()));
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class'],
-        });
-        return () => observer.disconnect();
-    }, []);
-    return dark;
-}
 
 // ── Continuous color scale (teal → blue → violet) ────────────────────────
 

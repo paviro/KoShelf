@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { LuNotebookPen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { useDarkMode } from '../../../shared/lib/dom/useDarkMode';
 import { DRAWER_LIST_ITEM_CLASSNAME } from '../../../shared/ui/dropdown/dropdown-styles';
 import type { LibraryAnnotation } from '../../library/api/library-data';
 import { useDrawerListScroll } from '../hooks/useDrawerListScroll';
@@ -58,7 +59,7 @@ export function ReaderHighlightList({
         );
     }
 
-    const isDark = document.documentElement.classList.contains('dark');
+    const isDark = useDarkMode();
 
     return (
         <div ref={listRef} className="flex flex-col gap-4 py-2">

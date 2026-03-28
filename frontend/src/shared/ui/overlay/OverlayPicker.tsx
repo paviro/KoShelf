@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-import { computeOverlayPosition } from '../../../shared/overlay/anchored-overlay';
+import { computeOverlayPosition } from '../../overlay/anchored-overlay';
 
 type OverlayPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;
