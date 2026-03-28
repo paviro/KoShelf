@@ -68,7 +68,6 @@ export function RecapHeaderControls({
         <div className="flex items-center space-x-2 md:space-x-4">
             {years.length > 0 && (
                 <YearSelector
-                    idPrefix="recapYear"
                     years={years}
                     selectedYear={selectedYear}
                     onSelect={onSelectYear}

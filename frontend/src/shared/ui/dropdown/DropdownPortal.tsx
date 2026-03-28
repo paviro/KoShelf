@@ -1,101 +1,85 @@
 import {
     useEffect,
-    useLayoutEffect,
+    useId,
     useRef,
-    useState,
-    type CSSProperties,
     type ReactNode,
     type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
 
+import type {
+    OverlayAlignmentOption,
+    OverlayPlacement,
+} from '../../overlay/anchored-overlay';
+import { useAnchoredPosition } from '../../overlay/useAnchoredPosition';
+import { useClickOutside } from '../../lib/dom/useClickOutside';
+import { useEscapeKey } from '../../lib/dom/useEscapeKey';
+
 type DropdownPortalProps = {
     triggerRef: RefObject<HTMLElement | null>;
     open: boolean;
     onClose: () => void;
-    closeOnScroll?: boolean;
     className?: string;
     children: ReactNode;
+    placements?: OverlayPlacement[];
+    alignment?: OverlayAlignmentOption;
+    gap?: number;
+    role?: 'menu' | 'dialog';
+    'aria-label'?: string;
 };
 
 export function DropdownPortal({
     triggerRef,
     open,
     onClose,
-    closeOnScroll = false,
     className = '',
     children,
+    placements = ['bottom', 'top'],
+    alignment = 'end',
+    gap = 6,
+    role = 'menu',
+    'aria-label': ariaLabel,
 }: DropdownPortalProps) {
     const panelRef = useRef<HTMLDivElement>(null);
-    const [style, setStyle] = useState<CSSProperties>({});
+    const panelId = useId();
 
-    useLayoutEffect(() => {
-        if (!open || !triggerRef.current) {
-            return;
-        }
+    useAnchoredPosition(triggerRef, panelRef, open, onClose, {
+        placements,
+        alignment,
+        arrowSize: 0,
+        gap,
+    });
 
-        const update = () => {
-            const rect = triggerRef.current!.getBoundingClientRect();
-            setStyle({
-                position: 'fixed',
-                top: rect.bottom + 6,
-                right: window.innerWidth - rect.right,
-            });
-        };
-
-        update();
-        window.addEventListener('resize', update);
-        return () => {
-            window.removeEventListener('resize', update);
-        };
-    }, [open, triggerRef]);
+    useClickOutside(panelRef, onClose, open, triggerRef);
+    useEscapeKey(onClose, open);
 
     useEffect(() => {
-        if (!open) {
-            return;
+        const trigger = triggerRef.current;
+        if (!trigger) return;
+
+        trigger.setAttribute('aria-haspopup', role);
+        trigger.setAttribute('aria-expanded', String(open));
+
+        if (open) {
+            trigger.setAttribute('aria-controls', panelId);
+        } else {
+            trigger.removeAttribute('aria-controls');
         }
-
-        const onMouseDown = (event: MouseEvent) => {
-            const target = event.target;
-            if (!(target instanceof Node)) {
-                return;
-            }
-            if (triggerRef.current?.contains(target)) {
-                return;
-            }
-            if (panelRef.current?.contains(target)) {
-                return;
-            }
-            onClose();
-        };
-
-        const onScroll = closeOnScroll
-            ? (event: Event) => {
-                  if (panelRef.current?.contains(event.target as Node)) {
-                      return;
-                  }
-                  onClose();
-              }
-            : null;
-
-        document.addEventListener('mousedown', onMouseDown);
-        if (onScroll) {
-            document.addEventListener('scroll', onScroll, true);
-        }
-        return () => {
-            document.removeEventListener('mousedown', onMouseDown);
-            if (onScroll) {
-                document.removeEventListener('scroll', onScroll, true);
-            }
-        };
-    }, [open, onClose, closeOnScroll, triggerRef]);
+    }, [open, triggerRef, panelId, role]);
 
     if (!open) {
         return null;
     }
 
     return createPortal(
-        <div ref={panelRef} className={`z-50 ${className}`} style={style}>
+        <div
+            ref={panelRef}
+            id={panelId}
+            role={role}
+            aria-label={ariaLabel}
+            className={`fixed z-50 ${className}`}
+            style={{ visibility: 'hidden' }}
+        >
             {children}
         </div>,
         document.body,

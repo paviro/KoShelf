@@ -1,13 +1,10 @@
 import {
     useCallback,
     useEffect,
-    useId,
-    useLayoutEffect,
     useRef,
     useState,
     type ReactNode,
 } from 'react';
-import { createPortal } from 'react-dom';
 import {
     LuALargeSmall,
     LuAlignJustify,
@@ -22,8 +19,7 @@ import {
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
-import { computeOverlayPosition } from '../../../shared/overlay/anchored-overlay';
-import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
+import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
 import type {
     ReaderModeControl,
     ReaderModeValue,
@@ -415,58 +411,8 @@ export function ReaderSettingsPanel({
 }: ReaderSettingsPanelProps) {
     const [open, setOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const panelRef = useRef<HTMLDivElement>(null);
-    const [position, setPosition] = useState<{
-        top: number;
-        left: number;
-    } | null>(null);
-    const panelId = useId();
 
     const close = useCallback(() => setOpen(false), []);
-    const updatePosition = useCallback(() => {
-        const button = buttonRef.current;
-        const panel = panelRef.current;
-        if (!button || !panel) {
-            return;
-        }
-
-        const result = computeOverlayPosition(
-            button.getBoundingClientRect(),
-            panel.getBoundingClientRect(),
-            window.innerWidth,
-            window.innerHeight,
-            {
-                placements: ['bottom', 'top'],
-                alignment: 'end',
-                arrowSize: 0,
-                gap: PANEL_OFFSET_PX,
-            },
-        );
-        setPosition({ top: result.top, left: result.left });
-    }, []);
-
-    useClickOutside(panelRef, close, open, buttonRef);
-
-    useLayoutEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        updatePosition();
-    }, [open, updatePosition]);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
-        return () => {
-            window.removeEventListener('resize', updatePosition);
-            window.removeEventListener('scroll', updatePosition, true);
-        };
-    }, [open, updatePosition]);
 
     useEffect(() => {
         if (!open) {
@@ -510,21 +456,6 @@ export function ReaderSettingsPanel({
                 doc.removeEventListener('pointerdown', close);
             }
         };
-    }, [close, open]);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                close();
-            }
-        };
-
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
     }, [close, open]);
 
     const displayFontSize = formatPointSettingValue(fontSize.value);
@@ -623,203 +554,173 @@ export function ReaderSettingsPanel({
                         ? 'bg-gray-200/60 dark:bg-dark-700/60 border-gray-300/80 dark:border-dark-600/70 text-gray-900 dark:text-white'
                         : ''
                 }
-                aria-expanded={open}
-                aria-haspopup="dialog"
-                aria-controls={open ? panelId : undefined}
             />
 
-            {open &&
-                createPortal(
-                    <div
-                        id={panelId}
-                        ref={panelRef}
-                        className="fixed w-80 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto bg-white/95 dark:bg-dark-900/88 backdrop-blur-xs border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl p-4 z-[100]"
-                        style={{
-                            top: position?.top ?? 0,
-                            left: position?.left ?? 0,
-                            visibility: position ? 'visible' : 'hidden',
-                        }}
-                        role="dialog"
-                        aria-label={translation.get(
-                            'reader-settings.aria-label',
-                        )}
-                    >
-                        <div className="space-y-2">
-                            <ReaderSettingControl
-                                icon={
-                                    <LuALargeSmall
-                                        className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                        aria-hidden="true"
-                                    />
-                                }
-                                label={translation.get('reader-font-size')}
-                                value={displayFontSize}
-                                decreaseAriaLabel={translation.get(
-                                    'reader-font-size.decrease-aria',
-                                )}
-                                increaseAriaLabel={translation.get(
-                                    'reader-font-size.increase-aria',
-                                )}
-                                control={fontSize}
+            <DropdownPortal
+                triggerRef={buttonRef}
+                open={open}
+                onClose={close}
+                gap={PANEL_OFFSET_PX}
+                role="dialog"
+                aria-label={translation.get('reader-settings.aria-label')}
+                className="w-80 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto bg-white/95 dark:bg-dark-900/88 backdrop-blur-xs border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl p-4"
+            >
+                <div className="space-y-2">
+                    <ReaderSettingControl
+                        icon={
+                            <LuALargeSmall
+                                className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                aria-hidden="true"
                             />
+                        }
+                        label={translation.get('reader-font-size')}
+                        value={displayFontSize}
+                        decreaseAriaLabel={translation.get(
+                            'reader-font-size.decrease-aria',
+                        )}
+                        increaseAriaLabel={translation.get(
+                            'reader-font-size.increase-aria',
+                        )}
+                        control={fontSize}
+                    />
 
-                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
+                    <hr className="border-gray-200/50 dark:border-dark-700/40" />
 
-                            <ReaderSettingsSection
-                                title={translation.get(
-                                    'reader-settings.typography',
+                    <ReaderSettingsSection
+                        title={translation.get('reader-settings.typography')}
+                        hasOverrides={hasTypographyOverrides}
+                    >
+                        <ReaderSettingControl
+                            icon={
+                                <LuAlignJustify
+                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                    aria-hidden="true"
+                                />
+                            }
+                            label={translation.get('reader-line-spacing')}
+                            value={displayLineSpacing}
+                            decreaseAriaLabel={translation.get(
+                                'reader-line-spacing.decrease-aria',
+                            )}
+                            increaseAriaLabel={translation.get(
+                                'reader-line-spacing.increase-aria',
+                            )}
+                            control={lineSpacing}
+                            formatForEdit={formatLineSpacingForEdit}
+                            parseInput={parseLineSpacingInput}
+                        />
+
+                        <ReaderSettingControl
+                            icon={
+                                <LuUnfoldHorizontal
+                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                    aria-hidden="true"
+                                />
+                            }
+                            label={translation.get('reader-word-spacing')}
+                            value={displayWordSpacing}
+                            decreaseAriaLabel={translation.get(
+                                'reader-word-spacing.decrease-aria',
+                            )}
+                            increaseAriaLabel={translation.get(
+                                'reader-word-spacing.increase-aria',
+                            )}
+                            control={wordSpacing}
+                        />
+
+                        <ReaderChoiceControl
+                            icon={
+                                <LuType
+                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                    aria-hidden="true"
+                                />
+                            }
+                            label={translation.get('reader-embedded-fonts')}
+                            value={embeddedFonts.value}
+                            options={embeddedFontOptions}
+                            onSelect={embeddedFonts.setValue}
+                            isOverridden={embeddedFonts.isOverridden}
+                        />
+
+                        <ReaderChoiceControl
+                            icon={
+                                <LuWrapText
+                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                    aria-hidden="true"
+                                />
+                            }
+                            label={translation.get('reader-hyphenation')}
+                            value={hyphenation.value}
+                            options={readerModeOptions}
+                            onSelect={hyphenation.setValue}
+                            isOverridden={hyphenation.isOverridden}
+                        />
+
+                        <ReaderChoiceControl
+                            icon={
+                                <LuQuote
+                                    className="w-4 h-4 text-primary-500 dark:text-primary-300"
+                                    aria-hidden="true"
+                                />
+                            }
+                            label={translation.get(
+                                'reader-floating-punctuation',
+                            )}
+                            value={floatingPunctuation.value}
+                            options={readerModeOptions}
+                            onSelect={floatingPunctuation.setValue}
+                            isOverridden={floatingPunctuation.isOverridden}
+                        />
+                    </ReaderSettingsSection>
+
+                    <hr className="border-gray-200/50 dark:border-dark-700/40" />
+
+                    <ReaderSettingsSection
+                        title={translation.get('reader-settings.margins')}
+                        hasOverrides={hasMarginOverrides}
+                    >
+                        {marginSettings.map((setting) => (
+                            <ReaderCompactControl
+                                key={setting.key}
+                                label={setting.label}
+                                value={setting.value}
+                                decreaseAriaLabel={setting.decreaseAriaLabel}
+                                increaseAriaLabel={setting.increaseAriaLabel}
+                                control={setting.control}
+                            />
+                        ))}
+                    </ReaderSettingsSection>
+
+                    <hr className="border-gray-200/50 dark:border-dark-700/40" />
+
+                    <div className="space-y-2">
+                        {hasDistinctBookDefaults && (
+                            <button
+                                type="button"
+                                onClick={onResetBookDefaults}
+                                disabled={!canResetBookDefaults}
+                                className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                                aria-label={translation.get(
+                                    'reader-reset.book-aria',
                                 )}
-                                hasOverrides={hasTypographyOverrides}
                             >
-                                <ReaderSettingControl
-                                    icon={
-                                        <LuAlignJustify
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-line-spacing',
-                                    )}
-                                    value={displayLineSpacing}
-                                    decreaseAriaLabel={translation.get(
-                                        'reader-line-spacing.decrease-aria',
-                                    )}
-                                    increaseAriaLabel={translation.get(
-                                        'reader-line-spacing.increase-aria',
-                                    )}
-                                    control={lineSpacing}
-                                    formatForEdit={formatLineSpacingForEdit}
-                                    parseInput={parseLineSpacingInput}
-                                />
-
-                                <ReaderSettingControl
-                                    icon={
-                                        <LuUnfoldHorizontal
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-word-spacing',
-                                    )}
-                                    value={displayWordSpacing}
-                                    decreaseAriaLabel={translation.get(
-                                        'reader-word-spacing.decrease-aria',
-                                    )}
-                                    increaseAriaLabel={translation.get(
-                                        'reader-word-spacing.increase-aria',
-                                    )}
-                                    control={wordSpacing}
-                                />
-
-                                <ReaderChoiceControl
-                                    icon={
-                                        <LuType
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-embedded-fonts',
-                                    )}
-                                    value={embeddedFonts.value}
-                                    options={embeddedFontOptions}
-                                    onSelect={embeddedFonts.setValue}
-                                    isOverridden={embeddedFonts.isOverridden}
-                                />
-
-                                <ReaderChoiceControl
-                                    icon={
-                                        <LuWrapText
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-hyphenation',
-                                    )}
-                                    value={hyphenation.value}
-                                    options={readerModeOptions}
-                                    onSelect={hyphenation.setValue}
-                                    isOverridden={hyphenation.isOverridden}
-                                />
-
-                                <ReaderChoiceControl
-                                    icon={
-                                        <LuQuote
-                                            className="w-4 h-4 text-primary-500 dark:text-primary-300"
-                                            aria-hidden="true"
-                                        />
-                                    }
-                                    label={translation.get(
-                                        'reader-floating-punctuation',
-                                    )}
-                                    value={floatingPunctuation.value}
-                                    options={readerModeOptions}
-                                    onSelect={floatingPunctuation.setValue}
-                                    isOverridden={
-                                        floatingPunctuation.isOverridden
-                                    }
-                                />
-                            </ReaderSettingsSection>
-
-                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
-
-                            <ReaderSettingsSection
-                                title={translation.get(
-                                    'reader-settings.margins',
-                                )}
-                                hasOverrides={hasMarginOverrides}
-                            >
-                                {marginSettings.map((setting) => (
-                                    <ReaderCompactControl
-                                        key={setting.key}
-                                        label={setting.label}
-                                        value={setting.value}
-                                        decreaseAriaLabel={
-                                            setting.decreaseAriaLabel
-                                        }
-                                        increaseAriaLabel={
-                                            setting.increaseAriaLabel
-                                        }
-                                        control={setting.control}
-                                    />
-                                ))}
-                            </ReaderSettingsSection>
-
-                            <hr className="border-gray-200/50 dark:border-dark-700/40" />
-
-                            <div className="space-y-2">
-                                {hasDistinctBookDefaults && (
-                                    <button
-                                        type="button"
-                                        onClick={onResetBookDefaults}
-                                        disabled={!canResetBookDefaults}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
-                                        aria-label={translation.get(
-                                            'reader-reset.book-aria',
-                                        )}
-                                    >
-                                        {translation.get('reader-reset.book')}
-                                    </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={onResetKoShelfDefaults}
-                                    disabled={!canResetKoShelfDefaults}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
-                                    aria-label={translation.get(
-                                        'reader-reset.defaults-aria',
-                                    )}
-                                >
-                                    {translation.get('reader-reset.defaults')}
-                                </button>
-                            </div>
-                        </div>
-                    </div>,
-                    document.body,
-                )}
+                                {translation.get('reader-reset.book')}
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={onResetKoShelfDefaults}
+                            disabled={!canResetKoShelfDefaults}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300/70 dark:border-dark-700/70 bg-white/85 dark:bg-dark-900/70 text-sm font-medium text-gray-700 dark:text-dark-200 hover:bg-gray-100 dark:hover:bg-dark-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                            aria-label={translation.get(
+                                'reader-reset.defaults-aria',
+                            )}
+                        >
+                            {translation.get('reader-reset.defaults')}
+                        </button>
+                    </div>
+                </div>
+            </DropdownPortal>
         </>
     );
 }

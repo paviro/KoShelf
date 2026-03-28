@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useEscapeKey } from './useEscapeKey';
+
 export const OVERLAY_TRANSITION_DURATION_MS = 300;
 
 type UseOverlayAnimationReturn = {
@@ -53,22 +55,7 @@ export function useOverlayAnimation(
         };
     }, [isMounted, open]);
 
-    useEffect(() => {
-        if (!isMounted) {
-            return;
-        }
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isMounted, onClose]);
+    useEscapeKey(onClose, isMounted);
 
     return { isMounted, isVisible, backdropRef };
 }

@@ -69,11 +69,7 @@ export function WeekSelector({
         <>
             <button
                 ref={triggerRef}
-                id="weekSelectorWrapper"
                 type="button"
-                aria-haspopup="menu"
-                aria-expanded={open}
-                aria-controls="weekOptions"
                 onClick={() => {
                     if (!open) {
                         setView('weeks');
@@ -87,10 +83,7 @@ export function WeekSelector({
                         className="w-5 h-5 text-gray-600 dark:text-gray-300 sm:text-primary-400 sm:dark:text-primary-400"
                         aria-hidden="true"
                     />
-                    <span
-                        id="selectedWeekText"
-                        className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm truncate"
-                    >
+                    <span className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm truncate">
                         {selectedWeek ? (
                             <span className="font-bold">{selectedText}</span>
                         ) : (
@@ -109,7 +102,6 @@ export function WeekSelector({
                 triggerRef={triggerRef}
                 open={open}
                 onClose={() => setOpen(false)}
-                closeOnScroll
                 className={`${DROPDOWN_PANEL_BASE_CLASSNAME} w-56 sm:w-64 max-w-[calc(100vw-1rem)]`}
             >
                 <div

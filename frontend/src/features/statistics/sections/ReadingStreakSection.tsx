@@ -45,7 +45,6 @@ export function ReadingStreakSection({
             onToggle={() => onToggle('reading-streak')}
             controls={
                 <YearSelector
-                    idPrefix="Year"
                     years={availableYears}
                     selectedYear={selectedYear}
                     onSelect={onSelectYear}

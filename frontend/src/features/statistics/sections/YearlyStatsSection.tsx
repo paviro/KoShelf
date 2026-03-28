@@ -123,7 +123,6 @@ export function YearlyStatsSection({
             onToggle={() => onToggle('yearly-stats')}
             controls={
                 <YearSelector
-                    idPrefix="YearlyStatsYear"
                     years={availableYears}
                     selectedYear={selectedYear}
                     onSelect={onSelectYear}

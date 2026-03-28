@@ -8,7 +8,6 @@ import {
 import { DropdownPortal } from '../dropdown/DropdownPortal';
 
 type YearSelectorProps = {
-    idPrefix: string;
     years: number[];
     selectedYear: number | null;
     onSelect: (year: number) => void;
@@ -18,7 +17,6 @@ type YearSelectorProps = {
 };
 
 export function YearSelector({
-    idPrefix,
     years,
     selectedYear,
     onSelect,
@@ -33,11 +31,7 @@ export function YearSelector({
         <>
             <button
                 ref={triggerRef}
-                id={`${idPrefix}SelectorWrapper`}
                 type="button"
-                aria-haspopup="menu"
-                aria-expanded={open}
-                aria-controls={`${idPrefix}Options`}
                 onClick={() => setOpen((current) => !current)}
                 className={`${DROPDOWN_TRIGGER_BASE_CLASSNAME} w-10 sm:w-auto sm:px-4`}
             >
@@ -46,10 +40,7 @@ export function YearSelector({
                         className={`w-5 h-5 ${iconColorClass}`}
                         aria-hidden="true"
                     />
-                    <span
-                        id={`selected${idPrefix}Text`}
-                        className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm"
-                    >
+                    <span className="hidden sm:inline text-gray-900 dark:text-white font-medium text-sm">
                         {selectedYear ? (
                             <span className="font-bold">{selectedYear}</span>
                         ) : (
@@ -67,7 +58,6 @@ export function YearSelector({
                 triggerRef={triggerRef}
                 open={open}
                 onClose={() => setOpen(false)}
-                closeOnScroll
                 className={`${DROPDOWN_PANEL_BASE_CLASSNAME} max-h-60 overflow-y-auto w-40`}
             >
                 {years.map((year) => {

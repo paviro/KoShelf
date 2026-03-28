@@ -1,7 +1,8 @@
 import { LuCheck } from 'react-icons/lu';
 
 import { HIGHLIGHT_COLORS } from '../lib/highlight-constants';
-import { OverlayPicker } from '../../../shared/ui/overlay/OverlayPicker';
+import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
+import { PICKER_PANEL_BASE_CLASSNAME } from '../../../shared/ui/dropdown/dropdown-styles';
 
 type HighlightColorPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;
@@ -17,11 +18,14 @@ export function HighlightColorPicker({
     onClose,
 }: HighlightColorPickerProps) {
     return (
-        <OverlayPicker
-            anchorRef={anchorRef}
+        <DropdownPortal
+            triggerRef={anchorRef}
+            open
             onClose={onClose}
+            className={PICKER_PANEL_BASE_CLASSNAME}
             alignment={{ bottom: 'end', top: 'end', left: 'center' }}
             placements={['bottom', 'top', 'left']}
+            gap={4}
         >
             <div className="grid grid-cols-5 gap-1.5">
                 {HIGHLIGHT_COLORS.map((color) => {
@@ -48,6 +52,6 @@ export function HighlightColorPicker({
                     );
                 })}
             </div>
-        </OverlayPicker>
+        </DropdownPortal>
     );
 }

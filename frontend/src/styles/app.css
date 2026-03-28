@@ -35,6 +35,16 @@
     --font-sans: 'Quicksand', sans-serif;
 }
 
+:root {
+    --header-height: 70px;
+}
+
+@media (width >= 768px) {
+    :root {
+        --header-height: 80px;
+    }
+}
+
 @utility aspect-book {
     aspect-ratio: 2 / 3;
 }
@@ -109,48 +119,6 @@
         min-height: calc(100dvh - 80px);
         margin-bottom: -1.5rem;
     }
-}
-
-@utility dropdown-trigger {
-    /* Dropdown Anchor Positioning */
-    anchor-name: --dropdown-anchor;
-}
-
-@utility dropdown-menu {
-    position: absolute;
-    margin-top: 0.5rem;
-
-    /* Fallback for browsers without anchor support */
-    top: 100%;
-    left: 0;
-
-    /* Anchor Positioning */
-    position-anchor: --dropdown-anchor;
-    top: anchor(bottom);
-    left: anchor(left);
-    position-try-fallbacks:
-        flip-inline,
-        flip-block,
-        flip-inline flip-block;
-}
-
-@utility dropdown-menu-right {
-    /* Right-aligned dropdown variant */
-    position: absolute;
-    margin-top: 0.5rem;
-
-    /* Fallback for browsers without anchor support */
-    top: 100%;
-    right: 0;
-
-    /* Anchor Positioning */
-    position-anchor: --dropdown-anchor;
-    top: anchor(bottom);
-    right: anchor(right);
-    position-try-fallbacks:
-        flip-inline,
-        flip-block,
-        flip-inline flip-block;
 }
 
 @utility heatmap-tooltip {

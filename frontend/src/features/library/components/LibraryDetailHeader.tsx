@@ -10,9 +10,9 @@ import {
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
 import { translation } from '../../../shared/i18n';
-import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import { Button } from '../../../shared/ui/button/Button';
 import { buttonVariants } from '../../../shared/ui/button/button-variants';
+import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
 
@@ -34,9 +34,7 @@ export function LibraryDetailHeader({
     format,
 }: LibraryDetailHeaderProps) {
     const [shareOpen, setShareOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useClickOutside(dropdownRef, () => setShareOpen(false), shareOpen);
+    const triggerRef = useRef<HTMLButtonElement>(null);
 
     const jsonHref = api.getItemDownloadHref(itemId);
     const jsonDownloadName = `${collection}-${itemId}.json`;
@@ -120,72 +118,66 @@ export function LibraryDetailHeader({
                             </span>
                         </Link>
                     )}
-                    <div className="relative" ref={dropdownRef}>
-                        <Button
-                            id="shareDropdownButton"
-                            variant="neutral"
-                            size="icon"
-                            className="dropdown-trigger"
-                            aria-haspopup="menu"
-                            aria-expanded={shareOpen}
-                            aria-controls="shareDropdownMenu"
-                            title={translation.get('share')}
-                            aria-label={translation.get('share')}
-                            onClick={() => setShareOpen((current) => !current)}
+                    <Button
+                        ref={triggerRef}
+                        variant="neutral"
+                        size="icon"
+                        title={translation.get('share')}
+                        aria-label={translation.get('share')}
+                        onClick={() => setShareOpen((current) => !current)}
+                    >
+                        <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
                         >
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M7 10l5 5 5-5"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 4v12"
-                                />
-                            </svg>
-                        </Button>
-
-                        <div
-                            id="shareDropdownMenu"
-                            className={`dropdown-menu-right absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl z-20 overflow-hidden ${shareOpen ? '' : 'hidden'}`}
-                            role="menu"
-                        >
-                            {fileHref && fileLabel && (
-                                <a
-                                    href={fileHref}
-                                    download={fileDownloadName}
-                                    className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm font-medium transition-colors duration-200"
-                                    onClick={() => setShareOpen(false)}
-                                >
-                                    {fileLabel}
-                                </a>
-                            )}
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M7 10l5 5 5-5"
+                            />
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 4v12"
+                            />
+                        </svg>
+                    </Button>
+                    <DropdownPortal
+                        triggerRef={triggerRef}
+                        open={shareOpen}
+                        onClose={() => setShareOpen(false)}
+                        className="w-40 bg-white dark:bg-dark-800 border border-gray-200/50 dark:border-dark-700/50 rounded-lg shadow-xl overflow-hidden"
+                    >
+                        {fileHref && fileLabel && (
                             <a
-                                href={jsonHref}
-                                download={jsonDownloadName}
+                                href={fileHref}
+                                download={fileDownloadName}
                                 className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm font-medium transition-colors duration-200"
                                 onClick={() => setShareOpen(false)}
                             >
-                                JSON
+                                {fileLabel}
                             </a>
-                        </div>
-                    </div>
+                        )}
+                        <a
+                            href={jsonHref}
+                            download={jsonDownloadName}
+                            className="block px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-dark-700/50 text-sm font-medium transition-colors duration-200"
+                            onClick={() => setShareOpen(false)}
+                        >
+                            JSON
+                        </a>
+                    </DropdownPortal>
                 </div>
             ),
         }),

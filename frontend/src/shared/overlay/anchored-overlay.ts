@@ -6,12 +6,21 @@ export type OverlayAlignmentOption =
     | OverlayAlignment
     | Partial<Record<OverlayPlacement, OverlayAlignment>>;
 
-type OverlayPositioningOptions = {
+export type ViewportInset = {
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+};
+
+export type OverlayPositioningOptions = {
     padding?: number;
     gap?: number;
     arrowSize?: number;
+    arrowPadding?: number;
     placements?: OverlayPlacement[];
     alignment?: OverlayAlignmentOption;
+    viewportInset?: ViewportInset;
 };
 
 type OverlayPositionResult = {
@@ -20,6 +29,7 @@ type OverlayPositionResult = {
     left: number;
     arrowX: number;
     arrowY: number;
+    anchorOffScreen: boolean;
 };
 
 const DEFAULT_PLACEMENTS: OverlayPlacement[] = [
@@ -35,6 +45,30 @@ const DEFAULT_PLACEMENT_CLASSES = [
     'tooltip-left',
     'tooltip-right',
 ];
+
+function isAnchorOffScreen(
+    anchorRect: DOMRect,
+    inset: ViewportInset = {},
+): boolean {
+    const chromeTop = inset.top ?? 0;
+    const chromeBottom = window.innerHeight - (inset.bottom ?? 0);
+    const chromeLeft = inset.left ?? 0;
+    const chromeRight = window.innerWidth - (inset.right ?? 0);
+
+    // The anchor is off-screen when it straddles a chrome boundary (one edge
+    // in the content area, one edge behind chrome). Chrome-resident anchors
+    // like navbar buttons have both edges within chrome and are excluded.
+    return (
+        (anchorRect.top < chromeTop && anchorRect.bottom > chromeTop) ||
+        (anchorRect.bottom > chromeBottom && anchorRect.top < chromeBottom) ||
+        (anchorRect.left < chromeLeft && anchorRect.right > chromeLeft) ||
+        (anchorRect.right > chromeRight && anchorRect.left < chromeRight) ||
+        anchorRect.bottom <= 0 ||
+        anchorRect.top >= window.innerHeight ||
+        anchorRect.right <= 0 ||
+        anchorRect.left >= window.innerWidth
+    );
+}
 
 function placementClassesForPrefix(prefix: string): string[] {
     if (prefix === DEFAULT_PLACEMENT_CLASS_PREFIX) {
@@ -61,14 +95,33 @@ export function computeOverlayPosition(
     const arrowSize = options.arrowSize ?? 6;
     const alignmentOption = options.alignment ?? 'center';
     const placements = options.placements ?? DEFAULT_PLACEMENTS;
+    const inset = options.viewportInset;
+    const rawInsetTop = inset?.top ?? 0;
+    const rawInsetBottom = inset?.bottom ?? 0;
+    const rawInsetLeft = inset?.left ?? 0;
+    const rawInsetRight = inset?.right ?? 0;
+
+    // When the anchor is inside chrome (e.g. a navbar button), clamp the
+    // effective inset to the anchor's edge so the overlay is placed adjacent
+    // to the anchor instead of being pushed into the content area.
+    const insetTop = Math.max(0, Math.min(rawInsetTop, anchorRect.top));
+    const insetBottom = Math.max(
+        0,
+        Math.min(rawInsetBottom, viewportHeight - anchorRect.bottom),
+    );
+    const insetLeft = Math.max(0, Math.min(rawInsetLeft, anchorRect.left));
+    const insetRight = Math.max(
+        0,
+        Math.min(rawInsetRight, viewportWidth - anchorRect.right),
+    );
 
     const anchorCenterX = anchorRect.left + anchorRect.width / 2;
     const anchorCenterY = anchorRect.top + anchorRect.height / 2;
 
-    const spaceTop = anchorRect.top;
-    const spaceBottom = viewportHeight - anchorRect.bottom;
-    const spaceLeft = anchorRect.left;
-    const spaceRight = viewportWidth - anchorRect.right;
+    const spaceTop = anchorRect.top - insetTop;
+    const spaceBottom = viewportHeight - anchorRect.bottom - insetBottom;
+    const spaceLeft = anchorRect.left - insetLeft;
+    const spaceRight = viewportWidth - anchorRect.right - insetRight;
 
     const requiredVertical = overlayRect.height + gap + arrowSize;
     const requiredHorizontal = overlayRect.width + gap + arrowSize;
@@ -151,19 +204,21 @@ export function computeOverlayPosition(
         }
     }
 
+    const minLeft = padding + insetLeft;
+    const minTop = padding + insetTop;
     const maxLeft = Math.max(
-        padding,
-        viewportWidth - overlayRect.width - padding,
+        minLeft,
+        viewportWidth - overlayRect.width - padding - insetRight,
     );
     const maxTop = Math.max(
-        padding,
-        viewportHeight - overlayRect.height - padding,
+        minTop,
+        viewportHeight - overlayRect.height - padding - insetBottom,
     );
 
-    left = Math.min(Math.max(left, padding), maxLeft);
-    top = Math.min(Math.max(top, padding), maxTop);
+    left = Math.min(Math.max(left, minLeft), maxLeft);
+    top = Math.min(Math.max(top, minTop), maxTop);
 
-    const arrowClampPadding = arrowSize + 6;
+    const arrowClampPadding = options.arrowPadding ?? arrowSize + 6;
     const arrowX = Math.min(
         Math.max(anchorCenterX - left, arrowClampPadding),
         Math.max(arrowClampPadding, overlayRect.width - arrowClampPadding),
@@ -179,7 +234,32 @@ export function computeOverlayPosition(
         left,
         arrowX,
         arrowY,
+        anchorOffScreen: isAnchorOffScreen(anchorRect, inset),
     };
+}
+
+export function getShellInset(): ViewportInset {
+    const inset: ViewportInset = {};
+
+    const headerHeight = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+            '--header-height',
+        ),
+    );
+    if (headerHeight > 0) {
+        inset.top = headerHeight;
+    }
+
+    const bottomNav = document.querySelector<HTMLElement>('[data-shell-nav]');
+    if (bottomNav && getComputedStyle(bottomNav).display !== 'none') {
+        const bottom =
+            window.innerHeight - bottomNav.getBoundingClientRect().top;
+        if (bottom > 0) {
+            inset.bottom = bottom;
+        }
+    }
+
+    return inset;
 }
 
 type AnchoredOverlayOptions = OverlayPositioningOptions & {
@@ -313,8 +393,14 @@ export class AnchoredOverlay {
                 arrowSize: this.options.arrowSize,
                 placements: this.options.placements,
                 alignment: this.options.alignment,
+                viewportInset: getShellInset(),
             },
         );
+
+        if (position.anchorOffScreen) {
+            this.hide();
+            return;
+        }
 
         this.root.style.top = `${position.top}px`;
         this.root.style.left = `${position.left}px`;

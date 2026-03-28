@@ -43,8 +43,6 @@ export function FilterDropdown<T extends string>({
             <button
                 ref={triggerRef}
                 type="button"
-                aria-haspopup="menu"
-                aria-expanded={open}
                 aria-label={ariaLabel}
                 title={ariaLabel}
                 onClick={() => setOpen((current) => !current)}

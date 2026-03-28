@@ -7,7 +7,11 @@ import {
     sanitizeRichTextHtml,
 } from '../lib/library-detail-formatters';
 import type { LibraryCollection } from '../model/library-model';
-import type { OverlayPlacement } from '../../../shared/overlay/anchored-overlay';
+import {
+    computeOverlayPosition,
+    getShellInset,
+    type OverlayPlacement,
+} from '../../../shared/overlay/anchored-overlay';
 import {
     fetchLibraryDetailQuery,
     getCachedLibraryDetailQueryData,
@@ -495,8 +499,6 @@ class HoverPreviewManager {
         card: LibraryCardElement,
         preview: HTMLElement,
     ): void {
-        const cardRect = card.getBoundingClientRect();
-
         preview.style.maxWidth = 'min(360px, calc(100vw - 20px))';
         preview.style.top = '0px';
         preview.style.left = '0px';
@@ -507,106 +509,35 @@ class HoverPreviewManager {
         const previewRect = preview.getBoundingClientRect();
         preview.style.visibility = previousVisibility;
 
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        const space = {
-            top: cardRect.top,
-            bottom: viewportHeight - cardRect.bottom,
-            left: cardRect.left,
-            right: viewportWidth - cardRect.right,
-        };
-
-        const neededHeight = previewRect.height + PREVIEW_OFFSET_PX;
-        const neededWidth = previewRect.width + PREVIEW_OFFSET_PX;
-
-        const placementScores: Array<{
-            placement: OverlayPlacement;
-            score: number;
-        }> = [
+        const result = computeOverlayPosition(
+            card.getBoundingClientRect(),
+            previewRect,
+            window.innerWidth,
+            window.innerHeight,
             {
-                placement: 'right',
-                score:
-                    space.right >= neededWidth
-                        ? 10000 + space.right
-                        : space.right - neededWidth,
+                placements: ['right', 'left', 'top', 'bottom'],
+                alignment: 'center',
+                gap: PREVIEW_OFFSET_PX,
+                padding: VIEWPORT_PADDING_PX,
+                arrowSize: 0,
+                arrowPadding: 24,
+                viewportInset: getShellInset(),
             },
-            {
-                placement: 'left',
-                score:
-                    space.left >= neededWidth
-                        ? 10000 + space.left
-                        : space.left - neededWidth,
-            },
-            {
-                placement: 'top',
-                score:
-                    space.top >= neededHeight
-                        ? 10000 + space.top
-                        : space.top - neededHeight,
-            },
-            {
-                placement: 'bottom',
-                score:
-                    space.bottom >= neededHeight
-                        ? 10000 + space.bottom
-                        : space.bottom - neededHeight,
-            },
-        ];
-
-        placementScores.sort((left, right) => right.score - left.score);
-        const placement = placementScores[0]?.placement ?? 'right';
-
-        let left = 0;
-        let top = 0;
-
-        const cardCenterX = cardRect.left + cardRect.width / 2;
-        const cardCenterY = cardRect.top + cardRect.height / 2;
-
-        if (placement === 'right') {
-            left = cardRect.right + PREVIEW_OFFSET_PX;
-            top = cardCenterY - previewRect.height / 2;
-        } else if (placement === 'left') {
-            left = cardRect.left - previewRect.width - PREVIEW_OFFSET_PX;
-            top = cardCenterY - previewRect.height / 2;
-        } else if (placement === 'top') {
-            left = cardCenterX - previewRect.width / 2;
-            top = cardRect.top - previewRect.height - PREVIEW_OFFSET_PX;
-        } else {
-            left = cardCenterX - previewRect.width / 2;
-            top = cardRect.bottom + PREVIEW_OFFSET_PX;
-        }
-
-        const maxLeft = Math.max(
-            VIEWPORT_PADDING_PX,
-            viewportWidth - previewRect.width - VIEWPORT_PADDING_PX,
-        );
-        const maxTop = Math.max(
-            VIEWPORT_PADDING_PX,
-            viewportHeight - previewRect.height - VIEWPORT_PADDING_PX,
         );
 
-        left = Math.min(Math.max(left, VIEWPORT_PADDING_PX), maxLeft);
-        top = Math.min(Math.max(top, VIEWPORT_PADDING_PX), maxTop);
-
-        preview.style.top = `${top}px`;
-        preview.style.left = `${left}px`;
+        preview.style.top = `${result.top}px`;
+        preview.style.left = `${result.left}px`;
 
         const arrow = preview.querySelector<HTMLElement>(
             '[data-preview-arrow]',
         );
         if (arrow) {
-            const arrowClamp = 14;
-            const arrowX = Math.min(
-                Math.max(cardCenterX - left, arrowClamp),
-                Math.max(arrowClamp, previewRect.width - arrowClamp),
+            this.positionArrow(
+                arrow,
+                result.placement,
+                result.arrowX,
+                result.arrowY,
             );
-            const arrowY = Math.min(
-                Math.max(cardCenterY - top, arrowClamp),
-                Math.max(arrowClamp, previewRect.height - arrowClamp),
-            );
-
-            this.positionArrow(arrow, placement, arrowX, arrowY);
         }
     }
 
@@ -661,7 +592,7 @@ class HoverPreviewManager {
         this.previewElement = document.createElement('aside');
         this.previewElement.id = PREVIEW_ELEMENT_ID;
         this.previewElement.className =
-            'fixed z-70 hidden w-[min(22rem,calc(100vw-1.25rem))] pointer-events-none rounded-3xl border border-gray-200/95 bg-white/95 p-4 shadow-[0_30px_70px_-28px_rgba(15,23,42,0.55)] ring-1 ring-black/5 backdrop-blur-xs will-change-transform dark:border-dark-600/80 dark:bg-dark-900/90 dark:ring-white/10';
+            'fixed z-50 hidden w-[min(22rem,calc(100vw-1.25rem))] pointer-events-none rounded-3xl border border-gray-200/95 bg-white/95 p-4 shadow-[0_30px_70px_-28px_rgba(15,23,42,0.55)] ring-1 ring-black/5 backdrop-blur-xs will-change-transform dark:border-dark-600/80 dark:bg-dark-900/90 dark:ring-white/10';
         this.previewElement.setAttribute('role', 'tooltip');
         this.previewElement.setAttribute('aria-hidden', 'true');
         this.previewElement.style.opacity = '0';

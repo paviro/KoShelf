@@ -2,7 +2,8 @@ import { LuCheck } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { DRAWER_TYPES } from '../lib/highlight-constants';
-import { OverlayPicker } from '../../../shared/ui/overlay/OverlayPicker';
+import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
+import { PICKER_PANEL_BASE_CLASSNAME } from '../../../shared/ui/dropdown/dropdown-styles';
 
 type HighlightDrawerPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;
@@ -18,11 +19,14 @@ export function HighlightDrawerPicker({
     onClose,
 }: HighlightDrawerPickerProps) {
     return (
-        <OverlayPicker
-            anchorRef={anchorRef}
+        <DropdownPortal
+            triggerRef={anchorRef}
+            open
             onClose={onClose}
+            className={PICKER_PANEL_BASE_CLASSNAME}
             alignment={{ bottom: 'end', top: 'end', left: 'center' }}
             placements={['bottom', 'top', 'left']}
+            gap={4}
         >
             <div className="flex flex-col gap-0.5">
                 {DRAWER_TYPES.map((drawer) => {
@@ -54,6 +58,6 @@ export function HighlightDrawerPicker({
                     );
                 })}
             </div>
-        </OverlayPicker>
+        </DropdownPortal>
     );
 }
