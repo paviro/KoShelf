@@ -60,14 +60,27 @@ export function useAnchoredPosition(
     useEffect(() => {
         if (!active) return;
 
-        document.addEventListener('scroll', reposition, {
+        let rafId = 0;
+        const scheduleReposition = () => {
+            if (!rafId) {
+                rafId = requestAnimationFrame(() => {
+                    rafId = 0;
+                    reposition();
+                });
+            }
+        };
+
+        document.addEventListener('scroll', scheduleReposition, {
             passive: true,
             capture: true,
         });
-        window.addEventListener('resize', reposition, { passive: true });
+        window.addEventListener('resize', scheduleReposition, {
+            passive: true,
+        });
         return () => {
-            document.removeEventListener('scroll', reposition, true);
-            window.removeEventListener('resize', reposition);
+            cancelAnimationFrame(rafId);
+            document.removeEventListener('scroll', scheduleReposition, true);
+            window.removeEventListener('resize', scheduleReposition);
         };
     }, [active, reposition]);
 }

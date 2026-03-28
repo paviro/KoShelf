@@ -282,6 +282,7 @@ export class AnchoredOverlay {
     private anchor: HTMLElement | null = null;
     private visible = false;
     private listenersBound = false;
+    private rafId = 0;
 
     private readonly handleDocumentClick = (event: MouseEvent): void => {
         if (!this.options.hideOnOutsideClick || !this.visible || !this.anchor) {
@@ -301,7 +302,12 @@ export class AnchoredOverlay {
     };
 
     private readonly handleScrollOrResize = (): void => {
-        this.refreshPosition();
+        if (!this.rafId) {
+            this.rafId = requestAnimationFrame(() => {
+                this.rafId = 0;
+                this.refreshPosition();
+            });
+        }
     };
 
     constructor(options: AnchoredOverlayOptions) {
@@ -342,6 +348,8 @@ export class AnchoredOverlay {
     }
 
     hide(): void {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = 0;
         const previousAnchor = this.anchor;
         this.root.classList.add(this.options.hideClassName ?? 'hidden');
         this.visible = false;
