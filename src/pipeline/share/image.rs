@@ -4,6 +4,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
 
+use crate::pipeline::embed::gz_decompress;
+
 const WEBP_QUALITY: f32 = 85.0;
 const WEBP_METHOD: i32 = 1;
 
@@ -12,22 +14,20 @@ const STORY_TEMPLATE: &str = include_str!("../../../assets/share_story.svg");
 const SQUARE_TEMPLATE: &str = include_str!("../../../assets/share_square.svg");
 const BANNER_TEMPLATE: &str = include_str!("../../../assets/share_banner.svg");
 
-// Embed fonts at compile time for cross-platform consistency
-const FONT_REGULAR: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/frontend/node_modules/@expo-google-fonts/gelasio/400Regular/Gelasio_400Regular.ttf"
-));
-const FONT_ITALIC: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/frontend/node_modules/@expo-google-fonts/gelasio/400Regular_Italic/Gelasio_400Regular_Italic.ttf"
+// Embed gzip-compressed fonts at compile time for cross-platform consistency
+const FONT_REGULAR_GZ: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/Gelasio_400Regular.ttf.gz"));
+const FONT_ITALIC_GZ: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/Gelasio_400Regular_Italic.ttf.gz"
 ));
 
 /// Cached font database - initialized once and reused across all share image generations.
 static FONT_DATABASE: LazyLock<Arc<resvg::usvg::fontdb::Database>> = LazyLock::new(|| {
     let mut fontdb = resvg::usvg::fontdb::Database::new();
 
-    fontdb.load_font_data(FONT_REGULAR.to_vec());
-    fontdb.load_font_data(FONT_ITALIC.to_vec());
+    fontdb.load_font_data(gz_decompress(FONT_REGULAR_GZ).expect("Failed to decompress font"));
+    fontdb.load_font_data(gz_decompress(FONT_ITALIC_GZ).expect("Failed to decompress font"));
 
     Arc::new(fontdb)
 });

@@ -1,5 +1,6 @@
 //! Pipeline orchestration: ingest, rebuild, export, media assets, and file watching.
 
+pub mod embed;
 pub mod export;
 pub mod frontend;
 pub mod ingest;

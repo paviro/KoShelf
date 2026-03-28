@@ -10,7 +10,9 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::sync::LazyLock;
 
-static FRONTEND_DIST: Dir = include_dir!("$CARGO_MANIFEST_DIR/frontend/dist");
+use crate::pipeline::embed::{gz_decompress, is_precompressed};
+
+static FRONTEND_DIST: Dir = include_dir!("$OUT_DIR/frontend_dist");
 
 static FRONTEND_VERSION: LazyLock<String> = LazyLock::new(|| {
     let mut hasher = DefaultHasher::new();
@@ -127,11 +129,13 @@ fn write_embedded_frontend_file(output_dir: &Path, file: &File<'_>) -> Result<()
     }
 
     if relative_path == "index.html" {
-        let source = file
-            .contents_utf8()
-            .context("Embedded React index.html is not UTF-8")?;
+        let raw = gz_decompress(file.contents())?;
+        let source = std::str::from_utf8(&raw).context("Embedded React index.html is not UTF-8")?;
         let injected = inject_server_mode_script(source, "external");
         fs::write(&output_path, injected)?;
+    } else if is_precompressed(&relative_path) {
+        let raw = gz_decompress(file.contents())?;
+        fs::write(&output_path, raw)?;
     } else {
         fs::write(&output_path, file.contents())?;
     }
