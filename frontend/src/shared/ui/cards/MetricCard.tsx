@@ -31,24 +31,17 @@ export function MetricCard({
     const valueClass = sm
         ? 'text-lg font-bold text-gray-900 dark:text-white'
         : 'text-xl md:text-2xl font-bold text-gray-900 dark:text-white';
-    const labelClass = sm
-        ? '-mt-0.5 text-xs font-medium text-gray-500 dark:text-dark-400'
-        : '-mt-0.5 text-sm font-medium text-gray-500 dark:text-dark-400';
-    const paddingClass = sm ? 'p-3' : 'p-3 sm:p-4';
+    const labelClass =
+        '-mt-0.5 text-sm font-medium text-gray-500 dark:text-dark-400';
+    const paddingClass = 'p-3 sm:p-4';
 
     const layoutClass =
         variant === 'inline'
             ? 'flex items-center gap-3'
-            : sm
-              ? 'flex flex-col @[120px]:flex-row items-center gap-2 @[120px]:gap-3'
-              : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3';
+            : 'flex flex-col @[140px]:flex-row items-center gap-2 @[140px]:gap-3';
 
     const textAlignClass =
-        variant === 'inline'
-            ? ''
-            : sm
-              ? 'text-center @[120px]:text-left'
-              : 'text-center @[140px]:text-left';
+        variant === 'inline' ? '' : 'text-center @[140px]:text-left';
 
     return (
         <div

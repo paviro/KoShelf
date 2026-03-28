@@ -70,7 +70,7 @@ export function CalendarEventModal({
         <ModalShell
             open={open}
             onClose={onClose}
-            cardClassName="max-w-sm w-full max-h-[85vh] overflow-y-auto bg-white/95 dark:bg-dark-900/70 backdrop-blur-xl border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl"
+            cardClassName="max-w-md w-full max-h-[85vh] overflow-y-auto bg-white/95 dark:bg-dark-900/70 backdrop-blur-xl border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl"
             showCloseButton={false}
         >
             <div className="flex items-center justify-between p-4 border-b border-gray-200/70 dark:border-dark-700/50">
@@ -100,43 +100,45 @@ export function CalendarEventModal({
             </div>
 
             <div className="p-4 space-y-4">
-                <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-xl overflow-hidden shadow-lg dark:shadow-none mx-auto max-w-[180px]">
-                    {coverUrl && !coverFailed ? (
-                        <img
-                            src={coverUrl}
-                            alt={title}
-                            className="w-full h-auto"
-                            onError={() => setCoverFailed(true)}
-                        />
-                    ) : (
-                        <div className="aspect-2/3 w-full flex items-center justify-center bg-linear-to-br from-primary-500/10 to-primary-600/10">
-                            <HiOutlineBookOpen
-                                className="w-12 h-12 text-gray-400 dark:text-dark-400"
-                                aria-hidden="true"
+                <div className="flex gap-4">
+                    <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-xl overflow-hidden shadow-lg dark:shadow-none w-[160px] shrink-0 self-start">
+                        {coverUrl && !coverFailed ? (
+                            <img
+                                src={coverUrl}
+                                alt={title}
+                                className="w-full h-auto"
+                                onError={() => setCoverFailed(true)}
                             />
-                        </div>
-                    )}
-                </div>
+                        ) : (
+                            <div className="aspect-2/3 w-full flex items-center justify-center bg-linear-to-br from-primary-500/10 to-primary-600/10">
+                                <HiOutlineBookOpen
+                                    className="w-12 h-12 text-gray-400 dark:text-dark-400"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                        )}
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <MetricCard
-                        size="sm"
-                        icon={LuClock3}
-                        iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
-                        iconClassName="text-green-600 dark:text-white"
-                        value={formatDuration(event.reading_time_sec, {
-                            includeSeconds: true,
-                        })}
-                        label={translation.get('reading-time')}
-                    />
-                    <MetricCard
-                        size="sm"
-                        icon={LuFileText}
-                        iconContainerClassName="bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600"
-                        iconClassName="text-blue-600 dark:text-white"
-                        value={formatNumber(event.pages_read)}
-                        label={translation.get('pages-read')}
-                    />
+                    <div className="flex flex-col justify-center gap-3 flex-1 min-w-0">
+                        <MetricCard
+                            size="sm"
+                            icon={LuClock3}
+                            iconContainerClassName="bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600"
+                            iconClassName="text-green-600 dark:text-white"
+                            value={formatDuration(event.reading_time_sec, {
+                                includeSeconds: true,
+                            })}
+                            label={translation.get('reading-time')}
+                        />
+                        <MetricCard
+                            size="sm"
+                            icon={LuFileText}
+                            iconContainerClassName="bg-blue-500/20 dark:bg-linear-to-br dark:from-blue-500 dark:to-blue-600"
+                            iconClassName="text-blue-600 dark:text-white"
+                            value={formatNumber(event.pages_read)}
+                            label={translation.get('pages-read')}
+                        />
+                    </div>
                 </div>
 
                 {canViewDetails && (
