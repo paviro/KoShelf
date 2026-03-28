@@ -233,11 +233,17 @@ fn created_at_from_uuid_v7(session_id: &str) -> Option<String> {
 fn parse_user_agent(user_agent: Option<&str>) -> (String, String) {
     let ua = user_agent.unwrap_or_default();
 
-    let browser = if let Some(version) = extract_version(ua, "Firefox/") {
+    let browser = if let Some(version) =
+        extract_version(ua, "Firefox/").or_else(|| extract_version(ua, "FxiOS/"))
+    {
         format!("Firefox {version}")
-    } else if let Some(version) = extract_version(ua, "Edg/") {
+    } else if let Some(version) =
+        extract_version(ua, "Edg/").or_else(|| extract_version(ua, "EdgiOS/"))
+    {
         format!("Edge {version}")
-    } else if let Some(version) = extract_version(ua, "Chrome/") {
+    } else if let Some(version) =
+        extract_version(ua, "Chrome/").or_else(|| extract_version(ua, "CriOS/"))
+    {
         format!("Chrome {version}")
     } else if let Some(version) = extract_version(ua, "Version/")
         && ua.contains("Safari/")
@@ -247,14 +253,14 @@ fn parse_user_agent(user_agent: Option<&str>) -> (String, String) {
         "Unknown browser".to_string()
     };
 
-    let os = if ua.contains("Windows") {
+    let os = if ua.contains("iPhone") || ua.contains("iPad") || ua.contains("iOS") {
+        "iOS".to_string()
+    } else if ua.contains("Windows") {
         "Windows".to_string()
     } else if ua.contains("Macintosh") || ua.contains("Mac OS X") {
         "macOS".to_string()
     } else if ua.contains("Android") {
         "Android".to_string()
-    } else if ua.contains("iPhone") || ua.contains("iPad") {
-        "iOS".to_string()
     } else if ua.contains("Linux") {
         "Linux".to_string()
     } else {
@@ -280,5 +286,130 @@ fn extract_version(ua: &str, marker: &str) -> Option<String> {
             .next()
             .map(str::to_string)
             .or(Some(version))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn browser_firefox() {
+        let ua = "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0";
+        let (browser, _) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Firefox 123");
+    }
+
+    #[test]
+    fn browser_edge() {
+        let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0";
+        let (browser, _) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Edge 121");
+    }
+
+    #[test]
+    fn browser_chrome() {
+        let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
+        let (browser, _) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Chrome 121");
+    }
+
+    #[test]
+    fn browser_safari() {
+        let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15";
+        let (browser, _) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Safari 17");
+    }
+
+    #[test]
+    fn browser_unknown() {
+        let ua = "SomeRandomClient/1.0";
+        let (browser, _) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Unknown browser");
+    }
+
+    #[test]
+    fn browser_none() {
+        let (browser, _) = parse_user_agent(None);
+        assert_eq!(browser, "Unknown browser");
+    }
+
+    #[test]
+    fn browser_edge_on_ios() {
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 EdgiOS/146.3856.77 Mobile/15E148 Safari/605.1.15";
+        let (browser, os) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Edge 146");
+        assert_eq!(os, "iOS");
+    }
+
+    #[test]
+    fn browser_chrome_on_ios() {
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/146.0.7167.71 Mobile/15E148 Safari/604.1";
+        let (browser, os) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Chrome 146");
+        assert_eq!(os, "iOS");
+    }
+
+    #[test]
+    fn browser_firefox_on_ios() {
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/146.0 Mobile/15E148 Safari/605.1.15";
+        let (browser, os) = parse_user_agent(Some(ua));
+        assert_eq!(browser, "Firefox 146");
+        assert_eq!(os, "iOS");
+    }
+
+    #[test]
+    fn os_windows() {
+        let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "Windows");
+    }
+
+    #[test]
+    fn os_macos() {
+        let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "macOS");
+    }
+
+    #[test]
+    fn os_linux() {
+        let ua = "Mozilla/5.0 (X11; Linux x86_64)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "Linux");
+    }
+
+    #[test]
+    fn os_android() {
+        let ua = "Mozilla/5.0 (Linux; Android 13)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "Android");
+    }
+
+    #[test]
+    fn os_ios_iphone() {
+        let ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "iOS");
+    }
+
+    #[test]
+    fn os_ios_ipad() {
+        let ua = "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X)";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "iOS");
+    }
+
+    #[test]
+    fn os_unknown() {
+        let ua = "SomeRandomClient/1.0";
+        let (_, os) = parse_user_agent(Some(ua));
+        assert_eq!(os, "Unknown OS");
+    }
+
+    #[test]
+    fn os_none() {
+        let (_, os) = parse_user_agent(None);
+        assert_eq!(os, "Unknown OS");
     }
 }
