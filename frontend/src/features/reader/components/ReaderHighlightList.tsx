@@ -44,6 +44,8 @@ export function ReaderHighlightList({
         [currentSectionIndex, groups, normalizedCurrent],
     );
 
+    const isDark = useDarkMode();
+
     useDrawerListScroll(listRef, currentGroupIndex, 'data-current-chapter');
 
     if (highlights.length === 0) {
@@ -58,8 +60,6 @@ export function ReaderHighlightList({
             />
         );
     }
-
-    const isDark = useDarkMode();
 
     return (
         <div ref={listRef} className="flex flex-col gap-4 py-2">
