@@ -101,8 +101,6 @@ type ChapterRange = {
     title: string;
     startPage: number;
     endPage: number;
-    /** Width as a percentage of totalPages. */
-    widthPct: number;
     /** Index for alternating colors. */
     bandIndex: number;
 };
@@ -169,12 +167,22 @@ export function PageActivityGrid({
                 title: sorted[i].title,
                 startPage,
                 endPage,
-                widthPct: ((endPage - startPage + 1) / totalPages) * 100,
                 bandIndex: i % 2,
             });
         }
         return ranges;
     }, [chaptersWithPages, totalPages]);
+
+    // Map each page to its chapter range for per-bar background and strip.
+    const pageChapterInfo = useMemo(() => {
+        const map = new Map<number, ChapterRange>();
+        for (const range of chapterRanges) {
+            for (let p = range.startPage; p <= range.endPage; p++) {
+                map.set(p, range);
+            }
+        }
+        return map;
+    }, [chapterRanges]);
 
     // Raw max for height scaling (outliers keep their tall bars).
     const maxDuration = useMemo(() => {
@@ -444,85 +452,76 @@ export function PageActivityGrid({
                         className="relative flex items-end"
                         style={{ height: '200px' }}
                     >
-                        {/* Alternating chapter background bands */}
-                        {hasChapters && (
-                            <div className="absolute inset-0 flex pointer-events-none">
-                                {chapterRanges.map((range) => (
-                                    <div
-                                        key={range.startPage}
-                                        className={
-                                            CHAPTER_BAND_CLASSES[
-                                                range.bandIndex
-                                            ]
-                                        }
-                                        style={{ width: `${range.widthPct}%` }}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
                         {/* Bars */}
-                        {bars.map((bar) => (
-                            <div
-                                key={bar.page}
-                                className="relative flex-1 min-w-0 flex flex-col items-center justify-end h-full"
-                                ref={(element) => {
-                                    if (element) {
-                                        TooltipManager.attach(
-                                            element,
-                                            bar.tooltip,
-                                        );
-                                    }
-                                }}
-                            >
+                        {bars.map((bar) => {
+                            const chInfo = pageChapterInfo.get(bar.page);
+                            return (
                                 <div
-                                    data-page={bar.page}
-                                    className="page-activity-bar w-full rounded-t-[1px] transition-colors hover:brightness-110 flex flex-col"
-                                    style={{
-                                        height: `${bar.heightPct}%`,
-                                        backgroundColor: bar.color,
+                                    key={bar.page}
+                                    className={`relative flex-1 min-w-0 flex flex-col items-center justify-end h-full${chInfo ? ` ${CHAPTER_BAND_CLASSES[chInfo.bandIndex]}` : ''}`}
+                                    ref={(element) => {
+                                        if (element) {
+                                            TooltipManager.attach(
+                                                element,
+                                                bar.tooltip,
+                                            );
+                                        }
                                     }}
                                 >
-                                    {(bar.dots.bookmark || bar.dots.note) && (
-                                        <div className="w-full shrink-0 flex flex-col rounded-t-[1px]">
-                                            {bar.dots.bookmark && (
-                                                <div
-                                                    className={`w-full ${bar.dots.bookmark}`}
-                                                    style={{ height: '6px' }}
-                                                />
-                                            )}
-                                            {bar.dots.note && (
-                                                <div
-                                                    className={`w-full ${bar.dots.note}`}
-                                                    style={{ height: '6px' }}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                    {bar.dots.highlight && (
-                                        <div
-                                            className={`w-full shrink-0 rounded-t-[1px] ${bar.dots.highlight}`}
-                                            style={{ height: '6px' }}
-                                        />
-                                    )}
+                                    <div
+                                        data-page={bar.page}
+                                        className="page-activity-bar w-full rounded-t-[1px] transition-colors hover:brightness-110 flex flex-col"
+                                        style={{
+                                            height: `${bar.heightPct}%`,
+                                            backgroundColor: bar.color,
+                                        }}
+                                    >
+                                        {(bar.dots.bookmark ||
+                                            bar.dots.note) && (
+                                            <div className="w-full shrink-0 flex flex-col rounded-t-[1px]">
+                                                {bar.dots.bookmark && (
+                                                    <div
+                                                        className={`w-full ${bar.dots.bookmark}`}
+                                                        style={{
+                                                            height: '6px',
+                                                        }}
+                                                    />
+                                                )}
+                                                {bar.dots.note && (
+                                                    <div
+                                                        className={`w-full ${bar.dots.note}`}
+                                                        style={{
+                                                            height: '6px',
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        )}
+                                        {bar.dots.highlight && (
+                                            <div
+                                                className={`w-full shrink-0 rounded-t-[1px] ${bar.dots.highlight}`}
+                                                style={{ height: '6px' }}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* Chapter strip along the bottom */}
                     {hasChapters && (
                         <div className="flex h-1.5 overflow-hidden">
-                            {chapterRanges.map((range) => (
-                                <div
-                                    key={range.startPage}
-                                    className={
-                                        CHAPTER_STRIP_CLASSES[range.bandIndex]
-                                    }
-                                    style={{ width: `${range.widthPct}%` }}
-                                    title={range.title}
-                                />
-                            ))}
+                            {bars.map((bar) => {
+                                const chInfo = pageChapterInfo.get(bar.page);
+                                return (
+                                    <div
+                                        key={bar.page}
+                                        className={`flex-1 min-w-0${chInfo ? ` ${CHAPTER_STRIP_CLASSES[chInfo.bandIndex]}` : ''}`}
+                                        title={chInfo?.title}
+                                    />
+                                );
+                            })}
                         </div>
                     )}
                 </div>
