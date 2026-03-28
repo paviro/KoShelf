@@ -17,9 +17,8 @@ export function CloseButton({
     return (
         <Button
             variant={bordered ? 'neutral' : 'ghost'}
-            size="icon"
             icon={LuX}
-            label={translation.get('close.aria-label')}
+            aria-label={translation.get('close.aria-label')}
             onClick={onClick}
             className={`${bordered ? '' : 'hover:text-gray-900 dark:hover:text-white '}${className}`}
         />

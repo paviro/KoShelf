@@ -88,35 +88,23 @@ export function LibraryHeader({
                     {!mobileSearchOpen && (
                         <Button
                             variant="neutral"
-                            size="icon"
                             className="sm:hidden"
-                            title={translation.get('search.aria-label')}
+                            icon={LuSearch}
                             aria-label={translation.get('search.aria-label')}
                             onClick={onOpenMobileSearch}
-                        >
-                            <LuSearch
-                                className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                                aria-hidden="true"
-                            />
-                        </Button>
+                        />
                     )}
 
                     {mobileSearchOpen && (
                         <Button
                             variant="neutral"
-                            size="icon"
                             className="sm:hidden"
-                            title={translation.get('close-search.aria-label')}
+                            icon={LuX}
                             aria-label={translation.get(
                                 'close-search.aria-label',
                             )}
                             onClick={onCloseMobileSearch}
-                        >
-                            <LuX
-                                className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                                aria-hidden="true"
-                            />
-                        </Button>
+                        />
                     )}
 
                     <div

@@ -1,4 +1,9 @@
-import { useId, type MouseEvent, type ReactNode } from 'react';
+import {
+    useId,
+    type ComponentType,
+    type MouseEvent,
+    type ReactNode,
+} from 'react';
 
 import { useOverlayAnimation } from '../../lib/dom/useOverlayAnimation';
 import { CloseButton } from '../button/CloseButton';
@@ -6,6 +11,7 @@ import { CloseButton } from '../button/CloseButton';
 export type TabbedDrawerTab<TTabId extends string> = {
     id: TTabId;
     label: string;
+    icon?: ComponentType<{ className?: string }>;
     content: ReactNode;
 };
 
@@ -93,6 +99,7 @@ export function TabbedDrawer<TTabId extends string>({
                                             active={isActive}
                                             onClick={() => onTabChange(tab.id)}
                                             label={tab.label}
+                                            icon={tab.icon}
                                         />
                                     );
                                 })}
@@ -126,9 +133,17 @@ type TabButtonProps = {
     active: boolean;
     onClick: () => void;
     label: string;
+    icon?: ComponentType<{ className?: string }>;
 };
 
-function TabButton({ id, panelId, active, onClick, label }: TabButtonProps) {
+function TabButton({
+    id,
+    panelId,
+    active,
+    onClick,
+    label,
+    icon: Icon,
+}: TabButtonProps) {
     return (
         <button
             id={id}
@@ -136,15 +151,17 @@ function TabButton({ id, panelId, active, onClick, label }: TabButtonProps) {
             role="tab"
             aria-selected={active}
             aria-controls={panelId}
+            aria-label={label}
             tabIndex={active ? 0 : -1}
             onClick={onClick}
-            className={`cursor-pointer px-3.5 py-1.5 text-sm font-medium rounded-lg border transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+            className={`cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-lg border transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
                 active
                     ? 'text-gray-900 dark:text-white bg-white dark:bg-dark-700/70 border-gray-200/80 dark:border-dark-600/70 shadow-xs'
                     : 'text-gray-500 dark:text-dark-300 bg-transparent border-transparent hover:text-gray-700 dark:hover:text-dark-100 hover:bg-white/70 dark:hover:bg-dark-700/45'
             }`}
         >
-            {label}
+            {Icon && <Icon className="w-4 h-4" aria-hidden />}
+            <span className={Icon ? 'hidden sm:inline' : ''}>{label}</span>
         </button>
     );
 }

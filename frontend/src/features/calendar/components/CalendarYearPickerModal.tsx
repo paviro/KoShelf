@@ -34,9 +34,10 @@ export function CalendarYearPickerModal({
                 <div className="flex items-center justify-between mb-4">
                     <Button
                         variant="neutral"
-                        size="icon"
                         icon={LuChevronLeft}
-                        label={translation.get('previous-month.aria-label')}
+                        aria-label={translation.get(
+                            'previous-month.aria-label',
+                        )}
                         onClick={onPreviousRange}
                     />
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -44,9 +45,8 @@ export function CalendarYearPickerModal({
                     </h3>
                     <Button
                         variant="neutral"
-                        size="icon"
                         icon={LuChevronRight}
-                        label={translation.get('next-month.aria-label')}
+                        aria-label={translation.get('next-month.aria-label')}
                         onClick={onNextRange}
                     />
                 </div>

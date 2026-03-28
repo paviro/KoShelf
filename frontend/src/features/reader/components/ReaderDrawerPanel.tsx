@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { BsBookmarkFill } from 'react-icons/bs';
+import { LuFileText, LuNotebookPen } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import {
@@ -45,6 +47,7 @@ export function ReaderDrawerPanel({
         {
             id: 'contents',
             label: translation.get('reader.contents'),
+            icon: LuFileText,
             content: (
                 <ReaderTocList
                     toc={toc}
@@ -58,6 +61,7 @@ export function ReaderDrawerPanel({
         {
             id: 'highlights',
             label: translation.get('highlights'),
+            icon: LuNotebookPen,
             content: (
                 <ReaderHighlightList
                     highlights={highlights}
@@ -70,6 +74,7 @@ export function ReaderDrawerPanel({
         {
             id: 'bookmarks',
             label: translation.get('bookmarks'),
+            icon: BsBookmarkFill,
             content: (
                 <ReaderBookmarkList
                     bookmarks={bookmarks}

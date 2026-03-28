@@ -545,9 +545,9 @@ export function ReaderSettingsPanel({
             <Button
                 ref={buttonRef}
                 variant="neutral"
-                size="icon"
                 icon={LuSettings}
-                label={translation.get('reader-settings.aria-label')}
+                label={translation.get('reader-settings.label')}
+                aria-label={translation.get('reader-settings.aria-label')}
                 onClick={() => setOpen((prev) => !prev)}
                 className={
                     open

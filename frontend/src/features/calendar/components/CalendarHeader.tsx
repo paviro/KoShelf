@@ -80,13 +80,17 @@ export function CalendarHeader({
                         <Button
                             variant="neutral"
                             icon={LuChevronLeft}
-                            label={translation.get('previous-month.aria-label')}
+                            aria-label={translation.get(
+                                'previous-month.aria-label',
+                            )}
                             onClick={onPreviousMonth}
                         />
                         <Button
                             variant="neutral"
                             icon={LuChevronRight}
-                            label={translation.get('next-month.aria-label')}
+                            aria-label={translation.get(
+                                'next-month.aria-label',
+                            )}
                             onClick={onNextMonth}
                         />
                     </div>

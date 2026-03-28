@@ -19,30 +19,28 @@ type RecapHeaderControlsProps = {
     onShareClick: () => void;
 };
 
-function SortOrderIcon({ newestFirst }: { newestFirst: boolean }) {
+function SortNewestIcon(props: React.SVGAttributes<SVGElement>) {
     return (
-        <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden
-        >
-            {newestFirst ? (
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"
-                />
-            ) : (
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 7h5M4 12h8M4 17h8M18 18V6M15 9l3-3 3 3"
-                />
-            )}
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"
+            />
+        </svg>
+    );
+}
+
+function SortOldestIcon(props: React.SVGAttributes<SVGElement>) {
+    return (
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 7h5M4 12h8M4 17h8M18 18V6M15 9l3-3 3 3"
+            />
         </svg>
     );
 }
@@ -79,22 +77,18 @@ export function RecapHeaderControls({
 
             <Button
                 variant="neutral"
-                size="icon"
                 icon={LuDownload}
-                label={shareLabel}
+                aria-label={shareLabel}
                 onClick={onShareClick}
                 disabled={!shareEnabled}
             />
 
             <Button
                 variant="neutral"
-                size="icon"
-                title={sortLabel}
+                icon={sortNewestFirst ? SortNewestIcon : SortOldestIcon}
                 aria-label={sortLabel}
                 onClick={onToggleSort}
-            >
-                <SortOrderIcon newestFirst={sortNewestFirst} />
-            </Button>
+            />
 
             <ContentScopeFilter
                 visible={showTypeFilter}

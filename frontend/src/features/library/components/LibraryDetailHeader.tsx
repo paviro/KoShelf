@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { LuArrowLeft, LuBookOpen } from 'react-icons/lu';
+import { LuArrowLeft, LuBookOpen, LuDownload } from 'react-icons/lu';
 import { Link } from 'react-router';
 
 import {
@@ -101,7 +101,7 @@ export function LibraryDetailHeader({
                             to={readerHref}
                             className={buttonVariants({
                                 variant: 'neutral',
-                                size: 'icon',
+                                size: 'compact',
                                 className: 'gap-1.5 px-3 md:px-4 w-auto',
                             })}
                             title={translation.get('open-in-reader.aria-label')}
@@ -121,38 +121,10 @@ export function LibraryDetailHeader({
                     <Button
                         ref={triggerRef}
                         variant="neutral"
-                        size="icon"
-                        title={translation.get('share')}
+                        icon={LuDownload}
                         aria-label={translation.get('share')}
                         onClick={() => setShareOpen((current) => !current)}
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
-                            />
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M7 10l5 5 5-5"
-                            />
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M12 4v12"
-                            />
-                        </svg>
-                    </Button>
+                    />
                     <DropdownPortal
                         triggerRef={triggerRef}
                         open={shareOpen}

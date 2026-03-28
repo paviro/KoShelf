@@ -15,9 +15,8 @@ export function EditSectionButton({
     return (
         <Button
             variant="neutral"
-            size="icon"
             icon={LuPencil}
-            label={translation.get('edit.aria-label')}
+            aria-label={translation.get('edit.aria-label')}
             onClick={onToggle}
             active={editing}
         />

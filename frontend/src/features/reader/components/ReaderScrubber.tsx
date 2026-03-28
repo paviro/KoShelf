@@ -29,9 +29,8 @@ export function ReaderScrubber({
         <footer className="flex items-center gap-3 h-[70px] md:h-[80px] px-4 md:px-6 border-t border-gray-200/50 dark:border-dark-700/50 bg-white/90 dark:bg-dark-950/75 backdrop-blur-xs shrink-0">
             <Button
                 variant="ghost"
-                size="icon"
                 icon={LuChevronLeft}
-                label={translation.get('reader.previous-page')}
+                aria-label={translation.get('reader.previous-page')}
                 onClick={onPrev}
                 className="hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
             />
@@ -67,9 +66,8 @@ export function ReaderScrubber({
 
             <Button
                 variant="ghost"
-                size="icon"
                 icon={LuChevronRight}
-                label={translation.get('reader.next-page')}
+                aria-label={translation.get('reader.next-page')}
                 onClick={onNext}
                 className="hover:bg-gray-200/50 dark:hover:bg-dark-700/50"
             />

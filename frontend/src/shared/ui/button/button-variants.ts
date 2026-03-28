@@ -86,7 +86,7 @@ function resolveVariantClasses(
 
 const SIZE_CLASSES = {
     sm: 'h-10 px-4 py-2 text-sm gap-2 rounded-lg',
-    icon: 'w-10 h-10 p-2.5 rounded-lg',
+    compact: 'w-10 h-10 p-2.5 rounded-lg',
     xs: 'h-auto px-2 py-1.5 text-sm gap-1.5 rounded-md',
 } as const;
 

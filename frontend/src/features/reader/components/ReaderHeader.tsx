@@ -59,9 +59,9 @@ export function ReaderHeader({
 
                 <Button
                     variant="neutral"
-                    size="icon"
                     icon={LuList}
-                    label={translation.get('reader-drawer.aria-label')}
+                    label={translation.get('reader-drawer.label')}
+                    aria-label={translation.get('reader-drawer.aria-label')}
                     onClick={onDrawerOpen}
                 />
             </div>

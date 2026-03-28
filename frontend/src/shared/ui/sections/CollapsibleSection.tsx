@@ -13,24 +13,17 @@ function ToggleButton({ visible, onClick }: ToggleButtonProps) {
     return (
         <Button
             variant="neutral"
-            size="icon"
-            className="sm:w-auto sm:px-3 sm:space-x-2"
+            icon={LuChevronDown}
+            iconPosition="end"
+            label={
+                visible
+                    ? translation.get('toggle.hide')
+                    : translation.get('toggle.show')
+            }
+            className={`[&>svg]:transition-transform [&>svg]:duration-200 ${visible ? '' : '[&>svg]:-rotate-90'}`}
             data-section-toggle-button
             onClick={onClick}
-        >
-            <span className="hidden sm:inline text-sm font-medium text-gray-600 dark:text-dark-300">
-                {visible
-                    ? translation.get('toggle.hide')
-                    : translation.get('toggle.show')}
-            </span>
-            <LuChevronDown
-                className="w-4 h-4 text-gray-600 dark:text-gray-300 transform transition-transform duration-200"
-                style={{
-                    transform: visible ? 'rotate(0deg)' : 'rotate(-90deg)',
-                }}
-                aria-hidden="true"
-            />
-        </Button>
+        />
     );
 }
 
