@@ -437,6 +437,16 @@ async fn compute_share_data_per_year(
     result
 }
 
+fn share_images_exist_on_disk(year: i32, recap_dir: &Path) -> bool {
+    [ShareFormat::Story, ShareFormat::Square, ShareFormat::Banner]
+        .iter()
+        .all(|fmt| {
+            recap_dir
+                .join(format!("{}_{}", year, fmt.filename()))
+                .exists()
+        })
+}
+
 /// Regenerate share images for years where the content fingerprint changed.
 ///
 /// Compares computed `ShareImageData` fingerprints against DB-stored values.
@@ -474,7 +484,9 @@ pub async fn regenerate_share_images(
     for (year, data) in &share_data_by_year {
         let new_fp = data.fingerprint();
         let needs_render = match stored_fingerprints.get(year) {
-            Some(stored_fp) => stored_fp != &new_fp,
+            Some(stored_fp) => {
+                stored_fp != &new_fp || !share_images_exist_on_disk(*year, recap_dir)
+            }
             None => true,
         };
         if needs_render {
