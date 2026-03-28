@@ -190,8 +190,7 @@ pub async fn rebuild(
 
                     has_writeback: config.writeback_enabled,
                 },
-                authenticated: None,
-                password_policy: None,
+                auth: None,
             };
 
             if let Some(site_store) = site_store {

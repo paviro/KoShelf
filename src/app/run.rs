@@ -8,7 +8,7 @@ use crate::pipeline::ingest::{load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::pipeline::watcher::FileWatcher;
-use crate::server::api::responses::site::{PasswordPolicy, SiteCapabilities, SiteData};
+use crate::server::api::responses::site::{PasswordPolicy, SiteAuth, SiteCapabilities, SiteData};
 use crate::server::auth::AuthState;
 use crate::server::auth::client_addr::ClientAddrResolver;
 use crate::server::auth::password::{
@@ -240,9 +240,12 @@ async fn initialize_pipeline(
     // ── 6. Build site metadata ───────────────────────────────────────
     let generated_at = config.time_config.now_rfc3339();
     let (has_books, has_comics) = repo.query_content_type_flags().await?;
-    let password_policy = if config.auth_enabled {
-        Some(PasswordPolicy {
-            min_chars: crate::server::auth::password::MIN_PASSWORD_CHARS,
+    let auth = if config.auth_enabled {
+        Some(SiteAuth {
+            authenticated: false,
+            password_policy: PasswordPolicy {
+                min_chars: crate::server::auth::password::MIN_PASSWORD_CHARS,
+            },
         })
     } else {
         None
@@ -256,11 +259,9 @@ async fn initialize_pipeline(
             has_comics,
             has_reading_data,
             has_files: is_internal_server || config.include_files,
-
             has_writeback: config.writeback_enabled,
         },
-        authenticated: None,
-        password_policy,
+        auth,
     };
 
     Ok(PipelineState {

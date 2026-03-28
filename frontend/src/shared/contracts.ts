@@ -11,12 +11,16 @@ export interface PasswordPolicy {
     min_chars: number;
 }
 
+export interface SiteAuth {
+    authenticated: boolean;
+    password_policy: PasswordPolicy;
+}
+
 export interface SiteData {
     title: string;
     language: string;
     capabilities: SiteCapabilities;
-    authenticated?: boolean;
-    password_policy?: PasswordPolicy;
+    auth?: SiteAuth;
     version?: string;
     generated_at?: string;
 }

@@ -71,7 +71,7 @@ export function SettingsRoute() {
         getPrefetchOnIntentPreference(),
     );
 
-    const authEnabled = siteQuery.data?.authenticated != null;
+    const authEnabled = siteQuery.data?.auth != null;
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);
@@ -383,7 +383,7 @@ export function SettingsRoute() {
                     >
                         <PasswordChangeSection
                             minPasswordChars={
-                                siteQuery.data?.password_policy?.min_chars
+                                siteQuery.data?.auth?.password_policy.min_chars
                             }
                         />
                     </SettingsSection>

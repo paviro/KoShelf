@@ -37,7 +37,9 @@ pub(crate) async fn site(
             .is_some(),
             None => false,
         };
-        data.authenticated = Some(is_authenticated);
+        if let Some(auth) = data.auth.as_mut() {
+            auth.authenticated = is_authenticated;
+        }
     }
 
     (

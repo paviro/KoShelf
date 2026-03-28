@@ -131,7 +131,7 @@ export function RuntimeUpdatesBridge() {
             }
 
             const site = queryClient.getQueryData<SiteData>(['site']);
-            if (site?.authenticated == null) {
+            if (!site?.auth) {
                 return;
             }
 

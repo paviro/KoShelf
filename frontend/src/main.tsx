@@ -53,7 +53,7 @@ async function bootstrap(): Promise<void> {
     }
 
     if (
-        initialSite?.authenticated === false &&
+        initialSite?.auth?.authenticated === false &&
         !isLoginHashRoute()
     ) {
         redirectToLogin();

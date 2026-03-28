@@ -62,7 +62,7 @@ export function App() {
     const navItems = buildNavItems(site);
     const defaultRoute = resolveDefaultRoute(site);
     const siteTitle = site?.title ?? 'KoShelf';
-    const authenticated = site?.authenticated;
+    const authenticated = site?.auth?.authenticated;
     const routeMatch = matchRoute(location.pathname);
     const isLoginRoute = routeMatch.routeId === 'login';
     const isReaderRoute = isReaderRouteId(routeMatch.routeId);
