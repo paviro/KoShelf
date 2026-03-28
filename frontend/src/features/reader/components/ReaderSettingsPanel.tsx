@@ -22,6 +22,7 @@ import {
 } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
+import { computeOverlayPosition } from '../../../shared/overlay/anchored-overlay';
 import { useClickOutside } from '../../../shared/lib/dom/useClickOutside';
 import type {
     ReaderModeControl,
@@ -415,21 +416,33 @@ export function ReaderSettingsPanel({
     const [open, setOpen] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
-    const [position, setPosition] = useState({ top: 0, right: 0 });
+    const [position, setPosition] = useState<{
+        top: number;
+        left: number;
+    } | null>(null);
     const panelId = useId();
 
     const close = useCallback(() => setOpen(false), []);
     const updatePosition = useCallback(() => {
         const button = buttonRef.current;
-        if (!button) {
+        const panel = panelRef.current;
+        if (!button || !panel) {
             return;
         }
 
-        const rect = button.getBoundingClientRect();
-        setPosition({
-            top: rect.bottom + PANEL_OFFSET_PX,
-            right: window.innerWidth - rect.right,
-        });
+        const result = computeOverlayPosition(
+            button.getBoundingClientRect(),
+            panel.getBoundingClientRect(),
+            window.innerWidth,
+            window.innerHeight,
+            {
+                placements: ['bottom', 'top'],
+                alignment: 'end',
+                arrowSize: 0,
+                gap: PANEL_OFFSET_PX,
+            },
+        );
+        setPosition({ top: result.top, left: result.left });
     }, []);
 
     useClickOutside(panelRef, close, open, buttonRef);
@@ -621,7 +634,11 @@ export function ReaderSettingsPanel({
                         id={panelId}
                         ref={panelRef}
                         className="fixed w-80 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto bg-white/95 dark:bg-dark-900/88 backdrop-blur-xs border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl p-4 z-[100]"
-                        style={{ top: position.top, right: position.right }}
+                        style={{
+                            top: position?.top ?? 0,
+                            left: position?.left ?? 0,
+                            visibility: position ? 'visible' : 'hidden',
+                        }}
                         role="dialog"
                         aria-label={translation.get(
                             'reader-settings.aria-label',

@@ -7,13 +7,19 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-import { computeOverlayPosition } from '../../overlay/anchored-overlay';
+import {
+    computeOverlayPosition,
+    type OverlayAlignmentOption,
+    type OverlayPlacement,
+} from '../../overlay/anchored-overlay';
 
 type OverlayPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;
     onClose: () => void;
     children: React.ReactNode;
     className?: string;
+    alignment?: OverlayAlignmentOption;
+    placements?: OverlayPlacement[];
 };
 
 export function OverlayPicker({
@@ -21,6 +27,8 @@ export function OverlayPicker({
     onClose,
     children,
     className = '',
+    alignment,
+    placements,
 }: OverlayPickerProps) {
     const ref = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -37,10 +45,15 @@ export function OverlayPicker({
             overlayRect,
             window.innerWidth,
             window.innerHeight,
-            { placementOrder: ['bottom', 'top'], arrowSize: 0, gap: 4 },
+            {
+                placements: placements ?? ['bottom', 'top'],
+                alignment,
+                arrowSize: 0,
+                gap: 4,
+            },
         );
         setPos({ top: result.top, left: result.left });
-    }, [anchorRef]);
+    }, [anchorRef, alignment, placements]);
 
     useLayoutEffect(() => {
         updatePosition();

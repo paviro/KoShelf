@@ -7,6 +7,7 @@ import {
     sanitizeRichTextHtml,
 } from '../lib/library-detail-formatters';
 import type { LibraryCollection } from '../model/library-model';
+import type { OverlayPlacement } from '../../../shared/overlay/anchored-overlay';
 import {
     fetchLibraryDetailQuery,
     getCachedLibraryDetailQueryData,
@@ -516,41 +517,42 @@ class HoverPreviewManager {
             right: viewportWidth - cardRect.right,
         };
 
-        type Placement = 'top' | 'bottom' | 'left' | 'right';
         const neededHeight = previewRect.height + PREVIEW_OFFSET_PX;
         const neededWidth = previewRect.width + PREVIEW_OFFSET_PX;
 
-        const placementScores: Array<{ placement: Placement; score: number }> =
-            [
-                {
-                    placement: 'right',
-                    score:
-                        space.right >= neededWidth
-                            ? 10000 + space.right
-                            : space.right - neededWidth,
-                },
-                {
-                    placement: 'left',
-                    score:
-                        space.left >= neededWidth
-                            ? 10000 + space.left
-                            : space.left - neededWidth,
-                },
-                {
-                    placement: 'top',
-                    score:
-                        space.top >= neededHeight
-                            ? 10000 + space.top
-                            : space.top - neededHeight,
-                },
-                {
-                    placement: 'bottom',
-                    score:
-                        space.bottom >= neededHeight
-                            ? 10000 + space.bottom
-                            : space.bottom - neededHeight,
-                },
-            ];
+        const placementScores: Array<{
+            placement: OverlayPlacement;
+            score: number;
+        }> = [
+            {
+                placement: 'right',
+                score:
+                    space.right >= neededWidth
+                        ? 10000 + space.right
+                        : space.right - neededWidth,
+            },
+            {
+                placement: 'left',
+                score:
+                    space.left >= neededWidth
+                        ? 10000 + space.left
+                        : space.left - neededWidth,
+            },
+            {
+                placement: 'top',
+                score:
+                    space.top >= neededHeight
+                        ? 10000 + space.top
+                        : space.top - neededHeight,
+            },
+            {
+                placement: 'bottom',
+                score:
+                    space.bottom >= neededHeight
+                        ? 10000 + space.bottom
+                        : space.bottom - neededHeight,
+            },
+        ];
 
         placementScores.sort((left, right) => right.score - left.score);
         const placement = placementScores[0]?.placement ?? 'right';
@@ -610,7 +612,7 @@ class HoverPreviewManager {
 
     private positionArrow(
         arrow: HTMLElement,
-        placement: 'top' | 'bottom' | 'left' | 'right',
+        placement: OverlayPlacement,
         arrowX: number,
         arrowY: number,
     ): void {

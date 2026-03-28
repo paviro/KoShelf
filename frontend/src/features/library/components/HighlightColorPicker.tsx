@@ -17,7 +17,12 @@ export function HighlightColorPicker({
     onClose,
 }: HighlightColorPickerProps) {
     return (
-        <OverlayPicker anchorRef={anchorRef} onClose={onClose}>
+        <OverlayPicker
+            anchorRef={anchorRef}
+            onClose={onClose}
+            alignment={{ bottom: 'end', top: 'end', left: 'center' }}
+            placements={['bottom', 'top', 'left']}
+        >
             <div className="grid grid-cols-5 gap-1.5">
                 {HIGHLIGHT_COLORS.map((color) => {
                     const isSelected = color.name === currentColor;

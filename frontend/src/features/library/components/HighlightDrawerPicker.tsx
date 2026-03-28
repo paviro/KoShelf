@@ -18,7 +18,12 @@ export function HighlightDrawerPicker({
     onClose,
 }: HighlightDrawerPickerProps) {
     return (
-        <OverlayPicker anchorRef={anchorRef} onClose={onClose}>
+        <OverlayPicker
+            anchorRef={anchorRef}
+            onClose={onClose}
+            alignment={{ bottom: 'end', top: 'end', left: 'center' }}
+            placements={['bottom', 'top', 'left']}
+        >
             <div className="flex flex-col gap-0.5">
                 {DRAWER_TYPES.map((drawer) => {
                     const isSelected = drawer.name === currentDrawer;

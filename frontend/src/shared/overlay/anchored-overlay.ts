@@ -1,10 +1,17 @@
-type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
+export type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
+
+export type OverlayAlignment = 'center' | 'start' | 'end';
+
+export type OverlayAlignmentOption =
+    | OverlayAlignment
+    | Partial<Record<OverlayPlacement, OverlayAlignment>>;
 
 type OverlayPositioningOptions = {
     padding?: number;
     gap?: number;
     arrowSize?: number;
-    placementOrder?: OverlayPlacement[];
+    placements?: OverlayPlacement[];
+    alignment?: OverlayAlignmentOption;
 };
 
 type OverlayPositionResult = {
@@ -15,7 +22,7 @@ type OverlayPositionResult = {
     arrowY: number;
 };
 
-const DEFAULT_PLACEMENT_ORDER: OverlayPlacement[] = [
+const DEFAULT_PLACEMENTS: OverlayPlacement[] = [
     'top',
     'bottom',
     'right',
@@ -42,32 +49,6 @@ function placementClassesForPrefix(prefix: string): string[] {
     ];
 }
 
-function normalizePlacementOrder(
-    order: OverlayPlacement[] | undefined,
-): OverlayPlacement[] {
-    if (!order || order.length === 0) {
-        return DEFAULT_PLACEMENT_ORDER;
-    }
-
-    const seen = new Set<OverlayPlacement>();
-    const normalized: OverlayPlacement[] = [];
-
-    order.forEach((placement) => {
-        if (!seen.has(placement)) {
-            normalized.push(placement);
-            seen.add(placement);
-        }
-    });
-
-    DEFAULT_PLACEMENT_ORDER.forEach((placement) => {
-        if (!seen.has(placement)) {
-            normalized.push(placement);
-        }
-    });
-
-    return normalized;
-}
-
 export function computeOverlayPosition(
     anchorRect: DOMRect,
     overlayRect: DOMRect,
@@ -78,7 +59,8 @@ export function computeOverlayPosition(
     const padding = options.padding ?? 8;
     const gap = options.gap ?? 8;
     const arrowSize = options.arrowSize ?? 6;
-    const placementOrder = normalizePlacementOrder(options.placementOrder);
+    const alignmentOption = options.alignment ?? 'center';
+    const placements = options.placements ?? DEFAULT_PLACEMENTS;
 
     const anchorCenterX = anchorRect.left + anchorRect.width / 2;
     const anchorCenterY = anchorRect.top + anchorRect.height / 2;
@@ -91,7 +73,7 @@ export function computeOverlayPosition(
     const requiredVertical = overlayRect.height + gap + arrowSize;
     const requiredHorizontal = overlayRect.width + gap + arrowSize;
 
-    const candidates = placementOrder.map((placement) => {
+    const candidates = placements.map((placement) => {
         if (placement === 'top') {
             return {
                 placement,
@@ -133,22 +115,40 @@ export function computeOverlayPosition(
 
     candidates.sort((left, right) => right.score - left.score);
     const placement = candidates[0]?.placement ?? 'top';
+    const alignment =
+        typeof alignmentOption === 'string'
+            ? alignmentOption
+            : (alignmentOption[placement] ?? 'center');
 
     let top = 0;
     let left = 0;
 
-    if (placement === 'top') {
-        top = anchorRect.top - overlayRect.height - gap - arrowSize;
-        left = anchorCenterX - overlayRect.width / 2;
-    } else if (placement === 'bottom') {
-        top = anchorRect.bottom + gap + arrowSize;
-        left = anchorCenterX - overlayRect.width / 2;
-    } else if (placement === 'right') {
-        top = anchorCenterY - overlayRect.height / 2;
-        left = anchorRect.right + gap + arrowSize;
+    if (placement === 'top' || placement === 'bottom') {
+        top =
+            placement === 'top'
+                ? anchorRect.top - overlayRect.height - gap - arrowSize
+                : anchorRect.bottom + gap + arrowSize;
+
+        if (alignment === 'start') {
+            left = anchorRect.left;
+        } else if (alignment === 'end') {
+            left = anchorRect.right - overlayRect.width;
+        } else {
+            left = anchorCenterX - overlayRect.width / 2;
+        }
     } else {
-        top = anchorCenterY - overlayRect.height / 2;
-        left = anchorRect.left - overlayRect.width - gap - arrowSize;
+        left =
+            placement === 'right'
+                ? anchorRect.right + gap + arrowSize
+                : anchorRect.left - overlayRect.width - gap - arrowSize;
+
+        if (alignment === 'start') {
+            top = anchorRect.top;
+        } else if (alignment === 'end') {
+            top = anchorRect.bottom - overlayRect.height;
+        } else {
+            top = anchorCenterY - overlayRect.height / 2;
+        }
     }
 
     const maxLeft = Math.max(
@@ -194,16 +194,11 @@ type AnchoredOverlayOptions = OverlayPositioningOptions & {
     onVisibilityChange?: (visible: boolean, anchor: HTMLElement | null) => void;
 };
 
-type AnchoredOverlayRuntimeOptions = Pick<
-    AnchoredOverlayOptions,
-    'padding' | 'gap' | 'arrowSize' | 'placementOrder' | 'maxWidthPadding'
->;
-
 export class AnchoredOverlay {
     private readonly root: HTMLElement;
     private readonly contentElement: HTMLElement | null;
     private readonly options: AnchoredOverlayOptions;
-    private runtimeOptions: Partial<AnchoredOverlayRuntimeOptions> = {};
+    private runtimeGap: number | undefined;
     private anchor: HTMLElement | null = null;
     private visible = false;
     private listenersBound = false;
@@ -253,10 +248,10 @@ export class AnchoredOverlay {
     show(
         anchor: HTMLElement,
         content: string,
-        runtimeOptions?: Partial<AnchoredOverlayRuntimeOptions>,
+        options?: { gap?: number },
     ): void {
         this.anchor = anchor;
-        this.runtimeOptions = runtimeOptions ?? {};
+        this.runtimeGap = options?.gap;
         this.setContent(content);
 
         this.root.classList.remove(this.options.hideClassName ?? 'hidden');
@@ -271,7 +266,7 @@ export class AnchoredOverlay {
         this.root.classList.add(this.options.hideClassName ?? 'hidden');
         this.visible = false;
         this.anchor = null;
-        this.runtimeOptions = {};
+        this.runtimeGap = undefined;
 
         const placementClassPrefix =
             this.options.placementClassPrefix ?? DEFAULT_PLACEMENT_CLASS_PREFIX;
@@ -294,11 +289,7 @@ export class AnchoredOverlay {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const maxWidthPadding =
-            this.runtimeOptions.maxWidthPadding ??
-            this.options.maxWidthPadding ??
-            this.runtimeOptions.padding ??
-            this.options.padding ??
-            8;
+            this.options.maxWidthPadding ?? this.options.padding ?? 8;
 
         this.root.style.position = 'fixed';
         this.root.style.maxWidth = `${Math.max(0, viewportWidth - maxWidthPadding * 2)}px`;
@@ -317,13 +308,11 @@ export class AnchoredOverlay {
             viewportWidth,
             viewportHeight,
             {
-                padding: this.runtimeOptions.padding ?? this.options.padding,
-                gap: this.runtimeOptions.gap ?? this.options.gap,
-                arrowSize:
-                    this.runtimeOptions.arrowSize ?? this.options.arrowSize,
-                placementOrder:
-                    this.runtimeOptions.placementOrder ??
-                    this.options.placementOrder,
+                padding: this.options.padding,
+                gap: this.runtimeGap ?? this.options.gap,
+                arrowSize: this.options.arrowSize,
+                placements: this.options.placements,
+                alignment: this.options.alignment,
             },
         );
 
