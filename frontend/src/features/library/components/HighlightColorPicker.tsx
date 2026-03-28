@@ -1,7 +1,7 @@
 import { LuCheck } from 'react-icons/lu';
 
 import { HIGHLIGHT_COLORS } from '../lib/highlight-constants';
-import { OverlayPicker } from './OverlayPicker';
+import { OverlayPicker } from '../../../shared/ui/overlay/OverlayPicker';
 
 type HighlightColorPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;

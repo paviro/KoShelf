@@ -2,7 +2,7 @@ import { LuCheck } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { DRAWER_TYPES } from '../lib/highlight-constants';
-import { OverlayPicker } from './OverlayPicker';
+import { OverlayPicker } from '../../../shared/ui/overlay/OverlayPicker';
 
 type HighlightDrawerPickerProps = {
     anchorRef: React.RefObject<HTMLElement | null>;

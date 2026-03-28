@@ -77,43 +77,18 @@ export function useSectionVisibilityState<SectionKey extends string>({
         fieldName,
     });
 
+    const opts = { routeId, sectionKeys, defaults, fieldName };
+
     const setVisibility = (sectionKey: SectionKey, visible: boolean): void => {
-        const current = readSectionVisibilityState({
-            routeId,
-            sectionKeys,
-            defaults,
-            fieldName,
-        });
-        const next = { ...current, [sectionKey]: visible };
-        writeSectionVisibilityState(
-            {
-                routeId,
-                sectionKeys,
-                defaults,
-                fieldName,
-            },
-            next,
-        );
+        writeSectionVisibilityState(opts, { ...state, [sectionKey]: visible });
         setRevision((value) => value + 1);
     };
 
     const toggle = (sectionKey: SectionKey): void => {
-        const current = readSectionVisibilityState({
-            routeId,
-            sectionKeys,
-            defaults,
-            fieldName,
+        writeSectionVisibilityState(opts, {
+            ...state,
+            [sectionKey]: !state[sectionKey],
         });
-        const next = { ...current, [sectionKey]: !current[sectionKey] };
-        writeSectionVisibilityState(
-            {
-                routeId,
-                sectionKeys,
-                defaults,
-                fieldName,
-            },
-            next,
-        );
         setRevision((value) => value + 1);
     };
 
