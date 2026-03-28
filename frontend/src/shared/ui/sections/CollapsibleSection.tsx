@@ -63,7 +63,7 @@ export function CollapsibleSection({
             data-name={sectionKey}
             data-default-visible={defaultVisible ? 'true' : 'false'}
         >
-            <div className="flex items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
+            <div className="flex items-center justify-between gap-3 mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
                 <div className="flex items-center space-x-3">
                     <div
                         className={`w-2 h-6 md:h-8 rounded-full ${accentClass}`}

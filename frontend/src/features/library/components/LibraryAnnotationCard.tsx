@@ -66,22 +66,14 @@ function CardHeader({
         <Tag
             className={`flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 ${isBookmark ? 'px-5' : 'px-6'} py-3${isBookmark ? '' : ' bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50'}`}
         >
-            <div
-                className={`flex items-center gap-3${isBookmark ? ' min-w-0' : ''}`}
-            >
+            <div className="flex items-center gap-3 min-w-0">
                 {chapter && (
-                    <span
-                        className={`inline-flex items-center${isBookmark ? ' min-w-0' : ''}`}
-                    >
+                    <span className="inline-flex items-center min-w-0">
                         <LuFileText
-                            className={`w-4 h-4 ${isBookmark ? 'mr-1.5' : 'mr-1'} text-primary-400${isBookmark ? ' shrink-0' : ''}`}
+                            className={`w-4 h-4 ${isBookmark ? 'mr-1.5' : 'mr-1'} text-primary-400 shrink-0`}
                             aria-hidden="true"
                         />
-                        {isBookmark ? (
-                            <span className="truncate">{chapter}</span>
-                        ) : (
-                            chapter
-                        )}
+                        <span className="truncate">{chapter}</span>
                     </span>
                 )}
 
@@ -107,7 +99,7 @@ function CardHeader({
                             className="w-4 h-4 mr-1 text-primary-400"
                             aria-hidden="true"
                         />
-                        {translation.get('page-number', pageno)}
+                        {pageno}
                     </span>
                 )}
 
