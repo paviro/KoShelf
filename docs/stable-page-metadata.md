@@ -25,7 +25,7 @@ For consistent page-based comparisons between books, enable KOReader's `Override
 
 - This feature requires KOReader nightly builds or a future stable release after `2025.10 "Ghost"`.
 - KOReader `2025.10 "Ghost"` does not write the required `pagemap_*` metadata fields, so KoShelf uses its standard unscaled page behavior.
-- After updating to a KOReader build newer than `2025.10 "Ghost"`, you can use [KoReader-PopulateStablePageKOReader](https://github.com/paviro/KoReader-PopulateStablePageKOReader) to backfill stable page metadata for already finished books.
+- After updating to a KOReader build newer than `2025.10 "Ghost"`, you can use [KoReader-PopulateStablePageKOReader](https://github.com/paviro/KoReader-PopulateStablePage) to backfill stable page metadata for already finished books.
 
 ## Disabling
 

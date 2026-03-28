@@ -21,7 +21,7 @@ port = 3000
 # enable_writeback = false
 # trusted_proxies = ["127.0.0.1/32", "::1/128"]
 
-[output]
+# [output]
 # path = "/path/to/output"
 # include_files = false
 # watch = false
