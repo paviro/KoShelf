@@ -458,9 +458,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Закрити
-toast-update-item-error = Не вдалося зберегти зміни. Ваші редагування були скасовані.
-toast-update-annotation-error = Не вдалося оновити анотацію. Ваші зміни були скасовані.
-toast-delete-annotation-error = Не вдалося видалити анотацію. Її було відновлено.
+toast-update-item-error = Не вдалося зберегти зміни
+    .subtitle = Ваші редагування були скасовані.
+toast-update-annotation-error = Не вдалося оновити анотацію
+    .subtitle = Ваші зміни були скасовані.
+toast-delete-annotation-error = Не вдалося видалити анотацію
+    .subtitle = Її було відновлено.
 
 # -----------------------------------
 #            Page Activity

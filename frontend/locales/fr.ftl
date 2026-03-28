@@ -427,9 +427,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Fermer
-toast-update-item-error = Impossible d'enregistrer les modifications. Vos changements ont été annulés.
-toast-update-annotation-error = Impossible de mettre à jour l'annotation. Vos modifications ont été annulées.
-toast-delete-annotation-error = Impossible de supprimer l'annotation. Elle a été restaurée.
+toast-update-item-error = Impossible d'enregistrer les modifications
+    .subtitle = Vos changements ont été annulés.
+toast-update-annotation-error = Impossible de mettre à jour l'annotation
+    .subtitle = Vos modifications ont été annulées.
+toast-delete-annotation-error = Impossible de supprimer l'annotation
+    .subtitle = Elle a été restaurée.
 
 # -----------------------------------
 #            Page Activity

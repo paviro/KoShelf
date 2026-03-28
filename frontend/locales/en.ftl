@@ -426,9 +426,12 @@ highlight-drawer =
 #         Toast notifications
 # -----------------------------------
 toast-dismiss-label = Dismiss
-toast-update-item-error = Failed to save changes. Your edits have been reverted.
-toast-update-annotation-error = Failed to update annotation. Your changes have been reverted.
-toast-delete-annotation-error = Failed to delete annotation. It has been restored.
+toast-update-item-error = Failed to save changes
+    .subtitle = Your edits have been reverted.
+toast-update-annotation-error = Failed to update annotation
+    .subtitle = Your changes have been reverted.
+toast-delete-annotation-error = Failed to delete annotation
+    .subtitle = It has been restored.
 
 # -----------------------------------
 #            Page Activity

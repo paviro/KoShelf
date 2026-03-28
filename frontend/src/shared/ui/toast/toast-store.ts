@@ -6,6 +6,7 @@ export type ToastEntry = {
     id: number;
     variant: ToastVariant;
     message: string;
+    subtitle?: string;
     durationMs: number;
 };
 
@@ -35,10 +36,19 @@ function getSnapshot(): ToastEntry[] {
 export function addToast(
     variant: ToastVariant,
     message: string,
-    durationMs = 4000,
+    options?: { subtitle?: string; durationMs?: number },
 ): number {
     const id = nextId++;
-    toasts = [...toasts, { id, variant, message, durationMs }];
+    toasts = [
+        ...toasts,
+        {
+            id,
+            variant,
+            message,
+            subtitle: options?.subtitle,
+            durationMs: options?.durationMs ?? 4000,
+        },
+    ];
     emit();
     return id;
 }

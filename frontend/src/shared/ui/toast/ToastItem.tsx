@@ -146,9 +146,16 @@ export function ToastItem({ toast }: { toast: ToastEntry }) {
                     >
                         <Icon className="w-4 h-4" aria-hidden />
                     </div>
-                    <p className="flex-1 text-sm font-medium text-gray-800 dark:text-dark-100 leading-snug pt-1">
-                        {toast.message}
-                    </p>
+                    <div className="flex-1 pt-1">
+                        <p className="text-sm font-medium text-gray-800 dark:text-dark-100 leading-snug">
+                            {toast.message}
+                        </p>
+                        {toast.subtitle && (
+                            <p className="text-sm font-medium text-gray-500 dark:text-dark-400 leading-snug mt-0.5">
+                                {toast.subtitle}
+                            </p>
+                        )}
+                    </div>
                     <Button
                         variant="ghost"
                         size="xs"
