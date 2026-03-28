@@ -54,6 +54,18 @@ For full password workflow details and examples, see [Authentication](authentica
 
 Print all supported UI locales and exit.
 
+### `koshelf licenses [dependency]`
+
+Print third-party dependency licenses. Without arguments, lists all dependencies grouped by SPDX license identifier. Pass a dependency name to view its full license text (supports exact and substring matching).
+
+```bash
+# List all dependencies and their licenses
+koshelf licenses
+
+# View the full license text for a specific dependency
+koshelf licenses serde
+```
+
 ### `koshelf github`
 
 Print the repository URL and exit.

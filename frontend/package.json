@@ -2,7 +2,7 @@
     "name": "koshelf-frontend",
     "description": "React + Vite frontend for KoShelf.",
     "repository": "https://github.com/paviro/KOShelf",
-    "license": "EUPL-1.2 license",
+    "license": "EUPL-1.2",
     "authors": [
         "Paul-Vincent Roll"
     ],
@@ -53,6 +53,7 @@
         "eslint-plugin-react-refresh": "^0.5.2",
         "globals": "^17.4.0",
         "jsdom": "^29.0.1",
+        "license-checker-rseidelsohn": "^4.4.2",
         "prettier": "^3.8.1",
         "tailwindcss": "^4.2.2",
         "typescript": "^5.9.3",

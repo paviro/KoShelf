@@ -53,6 +53,13 @@ pub enum CliCommand {
     /// List all supported UI languages and exit.
     ListLanguages,
 
+    /// Print third-party dependency licenses and exit.
+    /// Use 'licenses <dependency>' to view the full license text for a specific dependency.
+    Licenses {
+        /// Show the full license text for a specific dependency.
+        dependency: Option<String>,
+    },
+
     /// Print the GitHub repository URL and exit.
     Github,
 }
