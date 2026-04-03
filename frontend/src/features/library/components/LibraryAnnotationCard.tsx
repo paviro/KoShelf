@@ -330,35 +330,41 @@ export function LibraryAnnotationCard({
     const [editingNote, setEditingNote] = useState(false);
     const [draftNote, setDraftNote] = useState(annotation.note ?? '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const isEditingNote = editingNote && showEditingControls;
 
     const [suppressToolbarTransition, setSuppressToolbarTransition] =
         useState(false);
 
-    const [prevShowEditingControls, setPrevShowEditingControls] =
-        useState(showEditingControls);
-    const [prevEditingNote, setPrevEditingNote] = useState(false);
-    const [prevAnnotationNote, setPrevAnnotationNote] = useState(
-        annotation.note,
-    );
-    if (
-        showEditingControls !== prevShowEditingControls ||
-        editingNote !== prevEditingNote ||
-        annotation.note !== prevAnnotationNote
-    ) {
-        if (showEditingControls !== prevShowEditingControls)
-            setPrevShowEditingControls(showEditingControls);
-        if (editingNote !== prevEditingNote) setPrevEditingNote(editingNote);
-        if (annotation.note !== prevAnnotationNote)
-            setPrevAnnotationNote(annotation.note);
-        if (!showEditingControls && editingNote) {
-            setEditingNote(false);
-        } else if (editingNote) {
-            setDraftNote(annotation.note ?? '');
+    useEffect(() => {
+        if (!showEditingControls || !editingNote) {
+            return;
         }
-    }
+
+        const frameId = window.requestAnimationFrame(() => {
+            setEditingNote(false);
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [editingNote, showEditingControls]);
 
     useEffect(() => {
-        if (editingNote) {
+        if (!isEditingNote) {
+            return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+            setDraftNote(annotation.note ?? '');
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [annotation.note, isEditingNote]);
+
+    useEffect(() => {
+        if (isEditingNote) {
             requestAnimationFrame(() => {
                 if (textareaRef.current) {
                     const ta = textareaRef.current;
@@ -367,7 +373,7 @@ export function LibraryAnnotationCard({
                 }
             });
         }
-    }, [editingNote]);
+    }, [isEditingNote]);
 
     const dotClass = isHighlight ? colorDotClass(annotation.color) : '';
     const quoteBarClass = isHighlight
@@ -380,7 +386,7 @@ export function LibraryAnnotationCard({
     const hasWriteCapabilities =
         showEditingControls &&
         (onSaveNote || onColorChange || onDrawerChange || onDelete);
-    const showToolbar = hasWriteCapabilities && !editingNote;
+    const showToolbar = hasWriteCapabilities && !isEditingNote;
 
     const stopEditingNote = () => {
         setSuppressToolbarTransition(true);
@@ -413,7 +419,7 @@ export function LibraryAnnotationCard({
             />
 
             {/* Highlight body: quote + note */}
-            {isHighlight && (hasBody || editingNote) && (
+            {isHighlight && (hasBody || isEditingNote) && (
                 <div className="p-6">
                     {hasText && (
                         <div className="relative">
@@ -426,11 +432,11 @@ export function LibraryAnnotationCard({
                         </div>
                     )}
 
-                    {(hasNote || editingNote) && (
+                    {(hasNote || isEditingNote) && (
                         <NoteEditor
                             variant="highlight"
                             note={annotation.note}
-                            editingNote={editingNote}
+                            editingNote={isEditingNote}
                             draftNote={draftNote}
                             onDraftChange={setDraftNote}
                             textareaRef={textareaRef}
@@ -441,12 +447,12 @@ export function LibraryAnnotationCard({
             )}
 
             {/* Bookmark body: note only */}
-            {isBookmark && (hasNote || editingNote) && (
+            {isBookmark && (hasNote || isEditingNote) && (
                 <div className="px-5 pb-4">
                     <NoteEditor
                         variant="bookmark"
                         note={annotation.note}
-                        editingNote={editingNote}
+                        editingNote={isEditingNote}
                         draftNote={draftNote}
                         onDraftChange={setDraftNote}
                         textareaRef={textareaRef}
@@ -455,7 +461,7 @@ export function LibraryAnnotationCard({
                 </div>
             )}
 
-            {editingNote && (
+            {isEditingNote && (
                 <NoteEditingFooter
                     px={px}
                     hasNote={hasNote}
@@ -470,7 +476,7 @@ export function LibraryAnnotationCard({
 
             <AnimatedToolbar
                 visible={!!showToolbar}
-                editingNote={editingNote}
+                editingNote={isEditingNote}
                 suppressTransition={suppressToolbarTransition}
             >
                 {onDelete ? (
@@ -572,7 +578,13 @@ export function LibraryAnnotationCard({
                                     ? translation.get('edit-note')
                                     : translation.get('add-note')
                             }
-                            onClick={() => setEditingNote(!editingNote)}
+                            onClick={() => {
+                                if (!editingNote) {
+                                    setDraftNote(annotation.note ?? '');
+                                }
+
+                                setEditingNote(!editingNote);
+                            }}
                             className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
                         />
                     )}

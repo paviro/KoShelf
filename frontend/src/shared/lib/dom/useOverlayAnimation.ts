@@ -18,15 +18,29 @@ export function useOverlayAnimation(
     const [isVisible, setIsVisible] = useState(false);
     const backdropRef = useRef<HTMLDivElement | null>(null);
 
-    const [prevOpen, setPrevOpen] = useState(false);
-    if (open !== prevOpen) {
-        setPrevOpen(open);
+    useEffect(() => {
         if (open) {
-            setIsMounted(true);
-        } else if (isMounted) {
-            setIsVisible(false);
+            const frameId = window.requestAnimationFrame(() => {
+                setIsMounted(true);
+            });
+
+            return () => {
+                window.cancelAnimationFrame(frameId);
+            };
         }
-    }
+
+        if (!isMounted) {
+            return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+            setIsVisible(false);
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [isMounted, open]);
 
     useEffect(() => {
         if (!open && isMounted) {

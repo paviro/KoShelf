@@ -18,19 +18,21 @@ export function EditWarningModal({
 }: EditWarningModalProps) {
     const [dontShow, setDontShow] = useState(false);
 
-    // Reset checkbox when modal reopens so a previous Cancel doesn't persist it.
-    const [prevOpen, setPrevOpen] = useState(false);
-    if (open && !prevOpen) {
+    const handleCancel = () => {
         setDontShow(false);
-    }
-    if (open !== prevOpen) {
-        setPrevOpen(open);
-    }
+        onCancel();
+    };
+
+    const handleAcknowledge = () => {
+        const dontShowAgain = dontShow;
+        setDontShow(false);
+        onAcknowledge(dontShowAgain);
+    };
 
     return (
         <ModalShell
             open={open}
-            onClose={onCancel}
+            onClose={handleCancel}
             containerClassName="z-[60]"
             cardClassName="max-w-md bg-white/95 dark:bg-dark-900/90 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl"
             showCloseButton={false}
@@ -62,10 +64,10 @@ export function EditWarningModal({
                 </label>
 
                 <div className="flex justify-end gap-2">
-                    <Button color="secondary" onClick={onCancel}>
+                    <Button color="secondary" onClick={handleCancel}>
                         {translation.get('cancel')}
                     </Button>
-                    <Button onClick={() => onAcknowledge(dontShow)}>
+                    <Button onClick={handleAcknowledge}>
                         {translation.get('edit-warning.understood')}
                     </Button>
                 </div>

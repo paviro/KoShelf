@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     LuCalendarDays,
     LuChevronDown,
@@ -40,19 +40,25 @@ export function WeekSelector({
         );
     }, [selectedWeekKey, weeks]);
 
-    const [prevSelectedWeek, setPrevSelectedWeek] = useState(selectedWeek);
     const [selectedYear, setSelectedYear] = useState<string | null>(
         selectedWeek
             ? selectedWeek.start_date.substring(0, 4)
             : (yearOrder[0] ?? null),
     );
 
-    if (selectedWeek !== prevSelectedWeek) {
-        setPrevSelectedWeek(selectedWeek);
-        if (selectedWeek) {
-            setSelectedYear(selectedWeek.start_date.substring(0, 4));
+    useEffect(() => {
+        if (!selectedWeek) {
+            return;
         }
-    }
+
+        const frameId = window.requestAnimationFrame(() => {
+            setSelectedYear(selectedWeek.start_date.substring(0, 4));
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [selectedWeek]);
 
     const selectedText = selectedWeek
         ? DateFormatter.formatDateRange(

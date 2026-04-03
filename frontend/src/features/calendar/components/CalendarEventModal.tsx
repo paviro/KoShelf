@@ -27,26 +27,49 @@ type CalendarEventModalProps = {
     onClose: () => void;
 };
 
+function EventCoverImage({
+    coverUrl,
+    title,
+}: {
+    coverUrl: string | null;
+    title: string;
+}) {
+    const [coverFailed, setCoverFailed] = useState(false);
+
+    if (coverUrl && !coverFailed) {
+        return (
+            <img
+                src={coverUrl}
+                alt={title}
+                className="w-full h-auto"
+                onError={() => setCoverFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <div className="aspect-2/3 w-full flex items-center justify-center bg-linear-to-br from-primary-500/10 to-primary-600/10">
+            <HiOutlineBookOpen
+                className="w-12 h-12 text-gray-400 dark:text-dark-400"
+                aria-hidden="true"
+            />
+        </div>
+    );
+}
+
 export function CalendarEventModal({
     open,
     event,
     item,
     onClose,
 }: CalendarEventModalProps) {
-    const [coverFailed, setCoverFailed] = useState(false);
     const coverKey = `${event?.item_ref}\0${item?.item_cover}`;
-    const [prevCoverKey, setPrevCoverKey] = useState(coverKey);
     const location = useLocation();
     const navigate = useNavigate();
     const detailReturnState = createDetailReturnState(
         location.pathname,
         location.search,
     );
-
-    if (prevCoverKey !== coverKey) {
-        setPrevCoverKey(coverKey);
-        setCoverFailed(false);
-    }
 
     if (!event) {
         return null;
@@ -102,21 +125,11 @@ export function CalendarEventModal({
             <div className="p-4 space-y-4">
                 <div className="flex gap-4">
                     <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-xl overflow-hidden shadow-lg dark:shadow-none w-[160px] shrink-0 self-start">
-                        {coverUrl && !coverFailed ? (
-                            <img
-                                src={coverUrl}
-                                alt={title}
-                                className="w-full h-auto"
-                                onError={() => setCoverFailed(true)}
-                            />
-                        ) : (
-                            <div className="aspect-2/3 w-full flex items-center justify-center bg-linear-to-br from-primary-500/10 to-primary-600/10">
-                                <HiOutlineBookOpen
-                                    className="w-12 h-12 text-gray-400 dark:text-dark-400"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                        )}
+                        <EventCoverImage
+                            key={coverKey}
+                            coverUrl={coverUrl}
+                            title={title}
+                        />
                     </div>
 
                     <div className="flex flex-col justify-center gap-3 flex-1 min-w-0">

@@ -45,23 +45,20 @@ export function LibraryReviewSection({
 
     const hasNote = note.trim().length > 0;
 
-    // Sync drafts when entering edit mode or when source values change while editing.
-    const [prevEditing, setPrevEditing] = useState(editing);
-    const [prevNote, setPrevNote] = useState(note);
-    const [prevRating, setPrevRating] = useState(normalizedRating);
-    if (
-        editing !== prevEditing ||
-        note !== prevNote ||
-        normalizedRating !== prevRating
-    ) {
-        if (editing !== prevEditing) setPrevEditing(editing);
-        if (note !== prevNote) setPrevNote(note);
-        if (normalizedRating !== prevRating) setPrevRating(normalizedRating);
-        if (editing) {
+    useEffect(() => {
+        if (!editing) {
+            return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
             setDraftNote(note);
             setDraftRating(normalizedRating);
-        }
-    }
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [editing, note, normalizedRating]);
 
     useEffect(() => {
         if (editing && textareaRef.current) {
@@ -81,6 +78,15 @@ export function LibraryReviewSection({
     const handleDelete = () => {
         onDelete?.();
         closeEditing();
+    };
+
+    const handleToggleEditing = () => {
+        if (!editing) {
+            setDraftNote(note);
+            setDraftRating(normalizedRating);
+        }
+
+        toggleEditing();
     };
 
     const controls = (
@@ -105,7 +111,10 @@ export function LibraryReviewSection({
             )}
 
             {canWrite && visible && (
-                <EditSectionButton editing={editing} onToggle={toggleEditing} />
+                <EditSectionButton
+                    editing={editing}
+                    onToggle={handleToggleEditing}
+                />
             )}
         </div>
     );
