@@ -6,7 +6,7 @@ repository = "https://github.com/paviro/KOShelf"
 license = "EUPL-1.2"
 authors = ["Paul-Vincent Roll"]
 edition = "2024"
-build = "build.rs"
+build = "build/main.rs"
 
 [dependencies]
 # CLI
