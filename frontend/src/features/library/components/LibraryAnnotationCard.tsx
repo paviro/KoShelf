@@ -319,6 +319,7 @@ export function LibraryAnnotationCard({
     const hasText = annotation.text != null;
     const hasNote = annotation.note != null;
     const hasBody = hasText || hasNote;
+    const isInvertDrawer = annotation.drawer === 'invert';
 
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [activePicker, setActivePicker] = useState<'color' | 'drawer' | null>(
@@ -510,7 +511,10 @@ export function LibraryAnnotationCard({
                                 ref={colorButtonRef}
                                 variant="ghost"
                                 size="xs"
-                                active={activePicker === 'color'}
+                                active={
+                                    activePicker === 'color' && !isInvertDrawer
+                                }
+                                disabled={isInvertDrawer}
                                 aria-label={highlightColorLabel}
                                 title={highlightColorLabel}
                                 onClick={() =>
@@ -529,7 +533,7 @@ export function LibraryAnnotationCard({
                                     {highlightColorLabel}
                                 </span>
                             </Button>
-                            {activePicker === 'color' && (
+                            {activePicker === 'color' && !isInvertDrawer && (
                                 <HighlightColorPicker
                                     anchorRef={colorButtonRef}
                                     currentColor={annotation.color ?? 'yellow'}

@@ -18,7 +18,14 @@ function makeAnnotation(
     id: string,
     overrides?: Partial<LibraryAnnotation>,
 ): LibraryAnnotation {
-    return { id, text: `Text ${id}`, note: null, color: 'yellow', drawer: 'lighten', ...overrides };
+    return {
+        id,
+        text: `Text ${id}`,
+        note: null,
+        color: 'yellow',
+        drawer: 'lighten',
+        ...overrides,
+    };
 }
 
 function makeDetailData(
@@ -66,7 +73,9 @@ describe('applyAnnotationUpdate', () => {
 
     it('returns identical structure when annotationId matches nothing', () => {
         const data = makeDetailData();
-        const result = applyAnnotationUpdate(data, 'nonexistent', { note: 'x' });
+        const result = applyAnnotationUpdate(data, 'nonexistent', {
+            note: 'x',
+        });
 
         expect(result.highlights).toEqual(data.highlights);
         expect(result.bookmarks).toEqual(data.bookmarks);
