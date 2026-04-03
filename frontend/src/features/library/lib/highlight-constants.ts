@@ -1,7 +1,7 @@
 import {
+    LuContrast,
     LuHighlighter,
     LuStrikethrough,
-    LuType,
     LuUnderline,
 } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
@@ -93,7 +93,7 @@ export const DRAWER_TYPES = [
     {
         name: 'invert',
         labelKey: 'highlight-drawer.invert',
-        icon: LuType,
+        icon: LuContrast,
         sampleClass:
             'bg-gray-800 text-white dark:bg-white dark:text-gray-900 px-1 rounded-sm',
     },
