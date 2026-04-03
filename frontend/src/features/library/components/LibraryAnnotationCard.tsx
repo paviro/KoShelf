@@ -336,7 +336,7 @@ export function LibraryAnnotationCard({
         useState(false);
 
     useEffect(() => {
-        if (!showEditingControls || !editingNote) {
+        if (showEditingControls || !editingNote) {
             return;
         }
 
