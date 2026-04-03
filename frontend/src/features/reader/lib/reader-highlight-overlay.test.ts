@@ -8,6 +8,7 @@ function makeRenderers(): HighlightRenderers {
         highlight: vi.fn(),
         underline: vi.fn(),
         strikethrough: vi.fn(),
+        invert: vi.fn(),
     };
 }
 
@@ -87,6 +88,26 @@ describe('attachHighlightDrawListener', () => {
         );
 
         expect(draw).toHaveBeenCalledWith(renderers.strikethrough, {
+            color: '#eab308',
+        });
+
+        handle.detach();
+    });
+
+    it('selects invert renderer for invert drawer', () => {
+        const view = new EventTarget();
+        const renderers = makeRenderers();
+        const draw = vi.fn();
+
+        const handle = attachHighlightDrawListener(view, renderers);
+
+        view.dispatchEvent(
+            new CustomEvent('draw-annotation', {
+                detail: { draw, annotation: { drawer: 'invert' } },
+            }),
+        );
+
+        expect(draw).toHaveBeenCalledWith(renderers.invert, {
             color: '#eab308',
         });
 

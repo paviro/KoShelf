@@ -245,10 +245,21 @@ export function useReaderView(
                     import('@xincmm/foliate-js/view.js'),
                     import('@xincmm/foliate-js/overlayer.js'),
                 ]);
+                const invertRenderer = (
+                    rects: DOMRectList | ArrayLike<DOMRect>,
+                ) => {
+                    const element = Overlayer.highlight(rects, {
+                        color: '#ffffff',
+                    });
+                    element.style.opacity = '1';
+                    element.style.mixBlendMode = 'difference';
+                    return element;
+                };
                 const renderers = {
                     highlight: Overlayer.highlight,
                     underline: Overlayer.underline,
                     strikethrough: Overlayer.strikethrough,
+                    invert: invertRenderer,
                 };
 
                 if (cancelled) {

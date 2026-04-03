@@ -7,6 +7,7 @@ export type HighlightRenderers = {
     highlight: AnnotationRenderer;
     underline: AnnotationRenderer;
     strikethrough: AnnotationRenderer;
+    invert: AnnotationRenderer;
 };
 
 export type HighlightDrawListenerHandle = {
@@ -29,7 +30,7 @@ type DrawAnnotationDetail = {
 
 const DRAWER_TO_RENDERER: Record<string, keyof HighlightRenderers> = {
     lighten: 'highlight',
-    invert: 'highlight',
+    invert: 'invert',
     underscore: 'underline',
     strikeout: 'strikethrough',
 };
