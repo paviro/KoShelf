@@ -59,6 +59,12 @@ impl WriteCoordinator {
             .insert(path.to_path_buf(), Instant::now());
     }
 
+    /// Remove a path from the recent-writes map so the file watcher will
+    /// pick up the change and trigger re-ingestion.
+    pub fn unmark_written(&self, path: &Path) {
+        self.recent_writes.remove(path);
+    }
+
     /// Get a shared handle to the recent-writes map for the file watcher.
     pub fn recent_writes(&self) -> RecentWrites {
         self.recent_writes.clone()

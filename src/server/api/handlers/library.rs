@@ -231,40 +231,55 @@ impl WriteContext {
     /// publish an SSE notification.
     ///
     /// Must be called while the write lock is still held (i.e. before this
-    /// struct is dropped). Errors are logged but not propagated — the Lua
-    /// write already succeeded; the worst case is the next write gets a 409
-    /// that self-heals on re-ingestion.
-    async fn finish(&self, state: &ServerState) {
+    /// struct is dropped).
+    ///
+    /// When `db_ok` is false (the DB writeback failed), the file watcher is
+    /// left unsuppressed so it can detect the Lua change, re-ingest, and
+    /// publish its own SSE with correct data.
+    async fn finish(&self, state: &ServerState, db_ok: bool) {
+        if !db_ok {
+            // Let the file watcher detect the Lua change and re-ingest.
+            return;
+        }
+
         // Tell the file watcher to ignore the filesystem event we just caused.
         if let Some(ref coordinator) = state.write_coordinator {
             coordinator.mark_written(&self.metadata_path);
         }
-        match FileFingerprint::capture(&self.metadata_path) {
-            Ok(fp) => {
-                if let Err(e) = state
-                    .library_repo
-                    .update_metadata_fingerprint(
-                        &self.item_id,
-                        fp.size_bytes as i64,
-                        fp.modified_unix_ms as i64,
-                    )
-                    .await
-                {
+
+        let fp_ok = match FileFingerprint::capture(&self.metadata_path) {
+            Ok(fp) => state
+                .library_repo
+                .update_metadata_fingerprint(
+                    &self.item_id,
+                    fp.size_bytes as i64,
+                    fp.modified_unix_ms as i64,
+                )
+                .await
+                .map_err(|e| {
                     warn!(
                         "Failed to update fingerprint after write for {}: {}",
                         self.item_id, e
                     );
-                }
-            }
+                })
+                .is_ok(),
             Err(e) => {
                 warn!(
                     "Failed to capture fingerprint after write for {}: {}",
                     self.item_id, e
                 );
+                false
+            }
+        };
+
+        if fp_ok {
+            state.update_notifier.publish(Utc::now().to_rfc3339());
+        } else {
+            // Undo suppression so the file watcher can self-heal.
+            if let Some(ref coordinator) = state.write_coordinator {
+                coordinator.unmark_written(&self.metadata_path);
             }
         }
-
-        state.update_notifier.publish(Utc::now().to_rfc3339());
     }
 }
 
@@ -320,7 +335,7 @@ pub(crate) async fn update_item(
         ApiResponseError::internal_server_error()
     })?;
 
-    if let Err(e) = state
+    let db_ok = state
         .library_repo
         .update_item_writeback_fields(
             &id,
@@ -329,11 +344,10 @@ pub(crate) async fn update_item(
             status.as_deref(),
         )
         .await
-    {
-        warn!("Failed to update DB after item write {}: {}", id, e);
-    }
+        .map_err(|e| warn!("Failed to update DB after item write {}: {}", id, e))
+        .is_ok();
 
-    ctx.finish(&state).await;
+    ctx.finish(&state, db_ok).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -404,7 +418,7 @@ pub(crate) async fn update_annotation(
         ApiResponseError::internal_server_error()
     })?;
 
-    if let Err(e) = state
+    let db_ok = state
         .library_repo
         .update_annotation_writeback_fields(
             &annotation_id,
@@ -414,14 +428,15 @@ pub(crate) async fn update_annotation(
             datetime_updated.as_deref(),
         )
         .await
-    {
-        warn!(
-            "Failed to update DB after annotation write {}: {}",
-            annotation_id, e
-        );
-    }
+        .map_err(|e| {
+            warn!(
+                "Failed to update DB after annotation write {}: {}",
+                annotation_id, e
+            );
+        })
+        .is_ok();
 
-    ctx.finish(&state).await;
+    ctx.finish(&state, db_ok).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -465,14 +480,13 @@ pub(crate) async fn delete_annotation(
             ApiResponseError::internal_server_error()
         })?;
 
-    if let Err(e) = state
+    let db_ok = state
         .library_repo
         .decrement_annotation_count(&id, is_highlight)
         .await
-    {
-        warn!("Failed to decrement annotation count for {}: {}", id, e);
-    }
+        .map_err(|e| warn!("Failed to decrement annotation count for {}: {}", id, e))
+        .is_ok();
 
-    ctx.finish(&state).await;
+    ctx.finish(&state, db_ok).await;
     Ok(StatusCode::NO_CONTENT)
 }
