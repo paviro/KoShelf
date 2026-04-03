@@ -6,6 +6,7 @@
 //! KoReader's `dump.lua` output format.
 
 use anyhow::{Context, Result, anyhow};
+use log::warn;
 use mlua::{ChunkMode, Lua, LuaOptions, StdLib, Table, Value};
 use std::collections::HashSet;
 use std::fmt::Write as FmtWrite;
@@ -53,11 +54,20 @@ impl LuaWriter {
         // 1. Read
         let bytes = fs::read(metadata_path)
             .with_context(|| format!("Failed to read metadata file: {:?}", metadata_path))?;
-        let content = String::from_utf8_lossy(&bytes);
+        let content = match String::from_utf8(bytes) {
+            Ok(content) => content,
+            Err(error) => {
+                warn!(
+                    "Lua metadata file {:?} contains invalid UTF-8 ({}); replacing invalid bytes",
+                    metadata_path, error
+                );
+                String::from_utf8_lossy(error.as_bytes()).into_owned()
+            }
+        };
 
         let value: Value = self
             .lua
-            .load(&*content)
+            .load(&content)
             .set_mode(ChunkMode::Text)
             .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", metadata_path, e))?;

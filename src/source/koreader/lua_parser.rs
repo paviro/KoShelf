@@ -33,11 +33,20 @@ impl LuaParser {
 
         let bytes = fs::read(lua_path)
             .with_context(|| format!("Failed to read Lua file: {:?}", lua_path))?;
-        let content = String::from_utf8_lossy(&bytes);
+        let content = match String::from_utf8(bytes) {
+            Ok(content) => content,
+            Err(error) => {
+                warn!(
+                    "Lua metadata file {:?} contains invalid UTF-8 ({}); replacing invalid bytes",
+                    lua_path, error
+                );
+                String::from_utf8_lossy(error.as_bytes()).into_owned()
+            }
+        };
 
         let value: Value = self
             .lua
-            .load(&*content)
+            .load(&content)
             .set_mode(ChunkMode::Text)
             .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
