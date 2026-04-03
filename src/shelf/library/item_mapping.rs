@@ -77,7 +77,8 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
         partial_md5_checksum: item
             .koreader_metadata
             .as_ref()
-            .and_then(|m| m.partial_md5_checksum.clone()),
+            .and_then(|m| m.partial_md5_checksum.clone())
+            .or_else(|| Some(item.id.clone())),
         hidden_flow_pages: item
             .koreader_metadata
             .as_ref()
