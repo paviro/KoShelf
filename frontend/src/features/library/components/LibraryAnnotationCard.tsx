@@ -15,6 +15,7 @@ import {
     LuPencil,
     LuTrash2,
 } from 'react-icons/lu';
+import type { IconType } from 'react-icons';
 import { Link } from 'react-router';
 
 import { translation } from '../../../shared/i18n';
@@ -52,21 +53,41 @@ function CardHeader({
     pageno,
     formattedDate,
     readerHref,
+    drawerIcon,
+    drawerLabel,
 }: {
     variant: LibraryAnnotationCardVariant;
     chapter?: string | null;
     pageno?: number | null;
     formattedDate: string | null;
     readerHref?: string | null;
+    drawerIcon?: IconType | null;
+    drawerLabel?: string | null;
 }) {
     const isBookmark = variant === 'bookmark';
     const Tag = isBookmark ? 'div' : 'header';
 
     return (
         <Tag
-            className={`flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 ${isBookmark ? 'px-5' : 'px-6'} py-3${isBookmark ? '' : ' bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50'}`}
+            className={`flex items-center justify-between text-sm font-medium text-gray-500 dark:text-dark-400 ${isBookmark ? 'px-5' : 'px-3'} py-3${isBookmark ? '' : ' bg-gray-100/50 dark:bg-dark-850/50 border-b border-gray-200/50 dark:border-dark-700/50'}`}
         >
             <div className="flex items-center gap-3 min-w-0">
+                {drawerIcon &&
+                    (() => {
+                        const Icon = drawerIcon;
+                        return (
+                            <span
+                                className="hidden sm:inline-flex items-center justify-center px-2 py-1 rounded-md text-xs bg-gray-200/50 dark:bg-dark-700/50 text-gray-500 dark:text-dark-400"
+                                title={drawerLabel ?? undefined}
+                            >
+                                <Icon
+                                    className="w-3.5 h-3.5"
+                                    aria-hidden="true"
+                                />
+                            </span>
+                        );
+                    })()}
+
                 {chapter && (
                     <span className="inline-flex items-center min-w-0">
                         <LuFileText
@@ -424,6 +445,14 @@ export function LibraryAnnotationCard({
                 pageno={annotation.pageno}
                 formattedDate={formattedDate}
                 readerHref={readerHref}
+                drawerIcon={DrawerIcon}
+                drawerLabel={
+                    isHighlight
+                        ? translation.get(
+                              `highlight-drawer.${annotation.drawer ?? 'lighten'}`,
+                          )
+                        : null
+                }
             />
 
             {/* Highlight body: quote + note */}
