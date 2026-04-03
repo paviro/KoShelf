@@ -16,15 +16,15 @@ use serde::Serialize;
 use crate::pipeline::media;
 use crate::server::api::responses::common::ContentTypeFilter;
 use crate::server::api::responses::library::LibraryContentType;
-use crate::server::api::responses::reading::ReadingAvailablePeriodsData;
+use crate::server::api::responses::reading::{ReadingAvailablePeriodsData, ReadingMetricsData};
 use crate::server::api::responses::site::SiteCapabilities;
 use crate::shelf::library::queries::IncludeSet;
 use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
 use crate::shelf::statistics;
 use crate::shelf::statistics::queries::{
-    CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, MetricsGroupBy, PeriodGroupBy,
-    PeriodSource, ReadingAvailablePeriodsQuery, ReadingCalendarQuery, ReadingCompletionsQuery,
-    ReadingMetric, ReadingMetricsQuery, ReadingSummaryQuery,
+    CompletionsGroupBy, CompletionsIncludeSet, CompletionsSelector, DateRange, MetricsGroupBy,
+    PeriodGroupBy, PeriodSource, ReadingAvailablePeriodsQuery, ReadingCalendarQuery,
+    ReadingCompletionsQuery, ReadingMetric, ReadingMetricsQuery, ReadingSummaryQuery,
 };
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
@@ -61,24 +61,6 @@ struct ExportPeriodsReadingData {
 struct ExportPeriodsCompletions {
     month: ReadingAvailablePeriodsData,
     year: ReadingAvailablePeriodsData,
-}
-
-/// `data/reading/metrics/{YYYY-MM}/{scope}.json`
-#[derive(Serialize)]
-struct ExportMonthMetrics {
-    month: String,
-    days: BTreeMap<String, ExportDayMetrics>,
-}
-
-#[derive(Default, Serialize)]
-struct ExportDayMetrics {
-    reading_time_sec: i64,
-    pages_read: i64,
-    sessions: i64,
-    completions: i64,
-    active_days: i64,
-    longest_session_duration_sec: i64,
-    average_session_duration_sec: i64,
 }
 
 const SCOPES: [ContentTypeFilter; 3] = [
@@ -295,7 +277,19 @@ async fn export_page_activity(
 
 fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
     let summary_dir = data_dir.join("reading").join("summary");
+
+    let period_query = |scope, group_by| ReadingAvailablePeriodsQuery {
+        scope,
+        source: PeriodSource::ReadingData,
+        group_by,
+        range: None,
+        tz: None,
+    };
+
     for scope in SCOPES {
+        let scope_name = scope.as_str();
+
+        // Full-range summary (unchanged).
         let data = statistics::summary(
             reading_data,
             ReadingSummaryQuery {
@@ -304,8 +298,55 @@ fn export_reading_summary(data_dir: &Path, reading_data: &ReadingData) -> Result
                 tz: None,
             },
         );
-        write_json(&summary_dir.join(format!("{}.json", scope.as_str())), &data)?;
+        write_json(&summary_dir.join(format!("{scope_name}.json")), &data)?;
+
+        // Per-week summaries.
+        let week_periods =
+            statistics::available_periods(reading_data, period_query(scope, PeriodGroupBy::Week));
+        for period in &week_periods.periods {
+            let range = DateRange::from_str(&period.start_date, &period.end_date)
+                .expect("valid period dates");
+            let data = statistics::summary(
+                reading_data,
+                ReadingSummaryQuery {
+                    scope,
+                    range: Some(range),
+                    tz: None,
+                },
+            );
+            write_json(
+                &summary_dir
+                    .join("week")
+                    .join(&period.key)
+                    .join(format!("{scope_name}.json")),
+                &data,
+            )?;
+        }
+
+        // Per-year summaries.
+        let year_periods =
+            statistics::available_periods(reading_data, period_query(scope, PeriodGroupBy::Year));
+        for period in &year_periods.periods {
+            let range = DateRange::from_str(&period.start_date, &period.end_date)
+                .expect("valid period dates");
+            let data = statistics::summary(
+                reading_data,
+                ReadingSummaryQuery {
+                    scope,
+                    range: Some(range),
+                    tz: None,
+                },
+            );
+            write_json(
+                &summary_dir
+                    .join("year")
+                    .join(&period.key)
+                    .join(format!("{scope_name}.json")),
+                &data,
+            )?;
+        }
     }
+
     Ok(())
 }
 
@@ -356,24 +397,8 @@ fn export_reading_periods(data_dir: &Path, reading_data: &ReadingData) -> Result
 // ── Reading metrics export ──────────────────────────────────────────────
 
 fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result<()> {
-    // Determine which months have reading data.
-    let month_periods = statistics::available_periods(
-        reading_data,
-        ReadingAvailablePeriodsQuery {
-            scope: ContentTypeFilter::All,
-            source: PeriodSource::ReadingData,
-            group_by: PeriodGroupBy::Month,
-            range: None,
-            tz: None,
-        },
-    );
-
-    if month_periods.periods.is_empty() {
-        return Ok(());
-    }
-
     let metrics_dir = data_dir.join("reading").join("metrics");
-    let metrics = [
+    let all_metrics = vec![
         ReadingMetric::ReadingTimeSec,
         ReadingMetric::PagesRead,
         ReadingMetric::Sessions,
@@ -383,66 +408,107 @@ fn export_reading_metrics(data_dir: &Path, reading_data: &ReadingData) -> Result
         ReadingMetric::AverageSessionDurationSec,
     ];
 
-    // For each scope, get all daily points for all metrics and partition into months.
-    let mut exported_month_dirs = HashSet::new();
+    // Determine active years from year-level periods.
+    let year_periods = statistics::available_periods(
+        reading_data,
+        ReadingAvailablePeriodsQuery {
+            scope: ContentTypeFilter::All,
+            source: PeriodSource::ReadingData,
+            group_by: PeriodGroupBy::Year,
+            range: None,
+            tz: None,
+        },
+    );
 
-    for scope in SCOPES {
-        let mut months: BTreeMap<String, BTreeMap<String, ExportDayMetrics>> = BTreeMap::new();
-
-        for &metric in &metrics {
-            let result = statistics::metrics(
-                reading_data,
-                ReadingMetricsQuery {
-                    scope,
-                    metrics: vec![metric],
-                    group_by: MetricsGroupBy::Day,
-                    range: None,
-                    tz: None,
-                },
-            );
-
-            let metric_name = metric.as_str();
-
-            for point in &result.points {
-                let month_key = point.key[..7].to_string();
-                let day_map = months.entry(month_key).or_default();
-                let day_metrics = day_map.entry(point.key.clone()).or_default();
-
-                let value = point.values.get(metric_name).copied().unwrap_or(0);
-                match metric {
-                    ReadingMetric::ReadingTimeSec => day_metrics.reading_time_sec = value,
-                    ReadingMetric::PagesRead => day_metrics.pages_read = value,
-                    ReadingMetric::Sessions => day_metrics.sessions = value,
-                    ReadingMetric::Completions => day_metrics.completions = value,
-                    ReadingMetric::ActiveDays => day_metrics.active_days = value,
-                    ReadingMetric::LongestSessionDurationSec => {
-                        day_metrics.longest_session_duration_sec = value;
-                    }
-                    ReadingMetric::AverageSessionDurationSec => {
-                        day_metrics.average_session_duration_sec = value;
-                    }
-                }
-            }
-        }
-
-        let scope_name = scope.as_str();
-
-        for (month_key, days) in months {
-            let file = ExportMonthMetrics {
-                month: month_key.clone(),
-                days,
-            };
-            let month_dir = metrics_dir.join(&month_key);
-            write_json(&month_dir.join(format!("{scope_name}.json")), &file)?;
-            exported_month_dirs.insert(month_key);
-        }
+    if year_periods.periods.is_empty() {
+        return Ok(());
     }
 
-    cleanup_stale_dirs(&metrics_dir, &exported_month_dirs)?;
+    let mut exported_group_dirs = HashSet::new();
+
+    for scope in SCOPES {
+        let scope_name = scope.as_str();
+        let query = |group_by, range| ReadingMetricsQuery {
+            scope,
+            metrics: all_metrics.clone(),
+            group_by,
+            range,
+            tz: None,
+        };
+
+        // Day-level: get all daily points, partition by month.
+        let day_result = statistics::metrics(reading_data, query(MetricsGroupBy::Day, None));
+        let mut month_partitions: BTreeMap<&str, Vec<_>> = BTreeMap::new();
+        for point in &day_result.points {
+            month_partitions
+                .entry(&point.key[..7])
+                .or_default()
+                .push(point);
+        }
+        for (month_key, points) in &month_partitions {
+            let partition = ReadingMetricsData {
+                metrics: day_result.metrics.clone(),
+                group_by: day_result.group_by.clone(),
+                scope: day_result.scope.clone(),
+                points: points.iter().map(|p| (*p).clone()).collect(),
+            };
+            write_json(
+                &metrics_dir
+                    .join("day")
+                    .join(month_key)
+                    .join(format!("{scope_name}.json")),
+                &partition,
+            )?;
+        }
+
+        // Week and month level: one file per year.
+        for period in &year_periods.periods {
+            let range = DateRange::from_str(&period.start_date, &period.end_date)
+                .expect("valid period dates");
+
+            let week_result = statistics::metrics(
+                reading_data,
+                query(MetricsGroupBy::Week, Some(range.clone())),
+            );
+            write_json(
+                &metrics_dir
+                    .join("week")
+                    .join(&period.key)
+                    .join(format!("{scope_name}.json")),
+                &week_result,
+            )?;
+
+            let month_result =
+                statistics::metrics(reading_data, query(MetricsGroupBy::Month, Some(range)));
+            write_json(
+                &metrics_dir
+                    .join("month")
+                    .join(&period.key)
+                    .join(format!("{scope_name}.json")),
+                &month_result,
+            )?;
+        }
+
+        // Year-level and total: single file per scope.
+        let year_result = statistics::metrics(reading_data, query(MetricsGroupBy::Year, None));
+        write_json(
+            &metrics_dir.join("year").join(format!("{scope_name}.json")),
+            &year_result,
+        )?;
+
+        let total_result = statistics::metrics(reading_data, query(MetricsGroupBy::Total, None));
+        write_json(
+            &metrics_dir.join("total").join(format!("{scope_name}.json")),
+            &total_result,
+        )?;
+    }
+
+    exported_group_dirs.extend(["day", "week", "month", "year", "total"].map(String::from));
+    cleanup_stale_dirs(&metrics_dir, &exported_group_dirs)?;
 
     info!(
-        "Exported reading metrics for {} months",
-        exported_month_dirs.len()
+        "Exported reading metrics for {} years",
+        year_periods.periods.len()
     );
 
     Ok(())

@@ -371,21 +371,6 @@ export interface ExportReadingPeriods {
     };
 }
 
-export interface ExportDayMetrics {
-    reading_time_sec: number;
-    pages_read: number;
-    sessions: number;
-    completions: number;
-    active_days: number;
-    longest_session_duration_sec: number;
-    average_session_duration_sec: number;
-}
-
-export interface ExportMonthMetrics {
-    month: string;
-    days: Record<string, ExportDayMetrics>;
-}
-
 export interface ExportPageActivityData extends PageActivityData {
     by_completion: Record<string, PageActivityPage[]>;
 }

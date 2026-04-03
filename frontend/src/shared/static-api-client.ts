@@ -9,14 +9,13 @@ import { normalizeScope } from './api-client';
 import { fetchJson } from './api-fetch';
 import type {
     PageActivityData,
-    ExportDayMetrics,
-    ExportMonthMetrics,
     ExportPageActivityData,
     ExportReadingPeriods,
     ExportSite,
     LibraryDetailData,
     LibraryListData,
     LibraryListItem,
+    MetricPoint,
     ReadingAvailablePeriodsData,
     ReadingCalendarData,
     ReadingCompletionsData,
@@ -34,14 +33,32 @@ function writeUnavailableError(): Error {
     return new Error('Write operations are unavailable in static mode.');
 }
 
-// ── Date helpers ────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────
 
-function mondayOfWeek(dateStr: string): string {
-    const date = new Date(dateStr + 'T12:00:00');
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    date.setDate(date.getDate() + diff);
-    return date.toISOString().substring(0, 10);
+function filterPointsByRange(
+    points: MetricPoint[],
+    from?: string,
+    to?: string,
+): MetricPoint[] {
+    if (!from && !to) return points;
+    return points.filter(
+        (p) => (!from || p.key >= from) && (!to || p.key <= to),
+    );
+}
+
+function monthKeysForRange(from?: string, to?: string): string[] {
+    if (!from || !to) return [];
+    const keys: string[] = [];
+    let current = from.substring(0, 7);
+    const end = to.substring(0, 7);
+    while (current <= end) {
+        keys.push(current);
+        const [y, m] = current.split('-').map(Number);
+        const next =
+            m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+        current = next;
+    }
+    return keys;
 }
 
 // ── StaticApiClient ─────────────────────────────────────────────────────
@@ -120,14 +137,28 @@ export class StaticApiClient implements ApiClient {
     ): Promise<ReadingSummaryData> {
         const selectedScope = normalizeScope(scope);
 
-        // Full-range: return the pre-computed summary.
-        if (!from && !to) {
+        if (!from || !to) {
             return this.fetchCached<ReadingSummaryData>(
                 `/data/reading/summary/${selectedScope}.json`,
             );
         }
 
-        return this.computeRangedSummary(selectedScope, from, to);
+        // Year-aligned range: YYYY-01-01 to YYYY-12-31
+        if (
+            from.endsWith('-01-01') &&
+            to.endsWith('-12-31') &&
+            from.substring(0, 4) === to.substring(0, 4)
+        ) {
+            const year = from.substring(0, 4);
+            return this.fetchCached<ReadingSummaryData>(
+                `/data/reading/summary/year/${year}/${selectedScope}.json`,
+            );
+        }
+
+        // Week-aligned range: key is the Monday date (from).
+        return this.fetchCached<ReadingSummaryData>(
+            `/data/reading/summary/week/${from}/${selectedScope}.json`,
+        );
     }
 
     async getReadingMetrics(
@@ -138,7 +169,56 @@ export class StaticApiClient implements ApiClient {
         to?: string,
     ): Promise<ReadingMetricsData> {
         const selectedScope = normalizeScope(scope);
-        return this.assembleMetrics(selectedScope, metric, groupBy, from, to);
+        const metrics = metric
+            .split(',')
+            .map((m) => m.trim())
+            .filter(Boolean);
+
+        if (groupBy === 'total') {
+            const data = await this.fetchCached<ReadingMetricsData>(
+                `/data/reading/metrics/total/${selectedScope}.json`,
+            );
+            return { ...data, metrics };
+        }
+
+        if (groupBy === 'year') {
+            const data = await this.fetchCached<ReadingMetricsData>(
+                `/data/reading/metrics/year/${selectedScope}.json`,
+            );
+            return {
+                ...data,
+                metrics,
+                points: filterPointsByRange(data.points, from, to),
+            };
+        }
+
+        if ((groupBy === 'month' || groupBy === 'week') && from) {
+            const year = from.substring(0, 4);
+            const data = await this.fetchCached<ReadingMetricsData>(
+                `/data/reading/metrics/${groupBy}/${year}/${selectedScope}.json`,
+            );
+            return { ...data, metrics };
+        }
+
+        // Day-level: load relevant month files and concatenate.
+        const months = monthKeysForRange(from, to);
+        const allPoints: MetricPoint[] = [];
+        for (const mk of months) {
+            try {
+                const data = await this.fetchCached<ReadingMetricsData>(
+                    `/data/reading/metrics/day/${mk}/${selectedScope}.json`,
+                );
+                allPoints.push(...data.points);
+            } catch {
+                continue;
+            }
+        }
+        return {
+            metrics,
+            group_by: groupBy,
+            scope: selectedScope,
+            points: filterPointsByRange(allPoints, from, to),
+        };
     }
 
     async getAvailablePeriods(
@@ -243,188 +323,5 @@ export class StaticApiClient implements ApiClient {
 
     clearCache(): void {
         this.cache.clear();
-    }
-
-    // ── Ranged summary computation ─────────────────────────────────────
-
-    private async computeRangedSummary(
-        scope: ScopeValue,
-        from?: string,
-        to?: string,
-    ): Promise<ReadingSummaryData> {
-        const periods = await this.fetchCached<ExportReadingPeriods>(
-            `/data/reading/periods/${scope}.json`,
-        );
-        const relevantMonths = periods.reading_data.month.periods
-            .map((p) => p.key)
-            .filter((mk) => {
-                if (from && mk < from.substring(0, 7)) return false;
-                if (to && mk > to.substring(0, 7)) return false;
-                return true;
-            });
-
-        let totalTime = 0;
-        let totalPages = 0;
-        let totalSessions = 0;
-        let totalCompletions = 0;
-        let maxTimeInDay = 0;
-        let maxPagesInDay = 0;
-        let longestSession = 0;
-
-        for (const mk of relevantMonths) {
-            let monthData: ExportMonthMetrics;
-            try {
-                monthData = await this.fetchCached<ExportMonthMetrics>(
-                    `/data/reading/metrics/${mk}/${scope}.json`,
-                );
-            } catch {
-                continue;
-            }
-
-            for (const [dayKey, d] of Object.entries(monthData.days)) {
-                if (from && dayKey < from) continue;
-                if (to && dayKey > to) continue;
-
-                totalTime += d.reading_time_sec;
-                totalPages += d.pages_read;
-                totalSessions += d.sessions;
-                totalCompletions += d.completions;
-                if (d.reading_time_sec > maxTimeInDay)
-                    maxTimeInDay = d.reading_time_sec;
-                if (d.pages_read > maxPagesInDay) maxPagesInDay = d.pages_read;
-                if (d.longest_session_duration_sec > longestSession)
-                    longestSession = d.longest_session_duration_sec;
-            }
-        }
-
-        // Grab heatmap_config from the full-range summary (global, not range-dependent).
-        const fullSummary = await this.fetchCached<ReadingSummaryData>(
-            `/data/reading/summary/${scope}.json`,
-        );
-
-        return {
-            range: {
-                from: from ?? '',
-                to: to ?? '',
-                tz: 'UTC',
-            },
-            overview: {
-                reading_time_sec: totalTime,
-                pages_read: totalPages,
-                sessions: totalSessions,
-                completions: totalCompletions,
-                items_completed: 0,
-                longest_reading_time_in_day_sec: maxTimeInDay,
-                most_pages_in_day: maxPagesInDay,
-                longest_session_duration_sec: longestSession || null,
-                average_session_duration_sec:
-                    totalSessions > 0
-                        ? Math.round(totalTime / totalSessions)
-                        : null,
-            },
-            streaks: {
-                current: { days: 0 },
-                longest: { days: 0 },
-            },
-            heatmap_config: fullSummary.heatmap_config,
-        };
-    }
-
-    // ── Static metrics assembly ─────────────────────────────────────────
-
-    private async assembleMetrics(
-        scope: ScopeValue,
-        metric: string,
-        groupBy: string,
-        from?: string,
-        to?: string,
-    ): Promise<ReadingMetricsData> {
-        // Parse comma-separated metrics.
-        const metricNames = metric
-            .split(',')
-            .map((m) => m.trim())
-            .filter(Boolean);
-
-        // Determine which month files to load from the periods index.
-        const periods = await this.fetchCached<ExportReadingPeriods>(
-            `/data/reading/periods/${scope}.json`,
-        );
-        const monthKeys = periods.reading_data.month.periods.map((p) => p.key);
-
-        // Filter to months that overlap with the requested date range.
-        const relevantMonths = monthKeys.filter((mk) => {
-            if (from && mk < from.substring(0, 7)) return false;
-            if (to && mk > to.substring(0, 7)) return false;
-            return true;
-        });
-
-        // Load month files and extract metric data.
-        const allPoints: Array<{
-            key: string;
-            values: Record<string, number>;
-        }> = [];
-
-        for (const mk of relevantMonths) {
-            let monthData: ExportMonthMetrics;
-            try {
-                monthData = await this.fetchCached<ExportMonthMetrics>(
-                    `/data/reading/metrics/${mk}/${scope}.json`,
-                );
-            } catch {
-                continue;
-            }
-
-            for (const [dayKey, dayMetrics] of Object.entries(monthData.days)) {
-                if (from && dayKey < from) continue;
-                if (to && dayKey > to) continue;
-
-                const values: Record<string, number> = {};
-                for (const m of metricNames) {
-                    values[m] =
-                        (dayMetrics[m as keyof ExportDayMetrics] as number) ??
-                        0;
-                }
-                allPoints.push({ key: dayKey, values });
-            }
-        }
-
-        // Return day-level points directly.
-        if (groupBy === 'day') {
-            return {
-                metrics: metricNames,
-                group_by: groupBy,
-                scope,
-                points: allPoints.map((p) => ({ key: p.key, ...p.values })),
-            };
-        }
-
-        // Aggregate into buckets (total, week, month, or year).
-        const grouped = new Map<string, Record<string, number>>();
-        for (const point of allPoints) {
-            let groupKey: string;
-            if (groupBy === 'total') {
-                groupKey = 'total';
-            } else if (groupBy === 'month') {
-                groupKey = point.key.substring(0, 7);
-            } else if (groupBy === 'year') {
-                groupKey = point.key.substring(0, 4);
-            } else {
-                groupKey = mondayOfWeek(point.key);
-            }
-            const existing = grouped.get(groupKey);
-            if (existing) {
-                for (const m of metricNames) {
-                    existing[m] = (existing[m] ?? 0) + (point.values[m] ?? 0);
-                }
-            } else {
-                grouped.set(groupKey, { ...point.values });
-            }
-        }
-
-        const points = Array.from(grouped.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, values]) => ({ key, ...values }));
-
-        return { metrics: metricNames, group_by: groupBy, scope, points };
     }
 }
