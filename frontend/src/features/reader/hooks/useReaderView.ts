@@ -248,6 +248,7 @@ export function useReaderView(
                 const renderers = {
                     highlight: Overlayer.highlight,
                     underline: Overlayer.underline,
+                    strikethrough: Overlayer.strikethrough,
                 };
 
                 if (cancelled) {

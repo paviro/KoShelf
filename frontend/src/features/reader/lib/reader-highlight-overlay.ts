@@ -6,6 +6,7 @@ type AnnotationRenderer = (
 export type HighlightRenderers = {
     highlight: AnnotationRenderer;
     underline: AnnotationRenderer;
+    strikethrough: AnnotationRenderer;
 };
 
 export type HighlightDrawListenerHandle = {
@@ -30,7 +31,7 @@ const DRAWER_TO_RENDERER: Record<string, keyof HighlightRenderers> = {
     lighten: 'highlight',
     invert: 'highlight',
     underscore: 'underline',
-    strikeout: 'underline',
+    strikeout: 'strikethrough',
 };
 
 function withPulse(renderer: AnnotationRenderer): AnnotationRenderer {

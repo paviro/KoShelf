@@ -69,6 +69,7 @@ declare module '@xincmm/foliate-js' {
         hitTest(event: Event): [string | null, Range | null];
         static highlight: OverlayerDrawFunction;
         static underline: OverlayerDrawFunction;
+        static strikethrough: OverlayerDrawFunction;
         static outline: OverlayerDrawFunction;
     }
 }

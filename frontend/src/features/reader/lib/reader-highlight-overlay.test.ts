@@ -7,6 +7,7 @@ function makeRenderers(): HighlightRenderers {
     return {
         highlight: vi.fn(),
         underline: vi.fn(),
+        strikethrough: vi.fn(),
     };
 }
 
@@ -72,7 +73,7 @@ describe('attachHighlightDrawListener', () => {
         handle.detach();
     });
 
-    it('selects underline renderer for strikeout drawer', () => {
+    it('selects strikethrough renderer for strikeout drawer', () => {
         const view = new EventTarget();
         const renderers = makeRenderers();
         const draw = vi.fn();
@@ -85,7 +86,7 @@ describe('attachHighlightDrawListener', () => {
             }),
         );
 
-        expect(draw).toHaveBeenCalledWith(renderers.underline, {
+        expect(draw).toHaveBeenCalledWith(renderers.strikethrough, {
             color: '#eab308',
         });
 
