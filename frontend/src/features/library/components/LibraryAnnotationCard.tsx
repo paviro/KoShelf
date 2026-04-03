@@ -384,7 +384,7 @@ export function LibraryAnnotationCard({
         ? (DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten)
         : null;
     const toolbarButtonClass =
-        'min-h-8 min-w-8 hover:text-primary-600 dark:hover:text-primary-400';
+        'min-h-8 min-w-8 not-disabled:hover:text-primary-600 dark:not-disabled:hover:text-primary-400';
     const highlightColorLabel = translation.get('highlight-color.aria-label');
     const highlightDrawerLabel = translation.get('highlight-drawer.aria-label');
 
