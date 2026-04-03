@@ -1,4 +1,5 @@
+mod bootstrap;
+mod commands;
 pub mod config;
-mod run;
 
-pub use run::dispatch;
+pub use commands::dispatch;
