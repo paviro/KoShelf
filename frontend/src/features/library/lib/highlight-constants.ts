@@ -103,6 +103,12 @@ export const DRAWER_ICONS: Record<string, IconType> = Object.fromEntries(
     DRAWER_TYPES.map((d) => [d.name, d.icon]),
 ) as Record<string, IconType>;
 
+// Rainbow gradient used for unrecognized (custom-patched) KOReader colors.
+const UNKNOWN_DOT_CLASS =
+    'bg-linear-to-br from-red-400 via-green-400 to-violet-400';
+const UNKNOWN_QUOTE_BAR_GRADIENT =
+    'from-red-400 via-green-400 to-violet-400';
+
 // Lookup helpers derived from the arrays above.
 const COLOR_DOT_MAP = Object.fromEntries(
     HIGHLIGHT_COLORS.map((c) => [c.name, c.dotClass]),
@@ -113,17 +119,13 @@ const COLOR_QUOTE_BAR_MAP = Object.fromEntries(
 ) as Record<string, string>;
 
 export function colorDotClass(color: string | null | undefined): string {
-    return (
-        COLOR_DOT_MAP[color ?? DEFAULT_HIGHLIGHT_COLOR] ??
-        COLOR_DOT_MAP[DEFAULT_HIGHLIGHT_COLOR]
-    );
+    if (!color) return COLOR_DOT_MAP[DEFAULT_HIGHLIGHT_COLOR];
+    return COLOR_DOT_MAP[color] ?? UNKNOWN_DOT_CLASS;
 }
 
 export function colorQuoteBarGradient(
     color: string | null | undefined,
 ): string {
-    return (
-        COLOR_QUOTE_BAR_MAP[color ?? DEFAULT_HIGHLIGHT_COLOR] ??
-        COLOR_QUOTE_BAR_MAP[DEFAULT_HIGHLIGHT_COLOR]
-    );
+    if (!color) return COLOR_QUOTE_BAR_MAP[DEFAULT_HIGHLIGHT_COLOR];
+    return COLOR_QUOTE_BAR_MAP[color] ?? UNKNOWN_QUOTE_BAR_GRADIENT;
 }
