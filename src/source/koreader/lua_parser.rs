@@ -31,12 +31,13 @@ impl LuaParser {
     pub fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
         debug!("Parsing Lua metadata: {:?}", lua_path);
 
-        let content = fs::read_to_string(lua_path)
+        let bytes = fs::read(lua_path)
             .with_context(|| format!("Failed to read Lua file: {:?}", lua_path))?;
+        let content = String::from_utf8_lossy(&bytes);
 
         let value: Value = self
             .lua
-            .load(&content)
+            .load(&*content)
             .set_mode(ChunkMode::Text)
             .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
@@ -500,6 +501,39 @@ mod tests {
         assert_eq!(metadata.handmade_flow_points.len(), 3);
         // 50 hidden (100..150) + 101 hidden (700..800 inclusive) = 151
         assert_eq!(metadata.hidden_flow_pages(), Some(151));
+    }
+
+    #[test]
+    fn parses_file_with_invalid_utf8() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let lua_path = temp_dir.path().join("metadata.epub.lua");
+
+        // Simulate a truncated UTF-8 sequence: "Fran\xc3..." where \xc3 is the
+        // start of "ç" (U+00E7, encoded as \xc3\xa7) but the continuation byte
+        // is missing — KoReader can truncate highlight text mid-character.
+        let mut content: Vec<u8> = Vec::new();
+        content.extend_from_slice(b"return {\n");
+        content.extend_from_slice(b"    [\"annotations\"] = {\n");
+        content.extend_from_slice(b"        [1] = {\n");
+        content.extend_from_slice(b"            [\"text\"] = \"Fran");
+        content.push(0xc3); // leading byte of ç without continuation
+        content.extend_from_slice(b"...\",\n");
+        content.extend_from_slice(b"        },\n");
+        content.extend_from_slice(b"    },\n");
+        content.extend_from_slice(b"}");
+
+        fs::write(&lua_path, &content).expect("lua fixture should be written");
+
+        let parser = LuaParser::new();
+        let metadata = parser
+            .parse(&lua_path)
+            .expect("should parse despite invalid UTF-8");
+
+        assert_eq!(metadata.annotations.len(), 1);
+        // The replacement character replaces the broken byte
+        let text = metadata.annotations[0].text.as_deref().unwrap();
+        assert!(text.starts_with("Fran"));
+        assert!(text.ends_with("..."));
     }
 
     #[test]

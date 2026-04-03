@@ -51,12 +51,13 @@ impl LuaWriter {
         mutate: impl FnOnce(&Lua, &Table) -> mlua::Result<()>,
     ) -> Result<()> {
         // 1. Read
-        let content = fs::read_to_string(metadata_path)
+        let bytes = fs::read(metadata_path)
             .with_context(|| format!("Failed to read metadata file: {:?}", metadata_path))?;
+        let content = String::from_utf8_lossy(&bytes);
 
         let value: Value = self
             .lua
-            .load(&content)
+            .load(&*content)
             .set_mode(ChunkMode::Text)
             .eval()
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", metadata_path, e))?;
