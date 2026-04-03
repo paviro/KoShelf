@@ -115,7 +115,7 @@ function CardHeader({
                         to={readerHref}
                         title={translation.get('open-at-annotation')}
                         aria-label={translation.get('open-at-annotation')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-primary-600 dark:text-primary-300 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/20 hover:border-primary-500/30 transition-colors"
+                        className="inline-flex items-center justify-center gap-1.5 w-8 h-8 sm:w-auto sm:h-auto px-0 sm:px-2.5 py-1 rounded-md text-xs font-medium text-primary-600 dark:text-primary-300 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/20 hover:border-primary-500/30 transition-colors"
                     >
                         <LuBookOpen
                             className="w-3.5 h-3.5"
@@ -383,7 +383,7 @@ export function LibraryAnnotationCard({
         ? (DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten)
         : null;
     const toolbarButtonClass =
-        'hover:text-primary-600 dark:hover:text-primary-400';
+        'min-h-8 min-w-8 hover:text-primary-600 dark:hover:text-primary-400';
     const highlightColorLabel = translation.get('highlight-color.aria-label');
     const highlightDrawerLabel = translation.get('highlight-drawer.aria-label');
 
