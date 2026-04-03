@@ -382,6 +382,10 @@ export function LibraryAnnotationCard({
     const DrawerIcon = isHighlight
         ? (DRAWER_ICONS[annotation.drawer ?? 'lighten'] ?? DRAWER_ICONS.lighten)
         : null;
+    const toolbarButtonClass =
+        'hover:text-primary-600 dark:hover:text-primary-400';
+    const highlightColorLabel = translation.get('highlight-color.aria-label');
+    const highlightDrawerLabel = translation.get('highlight-drawer.aria-label');
 
     const hasWriteCapabilities =
         showEditingControls &&
@@ -405,6 +409,9 @@ export function LibraryAnnotationCard({
         : hasNote
           ? translation.get('delete-highlight-and-note')
           : translation.get('delete-highlight');
+    const noteButtonLabel = hasNote
+        ? translation.get('edit-note')
+        : translation.get('add-note');
 
     return (
         <article
@@ -497,16 +504,55 @@ export function LibraryAnnotationCard({
                 )}
 
                 <div className="flex items-center gap-0.5">
+                    {isHighlight && onColorChange && (
+                        <>
+                            <Button
+                                ref={colorButtonRef}
+                                variant="ghost"
+                                size="xs"
+                                active={activePicker === 'color'}
+                                aria-label={highlightColorLabel}
+                                title={highlightColorLabel}
+                                onClick={() =>
+                                    setActivePicker(
+                                        activePicker === 'color'
+                                            ? null
+                                            : 'color',
+                                    )
+                                }
+                                className={toolbarButtonClass}
+                            >
+                                <span
+                                    className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
+                                />
+                                <span className="hidden sm:inline">
+                                    {highlightColorLabel}
+                                </span>
+                            </Button>
+                            {activePicker === 'color' && (
+                                <HighlightColorPicker
+                                    anchorRef={colorButtonRef}
+                                    currentColor={annotation.color ?? 'yellow'}
+                                    onSelect={(color) => {
+                                        onColorChange(color);
+                                        setActivePicker(null);
+                                    }}
+                                    onClose={() => setActivePicker(null)}
+                                />
+                            )}
+                        </>
+                    )}
+
                     {isHighlight && onDrawerChange && DrawerIcon && (
                         <>
                             <Button
                                 ref={drawerButtonRef}
                                 variant="ghost"
                                 size="xs"
+                                active={activePicker === 'drawer'}
                                 icon={DrawerIcon}
-                                label={translation.get(
-                                    'highlight-drawer.aria-label',
-                                )}
+                                aria-label={highlightDrawerLabel}
+                                title={highlightDrawerLabel}
                                 onClick={() =>
                                     setActivePicker(
                                         activePicker === 'drawer'
@@ -514,8 +560,12 @@ export function LibraryAnnotationCard({
                                             : 'drawer',
                                     )
                                 }
-                                className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
-                            />
+                                className={toolbarButtonClass}
+                            >
+                                <span className="hidden sm:inline">
+                                    {highlightDrawerLabel}
+                                </span>
+                            </Button>
                             {activePicker === 'drawer' && (
                                 <HighlightDrawerPicker
                                     anchorRef={drawerButtonRef}
@@ -532,52 +582,13 @@ export function LibraryAnnotationCard({
                         </>
                     )}
 
-                    {isHighlight && onColorChange && (
-                        <>
-                            <Button
-                                ref={colorButtonRef}
-                                variant="ghost"
-                                size="xs"
-                                label={translation.get(
-                                    'highlight-color.aria-label',
-                                )}
-                                onClick={() =>
-                                    setActivePicker(
-                                        activePicker === 'color'
-                                            ? null
-                                            : 'color',
-                                    )
-                                }
-                                className="p-1.5"
-                            >
-                                <span
-                                    className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
-                                />
-                            </Button>
-                            {activePicker === 'color' && (
-                                <HighlightColorPicker
-                                    anchorRef={colorButtonRef}
-                                    currentColor={annotation.color ?? 'yellow'}
-                                    onSelect={(color) => {
-                                        onColorChange(color);
-                                        setActivePicker(null);
-                                    }}
-                                    onClose={() => setActivePicker(null)}
-                                />
-                            )}
-                        </>
-                    )}
-
                     {onSaveNote && (
                         <Button
                             variant="ghost"
                             size="xs"
                             icon={LuPencil}
-                            label={
-                                hasNote
-                                    ? translation.get('edit-note')
-                                    : translation.get('add-note')
-                            }
+                            aria-label={noteButtonLabel}
+                            title={noteButtonLabel}
                             onClick={() => {
                                 if (!editingNote) {
                                     setDraftNote(annotation.note ?? '');
@@ -585,8 +596,12 @@ export function LibraryAnnotationCard({
 
                                 setEditingNote(!editingNote);
                             }}
-                            className="p-1.5 hover:text-primary-600 dark:hover:text-primary-400"
-                        />
+                            className={toolbarButtonClass}
+                        >
+                            <span className="hidden sm:inline">
+                                {noteButtonLabel}
+                            </span>
+                        </Button>
                     )}
                 </div>
             </AnimatedToolbar>
