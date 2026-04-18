@@ -106,8 +106,7 @@ export const DRAWER_ICONS: Record<string, IconType> = Object.fromEntries(
 // Rainbow gradient used for unrecognized (custom-patched) KOReader colors.
 const UNKNOWN_DOT_CLASS =
     'bg-linear-to-br from-red-400 via-green-400 to-violet-400';
-const UNKNOWN_QUOTE_BAR_GRADIENT =
-    'from-red-400 via-green-400 to-violet-400';
+const UNKNOWN_QUOTE_BAR_GRADIENT = 'from-red-400 via-green-400 to-violet-400';
 
 // Lookup helpers derived from the arrays above.
 const COLOR_DOT_MAP = Object.fromEntries(

@@ -15,34 +15,40 @@ const COLOR_TOKENS: Record<
     primary: {
         text: 'text-primary-600 dark:text-primary-400',
         border: 'border-primary-500/30 dark:border-primary-500/20',
-        hoverBg: 'not-disabled:hover:bg-primary-50 dark:not-disabled:hover:bg-primary-500/10',
+        hoverBg:
+            'not-disabled:hover:bg-primary-50 dark:not-disabled:hover:bg-primary-500/10',
         gradientBg:
             'bg-linear-to-r from-primary-600 to-primary-500 not-disabled:hover:from-primary-500 not-disabled:hover:to-primary-400 shadow-lg shadow-primary-500/20',
     },
     secondary: {
         text: 'text-gray-500 dark:text-dark-400',
         border: 'border-gray-300/50 dark:border-dark-700/50',
-        hoverBg: 'not-disabled:hover:bg-gray-100 dark:not-disabled:hover:bg-dark-700',
+        hoverBg:
+            'not-disabled:hover:bg-gray-100 dark:not-disabled:hover:bg-dark-700',
     },
     danger: {
         text: 'text-red-700 dark:text-red-400',
         border: 'border-red-300/50 dark:border-red-500/30',
-        hoverBg: 'not-disabled:hover:bg-red-50 dark:not-disabled:hover:bg-red-500/10',
+        hoverBg:
+            'not-disabled:hover:bg-red-50 dark:not-disabled:hover:bg-red-500/10',
     },
     purple: {
         text: 'text-purple-600 dark:text-purple-400',
         border: 'border-purple-300/50 dark:border-purple-500/30',
-        hoverBg: 'not-disabled:hover:bg-purple-100 dark:not-disabled:hover:bg-purple-900/30',
+        hoverBg:
+            'not-disabled:hover:bg-purple-100 dark:not-disabled:hover:bg-purple-900/30',
     },
     blue: {
         text: 'text-blue-600 dark:text-blue-400',
         border: 'border-blue-300/50 dark:border-blue-500/30',
-        hoverBg: 'not-disabled:hover:bg-blue-100 dark:not-disabled:hover:bg-blue-900/30',
+        hoverBg:
+            'not-disabled:hover:bg-blue-100 dark:not-disabled:hover:bg-blue-900/30',
     },
     green: {
         text: 'text-green-600 dark:text-green-400',
         border: 'border-green-300/50 dark:border-green-500/30',
-        hoverBg: 'not-disabled:hover:bg-green-100 dark:not-disabled:hover:bg-green-900/30',
+        hoverBg:
+            'not-disabled:hover:bg-green-100 dark:not-disabled:hover:bg-green-900/30',
     },
 };
 
