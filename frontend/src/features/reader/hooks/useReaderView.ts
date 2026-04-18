@@ -232,6 +232,7 @@ export function useReaderView(
         let highlightDrawHandle: HighlightDrawListenerHandle | null = null;
         let showAnnotationListener: EventListener | null = null;
         let applyPresentationLoadListener: EventListener | null = null;
+        const invertObservers: MutationObserver[] = [];
 
         setLoading(true);
         setError(null);
@@ -245,15 +246,102 @@ export function useReaderView(
                     import('@xincmm/foliate-js/view.js'),
                     import('@xincmm/foliate-js/overlayer.js'),
                 ]);
+                // WeakMap: placeholder <g> → invertSVG injected in the iframe body
+                const invertOverlayMap = new WeakMap<Element, SVGSVGElement>();
                 const invertRenderer = (
                     rects: DOMRectList | ArrayLike<DOMRect>,
+                    opts?: Record<string, unknown>,
                 ) => {
-                    const element = Overlayer.highlight(rects, {
-                        color: '#ffffff',
-                    });
-                    element.style.opacity = '1';
-                    element.style.mixBlendMode = 'difference';
-                    return element;
+                    const doc = opts?.doc as Document | undefined;
+
+                    // Transparent placeholder — kept in the Overlayer SVG for
+                    // bookkeeping and hit-testing.
+                    const placeholder = document.createElementNS(
+                        'http://www.w3.org/2000/svg',
+                        'g',
+                    );
+
+                    if (doc?.body) {
+                        // Inject the invert overlay directly into the iframe's document.
+                        // Firefox only applies mix-blend-mode correctly when it is on an
+                        // SVG element that is a direct child of an HTML element. Placing
+                        // it on a <g> or on a nested <svg> inside the Overlayer SVG does
+                        // not blend against the page content in Firefox.
+                        const invertSVG = doc.createElementNS(
+                            'http://www.w3.org/2000/svg',
+                            'svg',
+                        ) as SVGSVGElement;
+                        Object.assign(invertSVG.style, {
+                            position: 'absolute',
+                            top: '0',
+                            left: '0',
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none',
+                            overflow: 'visible',
+                            mixBlendMode: 'difference',
+                        });
+                        const g = doc.createElementNS(
+                            'http://www.w3.org/2000/svg',
+                            'g',
+                        );
+                        g.setAttribute('fill', '#ffffff');
+                        for (const { left, top, height, width } of Array.from(
+                            rects,
+                        )) {
+                            const el = doc.createElementNS(
+                                'http://www.w3.org/2000/svg',
+                                'rect',
+                            );
+                            el.setAttribute('x', String(left));
+                            el.setAttribute('y', String(top));
+                            el.setAttribute('height', String(height));
+                            el.setAttribute('width', String(width));
+                            g.append(el);
+                        }
+                        invertSVG.append(g);
+                        doc.body.append(invertSVG);
+                        invertOverlayMap.set(placeholder, invertSVG);
+
+                        // Watch the Overlayer SVG for removal of this placeholder
+                        // so we can clean up the corresponding invertSVG.
+                        queueMicrotask(() => {
+                            if (cancelled) return;
+                            const overlayerSVG = placeholder.parentElement;
+                            if (!overlayerSVG) return;
+                            const observer = new MutationObserver(
+                                (mutations) => {
+                                    for (const { removedNodes } of mutations) {
+                                        for (const node of removedNodes) {
+                                            if (!(node instanceof Element))
+                                                continue;
+                                            const s =
+                                                invertOverlayMap.get(node);
+                                            if (s) {
+                                                s.remove();
+                                                invertOverlayMap.delete(node);
+                                            }
+                                        }
+                                    }
+                                },
+                            );
+                            observer.observe(overlayerSVG, {
+                                childList: true,
+                            });
+                            invertObservers.push(observer);
+                        });
+                    } else {
+                        // Fallback when doc is unavailable (works in Chrome/Safari,
+                        // not Firefox).
+                        const g = Overlayer.highlight(rects, {
+                            color: '#ffffff',
+                        });
+                        g.style.opacity = '1';
+                        g.style.mixBlendMode = 'difference';
+                        return g;
+                    }
+
+                    return placeholder as unknown as SVGElement;
                 };
                 const renderers = {
                     highlight: Overlayer.highlight,
@@ -594,6 +682,8 @@ export function useReaderView(
             cancelled = true;
             pulseHighlightRef.current = null;
             highlightDrawHandle?.detach();
+            for (const observer of invertObservers) observer.disconnect();
+            invertObservers.length = 0;
             if (showAnnotationListener && currentView) {
                 currentView.removeEventListener(
                     'show-annotation',

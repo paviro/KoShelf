@@ -26,6 +26,7 @@ type DrawAnnotationDetail = {
         target?: boolean;
         value?: string;
     };
+    doc?: Document;
 };
 
 const DRAWER_TO_RENDERER: Record<string, keyof HighlightRenderers> = {
@@ -79,14 +80,15 @@ export function attachHighlightDrawListener(
             typeof annotationValue === 'string' &&
             !animatedValues.has(annotationValue);
 
+        const opts = { color, doc: detail.doc };
         if (shouldAnimate) {
             animatedValues.add(annotationValue);
-            detail.draw(withPulse(baseRenderer), { color });
+            detail.draw(withPulse(baseRenderer), opts);
             if (detail.annotation) {
                 detail.annotation.target = false;
             }
         } else {
-            detail.draw(baseRenderer, { color });
+            detail.draw(baseRenderer, opts);
         }
     };
 
