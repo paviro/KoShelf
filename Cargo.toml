@@ -84,10 +84,10 @@ uuid = { version = "1", features = ["v4", "v7"] }
 ipnet = "2"
 # Gzip decompression for embedded license data
 flate2 = "1"
+# Memory allocator
+mimalloc = "0.1"
 
 [target.'cfg(not(windows))'.dependencies]
-# Memory allocator
-tikv-jemallocator = "0.6"
 # CBR/RAR archive extraction (not supported on Windows)
 unrar = "0.5"
 
