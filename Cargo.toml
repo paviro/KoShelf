@@ -10,11 +10,11 @@ build = "build/main.rs"
 
 [dependencies]
 # CLI
-clap = { version = "4.5.40", features = ["derive", "env"] }
+clap = { version = "4.6.1", features = ["derive", "env"] }
 # Error handling
 anyhow = "1.0.98"
 # Async
-tokio = { version = "1.45.1", features = [
+tokio = { version = "1.52.1", features = [
     "macros",
     "rt-multi-thread",
     "net",
@@ -29,7 +29,7 @@ notify = "8.0.0"
 # Temporary directories
 tempfile = "3.20.0"
 # EPUB and .fb2.zip parsing
-zip = "8.4.0"
+zip = "8.5.1"
 # Image processing
 image = { version = "0.25.6", default-features = false, features = [
     "jpeg",
@@ -43,7 +43,7 @@ mlua = { version = "0.11.5", features = ["luajit", "vendored", "send"] }
 # Serialization
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0"
-toml = "1.1.0"
+toml = "1.1.2"
 # Date/time
 chrono = { version = "0.4.41", features = ["serde", "std", "unstable-locales"] }
 # Logging
@@ -56,7 +56,7 @@ quick-xml = "0.39.2"
 # HTML sanitization
 ammonia = "4.1.2"
 # Web server (for live server mode)
-axum = "0.8.4"
+axum = "0.8.9"
 tower = "0.5"
 tower-http = { version = "0.6", features = [
     "fs",
