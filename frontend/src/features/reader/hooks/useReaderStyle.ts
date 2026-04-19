@@ -509,7 +509,17 @@ export function useReaderStyle(
         loadStoredReaderStyle(bookId, bookDefaultState, koshelfDefaultState),
     );
 
-    useEffect(() => {
+    const [prevStyleDeps, setPrevStyleDeps] = useState({
+        bookId,
+        bookDefaultState,
+        koshelfDefaultState,
+    });
+    if (
+        prevStyleDeps.bookId !== bookId ||
+        prevStyleDeps.bookDefaultState !== bookDefaultState ||
+        prevStyleDeps.koshelfDefaultState !== koshelfDefaultState
+    ) {
+        setPrevStyleDeps({ bookId, bookDefaultState, koshelfDefaultState });
         setState(
             loadStoredReaderStyle(
                 bookId,
@@ -517,7 +527,7 @@ export function useReaderStyle(
                 koshelfDefaultState,
             ),
         );
-    }, [bookId, bookDefaultState, koshelfDefaultState]);
+    }
 
     const { basis, style: styleState } = state;
 

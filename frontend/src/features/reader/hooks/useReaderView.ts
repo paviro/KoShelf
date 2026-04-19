@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -112,13 +113,13 @@ export function useReaderView(
     const annotationParamsConsumedRef = useRef(false);
 
     const fontSizePtRef = useRef(fontSizePt);
-    fontSizePtRef.current = fontSizePt;
-
     const lineSpacingRef = useRef(lineSpacing);
-    lineSpacingRef.current = lineSpacing;
-
     const readerPresentationRef = useRef(readerPresentation);
-    readerPresentationRef.current = readerPresentation;
+    useLayoutEffect(() => {
+        fontSizePtRef.current = fontSizePt;
+        lineSpacingRef.current = lineSpacing;
+        readerPresentationRef.current = readerPresentation;
+    });
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
@@ -195,38 +196,6 @@ export function useReaderView(
             return;
         }
 
-        if (detailIsError) {
-            setError(detailError ?? new Error('Failed to load book details.'));
-            setLoading(false);
-            return;
-        }
-
-        if (hasItem && !supportsReader) {
-            setError(
-                new Error(
-                    normalizedFormat
-                        ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
-                        : 'Unsupported format for in-app reader.',
-                ),
-            );
-            setLoading(false);
-            return;
-        }
-
-        if (hasItem && !fileHref) {
-            setError(
-                new ApiHttpError('/assets/files', 404, {
-                    code: 'book_file_unavailable',
-                }),
-            );
-            setLoading(false);
-            return;
-        }
-
-        if (!fileHref) {
-            return;
-        }
-
         let cancelled = false;
         let currentView: FoliateView | null = null;
         let highlightDrawHandle: HighlightDrawListenerHandle | null = null;
@@ -234,13 +203,47 @@ export function useReaderView(
         let applyPresentationLoadListener: EventListener | null = null;
         const invertObservers: MutationObserver[] = [];
 
-        setLoading(true);
-        setError(null);
-        setActiveNote(null);
-        setToc([]);
-        noteMapRef.current.clear();
-
         const initReader = async () => {
+            if (detailIsError) {
+                setError(
+                    detailError ?? new Error('Failed to load book details.'),
+                );
+                setLoading(false);
+                return;
+            }
+
+            if (hasItem && !supportsReader) {
+                setError(
+                    new Error(
+                        normalizedFormat
+                            ? `Unsupported format for in-app reader: ${normalizedFormat.toUpperCase()}`
+                            : 'Unsupported format for in-app reader.',
+                    ),
+                );
+                setLoading(false);
+                return;
+            }
+
+            if (hasItem && !fileHref) {
+                setError(
+                    new ApiHttpError('/assets/files', 404, {
+                        code: 'book_file_unavailable',
+                    }),
+                );
+                setLoading(false);
+                return;
+            }
+
+            if (!fileHref) {
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+            setActiveNote(null);
+            setToc([]);
+            noteMapRef.current.clear();
+
             try {
                 const [{ View }, { Overlayer }] = await Promise.all([
                     import('@xincmm/foliate-js/view.js'),

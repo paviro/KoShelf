@@ -46,7 +46,7 @@ function getServerMode(): ServerMode {
         return window.__KOSHELF_SERVER_MODE;
     }
 
-    let stored: ServerMode | null = null;
+    let stored: ServerMode | null;
     try {
         stored = parseStoredServerMode(
             localStorage.getItem(SERVER_MODE_STORAGE_KEY),
@@ -86,8 +86,7 @@ export const api = new Proxy<ApiClient>({} as ApiClient, {
         const client = getClient();
         const value = client[prop as keyof ApiClient];
         return typeof value === 'function'
-            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-              (value as Function).bind(client)
+            ? (value as (...args: unknown[]) => unknown).bind(client)
             : value;
     },
 });

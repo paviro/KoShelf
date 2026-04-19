@@ -44,7 +44,7 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap(): Promise<void> {
-    let initialSite: SiteData | null = null;
+    let initialSite: SiteData | null;
     try {
         initialSite = await api.getSite();
         queryClient.setQueryData(['site'], initialSite);

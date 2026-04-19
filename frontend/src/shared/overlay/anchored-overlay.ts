@@ -173,8 +173,8 @@ export function computeOverlayPosition(
             ? alignmentOption
             : (alignmentOption[placement] ?? 'center');
 
-    let top = 0;
-    let left = 0;
+    let top: number;
+    let left: number;
 
     if (placement === 'top' || placement === 'bottom') {
         top =
