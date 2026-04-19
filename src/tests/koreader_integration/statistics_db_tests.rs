@@ -256,6 +256,77 @@ fn format_percent_d(template: &str, values: &[i64]) -> String {
     formatted
 }
 
+#[tokio::test]
+async fn test_statistics_parser_deduplicates_by_md5() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db = TestDatabase::new(&artifacts.statements).await;
+
+    // Seed two books with the same md5 but different authors (simulates metadata edit)
+    for (id, authors, last_open, read_time, read_pages) in [
+        (1_i64, "Original Author", 100_i64, 5000_i64, 80_i64),
+        (2_i64, "Updated Author\nTranslator", 200_i64, 100_i64, 2_i64),
+    ] {
+        sqlx::query(
+            "INSERT INTO book (id, title, authors, notes, last_open, highlights, pages, series, language, md5, total_read_time, total_read_pages)
+             VALUES (?1, ?2, ?3, 0, ?4, 0, 300, NULL, 'en', 'shared-md5', ?5, ?6)",
+        )
+        .bind(id)
+        .bind("Shared Book")
+        .bind(authors)
+        .bind(last_open)
+        .bind(read_time)
+        .bind(read_pages)
+        .execute(&db.pool)
+        .await
+        .expect("Failed to seed book");
+    }
+
+    // Seed page_stats under both book IDs
+    for (id_book, page, start_time, duration, total_pages) in [
+        (1_i64, 1_i64, 1000_i64, 60_i64, 300_i64),
+        (1, 2, 1060, 60, 300),
+        (2, 3, 2000, 30, 300),
+    ] {
+        sqlx::query(
+            "INSERT INTO page_stat_data (id_book, page, start_time, duration, total_pages)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(id_book)
+        .bind(page)
+        .bind(start_time)
+        .bind(duration)
+        .bind(total_pages)
+        .execute(&db.pool)
+        .await
+        .expect("Failed to seed page_stat_data");
+    }
+
+    let stats = StatisticsParser::parse(&db.path)
+        .await
+        .expect("Parser failed");
+
+    // Should have exactly one book after deduplication
+    assert_eq!(stats.books.len(), 1, "duplicates should be merged into one");
+    let book = &stats.books[0];
+    assert_eq!(book.md5, "shared-md5");
+    assert_eq!(book.id, 2, "canonical = highest last_open");
+    assert_eq!(book.authors, "Updated Author\nTranslator");
+    assert_eq!(book.total_read_time, Some(5100), "read times summed");
+    assert_eq!(book.total_read_pages, Some(82), "read pages summed");
+
+    // All page_stats should reference the canonical book ID
+    assert_eq!(stats.page_stats.len(), 3);
+    for ps in &stats.page_stats {
+        assert_eq!(ps.id_book, 2, "page_stats remapped to canonical id");
+    }
+
+    // stats_by_md5 should also reflect the merged entry
+    assert_eq!(stats.stats_by_md5.len(), 1);
+    assert!(stats.stats_by_md5.contains_key("shared-md5"));
+}
+
 fn build_statistics_lua_script(root: &Path) -> String {
     let mocks = compose_lua_mocks(LUA_STATISTICS_MOCKS_EXTRA);
     LUA_STATISTICS_TEMPLATE
