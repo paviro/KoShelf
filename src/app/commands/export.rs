@@ -3,8 +3,10 @@ use crate::app::config::ExportArgs;
 use crate::pipeline::export::{ExportConfig, export_data_files};
 use crate::pipeline::frontend;
 use crate::pipeline::watcher::FileWatcher;
+use crate::store::memory::{ReadingDataStore, SiteStore};
 use anyhow::{Context, Result};
 use log::info;
+use std::sync::Arc;
 
 pub(crate) async fn export(args: ExportArgs) -> Result<()> {
     if let Err(e) = args.validate() {
@@ -46,7 +48,23 @@ pub(crate) async fn export(args: ExportArgs) -> Result<()> {
 
     if args.watch {
         info!("Watching library changes to refresh static shell/assets and /data export.");
-        let file_watcher = FileWatcher::new(state.config, None, None, None, Some(state.repo), None);
+
+        let site_store = Arc::new(SiteStore::new());
+        site_store.replace(state.site_data);
+
+        let reading_data_store = Arc::new(ReadingDataStore::new());
+        if let Some(rd) = state.reading_data {
+            reading_data_store.replace(rd);
+        }
+
+        let file_watcher = FileWatcher::new(
+            state.config,
+            Some(site_store),
+            Some(reading_data_store),
+            None,
+            Some(state.repo),
+            None,
+        );
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);
         }
