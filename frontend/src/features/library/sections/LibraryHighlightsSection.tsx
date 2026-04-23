@@ -42,8 +42,7 @@ export function LibraryHighlightsSection({
     const { editing, toggle } = useEditToggle(guardedAction);
 
     const displayed = useMemo(
-        () =>
-            sortOrder === 'desc' ? [...annotations].reverse() : annotations,
+        () => (sortOrder === 'desc' ? [...annotations].reverse() : annotations),
         [annotations, sortOrder],
     );
 
@@ -100,8 +99,7 @@ export function LibraryHighlightsSection({
                             showEditingControls={canWrite && editing}
                             onSaveNote={
                                 onSaveNote
-                                    ? (note) =>
-                                          onSaveNote(annotation.id, note)
+                                    ? (note) => onSaveNote(annotation.id, note)
                                     : undefined
                             }
                             onColorChange={
