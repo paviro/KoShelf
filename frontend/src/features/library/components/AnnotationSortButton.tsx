@@ -21,7 +21,7 @@ export function AnnotationSortButton({
     return (
         <Button
             variant="neutral"
-            icon={order === 'desc' ? LuCalendarArrowDown : LuCalendarArrowUp}
+            icon={order === 'desc' ? LuCalendarArrowUp : LuCalendarArrowDown}
             aria-label={ariaLabel}
             onClick={onToggle}
         />
