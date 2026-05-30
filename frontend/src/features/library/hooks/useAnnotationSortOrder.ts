@@ -5,7 +5,11 @@ import {
     patchRouteState,
     readRouteState,
 } from '../../../shared/lib/state/route-state-storage';
-import type { AnnotationSortOrder } from '../lib/annotation-sort';
+import {
+    nextAnnotationSortOrder,
+    normalizeAnnotationSortOrder,
+    type AnnotationSortOrder,
+} from '../lib/annotation-sort';
 
 type Options = {
     routeId: RouteId;
@@ -14,10 +18,6 @@ type Options = {
 };
 
 const FIELD_NAME = 'annotationSort';
-
-function isOrder(value: unknown): value is AnnotationSortOrder {
-    return value === 'asc' || value === 'desc';
-}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -32,8 +32,7 @@ export function readAnnotationSortOrder(
     if (!isPlainObject(persisted)) {
         return defaultOrder;
     }
-    const raw = persisted[sectionKey];
-    return isOrder(raw) ? raw : defaultOrder;
+    return normalizeAnnotationSortOrder(persisted[sectionKey], defaultOrder);
 }
 
 export function writeAnnotationSortOrder(
@@ -51,14 +50,17 @@ export function writeAnnotationSortOrder(
 export function useAnnotationSortOrder({
     routeId,
     sectionKey,
-    defaultOrder = 'asc',
+    defaultOrder = 'page-asc',
 }: Options): { order: AnnotationSortOrder; toggle: () => void } {
     const [, setRevision] = useState(0);
     const order = readAnnotationSortOrder(routeId, sectionKey, defaultOrder);
 
     const toggle = (): void => {
-        const next: AnnotationSortOrder = order === 'asc' ? 'desc' : 'asc';
-        writeAnnotationSortOrder(routeId, sectionKey, next);
+        writeAnnotationSortOrder(
+            routeId,
+            sectionKey,
+            nextAnnotationSortOrder(order),
+        );
         setRevision((value) => value + 1);
     };
 

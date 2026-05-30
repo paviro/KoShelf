@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import type { LibraryAnnotation } from '../api/library-data';
-import { sortedAnnotationEntries } from './annotation-sort';
+import {
+    nextAnnotationSortOrder,
+    normalizeAnnotationSortOrder,
+    sortedAnnotationEntries,
+} from './annotation-sort';
 
 function makeAnnotation(
     id: string,
     datetime?: string | null,
+    pageno?: number | null,
 ): LibraryAnnotation {
     return {
         id,
         datetime,
+        pageno,
     };
 }
 
@@ -21,7 +27,7 @@ describe('sortedAnnotationEntries', () => {
         ];
 
         expect(
-            sortedAnnotationEntries(annotations, 'asc').map(
+            sortedAnnotationEntries(annotations, 'date-asc').map(
                 (entry) => entry.annotation.id,
             ),
         ).toEqual(['older', 'newer']);
@@ -34,7 +40,7 @@ describe('sortedAnnotationEntries', () => {
         ];
 
         expect(
-            sortedAnnotationEntries(annotations, 'desc').map(
+            sortedAnnotationEntries(annotations, 'date-desc').map(
                 (entry) => entry.annotation.id,
             ),
         ).toEqual(['newer', 'older']);
@@ -47,7 +53,7 @@ describe('sortedAnnotationEntries', () => {
         ];
 
         expect(
-            sortedAnnotationEntries(annotations, 'desc').map(
+            sortedAnnotationEntries(annotations, 'date-desc').map(
                 (entry) => entry.annotation.id,
             ),
         ).toEqual(['first', 'second']);
@@ -61,10 +67,52 @@ describe('sortedAnnotationEntries', () => {
         ];
 
         expect(
-            sortedAnnotationEntries(annotations, 'asc').map(
+            sortedAnnotationEntries(annotations, 'date-asc').map(
                 (entry) => entry.annotation.id,
             ),
         ).toEqual(['valid', 'missing', 'invalid']);
+    });
+
+    it('sorts annotations by page number ascending', () => {
+        const annotations = [
+            makeAnnotation('page-30', null, 30),
+            makeAnnotation('page-10', null, 10),
+            makeAnnotation('page-20', null, 20),
+        ];
+
+        expect(
+            sortedAnnotationEntries(annotations, 'page-asc').map(
+                (entry) => entry.annotation.id,
+            ),
+        ).toEqual(['page-10', 'page-20', 'page-30']);
+    });
+
+    it('sorts annotations by page number descending', () => {
+        const annotations = [
+            makeAnnotation('page-10', null, 10),
+            makeAnnotation('page-30', null, 30),
+            makeAnnotation('page-20', null, 20),
+        ];
+
+        expect(
+            sortedAnnotationEntries(annotations, 'page-desc').map(
+                (entry) => entry.annotation.id,
+            ),
+        ).toEqual(['page-30', 'page-20', 'page-10']);
+    });
+
+    it('places missing page numbers after valid page numbers', () => {
+        const annotations = [
+            makeAnnotation('missing'),
+            makeAnnotation('page-10', null, 10),
+            makeAnnotation('page-20', null, 20),
+        ];
+
+        expect(
+            sortedAnnotationEntries(annotations, 'page-desc').map(
+                (entry) => entry.annotation.id,
+            ),
+        ).toEqual(['page-20', 'page-10', 'missing']);
     });
 
     it('preserves original indexes for reader links after sorting', () => {
@@ -75,7 +123,7 @@ describe('sortedAnnotationEntries', () => {
         ];
 
         expect(
-            sortedAnnotationEntries(annotations, 'asc').map((entry) => [
+            sortedAnnotationEntries(annotations, 'date-asc').map((entry) => [
                 entry.annotation.id,
                 entry.originalIndex,
             ]),
@@ -84,5 +132,40 @@ describe('sortedAnnotationEntries', () => {
             ['middle', 0],
             ['newest', 1],
         ]);
+    });
+});
+
+describe('normalizeAnnotationSortOrder', () => {
+    it('maps legacy persisted date values to explicit date sort states', () => {
+        expect(normalizeAnnotationSortOrder('asc', 'date-desc')).toBe(
+            'date-asc',
+        );
+        expect(normalizeAnnotationSortOrder('desc', 'date-asc')).toBe(
+            'date-desc',
+        );
+    });
+
+    it('accepts current persisted sort states', () => {
+        expect(normalizeAnnotationSortOrder('page-asc', 'date-asc')).toBe(
+            'page-asc',
+        );
+        expect(normalizeAnnotationSortOrder('page-desc', 'date-asc')).toBe(
+            'page-desc',
+        );
+    });
+
+    it('returns the default for unknown sort states', () => {
+        expect(normalizeAnnotationSortOrder('unknown', 'date-asc')).toBe(
+            'date-asc',
+        );
+    });
+});
+
+describe('nextAnnotationSortOrder', () => {
+    it('cycles through page and date sort states', () => {
+        expect(nextAnnotationSortOrder('page-asc')).toBe('page-desc');
+        expect(nextAnnotationSortOrder('page-desc')).toBe('date-asc');
+        expect(nextAnnotationSortOrder('date-asc')).toBe('date-desc');
+        expect(nextAnnotationSortOrder('date-desc')).toBe('page-asc');
     });
 });
