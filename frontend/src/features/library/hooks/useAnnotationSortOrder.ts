@@ -5,8 +5,7 @@ import {
     patchRouteState,
     readRouteState,
 } from '../../../shared/lib/state/route-state-storage';
-
-export type AnnotationSortOrder = 'asc' | 'desc';
+import type { AnnotationSortOrder } from '../lib/annotation-sort';
 
 type Options = {
     routeId: RouteId;

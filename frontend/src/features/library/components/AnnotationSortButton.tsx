@@ -1,8 +1,8 @@
-import { LuArrowDownUp } from 'react-icons/lu';
+import { LuCalendarArrowDown, LuCalendarArrowUp } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
-import type { AnnotationSortOrder } from '../hooks/useAnnotationSortOrder';
+import type { AnnotationSortOrder } from '../lib/annotation-sort';
 
 type AnnotationSortButtonProps = {
     order: AnnotationSortOrder;
@@ -14,17 +14,16 @@ export function AnnotationSortButton({
     onToggle,
 }: AnnotationSortButtonProps) {
     const ariaLabel =
-        order === 'asc'
-            ? translation.get('annotation-sort.aria-label-ascending')
-            : translation.get('annotation-sort.aria-label-descending');
+        order === 'desc'
+            ? translation.get('sort-order.newest-first')
+            : translation.get('sort-order.oldest-first');
 
     return (
         <Button
             variant="neutral"
-            icon={LuArrowDownUp}
+            icon={order === 'desc' ? LuCalendarArrowDown : LuCalendarArrowUp}
             aria-label={ariaLabel}
             onClick={onToggle}
-            active={order === 'desc'}
         />
     );
 }

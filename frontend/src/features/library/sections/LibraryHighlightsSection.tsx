@@ -6,7 +6,10 @@ import { LibraryAnnotationCard } from '../components/LibraryAnnotationCard';
 import { AnnotationSortButton } from '../components/AnnotationSortButton';
 import { EditSectionButton } from '../components/EditSectionButton';
 import type { LibraryAnnotation } from '../api/library-data';
-import type { AnnotationSortOrder } from '../hooks/useAnnotationSortOrder';
+import {
+    sortedAnnotationEntries,
+    type AnnotationSortOrder,
+} from '../lib/annotation-sort';
 import { annotationReaderHref } from '../lib/library-reader-links';
 import { useEditToggle } from '../hooks/useEditToggle';
 
@@ -41,13 +44,13 @@ export function LibraryHighlightsSection({
 }: LibraryHighlightsSectionProps) {
     const { editing, toggle } = useEditToggle(guardedAction);
 
-    const displayed = useMemo(
-        () => (sortOrder === 'desc' ? [...annotations].reverse() : annotations),
+    const displayedEntries = useMemo(
+        () => sortedAnnotationEntries(annotations, sortOrder),
         [annotations, sortOrder],
     );
 
     const sortButton =
-        annotations.length > 0 ? (
+        visible && annotations.length > 0 ? (
             <AnnotationSortButton order={sortOrder} onToggle={onToggleSort} />
         ) : null;
 
@@ -81,47 +84,38 @@ export function LibraryHighlightsSection({
             controls={controls}
         >
             <div className="space-y-6">
-                {displayed.map((annotation, renderedIndex) => {
-                    const originalIndex =
-                        sortOrder === 'desc'
-                            ? annotations.length - 1 - renderedIndex
-                            : renderedIndex;
-                    return (
-                        <LibraryAnnotationCard
-                            key={annotation.id}
-                            annotation={annotation}
-                            variant="highlight"
-                            readerHref={annotationReaderHref(
-                                readerBaseHref,
-                                'highlight',
-                                originalIndex,
-                            )}
-                            showEditingControls={canWrite && editing}
-                            onSaveNote={
-                                onSaveNote
-                                    ? (note) => onSaveNote(annotation.id, note)
-                                    : undefined
-                            }
-                            onColorChange={
-                                onColorChange
-                                    ? (color) =>
-                                          onColorChange(annotation.id, color)
-                                    : undefined
-                            }
-                            onDrawerChange={
-                                onDrawerChange
-                                    ? (drawer) =>
-                                          onDrawerChange(annotation.id, drawer)
-                                    : undefined
-                            }
-                            onDelete={
-                                onDelete
-                                    ? () => onDelete(annotation.id)
-                                    : undefined
-                            }
-                        />
-                    );
-                })}
+                {displayedEntries.map(({ annotation, originalIndex }) => (
+                    <LibraryAnnotationCard
+                        key={annotation.id}
+                        annotation={annotation}
+                        variant="highlight"
+                        readerHref={annotationReaderHref(
+                            readerBaseHref,
+                            'highlight',
+                            originalIndex,
+                        )}
+                        showEditingControls={canWrite && editing}
+                        onSaveNote={
+                            onSaveNote
+                                ? (note) => onSaveNote(annotation.id, note)
+                                : undefined
+                        }
+                        onColorChange={
+                            onColorChange
+                                ? (color) => onColorChange(annotation.id, color)
+                                : undefined
+                        }
+                        onDrawerChange={
+                            onDrawerChange
+                                ? (drawer) =>
+                                      onDrawerChange(annotation.id, drawer)
+                                : undefined
+                        }
+                        onDelete={
+                            onDelete ? () => onDelete(annotation.id) : undefined
+                        }
+                    />
+                ))}
             </div>
         </CollapsibleSection>
     );
