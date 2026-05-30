@@ -1,6 +1,7 @@
 //! Write operations for the library repository.
 
 use anyhow::{Context, Result};
+use sqlx::{QueryBuilder, Sqlite};
 
 use crate::store::sqlite::repo::LibraryRepository;
 use crate::store::sqlite::repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
@@ -207,17 +208,19 @@ impl LibraryRepository {
                 .await
                 .context("Failed to clear share image fingerprints")?;
         } else {
-            let placeholders: Vec<String> =
-                (1..=valid_years.len()).map(|i| format!("?{i}")).collect();
-            let sql = format!(
-                "DELETE FROM share_image_fingerprints WHERE year NOT IN ({})",
-                placeholders.join(", ")
+            let mut builder = QueryBuilder::<Sqlite>::new(
+                "DELETE FROM share_image_fingerprints WHERE year NOT IN (",
             );
-            let mut query = sqlx::query(&sql);
-            for year in valid_years {
-                query = query.bind(year);
+            {
+                let mut separated = builder.separated(", ");
+                for year in valid_years {
+                    separated.push_bind(year);
+                }
             }
-            query
+            builder.push(")");
+
+            builder
+                .build()
                 .execute(&self.pool)
                 .await
                 .context("Failed to cleanup stale share image fingerprints")?;
@@ -317,18 +320,18 @@ impl LibraryRepository {
         item_id: &str,
         is_highlight: bool,
     ) -> Result<()> {
-        let kind_column = if is_highlight {
-            "highlight_count"
-        } else {
-            "bookmark_count"
-        };
-        let sql = format!(
+        let sql = if is_highlight {
             "UPDATE library_items SET
                 annotation_count = MAX(annotation_count - 1, 0),
-                {kind_column} = MAX({kind_column} - 1, 0)
+                highlight_count = MAX(highlight_count - 1, 0)
              WHERE id = ?1"
-        );
-        sqlx::query(&sql)
+        } else {
+            "UPDATE library_items SET
+                annotation_count = MAX(annotation_count - 1, 0),
+                bookmark_count = MAX(bookmark_count - 1, 0)
+             WHERE id = ?1"
+        };
+        sqlx::query(sql)
             .bind(item_id)
             .execute(&self.pool)
             .await

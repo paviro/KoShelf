@@ -1,11 +1,10 @@
 use crate::shelf::models::BookInfo;
 use crate::shelf::utils::sanitize_html;
+use crate::source::parsers::xml::decode_xml_text;
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use quick_xml::Reader;
-use quick_xml::escape::unescape;
 use quick_xml::events::Event;
-use std::borrow::Cow;
 #[cfg(not(windows))]
 use std::fs;
 use std::fs::File;
@@ -262,7 +261,7 @@ impl ComicParser {
 
                     // Read the text content for this element
                     if let Ok(text) = reader.read_text(e.name()) {
-                        let text = unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                        let text = decode_xml_text(&text);
                         if text.is_empty() {
                             continue;
                         }

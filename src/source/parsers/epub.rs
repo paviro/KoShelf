@@ -1,11 +1,10 @@
 use crate::shelf::models::{BookInfo, ChapterEntry, Identifier};
 use crate::shelf::utils::sanitize_html;
+use crate::source::parsers::xml::{decode_xml_text, xml_attr_value};
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
 use quick_xml::Reader;
-use quick_xml::escape::unescape;
 use quick_xml::events::Event;
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -149,7 +148,7 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"full-path" {
-                                return Ok(attr.unescape_value()?.into_owned());
+                                return Ok(xml_attr_value(&attr)?.into_owned());
                             }
                         }
                     }
@@ -200,24 +199,17 @@ impl EpubParser {
                         match local_name.as_ref() {
                             b"title" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    title = Some(
-                                        unescape(&text)
-                                            .unwrap_or(Cow::Borrowed(&text))
-                                            .into_owned(),
-                                    );
+                                    title = Some(decode_xml_text(&text));
                                 }
                             }
                             b"creator" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    authors.push(
-                                        unescape(&text_content)
-                                            .unwrap_or(Cow::Borrowed(&text_content))
-                                            .into_owned(),
-                                    );
+                                    authors.push(decode_xml_text(&text_content));
                                 }
                             }
                             b"description" => match reader.read_text(e.name()) {
                                 Ok(raw_text) => {
+                                    let raw_text = decode_xml_text(&raw_text);
                                     let cleaned = sanitize_html(&raw_text);
 
                                     let trimmed = cleaned.trim();
@@ -231,20 +223,12 @@ impl EpubParser {
                             },
                             b"publisher" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    publisher = Some(
-                                        unescape(&text)
-                                            .unwrap_or(Cow::Borrowed(&text))
-                                            .into_owned(),
-                                    );
+                                    publisher = Some(decode_xml_text(&text));
                                 }
                             }
                             b"language" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
-                                    language = Some(
-                                        unescape(&text)
-                                            .unwrap_or(Cow::Borrowed(&text))
-                                            .into_owned(),
-                                    );
+                                    language = Some(decode_xml_text(&text));
                                 }
                             }
                             b"identifier" => {
@@ -252,13 +236,11 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     if key == b"opf:scheme" || key == b"scheme" {
-                                        scheme = Some(attr.unescape_value()?.into_owned());
+                                        scheme = Some(xml_attr_value(&attr)?.into_owned());
                                     }
                                 }
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let value = unescape(&text_content)
-                                        .unwrap_or(Cow::Borrowed(&text_content))
-                                        .into_owned();
+                                    let value = decode_xml_text(&text_content);
                                     let (final_scheme, final_value) = if let Some(s) = scheme {
                                         (s, value.clone())
                                     } else if let Some(colon_pos) = value.find(':') {
@@ -273,9 +255,7 @@ impl EpubParser {
                             }
                             b"subject" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
-                                    let subject = unescape(&text_content)
-                                        .unwrap_or(Cow::Borrowed(&text_content))
-                                        .into_owned();
+                                    let subject = decode_xml_text(&text_content);
                                     if !subject.is_empty() {
                                         subjects.push(subject);
                                     }
@@ -293,17 +273,17 @@ impl EpubParser {
                                     let key = attr.key.as_ref();
                                     match key {
                                         b"property" => {
-                                            property = Some(attr.unescape_value()?.into_owned())
+                                            property = Some(xml_attr_value(&attr)?.into_owned())
                                         }
-                                        b"id" => id = Some(attr.unescape_value()?.into_owned()),
+                                        b"id" => id = Some(xml_attr_value(&attr)?.into_owned()),
                                         b"refines" => {
-                                            refines = Some(attr.unescape_value()?.into_owned())
+                                            refines = Some(xml_attr_value(&attr)?.into_owned())
                                         }
                                         b"name" => {
-                                            name_attr = Some(attr.unescape_value()?.into_owned())
+                                            name_attr = Some(xml_attr_value(&attr)?.into_owned())
                                         }
                                         b"content" => {
-                                            content_attr = Some(attr.unescape_value()?.into_owned())
+                                            content_attr = Some(xml_attr_value(&attr)?.into_owned())
                                         }
                                         _ => {}
                                     }
@@ -326,12 +306,8 @@ impl EpubParser {
                                         if let (Ok(text_content), Some(i)) =
                                             (reader.read_text(e.name()), id)
                                         {
-                                            epub3_collections.insert(
-                                                i,
-                                                unescape(&text_content)
-                                                    .unwrap_or(Cow::Borrowed(&text_content))
-                                                    .into_owned(),
-                                            );
+                                            epub3_collections
+                                                .insert(i, decode_xml_text(&text_content));
                                         }
                                     } else if prop == "group-position" {
                                         if let (Ok(text_content), Some(r)) =
@@ -340,14 +316,13 @@ impl EpubParser {
                                             let clean_refines = r.trim_start_matches('#');
                                             epub3_indices.insert(
                                                 clean_refines.to_string(),
-                                                unescape(&text_content)
-                                                    .unwrap_or(Cow::Borrowed(&text_content))
-                                                    .into_owned(),
+                                                decode_xml_text(&text_content),
                                             );
                                         }
                                     } else if prop == "schema:numberOfPages"
                                         && let Ok(text_content) = reader.read_text(e.name())
-                                        && let Ok(pages) = text_content.trim().parse::<u32>()
+                                        && let Ok(pages) =
+                                            decode_xml_text(&text_content).trim().parse::<u32>()
                                     {
                                         number_of_pages = Some(pages);
                                     }
@@ -365,9 +340,9 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             match key {
-                                b"name" => name_attr = Some(attr.unescape_value()?.into_owned()),
+                                b"name" => name_attr = Some(xml_attr_value(&attr)?.into_owned()),
                                 b"content" => {
-                                    content_attr = Some(attr.unescape_value()?.into_owned())
+                                    content_attr = Some(xml_attr_value(&attr)?.into_owned())
                                 }
                                 _ => {}
                             }
@@ -388,11 +363,11 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"href" {
-                                if let Ok(h) = attr.unescape_value() {
+                                if let Ok(h) = xml_attr_value(&attr) {
                                     href = Some(h.into_owned());
                                 }
                             } else if key == b"properties"
-                                && let Ok(p) = attr.unescape_value()
+                                && let Ok(p) = xml_attr_value(&attr)
                             {
                                 properties = Some(p.into_owned());
                             }
@@ -476,13 +451,13 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if key == b"id" {
-                                id = Some(attr.unescape_value()?.into_owned());
+                                id = Some(xml_attr_value(&attr)?.into_owned());
                             } else if key == b"href" {
-                                href = Some(attr.unescape_value()?.into_owned());
+                                href = Some(xml_attr_value(&attr)?.into_owned());
                             } else if key == b"media-type" {
-                                media_type = Some(attr.unescape_value()?.into_owned());
+                                media_type = Some(xml_attr_value(&attr)?.into_owned());
                             } else if key == b"properties" {
-                                properties = Some(attr.unescape_value()?.into_owned());
+                                properties = Some(xml_attr_value(&attr)?.into_owned());
                             }
                         }
 
@@ -545,7 +520,7 @@ impl EpubParser {
                             // Look for epub:type attribute (either with or without namespace prefix)
                             let key = attr.key.as_ref();
                             if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
-                                && let Ok(val) = attr.unescape_value()
+                                && let Ok(val) = xml_attr_value(&attr)
                                 && val.contains("page-list")
                             {
                                 in_page_list = true;
@@ -668,7 +643,7 @@ impl EpubParser {
                         in_spine = true;
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"toc"
-                                && let Ok(v) = attr.unescape_value()
+                                && let Ok(v) = xml_attr_value(&attr)
                             {
                                 ncx_toc_id = Some(v.into_owned());
                             }
@@ -679,12 +654,12 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
                                 b"id" => {
-                                    if let Ok(v) = attr.unescape_value() {
+                                    if let Ok(v) = xml_attr_value(&attr) {
                                         id = Some(v.into_owned());
                                     }
                                 }
                                 b"href" => {
-                                    if let Ok(v) = attr.unescape_value() {
+                                    if let Ok(v) = xml_attr_value(&attr) {
                                         href = Some(v.into_owned());
                                     }
                                 }
@@ -697,7 +672,7 @@ impl EpubParser {
                     } else if in_spine && local.as_ref() == b"itemref" {
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"idref"
-                                && let Ok(v) = attr.unescape_value()
+                                && let Ok(v) = xml_attr_value(&attr)
                             {
                                 spine_idrefs.push(v.into_owned());
                             }
@@ -766,7 +741,7 @@ impl EpubParser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
-                                && let Ok(val) = attr.unescape_value()
+                                && let Ok(val) = xml_attr_value(&attr)
                                 && val.contains("toc")
                             {
                                 in_toc = true;
@@ -779,14 +754,13 @@ impl EpubParser {
                         let mut href = None;
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"href"
-                                && let Ok(v) = attr.unescape_value()
+                                && let Ok(v) = xml_attr_value(&attr)
                             {
                                 href = Some(v.into_owned());
                             }
                         }
                         if let (Some(href), Ok(text)) = (href, reader.read_text(e.name())) {
-                            let title =
-                                unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                            let title = decode_xml_text(&text);
                             let title = title.trim().to_string();
                             if !title.is_empty() {
                                 entries.push((href, title));
@@ -841,12 +815,7 @@ impl EpubParser {
                         && local.as_ref() == b"text"
                         && let Ok(text) = reader.read_text(e.name())
                     {
-                        current_title = Some(
-                            unescape(&text)
-                                .unwrap_or(Cow::Borrowed(&text))
-                                .trim()
-                                .to_string(),
-                        );
+                        current_title = Some(decode_xml_text(&text).trim().to_string());
                     }
                 }
                 Ok(Event::Empty(ref e)) => {
@@ -854,7 +823,7 @@ impl EpubParser {
                     if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"content" {
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"src"
-                                && let Ok(v) = attr.unescape_value()
+                                && let Ok(v) = xml_attr_value(&attr)
                             {
                                 current_src = Some(v.into_owned());
                             }

@@ -4,6 +4,7 @@ pub mod comic;
 pub mod epub;
 pub mod fb2;
 pub mod mobi;
+mod xml;
 
 pub use comic::ComicParser;
 pub use epub::EpubParser;

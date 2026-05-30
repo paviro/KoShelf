@@ -3,7 +3,10 @@ use log::warn;
 use sqlx::SqlitePool;
 use sqlx::migrate::MigrateError;
 
-use crate::store::sqlite::pool::LIBRARY_DB_REQUIRED_TABLES;
+use crate::store::sqlite::pool::{
+    LIBRARY_DB_REQUIRED_TABLES, TABLE_LIBRARY_ANNOTATIONS, TABLE_LIBRARY_ITEM_FINGERPRINTS,
+    TABLE_LIBRARY_ITEMS, TABLE_SHARE_IMAGE_FINGERPRINTS,
+};
 
 /// Run all pending library DB migrations using sqlx's embedded migration system.
 ///
@@ -47,7 +50,7 @@ pub async fn run_koshelf_migrations(pool: &SqlitePool) -> Result<()> {
 /// Drop all library tables and the sqlx migration tracking table.
 async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
     for table in LIBRARY_DB_REQUIRED_TABLES.iter().rev() {
-        sqlx::query(&format!("DROP TABLE IF EXISTS {table}"))
+        sqlx::query(drop_table_sql(table))
             .execute(pool)
             .await
             .with_context(|| format!("Failed to drop table `{table}` during library DB reset"))?;
@@ -57,6 +60,16 @@ async fn reset_library_db(pool: &SqlitePool) -> Result<()> {
         .await
         .context("Failed to drop `_sqlx_migrations` table during library DB reset")?;
     Ok(())
+}
+
+fn drop_table_sql(table: &str) -> &'static str {
+    match table {
+        TABLE_LIBRARY_ITEMS => "DROP TABLE IF EXISTS library_items",
+        TABLE_LIBRARY_ANNOTATIONS => "DROP TABLE IF EXISTS library_annotations",
+        TABLE_LIBRARY_ITEM_FINGERPRINTS => "DROP TABLE IF EXISTS library_item_fingerprints",
+        TABLE_SHARE_IMAGE_FINGERPRINTS => "DROP TABLE IF EXISTS share_image_fingerprints",
+        _ => unreachable!("unexpected library DB table: {table}"),
+    }
 }
 
 #[cfg(test)]

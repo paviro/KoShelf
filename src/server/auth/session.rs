@@ -33,7 +33,8 @@ pub fn paseto_key_from_bytes(raw_key: &[u8]) -> Result<PasetoSymmetricKey<V4, Lo
         );
     }
 
-    let key = Key::<32>::from(raw_key);
+    let key_bytes = <[u8; 32]>::try_from(raw_key).context("Failed to decode 32-byte token key")?;
+    let key = Key::<32>::from(key_bytes);
     Ok(PasetoSymmetricKey::<V4, Local>::from(key))
 }
 

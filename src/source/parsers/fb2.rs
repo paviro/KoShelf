@@ -1,12 +1,11 @@
 use crate::shelf::models::{BookInfo, ChapterEntry, Identifier};
 use crate::shelf::utils::sanitize_html;
+use crate::source::parsers::xml::{decode_xml_text, xml_attr_value};
 use anyhow::{Context, Result, anyhow};
 use base64::{Engine as _, engine::general_purpose};
 use log::{debug, warn};
 use quick_xml::Reader;
-use quick_xml::escape::unescape;
 use quick_xml::events::Event;
-use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -177,22 +176,17 @@ impl Fb2Parser {
                         // title-info elements
                         b"book-title" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                title = Some(
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned(),
-                                );
+                                title = Some(decode_xml_text(&text));
                             }
                         }
                         b"lang" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                language = Some(
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned(),
-                                );
+                                language = Some(decode_xml_text(&text));
                             }
                         }
                         b"genre" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                let genre =
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                                let genre = decode_xml_text(&text);
                                 if !genre.is_empty() {
                                     subjects.push(genre);
                                 }
@@ -201,6 +195,7 @@ impl Fb2Parser {
                         b"annotation" if in_title_info => {
                             // Read the entire annotation content (may contain nested XML)
                             if let Ok(text) = reader.read_text(e.name()) {
+                                let text = decode_xml_text(&text);
                                 let cleaned = sanitize_html(&text);
                                 if !cleaned.trim().is_empty() {
                                     description = Some(cleaned);
@@ -210,34 +205,28 @@ impl Fb2Parser {
                         // Author name parts
                         b"first-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                first_name =
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                                first_name = decode_xml_text(&text);
                             }
                         }
                         b"middle-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                middle_name =
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                                middle_name = decode_xml_text(&text);
                             }
                         }
                         b"last-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                last_name =
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                                last_name = decode_xml_text(&text);
                             }
                         }
                         // publish-info elements
                         b"publisher" if in_publish_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                publisher = Some(
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned(),
-                                );
+                                publisher = Some(decode_xml_text(&text));
                             }
                         }
                         b"isbn" if in_publish_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
-                                let isbn =
-                                    unescape(&text).unwrap_or(Cow::Borrowed(&text)).into_owned();
+                                let isbn = decode_xml_text(&text);
                                 if !isbn.is_empty() {
                                     identifiers.push(Identifier::new("isbn".to_string(), isbn));
                                 }
@@ -249,7 +238,7 @@ impl Fb2Parser {
                                 let key = attr.key.as_ref();
                                 // Handle both href and l:href (XLink namespace)
                                 if (key == b"href" || key.ends_with(b":href"))
-                                    && let Ok(href) = attr.unescape_value()
+                                    && let Ok(href) = xml_attr_value(&attr)
                                 {
                                     cover_href = Some(href.trim_start_matches('#').to_string());
                                     break;
@@ -268,12 +257,12 @@ impl Fb2Parser {
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
                                 b"name" => {
-                                    if let Ok(val) = attr.unescape_value() {
+                                    if let Ok(val) = xml_attr_value(&attr) {
                                         series = Some(val.into_owned());
                                     }
                                 }
                                 b"number" => {
-                                    if let Ok(val) = attr.unescape_value() {
+                                    if let Ok(val) = xml_attr_value(&attr) {
                                         series_number = Some(val.into_owned());
                                     }
                                 }
@@ -286,7 +275,7 @@ impl Fb2Parser {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             if (key == b"href" || key.ends_with(b":href"))
-                                && let Ok(href) = attr.unescape_value()
+                                && let Ok(href) = xml_attr_value(&attr)
                             {
                                 cover_href = Some(href.trim_start_matches('#').to_string());
                                 break;
@@ -396,9 +385,7 @@ impl Fb2Parser {
                         b"title" if in_body && section_depth >= 1 => {
                             let pos = reader.buffer_position();
                             if let Ok(inner) = reader.read_text(e.name()) {
-                                let text = Self::strip_xml_tags(
-                                    &unescape(&inner).unwrap_or(Cow::Borrowed(&inner)),
-                                );
+                                let text = Self::strip_xml_tags(&decode_xml_text(&inner));
                                 if !text.is_empty() {
                                     titled_entries.push((pos, text));
                                 }
@@ -407,9 +394,7 @@ impl Fb2Parser {
                         }
                         b"p" if in_body && section_depth == 1 && awaiting_first_p => {
                             if let Ok(inner) = reader.read_text(e.name()) {
-                                let text = Self::strip_xml_tags(
-                                    &unescape(&inner).unwrap_or(Cow::Borrowed(&inner)),
-                                );
+                                let text = Self::strip_xml_tags(&decode_xml_text(&inner));
                                 if !text.is_empty() && text.len() <= 80 {
                                     current_first_p = Some(text);
                                 }
@@ -504,14 +489,14 @@ impl Fb2Parser {
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
                                 b"id" => {
-                                    if let Ok(id) = attr.unescape_value()
+                                    if let Ok(id) = xml_attr_value(&attr)
                                         && id.as_ref() == cover_href
                                     {
                                         found_id = true;
                                     }
                                 }
                                 b"content-type" => {
-                                    if let Ok(ct) = attr.unescape_value() {
+                                    if let Ok(ct) = xml_attr_value(&attr) {
                                         mime_type = Some(ct.into_owned());
                                     }
                                 }
@@ -522,6 +507,7 @@ impl Fb2Parser {
                         if found_id {
                             // Read the base64 content
                             if let Ok(text) = reader.read_text(e.name()) {
+                                let text = decode_xml_text(&text);
                                 let text_clean = text.trim().replace(['\n', '\r', ' '], "");
                                 match general_purpose::STANDARD.decode(&text_clean) {
                                     Ok(data) => return Ok((Some(data), mime_type)),

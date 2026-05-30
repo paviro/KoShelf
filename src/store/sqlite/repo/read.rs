@@ -8,7 +8,7 @@ use log::warn;
 use crate::server::api::responses::library::{
     LibraryAnnotation, LibraryDetailItem, LibraryListItem,
 };
-use crate::shelf::library::queries::LibraryListQuery;
+use crate::shelf::library::queries::{ItemSort, LibraryListQuery, SortOrder};
 use crate::shelf::models::ChapterEntry;
 use crate::shelf::models::ContentType;
 
@@ -23,19 +23,7 @@ impl LibraryRepository {
 
         let content_type = query.scope.sql_value();
 
-        let sql = format!(
-            "SELECT
-                id, title, authors_json, series_json, status,
-                progress_percentage, rating, annotation_count,
-                cover_url, content_type
-             FROM library_items
-             WHERE (?1 IS NULL OR content_type = ?1)
-             ORDER BY {} {} NULLS LAST, id ASC",
-            query.sort.sql_column(),
-            direction.sql_keyword(),
-        );
-
-        sqlx::query_as::<_, LibraryListItem>(&sql)
+        sqlx::query_as::<_, LibraryListItem>(list_items_sql(query.sort, direction))
             .bind(content_type)
             .fetch_all(&self.pool)
             .await
@@ -43,27 +31,33 @@ impl LibraryRepository {
     }
 
     pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
-        let pages_expr = if self.use_stable_page_metadata {
-            "COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages)"
-        } else {
-            "COALESCE(i.doc_pages, i.parser_pages)"
-        };
-
-        let sql = format!(
+        let sql = if self.use_stable_page_metadata {
             "SELECT
                 i.id, i.title, i.authors_json, i.series_json, i.status,
                 i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
                 i.language, i.publisher, i.description, i.review_note,
-                {pages_expr} as pages,
+                COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages) as pages,
                 i.search_base_path, i.subjects_json, i.identifiers_json,
                 (f.metadata_path IS NOT NULL) AS has_metadata,
                 i.partial_md5_checksum, i.reader_presentation
              FROM library_items i
              LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
              WHERE i.id = ?1"
-        );
+        } else {
+            "SELECT
+                i.id, i.title, i.authors_json, i.series_json, i.status,
+                i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
+                i.language, i.publisher, i.description, i.review_note,
+                COALESCE(i.doc_pages, i.parser_pages) as pages,
+                i.search_base_path, i.subjects_json, i.identifiers_json,
+                (f.metadata_path IS NOT NULL) AS has_metadata,
+                i.partial_md5_checksum, i.reader_presentation
+             FROM library_items i
+             LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
+             WHERE i.id = ?1"
+        };
 
-        sqlx::query_as::<_, LibraryDetailItem>(&sql)
+        sqlx::query_as::<_, LibraryDetailItem>(sql)
             .bind(id)
             .fetch_optional(&self.pool)
             .await
@@ -416,10 +410,49 @@ impl LibraryRepository {
     }
 }
 
+macro_rules! list_items_query {
+    ($order_by:literal) => {
+        concat!(
+            "SELECT
+                id, title, authors_json, series_json, status,
+                progress_percentage, rating, annotation_count,
+                cover_url, content_type
+             FROM library_items
+             WHERE (?1 IS NULL OR content_type = ?1)
+             ORDER BY ",
+            $order_by,
+            " NULLS LAST, id ASC"
+        )
+    };
+}
+
+fn list_items_sql(sort: ItemSort, direction: SortOrder) -> &'static str {
+    match (sort, direction) {
+        (ItemSort::Title, SortOrder::Asc) => list_items_query!("LOWER(title) ASC"),
+        (ItemSort::Title, SortOrder::Desc) => list_items_query!("LOWER(title) DESC"),
+        (ItemSort::Author, SortOrder::Asc) => {
+            list_items_query!("LOWER(JSON_EXTRACT(authors_json, '$[0]')) ASC")
+        }
+        (ItemSort::Author, SortOrder::Desc) => {
+            list_items_query!("LOWER(JSON_EXTRACT(authors_json, '$[0]')) DESC")
+        }
+        (ItemSort::Status, SortOrder::Asc) => list_items_query!("status ASC"),
+        (ItemSort::Status, SortOrder::Desc) => list_items_query!("status DESC"),
+        (ItemSort::Progress, SortOrder::Asc) => list_items_query!("progress_percentage ASC"),
+        (ItemSort::Progress, SortOrder::Desc) => list_items_query!("progress_percentage DESC"),
+        (ItemSort::Rating, SortOrder::Asc) => list_items_query!("rating ASC"),
+        (ItemSort::Rating, SortOrder::Desc) => list_items_query!("rating DESC"),
+        (ItemSort::Annotations, SortOrder::Asc) => list_items_query!("annotation_count ASC"),
+        (ItemSort::Annotations, SortOrder::Desc) => list_items_query!("annotation_count DESC"),
+        (ItemSort::LastOpenAt, SortOrder::Asc) => list_items_query!("last_open_at ASC"),
+        (ItemSort::LastOpenAt, SortOrder::Desc) => list_items_query!("last_open_at DESC"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::server::api::responses::common::ContentTypeFilter;
-    use crate::shelf::library::queries::{ItemSort, LibraryListQuery};
+    use crate::shelf::library::queries::{ItemSort, LibraryListQuery, SortOrder};
     use crate::store::sqlite::repo::tests::{sample_annotation, sample_item, test_repo};
 
     #[tokio::test]
@@ -509,6 +542,36 @@ mod tests {
             .unwrap();
         assert_eq!(items[0].rating, Some(5));
         assert_eq!(items[1].rating, Some(1));
+    }
+
+    #[tokio::test]
+    async fn list_items_supports_all_sort_and_order_combinations() {
+        let repo = test_repo().await;
+        repo.upsert_item(&sample_item("sort-arms")).await.unwrap();
+
+        for sort in [
+            ItemSort::Title,
+            ItemSort::Author,
+            ItemSort::Status,
+            ItemSort::Progress,
+            ItemSort::Rating,
+            ItemSort::Annotations,
+            ItemSort::LastOpenAt,
+        ] {
+            for order in [SortOrder::Asc, SortOrder::Desc] {
+                let items = repo
+                    .list_items(&LibraryListQuery {
+                        sort,
+                        order: Some(order),
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
+
+                assert_eq!(items.len(), 1);
+                assert_eq!(items[0].id, "sort-arms");
+            }
+        }
     }
 
     #[tokio::test]

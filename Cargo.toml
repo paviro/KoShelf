@@ -52,7 +52,7 @@ env_logger = "0.11.10"
 # Progress bars
 indicatif = "0.18"
 # XML parsing
-quick-xml = "0.39.2"
+quick-xml = "0.40.1"
 # HTML sanitization
 ammonia = "4.1.2"
 # Web server (for live server mode)
@@ -67,7 +67,7 @@ tower-http = { version = "0.6", features = [
 # Futures utilities
 futures = "0.3"
 # SQLite database access
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "derive", "json"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "derive", "json"] }
 chrono-tz = "0.10"
 md5 = "0.8.0"
 regex = "1.12.2"
@@ -76,7 +76,7 @@ base64 = "0.22"
 include_dir = "0.7.4"
 argon2 = "0.5"
 rand = "0.10"
-rusty_paseto = "0.9"
+rusty_paseto = "0.10"
 rpassword = "7.5"
 governor = "0.10.4"
 dashmap = "6"

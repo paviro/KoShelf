@@ -3,7 +3,7 @@ use super::*;
 use crate::source::koreader::StatisticsParser;
 use mlua::{Lua, LuaOptions, StdLib, Table};
 use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::{Executor, Row, SqlitePool};
+use sqlx::{AssertSqlSafe, Executor, Row, SqlitePool};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -53,12 +53,16 @@ impl TestDatabase {
             .expect("Failed to open temporary statistics DB");
 
         for stmt in statements {
-            pool.execute(stmt.as_str()).await.unwrap_or_else(|err| {
-                panic!(
-                    "Failed to execute KoReader schema statement:\n{}\nError: {}",
-                    stmt, err
-                )
-            });
+            // These schema statements are captured from KoReader's Lua test fixture,
+            // so they are inherently runtime SQL rather than literals.
+            pool.execute(AssertSqlSafe(stmt.clone()))
+                .await
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "Failed to execute KoReader schema statement:\n{}\nError: {}",
+                        stmt, err
+                    )
+                });
         }
 
         pool.execute("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE;")
@@ -133,7 +137,9 @@ async fn test_statistics_totals_query_matches_parser() {
     seed_sample_statistics(&db.pool).await;
 
     let query = format_percent_d(&artifacts.totals_query, &[1]);
-    let row = sqlx::query(&query)
+    // This query is captured from KoReader's Lua code and formatted with a
+    // numeric book id above, so it cannot be represented as a local SQL literal.
+    let row = sqlx::query(AssertSqlSafe(query))
         .fetch_one(&db.pool)
         .await
         .expect("KoReader totals query failed");
@@ -162,8 +168,12 @@ async fn test_statistics_totals_query_matches_parser() {
 }
 
 async fn fetch_table_info(pool: &SqlitePool, table: &str) -> Vec<ColumnDescriptor> {
-    let pragma = format!("PRAGMA table_info({})", table);
-    let rows = sqlx::query(&pragma)
+    let pragma = match table {
+        "page_stat_data" => "PRAGMA table_info(page_stat_data)",
+        "page_stat" => "PRAGMA table_info(page_stat)",
+        _ => unreachable!("unexpected statistics table: {table}"),
+    };
+    let rows = sqlx::query(pragma)
         .fetch_all(pool)
         .await
         .expect("Failed to inspect schema");

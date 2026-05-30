@@ -26,18 +26,6 @@ query_enum_bare! {
 }
 
 impl ItemSort {
-    pub fn sql_column(self) -> &'static str {
-        match self {
-            Self::Title => "LOWER(title)",
-            Self::Author => "LOWER(JSON_EXTRACT(authors_json, '$[0]'))",
-            Self::Status => "status",
-            Self::Progress => "progress_percentage",
-            Self::Rating => "rating",
-            Self::Annotations => "annotation_count",
-            Self::LastOpenAt => "last_open_at",
-        }
-    }
-
     pub fn default_order(self) -> SortOrder {
         match self {
             Self::Title | Self::Author | Self::Status => SortOrder::Asc,
@@ -56,15 +44,6 @@ query_enum_bare! {
     pub enum SortOrder {
         Asc => "asc",
         Desc => "desc",
-    }
-}
-
-impl SortOrder {
-    pub fn sql_keyword(self) -> &'static str {
-        match self {
-            Self::Asc => "ASC",
-            Self::Desc => "DESC",
-        }
     }
 }
 
