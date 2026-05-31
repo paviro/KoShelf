@@ -80,7 +80,7 @@ export function LibraryBookmarksSection({
             controls={controls}
         >
             <div className="space-y-3">
-                {displayedEntries.map(({ annotation, originalIndex }) => (
+                {displayedEntries.map(({ annotation }) => (
                     <LibraryAnnotationCard
                         key={annotation.id}
                         annotation={annotation}
@@ -88,7 +88,7 @@ export function LibraryBookmarksSection({
                         readerHref={annotationReaderHref(
                             readerBaseHref,
                             'bookmark',
-                            originalIndex,
+                            annotation.id,
                         )}
                         showEditingControls={canWrite && editing}
                         onSaveNote={

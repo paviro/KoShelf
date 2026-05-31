@@ -115,7 +115,7 @@ describe('sortedAnnotationEntries', () => {
         ).toEqual(['page-20', 'page-10', 'missing']);
     });
 
-    it('preserves original indexes for reader links after sorting', () => {
+    it('preserves original indexes as sort metadata after sorting', () => {
         const annotations = [
             makeAnnotation('middle', '2026-02-01T10:00:00Z'),
             makeAnnotation('newest', '2026-03-01T10:00:00Z'),

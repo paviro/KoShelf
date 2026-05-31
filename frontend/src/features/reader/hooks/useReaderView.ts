@@ -36,6 +36,7 @@ import {
     isReaderFormatSupported,
     normalizeLibraryFormat,
 } from '../lib/reader-format-support';
+import { resolveTargetAnnotation } from '../lib/reader-annotation-url';
 import { resolveHighlightsBySection } from '../lib/reader-highlight-resolution';
 import { resolveAnnotationTarget } from '../lib/reader-navigation-resolution';
 import { parseKoReaderPosition } from '../lib/reader-position-parser';
@@ -96,8 +97,8 @@ export function useReaderView(
     const params = useParams();
     const [searchParams] = useSearchParams();
     const id = params.id;
-    const highlightIndex = searchParams.get('highlight');
-    const bookmarkIndex = searchParams.get('bookmark');
+    const highlightId = searchParams.get('highlight');
+    const bookmarkId = searchParams.get('bookmark');
 
     const detailData = detailState.data;
     const detailError = detailState.error;
@@ -572,7 +573,7 @@ export function useReaderView(
 
                 const hasAnnotationTarget =
                     !annotationParamsConsumedRef.current &&
-                    (highlightIndex !== null || bookmarkIndex !== null);
+                    (highlightId !== null || bookmarkId !== null);
                 const savedCfi =
                     !hasAnnotationTarget && id
                         ? StorageManager.getSessionByKey<string>(
@@ -593,8 +594,8 @@ export function useReaderView(
                 const prioritySectionIndexes = buildPrioritySectionIndexes(
                     highlights,
                     bookmarks,
-                    highlightIndex,
-                    bookmarkIndex,
+                    highlightId,
+                    bookmarkId,
                     loadedOverlaySections,
                 );
 
@@ -602,11 +603,11 @@ export function useReaderView(
                     document.documentElement.classList.contains('dark');
 
                 const targetAnnotation =
-                    highlightIndex !== null
+                    highlightId !== null
                         ? resolveTargetAnnotation(
                               highlights,
                               bookmarks,
-                              highlightIndex,
+                              highlightId,
                               null,
                           )
                         : null;
@@ -642,8 +643,8 @@ export function useReaderView(
                     view,
                     highlights,
                     bookmarks,
-                    highlightIndex,
-                    bookmarkIndex,
+                    highlightId,
+                    bookmarkId,
                 );
 
                 if (hasAnnotationTarget) {
@@ -716,11 +717,11 @@ export function useReaderView(
         closeReaderView,
         detailError,
         bookmarks,
-        bookmarkIndex,
+        bookmarkId,
         detailIsError,
         fileHref,
         hasItem,
-        highlightIndex,
+        highlightId,
         highlights,
         id,
         normalizedFormat,
@@ -780,31 +781,6 @@ function stripAnnotationParams(): void {
     window.history.replaceState(window.history.state, '', newHash);
 }
 
-function resolveTargetAnnotation(
-    highlights: LibraryAnnotation[],
-    bookmarks: LibraryAnnotation[],
-    highlightIndex: string | null,
-    bookmarkIndex: string | null,
-): { annotation: LibraryAnnotation; index: number } | null {
-    const targetIndex = bookmarkIndex !== null ? bookmarkIndex : highlightIndex;
-    const annotations = bookmarkIndex !== null ? bookmarks : highlights;
-
-    if (targetIndex === null) {
-        return null;
-    }
-
-    const parsedIndex = Number.parseInt(targetIndex, 10);
-    if (
-        Number.isNaN(parsedIndex) ||
-        parsedIndex < 0 ||
-        parsedIndex >= annotations.length
-    ) {
-        return null;
-    }
-
-    return { annotation: annotations[parsedIndex], index: parsedIndex };
-}
-
 function resolveTocEntries(view: FoliateView): TocEntry[] {
     const result: TocEntry[] = [];
 
@@ -849,14 +825,14 @@ async function navigateToAnnotation(
     view: FoliateView,
     highlights: LibraryAnnotation[],
     bookmarks: LibraryAnnotation[],
-    highlightIndex: string | null,
-    bookmarkIndex: string | null,
+    highlightId: string | null,
+    bookmarkId: string | null,
 ) {
     const resolved = resolveTargetAnnotation(
         highlights,
         bookmarks,
-        highlightIndex,
-        bookmarkIndex,
+        highlightId,
+        bookmarkId,
     );
     if (!resolved) {
         return;
@@ -877,16 +853,16 @@ async function navigateToAnnotation(
 function buildPrioritySectionIndexes(
     highlights: LibraryAnnotation[],
     bookmarks: LibraryAnnotation[],
-    highlightIndex: string | null,
-    bookmarkIndex: string | null,
+    highlightId: string | null,
+    bookmarkId: string | null,
     loadedOverlaySections: Set<number>,
 ): number[] {
     const sectionIndexes = new Set<number>(loadedOverlaySections);
     const resolved = resolveTargetAnnotation(
         highlights,
         bookmarks,
-        highlightIndex,
-        bookmarkIndex,
+        highlightId,
+        bookmarkId,
     );
 
     if (resolved?.annotation.pos0) {

@@ -84,7 +84,7 @@ export function LibraryHighlightsSection({
             controls={controls}
         >
             <div className="space-y-6">
-                {displayedEntries.map(({ annotation, originalIndex }) => (
+                {displayedEntries.map(({ annotation }) => (
                     <LibraryAnnotationCard
                         key={annotation.id}
                         annotation={annotation}
@@ -92,7 +92,7 @@ export function LibraryHighlightsSection({
                         readerHref={annotationReaderHref(
                             readerBaseHref,
                             'highlight',
-                            originalIndex,
+                            annotation.id,
                         )}
                         showEditingControls={canWrite && editing}
                         onSaveNote={
