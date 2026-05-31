@@ -195,19 +195,6 @@ export function PasswordChangeSection({
                 />
             </SettingsField>
 
-            {feedback ? (
-                <p
-                    role="alert"
-                    className={`text-sm font-medium px-3 py-2 rounded-lg border ${
-                        feedback.type === 'success'
-                            ? 'border-emerald-300/70 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                            : 'border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300'
-                    }`}
-                >
-                    {feedback.message}
-                </p>
-            ) : null}
-
             <SettingsField
                 label={translation.get('change-password')}
                 htmlFor="settings-change-password-submit"
@@ -227,6 +214,19 @@ export function PasswordChangeSection({
                     {translation.get('change-password')}
                 </Button>
             </SettingsField>
+
+            {feedback ? (
+                <p
+                    role="alert"
+                    className={`text-sm font-medium px-3 py-2 rounded-lg border ${
+                        feedback.type === 'success'
+                            ? 'border-emerald-300/70 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : 'border-red-200/80 dark:border-red-500/40 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-300'
+                    }`}
+                >
+                    {feedback.message}
+                </p>
+            ) : null}
         </form>
     );
 }
