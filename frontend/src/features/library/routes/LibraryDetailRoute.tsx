@@ -20,6 +20,7 @@ import { LibraryDetailHeader } from '../components/LibraryDetailHeader';
 import { EditWarningModal } from '../components/EditWarningModal';
 import { useLibraryDetailQuery } from '../hooks/useLibraryQueries';
 import { useEditWarning } from '../hooks/useEditWarning';
+import { useAnnotationSortOrder } from '../hooks/useAnnotationSortOrder';
 import {
     useUpdateItem,
     useUpdateAnnotation,
@@ -172,6 +173,16 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
             sectionKeys: LIBRARY_DETAIL_SECTION_KEYS,
             defaults: sectionDefaults,
         });
+    const { order: highlightsSortOrder, toggle: toggleHighlightsSort } =
+        useAnnotationSortOrder({
+            routeId: detailRouteId,
+            sectionKey: 'highlights',
+        });
+    const { order: bookmarksSortOrder, toggle: toggleBookmarksSort } =
+        useAnnotationSortOrder({
+            routeId: detailRouteId,
+            sectionKey: 'bookmarks',
+        });
 
     useDocumentTitle(
         item?.title ?? collectionTitle(collection),
@@ -286,6 +297,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                         annotations={highlightAnnotations}
                                         visible={sectionState.highlights}
                                         onToggle={() => toggle('highlights')}
+                                        sortOrder={highlightsSortOrder}
+                                        onToggleSort={toggleHighlightsSort}
                                         readerBaseHref={readerBaseHref}
                                         canWrite={canWrite}
                                         onSaveNote={handleAnnotationNoteUpdate}
@@ -306,6 +319,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                         annotations={bookmarkAnnotations}
                                         visible={sectionState.bookmarks}
                                         onToggle={() => toggle('bookmarks')}
+                                        sortOrder={bookmarksSortOrder}
+                                        onToggleSort={toggleBookmarksSort}
                                         readerBaseHref={readerBaseHref}
                                         canWrite={canWrite}
                                         onSaveNote={handleAnnotationNoteUpdate}

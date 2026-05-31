@@ -2,6 +2,10 @@ import { LuDownload } from 'react-icons/lu';
 
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
+import {
+    SortNewestIcon,
+    SortOldestIcon,
+} from '../../../shared/ui/icons/SortOrderIcons';
 import { ContentScopeFilter } from '../../../shared/ui/selectors/ContentScopeFilter';
 import { YearSelector } from '../../../shared/ui/selectors/YearSelector';
 import type { RecapScope } from '../api/recap-data';
@@ -18,32 +22,6 @@ type RecapHeaderControlsProps = {
     shareEnabled: boolean;
     onShareClick: () => void;
 };
-
-function SortNewestIcon(props: React.SVGAttributes<SVGElement>) {
-    return (
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 7h8M4 12h8M4 17h5M18 6v12M15 15l3 3 3-3"
-            />
-        </svg>
-    );
-}
-
-function SortOldestIcon(props: React.SVGAttributes<SVGElement>) {
-    return (
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" {...props}>
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 7h5M4 12h8M4 17h8M18 18V6M15 9l3-3 3 3"
-            />
-        </svg>
-    );
-}
 
 export function RecapHeaderControls({
     showTypeFilter,
