@@ -3,6 +3,10 @@ import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
 import { api, isApiHttpError, isServeMode } from './api';
 import { fetchJson, isLoginHashRoute, redirectToLogin } from './api-fetch';
+import {
+    emitUnauthorizedSessionEvent,
+    installUnauthorizedSessionCacheSync,
+} from './auth-session';
 import type { SiteData } from './contracts';
 
 interface DataChangedPayload {
@@ -84,6 +88,11 @@ export function RuntimeUpdatesBridge() {
     const lastRevisionRef = useRef<number | null>(null);
     const lastGeneratedAtRef = useRef<string | null>(null);
 
+    useEffect(
+        () => installUnauthorizedSessionCacheSync(queryClient),
+        [queryClient],
+    );
+
     useEffect(() => {
         if (
             !isServeMode() ||
@@ -142,6 +151,7 @@ export function RuntimeUpdatesBridge() {
                 });
             } catch (error) {
                 if (isApiHttpError(error) && error.status === 401) {
+                    emitUnauthorizedSessionEvent();
                     redirectToLogin();
                 }
             } finally {

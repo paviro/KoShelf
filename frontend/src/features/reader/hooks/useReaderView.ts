@@ -16,6 +16,10 @@ import {
     detailRouteIdForCollection,
 } from '../../../app/routes/route-registry';
 import { ApiHttpError, api } from '../../../shared/api';
+import {
+    apiHttpErrorFromResponse,
+    handleUnauthorizedResponse,
+} from '../../../shared/api-fetch';
 import { translation } from '../../../shared/i18n';
 import { StorageManager } from '../../../shared/storage-manager';
 import type {
@@ -358,14 +362,19 @@ export function useReaderView(
                 }
 
                 const response = await fetch(fileHref);
+                if (response.status === 401) {
+                    await handleUnauthorizedResponse(fileHref, response);
+                }
+
                 if (!response.ok) {
-                    throw new ApiHttpError(fileHref, response.status, {
-                        code:
-                            response.status === 404
-                                ? 'book_file_unavailable'
-                                : undefined,
-                        apiMessage: response.statusText.trim() || undefined,
-                    });
+                    if (response.status === 404) {
+                        throw new ApiHttpError(fileHref, response.status, {
+                            code: 'book_file_unavailable',
+                            apiMessage: response.statusText.trim() || undefined,
+                        });
+                    }
+
+                    throw await apiHttpErrorFromResponse(fileHref, response);
                 }
 
                 if (cancelled) {

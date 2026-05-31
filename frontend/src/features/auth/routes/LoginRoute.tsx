@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate } from 'react-router';
 
 import { BRAND_ICON } from '../../../app/shell/shell-nav';
 import { api, isApiHttpError } from '../../../shared/api';
+import { markSiteAuthenticated } from '../../../shared/auth-session';
 import { translation } from '../../../shared/i18n';
 import { LoginPasswordField } from '../components/LoginPasswordField';
 import { Button } from '../../../shared/ui/button/Button';
@@ -37,6 +39,7 @@ export function LoginRoute({
     siteLoaded,
 }: LoginRouteProps) {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [password, setPassword] = useState('');
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitPending, setSubmitPending] = useState(false);
@@ -66,6 +69,8 @@ export function LoginRoute({
 
             try {
                 await api.login(password);
+                markSiteAuthenticated(queryClient, true);
+                void queryClient.invalidateQueries({ queryKey: ['site'] });
                 navigate(defaultRoute, { replace: true });
             } catch (error) {
                 setSubmitError(resolveLoginErrorMessage(error));
@@ -73,7 +78,7 @@ export function LoginRoute({
                 setSubmitPending(false);
             }
         },
-        [defaultRoute, navigate, password, submitPending],
+        [defaultRoute, navigate, password, queryClient, submitPending],
     );
 
     if (authenticated == null) {

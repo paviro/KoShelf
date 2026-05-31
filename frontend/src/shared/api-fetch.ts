@@ -1,3 +1,5 @@
+import { emitUnauthorizedSessionEvent } from './auth-session';
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type FetchJsonOptions = {
@@ -113,6 +115,30 @@ async function parseErrorEnvelope(response: Response): Promise<{
     }
 }
 
+export async function apiHttpErrorFromResponse(
+    url: string,
+    response: Response,
+): Promise<ApiHttpError> {
+    const errorPayload = await parseErrorEnvelope(response);
+    return new ApiHttpError(url, response.status, {
+        code: errorPayload.code,
+        apiMessage: errorPayload.apiMessage,
+        details: errorPayload.details,
+        retryAfterSeconds: parseRetryAfterSeconds(
+            response.headers.get('retry-after'),
+        ),
+    });
+}
+
+export async function handleUnauthorizedResponse(
+    url: string,
+    response: Response,
+): Promise<never> {
+    emitUnauthorizedSessionEvent();
+    redirectToLogin();
+    throw await apiHttpErrorFromResponse(url, response);
+}
+
 export async function fetchJson(
     url: string,
     options: FetchJsonOptions = {},
@@ -128,20 +154,11 @@ export async function fetchJson(
     });
 
     if (response.status === 401 && options.redirectOnUnauthorized !== false) {
-        redirectToLogin();
-        return new Promise<never>(() => {});
+        await handleUnauthorizedResponse(url, response);
     }
 
     if (!response.ok) {
-        const errorPayload = await parseErrorEnvelope(response);
-        throw new ApiHttpError(url, response.status, {
-            code: errorPayload.code,
-            apiMessage: errorPayload.apiMessage,
-            details: errorPayload.details,
-            retryAfterSeconds: parseRetryAfterSeconds(
-                response.headers.get('retry-after'),
-            ),
-        });
+        throw await apiHttpErrorFromResponse(url, response);
     }
 
     if (response.status === 204) {
