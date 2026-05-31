@@ -9,6 +9,7 @@ import {
     groupAnnotationsByChapter,
     normalizeReaderText,
     resolveCurrentGroupIndex,
+    sortReaderAnnotationsByPage,
 } from '../lib/reader-drawer-utils';
 import { ReaderDrawerEmptyState } from './ReaderDrawerEmptyState';
 
@@ -26,7 +27,7 @@ export function ReaderBookmarkList({
     onSelect,
 }: ReaderBookmarkListProps) {
     const groups = useMemo(
-        () => groupAnnotationsByChapter(bookmarks),
+        () => groupAnnotationsByChapter(sortReaderAnnotationsByPage(bookmarks)),
         [bookmarks],
     );
     const listRef = useRef<HTMLDivElement>(null);

@@ -1,4 +1,5 @@
 import type { LibraryAnnotation } from '../../library/api/library-data';
+import { sortedAnnotationEntries } from '../../library/lib/annotation-sort';
 import { parseKoReaderPosition } from './reader-position-parser';
 
 export function normalizeReaderText(value: string): string {
@@ -53,6 +54,14 @@ export function groupAnnotationsByChapter(
     }
 
     return groups;
+}
+
+export function sortReaderAnnotationsByPage(
+    annotations: LibraryAnnotation[],
+): LibraryAnnotation[] {
+    return sortedAnnotationEntries(annotations, 'page-asc').map(
+        (entry) => entry.annotation,
+    );
 }
 
 export function resolveCurrentGroupIndex(

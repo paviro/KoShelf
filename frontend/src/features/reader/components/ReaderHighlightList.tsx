@@ -10,6 +10,7 @@ import {
     groupAnnotationsByChapter,
     normalizeReaderText,
     resolveCurrentGroupIndex,
+    sortReaderAnnotationsByPage,
 } from '../lib/reader-drawer-utils';
 import { highlightColor } from '../lib/reader-highlight-colors';
 import { ReaderDrawerEmptyState } from './ReaderDrawerEmptyState';
@@ -28,7 +29,8 @@ export function ReaderHighlightList({
     onSelect,
 }: ReaderHighlightListProps) {
     const groups = useMemo(
-        () => groupAnnotationsByChapter(highlights),
+        () =>
+            groupAnnotationsByChapter(sortReaderAnnotationsByPage(highlights)),
         [highlights],
     );
     const listRef = useRef<HTMLDivElement>(null);
