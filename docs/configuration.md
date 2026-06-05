@@ -84,6 +84,7 @@ These flags are shared by both `serve` and `export`:
 - `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
 - `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided)
+- `--kobo-db`: Path to Kobo's `KoboReader.sqlite` database. Used to discover matched extensionless kepub files and parse them as EPUBs. Requires `--library-path`.
 - `--include-unread`: Include unread items (files without KoReader metadata)
 
 **Data:**
@@ -121,6 +122,7 @@ Common environment variables:
 
 - `KOSHELF_LIBRARY_PATH`
 - `KOSHELF_STATISTICS_DB`
+- `KOSHELF_KOBO_DB`
 - `KOSHELF_OUTPUT`
 - `KOSHELF_INCLUDE_FILES`
 - `KOSHELF_DATA_PATH`
@@ -177,6 +179,9 @@ koshelf export ~/my-reading-site -i ~/Books --hashdocsettings-path ~/KOReaderSet
 
 # Using docsettings (metadata stored in central folder by path)
 koshelf export ~/my-reading-site -i ~/Books --docsettings-path ~/KOReaderSettings/docsettings
+
+# Include extensionless Kobo kepubs from a mounted Kobo device/library
+koshelf export ~/my-reading-site -i /Volumes/KOBOeReader --kobo-db /Volumes/KOBOeReader/.kobo/KoboReader.sqlite --include-unread
 
 # Generate site with German UI language
 koshelf export ~/my-reading-site -i ~/Library --language de_DE
