@@ -85,6 +85,10 @@ pub struct CommonArgs {
     #[arg(short, long, env = "KOSHELF_STATISTICS_DB")]
     pub statistics_db: Option<PathBuf>,
 
+    /// Path to Kobo's KoboReader.sqlite database for matching extensionless kepub files. Requires --library-path.
+    #[arg(long, env = "KOSHELF_KOBO_DB")]
+    pub kobo_db: Option<PathBuf>,
+
     /// Include unread books (EPUBs without KoReader metadata) in the generated site
     #[arg(long, env = "KOSHELF_INCLUDE_UNREAD", default_value = "false")]
     pub include_unread: bool,
@@ -269,6 +273,10 @@ impl CommonArgs {
             anyhow::bail!("--hashdocsettings-path requires --library-path to be provided");
         }
 
+        if self.kobo_db.is_some() && self.library_path.is_empty() {
+            anyhow::bail!("--kobo-db requires --library-path to be provided");
+        }
+
         if let Some(ref docsettings_path) = self.docsettings_path {
             if !docsettings_path.exists() {
                 anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
@@ -300,6 +308,12 @@ impl CommonArgs {
             && !stats_path.exists()
         {
             anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
+        }
+
+        if let Some(ref kobo_db_path) = self.kobo_db
+            && !kobo_db_path.exists()
+        {
+            anyhow::bail!("Kobo database does not exist: {:?}", kobo_db_path);
         }
 
         if let Some(ref data_path) = self.data_path
@@ -445,6 +459,92 @@ mod tests {
         assert_eq!(args.common.library_path, vec![PathBuf::from("/lib")]);
         assert_eq!(args.common.data_path, Some(PathBuf::from("/data")));
         assert_eq!(args.port, 8080);
+    }
+
+    #[test]
+    fn serve_parses_kobo_db() {
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "--library-path",
+                "/lib",
+                "--data-path",
+                "/data",
+                "--kobo-db",
+                "/KoboReader.sqlite",
+            ])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+
+        let CliCommand::Serve(args) = cli.command else {
+            panic!("expected serve command")
+        };
+
+        assert_eq!(
+            args.common.kobo_db,
+            Some(PathBuf::from("/KoboReader.sqlite"))
+        );
+    }
+
+    #[test]
+    fn validate_rejects_missing_kobo_db() {
+        let library = tempfile::tempdir().expect("library temp dir");
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "export",
+                "--library-path",
+                library.path().to_str().unwrap(),
+                "--kobo-db",
+                library.path().join("missing.sqlite").to_str().unwrap(),
+                "/out",
+            ])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let CliCommand::Export(args) = cli.command else {
+            panic!("expected export command")
+        };
+
+        let error = args.validate().expect_err("missing Kobo DB should fail");
+        assert!(
+            error.to_string().contains("Kobo database does not exist"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_kobo_db_without_library_path() {
+        let stats = tempfile::NamedTempFile::new().expect("stats db temp file");
+        let kobo = tempfile::NamedTempFile::new().expect("kobo db temp file");
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "export",
+                "--statistics-db",
+                stats.path().to_str().unwrap(),
+                "--kobo-db",
+                kobo.path().to_str().unwrap(),
+                "/out",
+            ])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let CliCommand::Export(args) = cli.command else {
+            panic!("expected export command")
+        };
+
+        let error = args
+            .validate()
+            .expect_err("Kobo DB without library path should fail");
+        assert!(
+            error
+                .to_string()
+                .contains("--kobo-db requires --library-path"),
+            "unexpected error: {error}"
+        );
     }
 
     #[test]

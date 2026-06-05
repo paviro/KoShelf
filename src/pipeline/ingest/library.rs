@@ -23,10 +23,11 @@ use crate::app::config::SiteConfig;
 use crate::pipeline::media;
 use crate::shelf::library::upsert_single_item;
 use crate::shelf::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
+use crate::source::kobo::KoboFileHints;
 use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};
 use crate::source::koreader::{LuaParser, calculate_partial_md5};
 use crate::source::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
-use crate::source::scanner::{MetadataLocation, collect_paths};
+use crate::source::scanner::{CollectedItem, CollectionOptions, MetadataLocation, collect_paths};
 use crate::source::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };
@@ -176,6 +177,51 @@ impl ItemProcessor {
             path
         );
     }
+}
+
+fn regular_collected_item(path: PathBuf) -> Option<CollectedItem> {
+    LibraryItemFormat::from_path(&path).map(|format| CollectedItem {
+        path,
+        format,
+        kobo_hints: None,
+    })
+}
+
+fn should_use_kobo_encryption_warning(kobo_hints: Option<&KoboFileHints>) -> bool {
+    kobo_hints.is_some_and(KoboFileHints::suggests_encryption)
+}
+
+fn kobo_hint_label(hints: &KoboFileHints) -> String {
+    match (hints.title.as_deref(), hints.author.as_deref()) {
+        (Some(title), Some(author)) => format!("{} by {}", title, author),
+        (Some(title), None) => title.to_string(),
+        (None, Some(author)) => format!("author {}", author),
+        (None, None) => "unknown title".to_string(),
+    }
+}
+
+fn warn_parse_failure(
+    format: LibraryItemFormat,
+    path: &Path,
+    error: &anyhow::Error,
+    kobo_hints: Option<&KoboFileHints>,
+) {
+    if should_use_kobo_encryption_warning(kobo_hints) {
+        let hints = kobo_hints.expect("checked above");
+        warn!(
+            "Failed to parse Kobo {:?} {:?} ({}): {}. Kobo database marks this file as possibly encrypted (ContentID: {}, IsEncrypted: {}, content_keys: {}). Only plaintext EPUB metadata may be readable.",
+            format,
+            path,
+            kobo_hint_label(hints),
+            error,
+            hints.content_id,
+            hints.is_encrypted,
+            hints.has_content_keys
+        );
+        return;
+    }
+
+    warn!("Failed to parse {:?} {:?}: {}", format, path, error);
 }
 
 // ── Index builders ──────────────────────────────────────────────────────
@@ -357,7 +403,7 @@ fn locate_metadata_path(
 ///
 /// Returns the outcome as an `IngestStats` with exactly one counter incremented.
 async fn process_single_item(
-    path: &Path,
+    item: &CollectedItem,
     processor: &ItemProcessor,
     config: &SiteConfig,
     repo: &LibraryRepository,
@@ -369,19 +415,13 @@ async fn process_single_item(
         ..Default::default()
     };
 
-    let format = match LibraryItemFormat::from_path(path) {
-        Some(f) => f,
-        None => {
-            warn!("Unsupported file format: {:?}", path);
-            stats.errors = 1;
-            return stats;
-        }
-    };
+    let path = item.path.as_path();
+    let format = item.format;
 
     let mut book_info = match processor.parse_book_info(format, path).await {
         Ok(info) => info,
         Err(e) => {
-            warn!("Failed to parse {:?} {:?}: {}", format, path, e);
+            warn_parse_failure(format, path, &e, item.kobo_hints.as_ref());
             stats.errors = 1;
             return stats;
         }
@@ -480,22 +520,22 @@ const INGEST_CONCURRENCY: usize = 8;
 /// This single function handles both full ingest (all paths from scanner)
 /// and targeted updates (changed paths from watcher).
 pub async fn ingest_paths(
-    paths: &[PathBuf],
+    items: &[CollectedItem],
     config: &SiteConfig,
     repo: &LibraryRepository,
     covers_dir: &Path,
     files_dir: &Path,
 ) -> Result<IngestStats> {
-    if paths.is_empty() {
+    if items.is_empty() {
         return Ok(IngestStats::default());
     }
 
-    info!("Ingesting {} items...", paths.len());
+    info!("Ingesting {} items...", items.len());
     let start = Instant::now();
 
     let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
 
-    let pb = ProgressBar::new(paths.len() as u64);
+    let pb = ProgressBar::new(items.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("{msg} {bar:30.cyan/blue} {pos}/{len}")
@@ -504,7 +544,7 @@ pub async fn ingest_paths(
     );
     pb.set_message("Ingesting library:");
 
-    let (tx, rx) = tokio::sync::mpsc::channel::<PathBuf>(INGEST_CONCURRENCY * 2);
+    let (tx, rx) = tokio::sync::mpsc::channel::<CollectedItem>(INGEST_CONCURRENCY * 2);
     let rx = Arc::new(tokio::sync::Mutex::new(rx));
 
     let mut workers = tokio::task::JoinSet::new();
@@ -522,7 +562,7 @@ pub async fn ingest_paths(
             let mut stats = IngestStats::default();
 
             loop {
-                let path = {
+                let item = {
                     let mut rx = rx.lock().await;
                     match rx.recv().await {
                         Some(p) => p,
@@ -531,7 +571,7 @@ pub async fn ingest_paths(
                 };
 
                 let item_stats =
-                    process_single_item(&path, &processor, &config, &repo, &covers_dir, &files_dir)
+                    process_single_item(&item, &processor, &config, &repo, &covers_dir, &files_dir)
                         .await;
                 stats.merge(item_stats);
                 pb.inc(1);
@@ -541,8 +581,8 @@ pub async fn ingest_paths(
         });
     }
 
-    for path in paths {
-        if tx.send(path.clone()).await.is_err() {
+    for item in items {
+        if tx.send(item.clone()).await.is_err() {
             break;
         }
     }
@@ -557,7 +597,7 @@ pub async fn ingest_paths(
     }
 
     pb.finish_and_clear();
-    total_stats.processed = paths.len() as u64;
+    total_stats.processed = items.len() as u64;
 
     let elapsed = start.elapsed();
     info!(
@@ -596,7 +636,13 @@ pub async fn update_library(
     files_dir: &Path,
 ) -> Result<UpdateResult> {
     let start = Instant::now();
-    let fs_paths = collect_paths(&config.library_paths);
+    let fs_items = collect_paths(
+        &config.library_paths,
+        &CollectionOptions {
+            kobo_db_path: config.kobo_db_path.clone(),
+        },
+    )
+    .await;
     let stored_fingerprints = repo.load_all_fingerprints().await?;
 
     let stored_by_book_path: HashMap<&str, _> = stored_fingerprints
@@ -604,15 +650,20 @@ pub async fn update_library(
         .map(|fp| (fp.book_path.as_str(), fp))
         .collect();
 
-    let fs_path_set: HashSet<String> = fs_paths
+    let fs_path_set: HashSet<String> = fs_items
         .iter()
-        .map(|p| p.to_string_lossy().into_owned())
+        .map(|item| item.path.to_string_lossy().into_owned())
+        .collect();
+    let fs_item_by_path: HashMap<String, CollectedItem> = fs_items
+        .iter()
+        .cloned()
+        .map(|item| (item.path.to_string_lossy().into_owned(), item))
         .collect();
 
     let metadata_indices = MetadataIndices::new(&config.metadata_location)?;
 
     let mut result = UpdateResult::default();
-    let mut ingest_paths_list: Vec<PathBuf> = Vec::new();
+    let mut ingest_items: Vec<CollectedItem> = Vec::new();
     let mut remove_ids: Vec<String> = Vec::new();
 
     // ── Phase 1: Check stored items against filesystem ───────────────
@@ -630,7 +681,11 @@ pub async fn update_library(
             Ok(f) => f,
             Err(e) => {
                 warn!("Failed to capture fingerprint for {:?}: {}", book_path, e);
-                ingest_paths_list.push(book_path.to_path_buf());
+                if let Some(item) = fs_item_by_path.get(&fp.book_path) {
+                    ingest_items.push(item.clone());
+                } else if let Some(item) = regular_collected_item(book_path.to_path_buf()) {
+                    ingest_items.push(item);
+                }
                 result.changed += 1;
                 continue;
             }
@@ -640,7 +695,10 @@ pub async fn update_library(
             Some(PathBuf::from(stored_meta))
         } else {
             // Check if metadata has appeared since last run.
-            LibraryItemFormat::from_path(book_path)
+            fs_item_by_path
+                .get(&fp.book_path)
+                .map(|item| item.format)
+                .or_else(|| LibraryItemFormat::from_path(book_path))
                 .and_then(|fmt| locate_metadata_path(&metadata_indices, book_path, fmt))
         };
 
@@ -692,14 +750,25 @@ pub async fn update_library(
             ReconcileAction::Unchanged if !metadata_appeared => {
                 let cover_path = covers_dir.join(format!("{}.webp", fp.item_id));
                 if media::cover_needs_generation(book_path, &cover_path) {
-                    ingest_paths_list.push(book_path.to_path_buf());
+                    if let Some(item) = fs_item_by_path.get(&fp.book_path) {
+                        ingest_items.push(item.clone());
+                    } else if let Some(item) = regular_collected_item(book_path.to_path_buf()) {
+                        ingest_items.push(item);
+                    }
                     result.changed += 1;
                 } else {
                     // Ensure file symlink exists for unchanged items
                     if config.is_internal_server
-                        && let Some(ext) = book_path.extension().and_then(|e| e.to_str())
-                        && let Err(e) =
-                            media::sync_item_file_symlink(&fp.item_id, ext, book_path, files_dir)
+                        && let Some(format) = fs_item_by_path
+                            .get(&fp.book_path)
+                            .map(|item| item.format)
+                            .or_else(|| LibraryItemFormat::from_path(book_path))
+                        && let Err(e) = media::sync_item_file_symlink(
+                            &fp.item_id,
+                            format.extension(),
+                            book_path,
+                            files_dir,
+                        )
                     {
                         warn!("Failed to create file symlink for {}: {}", fp.item_id, e);
                     }
@@ -708,11 +777,19 @@ pub async fn update_library(
             }
             ReconcileAction::Unchanged => {
                 // metadata_appeared — need to re-ingest to pick up the new metadata
-                ingest_paths_list.push(book_path.to_path_buf());
+                if let Some(item) = fs_item_by_path.get(&fp.book_path) {
+                    ingest_items.push(item.clone());
+                } else if let Some(item) = regular_collected_item(book_path.to_path_buf()) {
+                    ingest_items.push(item);
+                }
                 result.changed += 1;
             }
             ReconcileAction::Reparse(_) => {
-                ingest_paths_list.push(book_path.to_path_buf());
+                if let Some(item) = fs_item_by_path.get(&fp.book_path) {
+                    ingest_items.push(item.clone());
+                } else if let Some(item) = regular_collected_item(book_path.to_path_buf()) {
+                    ingest_items.push(item);
+                }
                 result.changed += 1;
             }
             _ => {
@@ -723,10 +800,10 @@ pub async fn update_library(
     }
 
     // ── Phase 2: Detect new paths ────────────────────────────────────
-    for path in &fs_paths {
-        let path_str = path.to_string_lossy();
+    for item in &fs_items {
+        let path_str = item.path.to_string_lossy();
         if !stored_by_book_path.contains_key(path_str.as_ref()) {
-            ingest_paths_list.push(path.clone());
+            ingest_items.push(item.clone());
             result.added += 1;
         }
     }
@@ -755,12 +832,12 @@ pub async fn update_library(
         }
     }
 
-    if !ingest_paths_list.is_empty() {
-        let stats = ingest_paths(&ingest_paths_list, config, repo, covers_dir, files_dir).await?;
+    if !ingest_items.is_empty() {
+        let stats = ingest_paths(&ingest_items, config, repo, covers_dir, files_dir).await?;
         result.ingest_stats = Some(stats);
     }
 
-    if ingest_paths_list.is_empty() && remove_ids.is_empty() {
+    if ingest_items.is_empty() && remove_ids.is_empty() {
         info!(
             "Library unchanged ({} items, checked in {} ms)",
             result.unchanged,
@@ -794,4 +871,171 @@ async fn needs_stats_reload(item: &LibraryItem, repo: &LibraryRepository) -> boo
     );
 
     old_fields != new_fields
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ingest_paths, kobo_hint_label, should_use_kobo_encryption_warning};
+    use crate::app::config::SiteConfig;
+    use crate::shelf::library::queries::LibraryListQuery;
+    use crate::shelf::models::LibraryItemFormat;
+    use crate::shelf::time_config::TimeConfig;
+    use crate::source::kobo::KoboFileHints;
+    use crate::source::scanner::{CollectedItem, MetadataLocation};
+    use crate::store::lifecycle::{RuntimeDataPathOptions, resolve_runtime_data_policy};
+    use crate::store::sqlite::repo::tests::test_repo;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    fn test_config(library_path: &Path, output_dir: &Path) -> SiteConfig {
+        let mut runtime_data_policy =
+            resolve_runtime_data_policy(&RuntimeDataPathOptions::default());
+        runtime_data_policy.set_resolved_data_dir(output_dir.join("runtime"));
+
+        SiteConfig {
+            output_dir: output_dir.to_path_buf(),
+            site_title: "KoShelf".to_string(),
+            include_unread: true,
+            library_paths: vec![library_path.to_path_buf()],
+            metadata_location: MetadataLocation::InBookFolder,
+            statistics_db_path: None,
+            kobo_db_path: None,
+            heatmap_scale_max: None,
+            time_config: TimeConfig::from_cli(&None, &None).expect("time config"),
+            min_pages_per_day: None,
+            min_time_per_day: None,
+            include_all_stats: false,
+            is_internal_server: false,
+            language: "en_US".to_string(),
+            use_stable_page_metadata: true,
+            auth_enabled: false,
+            writeback_enabled: false,
+            include_files: false,
+            runtime_data_policy,
+        }
+    }
+
+    fn write_minimal_epub(path: &Path) {
+        let file = File::create(path).expect("epub file");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("META-INF/container.xml", options)
+            .expect("container start");
+        zip.write_all(
+            br#"<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>"#,
+        )
+        .expect("container write");
+
+        zip.start_file("OPS/content.opf", options)
+            .expect("opf start");
+        zip.write_all(
+            br#"<?xml version="1.0"?>
+<package version="3.0" xmlns="http://www.idpf.org/2007/opf">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Extensionless Kobo EPUB</dc:title>
+    <dc:creator>Fixture Author</dc:creator>
+    <dc:language>en</dc:language>
+  </metadata>
+  <manifest/>
+  <spine/>
+</package>"#,
+        )
+        .expect("opf write");
+
+        zip.finish().expect("zip finish");
+    }
+
+    fn kobo_hints(is_encrypted: bool, has_content_keys: bool) -> KoboFileHints {
+        KoboFileHints {
+            content_id: "matched-book".to_string(),
+            title: Some("Kobo Title".to_string()),
+            author: Some("Kobo Author".to_string()),
+            is_encrypted,
+            has_content_keys,
+        }
+    }
+
+    #[tokio::test]
+    async fn ingests_valid_epub_from_extensionless_kobo_match() {
+        let library_dir = tempfile::tempdir().expect("library dir");
+        let output_dir = tempfile::tempdir().expect("output dir");
+        let covers_dir = output_dir.path().join("covers");
+        let files_dir = output_dir.path().join("files");
+        std::fs::create_dir_all(&covers_dir).expect("covers dir");
+        std::fs::create_dir_all(&files_dir).expect("files dir");
+
+        let book_path = library_dir
+            .path()
+            .join(".kobo")
+            .join("kepub")
+            .join("matched-book");
+        std::fs::create_dir_all(book_path.parent().expect("book parent")).expect("kepub dir");
+        write_minimal_epub(&book_path);
+
+        let repo = test_repo().await;
+        let config = test_config(library_dir.path(), output_dir.path());
+        let stats = ingest_paths(
+            &[CollectedItem {
+                path: book_path,
+                format: LibraryItemFormat::Epub,
+                kobo_hints: Some(kobo_hints(false, false)),
+            }],
+            &config,
+            &repo,
+            &covers_dir,
+            &files_dir,
+        )
+        .await
+        .expect("ingest paths");
+
+        assert_eq!(stats.processed, 1);
+        assert_eq!(stats.upserted, 1);
+        assert_eq!(stats.errors, 0);
+
+        let items = repo
+            .list_items(&LibraryListQuery::default())
+            .await
+            .expect("list items");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Extensionless Kobo EPUB");
+    }
+
+    #[test]
+    fn parse_failure_classification_uses_kobo_warning_only_for_encryption_hints() {
+        let encrypted = kobo_hints(true, false);
+        let keyed = kobo_hints(false, true);
+        let plain = kobo_hints(false, false);
+
+        assert!(should_use_kobo_encryption_warning(Some(&encrypted)));
+        assert!(should_use_kobo_encryption_warning(Some(&keyed)));
+        assert!(!should_use_kobo_encryption_warning(Some(&plain)));
+        assert!(!should_use_kobo_encryption_warning(None));
+    }
+
+    #[test]
+    fn kobo_warning_label_uses_title_and_author_when_available() {
+        let hints = kobo_hints(true, false);
+        assert_eq!(kobo_hint_label(&hints), "Kobo Title by Kobo Author");
+
+        let title_only = KoboFileHints {
+            author: None,
+            ..hints.clone()
+        };
+        assert_eq!(kobo_hint_label(&title_only), "Kobo Title");
+
+        let author_only = KoboFileHints {
+            title: None,
+            ..hints
+        };
+        assert_eq!(kobo_hint_label(&author_only), "author Kobo Author");
+    }
 }

@@ -3,6 +3,7 @@ use crate::pipeline::rebuild::rebuild;
 use crate::server::RecentWrites;
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::MetadataLocation;
+use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
@@ -103,6 +104,14 @@ impl FileWatcher {
             watched.push(format!("{}", stats_path.display()));
         }
 
+        if let Some(ref kobo_db_path) = self.kobo_db_path
+            && kobo_db_path.exists()
+            && let Some(parent) = kobo_db_path.parent()
+        {
+            watcher.watch(parent, RecursiveMode::NonRecursive)?;
+            watched.push(format!("{}", kobo_db_path.display()));
+        }
+
         info!(
             "File watcher started for {} paths: {}",
             watched.len(),
@@ -147,6 +156,7 @@ impl FileWatcher {
                     log_accumulated_paths(
                         &accumulated_paths,
                         config_clone.statistics_db_path.as_deref(),
+                        config_clone.kobo_db_path.as_deref(),
                     );
 
                     let result = if let Some(ref repo) = library_repo_clone {
@@ -230,8 +240,16 @@ impl FileWatcher {
                 return true;
             }
             if let Some(ref stats_path) = self.statistics_db_path
-                && path == stats_path
+                && is_sqlite_db_or_companion(path, stats_path)
             {
+                return true;
+            }
+            if let Some(ref kobo_db_path) = self.kobo_db_path
+                && is_sqlite_db_or_companion(path, kobo_db_path)
+            {
+                return true;
+            }
+            if self.kobo_db_path.is_some() && path.extension().is_none() {
                 return true;
             }
             false
@@ -303,7 +321,11 @@ fn collapse_paths(paths: &[String]) -> String {
 }
 
 /// Log accumulated unique paths once before a rebuild.
-fn log_accumulated_paths(paths: &HashSet<PathBuf>, statistics_db_path: Option<&std::path::Path>) {
+fn log_accumulated_paths(
+    paths: &HashSet<PathBuf>,
+    statistics_db_path: Option<&std::path::Path>,
+    kobo_db_path: Option<&std::path::Path>,
+) {
     for path in paths {
         let filename = path.file_name().and_then(|s| s.to_str());
 
@@ -318,9 +340,15 @@ fn log_accumulated_paths(paths: &HashSet<PathBuf>, statistics_db_path: Option<&s
         {
             info!("KoReader metadata directory changed: {:?}", path);
         } else if let Some(stats_path) = statistics_db_path
-            && path == stats_path
+            && is_sqlite_db_or_companion(path, stats_path)
         {
             info!("Statistics database changed: {:?}", path);
+        } else if let Some(kobo_db_path) = kobo_db_path
+            && is_sqlite_db_or_companion(path, kobo_db_path)
+        {
+            info!("Kobo database changed: {:?}", path);
+        } else if kobo_db_path.is_some() && path.extension().is_none() {
+            info!("Extensionless Kobo candidate changed: {:?}", path);
         }
     }
 }

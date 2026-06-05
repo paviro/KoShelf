@@ -1,10 +1,10 @@
 use crate::source::koreader::types::{PageStat, StatBook, StatisticsData};
+use crate::source::sqlite_snapshot::copy_sqlite_snapshot;
 use anyhow::{Context, Result};
 use log::{debug, info, warn};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::path::Path;
 use std::str::FromStr;
 use tempfile::TempDir;
@@ -24,13 +24,7 @@ impl StatisticsParser {
             "Copying database to temporary directory: {:?}",
             temp_db_path
         );
-        fs::copy(path.as_ref(), &temp_db_path).with_context(|| {
-            format!(
-                "Failed to copy database from {:?} to {:?}",
-                path.as_ref(),
-                temp_db_path
-            )
-        })?;
+        copy_sqlite_snapshot(path.as_ref(), &temp_db_path)?;
 
         let url = format!("sqlite:{}?mode=ro", temp_db_path.display());
         let options = SqliteConnectOptions::from_str(&url)
@@ -209,5 +203,88 @@ impl StatisticsParser {
         for idx in remove_sorted {
             books.remove(idx);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::StatisticsParser;
+    use sqlx::Executor;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn parse_reads_rows_from_wal_snapshot() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let db_path = temp_dir.path().join("statistics.sqlite3");
+        let url = format!("sqlite:{}?mode=rwc", db_path.display());
+        let options = SqliteConnectOptions::from_str(&url).expect("sqlite options");
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("sqlite pool");
+
+        pool.execute("PRAGMA journal_mode=WAL")
+            .await
+            .expect("wal mode");
+        pool.execute("PRAGMA wal_autocheckpoint=0")
+            .await
+            .expect("disable autocheckpoint");
+        pool.execute(
+            "CREATE TABLE book (
+                id INTEGER PRIMARY KEY,
+                title TEXT NOT NULL,
+                authors TEXT NOT NULL,
+                notes INTEGER,
+                last_open INTEGER,
+                highlights INTEGER,
+                pages INTEGER,
+                md5 TEXT NOT NULL,
+                total_read_time INTEGER,
+                total_read_pages INTEGER
+            )",
+        )
+        .await
+        .expect("book table");
+        pool.execute(
+            "CREATE TABLE page_stat (
+                id_book INTEGER NOT NULL,
+                page INTEGER NOT NULL,
+                start_time INTEGER NOT NULL,
+                duration INTEGER NOT NULL
+            )",
+        )
+        .await
+        .expect("page_stat table");
+        pool.execute(
+            "INSERT INTO book
+             (id, title, authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages)
+             VALUES (1, 'Wal Book', 'Author', 0, 10, 0, 42, 'abc123', 60, 3)",
+        )
+        .await
+        .expect("book row");
+        pool.execute(
+            "INSERT INTO page_stat (id_book, page, start_time, duration)
+             VALUES (1, 2, 1000, 30)",
+        )
+        .await
+        .expect("page_stat row");
+
+        assert!(
+            db_path.with_file_name("statistics.sqlite3-wal").exists(),
+            "test setup should leave rows in WAL"
+        );
+
+        let data = StatisticsParser::parse(&db_path)
+            .await
+            .expect("parse stats db");
+
+        assert_eq!(data.books.len(), 1);
+        assert_eq!(data.books[0].title, "Wal Book");
+        assert_eq!(data.page_stats.len(), 1);
+        assert_eq!(data.page_stats[0].page, 2);
+
+        pool.close().await;
     }
 }

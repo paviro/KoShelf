@@ -21,6 +21,7 @@ pub struct LibrarySection {
     pub docsettings_path: Option<PathBuf>,
     pub hashdocsettings_path: Option<PathBuf>,
     pub statistics_db: Option<PathBuf>,
+    pub kobo_db: Option<PathBuf>,
     pub include_unread: Option<bool>,
 }
 

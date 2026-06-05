@@ -65,6 +65,11 @@ fn merge_common_with_file_config(
         {
             common.statistics_db = Some(p.clone());
         }
+        if let Some(ref p) = lib.kobo_db
+            && not_explicit(matches, "kobo_db")
+        {
+            common.kobo_db = Some(p.clone());
+        }
         if let Some(v) = lib.include_unread
             && not_explicit(matches, "include_unread")
         {
@@ -209,7 +214,7 @@ pub fn merge_set_password_data_path(
 mod tests {
     use super::{merge_export_with_file_config, merge_serve_with_file_config};
     use crate::app::config::cli::{Cli, CliCommand};
-    use crate::app::config::file::{FileConfig, KoshelfSection};
+    use crate::app::config::file::{FileConfig, KoshelfSection, LibrarySection};
     use clap::{CommandFactory, FromArgMatches};
     use std::path::PathBuf;
 
@@ -302,6 +307,67 @@ mod tests {
             args.output,
             Some(PathBuf::from("/output/from-config")),
             "config file should provide output path"
+        );
+    }
+
+    #[test]
+    fn file_config_kobo_db_is_used_when_cli_not_explicit() {
+        let matches = Cli::command()
+            .try_get_matches_from(["koshelf", "serve", "--library-path", "/library"])
+            .expect("CLI args should parse");
+
+        let mut cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let file_config = FileConfig {
+            library: Some(LibrarySection {
+                kobo_db: Some(PathBuf::from("/runtime/KoboReader.sqlite")),
+                ..LibrarySection::default()
+            }),
+            ..FileConfig::default()
+        };
+
+        let (_, sub_matches) = matches.subcommand().unwrap();
+        let CliCommand::Serve(ref mut args) = cli.command else {
+            panic!("expected serve command");
+        };
+        merge_serve_with_file_config(args, &file_config, sub_matches);
+
+        assert_eq!(
+            args.common.kobo_db,
+            Some(PathBuf::from("/runtime/KoboReader.sqlite"))
+        );
+    }
+
+    #[test]
+    fn cli_kobo_db_wins_over_file_config() {
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "--library-path",
+                "/library",
+                "--kobo-db",
+                "/runtime/from-cli.sqlite",
+            ])
+            .expect("CLI args should parse");
+
+        let mut cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let file_config = FileConfig {
+            library: Some(LibrarySection {
+                kobo_db: Some(PathBuf::from("/runtime/from-config.sqlite")),
+                ..LibrarySection::default()
+            }),
+            ..FileConfig::default()
+        };
+
+        let (_, sub_matches) = matches.subcommand().unwrap();
+        let CliCommand::Serve(ref mut args) = cli.command else {
+            panic!("expected serve command");
+        };
+        merge_serve_with_file_config(args, &file_config, sub_matches);
+
+        assert_eq!(
+            args.common.kobo_db,
+            Some(PathBuf::from("/runtime/from-cli.sqlite"))
         );
     }
 }

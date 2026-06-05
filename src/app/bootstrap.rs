@@ -63,6 +63,7 @@ fn build_site_config(
         library_paths: common.library_path.clone(),
         metadata_location: metadata_location(common),
         statistics_db_path: common.statistics_db.clone(),
+        kobo_db_path: common.kobo_db.clone(),
         heatmap_scale_max,
         time_config: TimeConfig::from_cli(&common.timezone, &common.day_start_time)?,
         min_pages_per_day: common.min_pages_per_day,

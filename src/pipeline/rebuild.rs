@@ -5,13 +5,14 @@
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
-use crate::pipeline::ingest::{ingest_paths, load_reading_data};
+use crate::pipeline::ingest::{ingest_paths, load_reading_data, update_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::FileFingerprint;
-use crate::source::scanner::MetadataLocation;
+use crate::source::scanner::{CollectedItem, MetadataLocation};
+use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
@@ -34,10 +35,20 @@ pub async fn rebuild(
         accumulated_paths.len()
     );
 
-    let stats_changed = config
-        .statistics_db_path
-        .as_ref()
-        .is_some_and(|sp| accumulated_paths.contains(sp));
+    let stats_changed = config.statistics_db_path.as_ref().is_some_and(|db_path| {
+        accumulated_paths
+            .iter()
+            .any(|path| is_sqlite_db_or_companion(path, db_path))
+    });
+    let kobo_db_changed = config.kobo_db_path.as_ref().is_some_and(|db_path| {
+        accumulated_paths
+            .iter()
+            .any(|path| is_sqlite_db_or_companion(path, db_path))
+    });
+    let kobo_extensionless_changed = config.kobo_db_path.is_some()
+        && accumulated_paths
+            .iter()
+            .any(|path| is_extensionless_path(path.as_path()));
 
     let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
     if let Err(e) = media::create_media_directories(&media_dirs) {
@@ -45,20 +56,45 @@ pub async fn rebuild(
     }
 
     // ── 1. Classify paths ────────────────────────────────────────────
-    let mut parse_paths: HashSet<PathBuf> = HashSet::new();
+    let mut parse_items: Vec<CollectedItem> = Vec::new();
     let mut delete_book_paths: Vec<String> = Vec::new();
 
-    for path in &accumulated_paths {
-        if LibraryItemFormat::from_path(path).is_some() {
-            if path.exists() {
-                parse_paths.insert(path.clone());
-            } else {
-                delete_book_paths.push(path.to_string_lossy().to_string());
-            }
-        } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-            if LibraryItemFormat::is_metadata_file(filename) {
-                if let Some(book_path) =
-                    derive_book_path_from_metadata_path(path, &config.metadata_location, repo).await
+    let library_update = if kobo_db_changed || kobo_extensionless_changed {
+        Some(update_library(config, repo, &media_dirs.covers_dir, &media_dirs.files_dir).await?)
+    } else {
+        for path in &accumulated_paths {
+            if let Some(format) = LibraryItemFormat::from_path(path) {
+                if path.exists() {
+                    parse_items.push(CollectedItem {
+                        path: path.clone(),
+                        format,
+                        kobo_hints: None,
+                    });
+                } else {
+                    delete_book_paths.push(path.to_string_lossy().to_string());
+                }
+            } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                if LibraryItemFormat::is_metadata_file(filename) {
+                    if let Some(book_path) =
+                        derive_book_path_from_metadata_path(path, &config.metadata_location, repo)
+                            .await
+                        && book_path.exists()
+                    {
+                        if metadata_fingerprint_matches_db(&book_path, repo).await {
+                            debug!(
+                                "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
+                                path
+                            );
+                        } else if let Some(format) = LibraryItemFormat::from_path(&book_path) {
+                            parse_items.push(CollectedItem {
+                                path: book_path,
+                                format,
+                                kobo_hints: None,
+                            });
+                        }
+                    }
+                } else if filename.ends_with(".sdr")
+                    && let Some(book_path) = derive_book_path_from_sdr_path(path)
                     && book_path.exists()
                 {
                     if metadata_fingerprint_matches_db(&book_path, repo).await {
@@ -66,25 +102,18 @@ pub async fn rebuild(
                             "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
                             path
                         );
-                    } else {
-                        parse_paths.insert(book_path);
+                    } else if let Some(format) = LibraryItemFormat::from_path(&book_path) {
+                        parse_items.push(CollectedItem {
+                            path: book_path,
+                            format,
+                            kobo_hints: None,
+                        });
                     }
-                }
-            } else if filename.ends_with(".sdr")
-                && let Some(book_path) = derive_book_path_from_sdr_path(path)
-                && book_path.exists()
-            {
-                if metadata_fingerprint_matches_db(&book_path, repo).await {
-                    debug!(
-                        "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
-                        path
-                    );
-                } else {
-                    parse_paths.insert(book_path);
                 }
             }
         }
-    }
+        None
+    };
 
     // ── 2. Delete removed items ──────────────────────────────────────
     let mut deleted_count = 0u64;
@@ -126,9 +155,8 @@ pub async fn rebuild(
     }
 
     // ── 3. Ingest changed/new paths ──────────────────────────────────
-    let parse_list: Vec<PathBuf> = parse_paths.into_iter().collect();
     let ingest_stats = ingest_paths(
-        &parse_list,
+        &parse_items,
         config,
         repo,
         &media_dirs.covers_dir,
@@ -138,8 +166,16 @@ pub async fn rebuild(
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
-    let needs_stats_reload =
-        stats_changed || ingest_stats.stats_invalidated > 0 || deleted_count > 0;
+    let needs_stats_reload = stats_changed
+        || ingest_stats.stats_invalidated > 0
+        || deleted_count > 0
+        || library_update
+            .as_ref()
+            .and_then(|update| update.ingest_stats)
+            .is_some_and(|stats| stats.stats_invalidated > 0)
+        || library_update
+            .as_ref()
+            .is_some_and(|update| update.removed > 0);
 
     if needs_stats_reload {
         match load_reading_data(config, repo).await {
@@ -201,7 +237,15 @@ pub async fn rebuild(
     }
 
     // ── 6. SSE broadcast (only when something actually changed) ────
-    let data_changed = ingest_stats.upserted > 0 || deleted_count > 0 || stats_reloaded;
+    let data_changed = ingest_stats.upserted > 0
+        || deleted_count > 0
+        || stats_reloaded
+        || library_update.as_ref().is_some_and(|update| {
+            update.removed > 0
+                || update
+                    .ingest_stats
+                    .is_some_and(|stats| stats.upserted > 0 || stats.stats_invalidated > 0)
+        });
     if data_changed && let Some(notifier) = update_notifier {
         let update = notifier.publish(generated_at.clone());
         info!("Published data_changed event, revision {}", update.revision);
@@ -263,6 +307,10 @@ async fn metadata_fingerprint_matches_db(book_path: &Path, repo: &LibraryReposit
     };
 
     disk.size_bytes as i64 == stored_size && disk.modified_unix_ms as i64 == stored_modified
+}
+
+fn is_extensionless_path(path: &Path) -> bool {
+    path.extension().is_none()
 }
 
 // ── Path derivation helpers ──────────────────────────────────────────────
