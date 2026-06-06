@@ -10,6 +10,7 @@ use std::time::SystemTime;
 // ── Directory helpers ───────────────────────────────────────────────────
 
 /// Resolved media asset directories.
+#[derive(Debug, Clone)]
 pub struct MediaDirs {
     pub output_dir: PathBuf,
     pub assets_dir: PathBuf,

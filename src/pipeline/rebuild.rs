@@ -5,7 +5,9 @@
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
-use crate::pipeline::ingest::{ingest_paths, load_reading_data, update_library};
+use crate::pipeline::ingest::{
+    delete_item_for_book_path, ingest_items, load_reading_data, sync_library,
+};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
@@ -18,7 +20,6 @@ use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
 use log::{debug, info, warn};
 use std::collections::HashSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Targeted rebuild: process only changed paths using the library DB.
@@ -40,15 +41,7 @@ pub async fn rebuild(
             .iter()
             .any(|path| is_sqlite_db_or_companion(path, db_path))
     });
-    let kobo_db_changed = config.kobo_db_path.as_ref().is_some_and(|db_path| {
-        accumulated_paths
-            .iter()
-            .any(|path| is_sqlite_db_or_companion(path, db_path))
-    });
-    let kobo_extensionless_changed = config.kobo_db_path.is_some()
-        && accumulated_paths
-            .iter()
-            .any(|path| is_extensionless_path(path.as_path()));
+    let full_library_sync_required = requires_full_library_sync(&accumulated_paths, config);
 
     let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
     if let Err(e) = media::create_media_directories(&media_dirs) {
@@ -59,8 +52,8 @@ pub async fn rebuild(
     let mut parse_items: Vec<CollectedItem> = Vec::new();
     let mut delete_book_paths: Vec<String> = Vec::new();
 
-    let library_update = if kobo_db_changed || kobo_extensionless_changed {
-        Some(update_library(config, repo, &media_dirs.covers_dir, &media_dirs.files_dir).await?)
+    let library_update = if full_library_sync_required {
+        Some(sync_library(config, repo, &media_dirs).await?)
     } else {
         for path in &accumulated_paths {
             if let Some(format) = LibraryItemFormat::from_path(path) {
@@ -114,55 +107,25 @@ pub async fn rebuild(
         }
         None
     };
+    if let Some(update) = &library_update {
+        debug!(
+            "Full library sync result: {} unchanged, {} changed, {} added, {} removed",
+            update.unchanged, update.changed, update.added, update.removed
+        );
+    }
 
     // ── 2. Delete removed items ──────────────────────────────────────
     let mut deleted_count = 0u64;
     for book_path_str in &delete_book_paths {
-        match repo.find_fingerprint_by_book_path(book_path_str).await {
-            Ok(Some(fp)) => {
-                if let Err(e) = repo.delete_item(&fp.item_id).await {
-                    warn!("Failed to delete item {}: {}", fp.item_id, e);
-                } else {
-                    if media::is_canonical_item_id(&fp.item_id) {
-                        let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
-                        let _ = fs::remove_file(&cover_path);
-                    } else {
-                        warn!(
-                            "Skipping cover cleanup for non-canonical item id: {}",
-                            fp.item_id
-                        );
-                    }
-                    if config.is_internal_server
-                        && let Err(e) =
-                            media::remove_item_files_by_id(&fp.item_id, &media_dirs.files_dir)
-                    {
-                        warn!("Failed to clean file symlinks for {}: {}", fp.item_id, e);
-                    }
-                    info!(
-                        "Deleted item {} (book removed: {})",
-                        fp.item_id, book_path_str
-                    );
-                    deleted_count += 1;
-                }
-            }
-            Ok(None) => {
-                debug!("No DB fingerprint for removed path: {}", book_path_str);
-            }
-            Err(e) => {
-                warn!("Failed to look up fingerprint for {}: {}", book_path_str, e);
-            }
+        if delete_item_for_book_path(repo, book_path_str, &media_dirs, config.is_internal_server)
+            .await
+        {
+            deleted_count += 1;
         }
     }
 
     // ── 3. Ingest changed/new paths ──────────────────────────────────
-    let ingest_stats = ingest_paths(
-        &parse_items,
-        config,
-        repo,
-        &media_dirs.covers_dir,
-        &media_dirs.files_dir,
-    )
-    .await?;
+    let ingest_stats = ingest_items(&parse_items, config, repo, &media_dirs).await?;
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
@@ -313,6 +276,20 @@ fn is_extensionless_path(path: &Path) -> bool {
     path.extension().is_none()
 }
 
+fn requires_full_library_sync(accumulated_paths: &HashSet<PathBuf>, config: &SiteConfig) -> bool {
+    let kobo_db_changed = config.kobo_db_path.as_ref().is_some_and(|db_path| {
+        accumulated_paths
+            .iter()
+            .any(|path| is_sqlite_db_or_companion(path, db_path))
+    });
+    let kobo_extensionless_changed = config.kobo_db_path.is_some()
+        && accumulated_paths
+            .iter()
+            .any(|path| is_extensionless_path(path.as_path()));
+
+    kobo_db_changed || kobo_extensionless_changed
+}
+
 // ── Path derivation helpers ──────────────────────────────────────────────
 
 /// Derive the book file path from a KOReader metadata file path.
@@ -376,4 +353,62 @@ fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::requires_full_library_sync;
+    use crate::app::config::SiteConfig;
+    use crate::shelf::time_config::TimeConfig;
+    use crate::source::scanner::MetadataLocation;
+    use crate::store::lifecycle::{RuntimeDataPathOptions, resolve_runtime_data_policy};
+    use std::collections::HashSet;
+    use std::path::{Path, PathBuf};
+
+    fn test_config(output_dir: &Path, kobo_db_path: Option<PathBuf>) -> SiteConfig {
+        let mut runtime_data_policy =
+            resolve_runtime_data_policy(&RuntimeDataPathOptions::default());
+        runtime_data_policy.set_resolved_data_dir(output_dir.join("runtime"));
+
+        SiteConfig {
+            output_dir: output_dir.to_path_buf(),
+            site_title: "KoShelf".to_string(),
+            include_unread: true,
+            library_paths: vec![output_dir.join("library")],
+            metadata_location: MetadataLocation::InBookFolder,
+            statistics_db_path: None,
+            kobo_db_path,
+            heatmap_scale_max: None,
+            time_config: TimeConfig::from_cli(&None, &None).expect("time config"),
+            min_pages_per_day: None,
+            min_time_per_day: None,
+            include_all_stats: false,
+            is_internal_server: false,
+            language: "en_US".to_string(),
+            use_stable_page_metadata: true,
+            auth_enabled: false,
+            writeback_enabled: false,
+            include_files: false,
+            runtime_data_policy,
+        }
+    }
+
+    #[test]
+    fn rebuild_requires_full_library_sync_for_kobo_db_or_extensionless_changes() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let kobo_db_path = dir.path().join("KoboReader.sqlite");
+        let config = test_config(dir.path(), Some(kobo_db_path.clone()));
+
+        let mut db_changed = HashSet::new();
+        db_changed.insert(kobo_db_path);
+        assert!(requires_full_library_sync(&db_changed, &config));
+
+        let mut extensionless_changed = HashSet::new();
+        extensionless_changed.insert(dir.path().join("library").join("kobo-content-id"));
+        assert!(requires_full_library_sync(&extensionless_changed, &config));
+
+        let mut regular_book_changed = HashSet::new();
+        regular_book_changed.insert(dir.path().join("library").join("book.epub"));
+        assert!(!requires_full_library_sync(&regular_book_changed, &config));
+    }
 }

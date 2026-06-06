@@ -1,13 +1,14 @@
-//! Ingest pipeline: library item processing and statistics loading.
-//!
-//! `library` handles parsing book files, deduplicating via the DB, persisting
-//! items, and generating covers — all one item at a time with no bulk vectors.
-//!
-//! `statistics` loads the KOReader statistics database and tags entries using
-//! DB queries rather than in-memory item collections.
+//! Ingest pipeline: library sync, item processing, cleanup, and statistics loading.
 
-pub mod library;
-pub mod statistics;
+mod batch;
+mod cleanup;
+mod library;
+mod metadata;
+mod processor;
+mod reconcile;
+mod statistics;
 
-pub use library::{ingest_paths, update_library};
-pub use statistics::load_reading_data;
+pub(crate) use batch::ingest_items;
+pub(crate) use cleanup::delete_item_for_book_path;
+pub(crate) use library::sync_library;
+pub(crate) use statistics::load_reading_data;

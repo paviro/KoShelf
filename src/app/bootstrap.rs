@@ -1,5 +1,5 @@
 use crate::app::config::{CommonArgs, SiteConfig, parse_time_to_seconds};
-use crate::pipeline::ingest::{load_reading_data, update_library};
+use crate::pipeline::ingest::{load_reading_data, sync_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{PasswordPolicy, SiteAuth, SiteCapabilities, SiteData};
@@ -165,13 +165,7 @@ pub(crate) async fn initialize_pipeline(
 
     // ── 3. Update library ────────────────────────────────────────────
     if !config.library_paths.is_empty() {
-        update_library(
-            &config,
-            &repo,
-            &media_dirs.covers_dir,
-            &media_dirs.files_dir,
-        )
-        .await?;
+        sync_library(&config, &repo, &media_dirs).await?;
 
         match repo.load_all_item_ids().await {
             Ok(ids) => {
