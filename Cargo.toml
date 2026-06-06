@@ -12,9 +12,9 @@ build = "build/main.rs"
 # CLI
 clap = { version = "4.6.1", features = ["derive", "env"] }
 # Error handling
-anyhow = "1.0.98"
+anyhow = "1.0.102"
 # Async
-tokio = { version = "1.52.1", features = [
+tokio = { version = "1.52.3", features = [
     "macros",
     "rt-multi-thread",
     "net",
@@ -25,13 +25,13 @@ tokio = { version = "1.52.1", features = [
 # File system
 walkdir = "2.5.0"
 # File system watching
-notify = "8.0.0"
+notify = "8.2.0"
 # Temporary directories
-tempfile = "3.20.0"
+tempfile = "3.27.0"
 # EPUB and .fb2.zip parsing
-zip = "8.5.1"
+zip = "8.6.0"
 # Image processing
-image = { version = "0.25.6", default-features = false, features = [
+image = { version = "0.25.10", default-features = false, features = [
     "jpeg",
     "png",
     "webp",
@@ -39,63 +39,63 @@ image = { version = "0.25.6", default-features = false, features = [
 ] }
 webp = "0.3.1"
 # Lua parsing (use LuaJIT to match KoReader's runtime)
-mlua = { version = "0.11.5", features = ["luajit", "vendored", "send"] }
+mlua = { version = "0.11.6", features = ["luajit", "vendored", "send"] }
 # Serialization
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
 toml = "1.1.2"
 # Date/time
-chrono = { version = "0.4.41", features = ["serde", "std", "unstable-locales"] }
+chrono = { version = "0.4.45", features = ["serde", "std", "unstable-locales"] }
 # Logging
-log = "0.4.27"
+log = "0.4.32"
 env_logger = "0.11.10"
 # Progress bars
-indicatif = "0.18"
+indicatif = "0.18.4"
 # XML parsing
 quick-xml = "0.40.1"
 # HTML sanitization
 ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.9"
-tower = "0.5"
-tower-http = { version = "0.6", features = [
+tower = "0.5.3"
+tower-http = { version = "0.6.11", features = [
     "fs",
     "set-header",
     "compression-gzip",
     "compression-br",
 ] }
 # Futures utilities
-futures = "0.3"
+futures = "0.3.32"
 # SQLite database access
-sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "derive", "json"] }
-chrono-tz = "0.10"
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "derive", "json"] }
+chrono-tz = "0.10.4"
 md5 = "0.8.0"
-regex = "1.12.2"
-resvg = "0.47"
-base64 = "0.22"
+regex = "1.12.3"
+resvg = "0.47.0"
+base64 = "0.22.1"
 include_dir = "0.7.4"
-argon2 = "0.5"
-rand = "0.10"
-rusty_paseto = "0.10"
-rpassword = "7.5"
+argon2 = "0.5.3"
+rand = "0.10.1"
+rusty_paseto = "0.10.0"
+rpassword = "7.5.4"
 governor = "0.10.4"
-dashmap = "6"
-uuid = { version = "1", features = ["v4", "v7"] }
-ipnet = "2"
+dashmap = "6.2.1"
+uuid = { version = "1.23.2", features = ["v4", "v7"] }
+ipnet = "2.12.0"
 # Gzip decompression for embedded license data
-flate2 = "1"
+flate2 = "1.1.9"
 # Memory allocator
-mimalloc = "0.1"
+mimalloc = "0.1.52"
 
 [target.'cfg(not(windows))'.dependencies]
 # CBR/RAR archive extraction (not supported on Windows)
-unrar = "0.5"
+unrar = "0.5.8"
 
 [build-dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "1"
-flate2 = "1"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+toml = "1.1.2"
+flate2 = "1.1.9"
 
 [dev-dependencies]
 ureq = { version = "3.3.0", features = ["json"] }
