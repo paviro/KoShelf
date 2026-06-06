@@ -547,10 +547,26 @@ pub async fn ingest_paths(
         return Ok(IngestStats::default());
     }
 
+    let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
+
+    ingest_paths_with_metadata_indices(items, config, repo, covers_dir, files_dir, metadata_indices)
+        .await
+}
+
+async fn ingest_paths_with_metadata_indices(
+    items: &[CollectedItem],
+    config: &SiteConfig,
+    repo: &LibraryRepository,
+    covers_dir: &Path,
+    files_dir: &Path,
+    metadata_indices: Arc<MetadataIndices>,
+) -> Result<IngestStats> {
+    if items.is_empty() {
+        return Ok(IngestStats::default());
+    }
+
     info!("Ingesting {} items...", items.len());
     let start = Instant::now();
-
-    let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
 
     let pb = ProgressBar::new(items.len() as u64);
     pb.set_style(
@@ -677,7 +693,7 @@ pub async fn update_library(
         .map(|item| (item.path.to_string_lossy().into_owned(), item))
         .collect();
 
-    let metadata_indices = MetadataIndices::new(&config.metadata_location)?;
+    let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
 
     let mut result = UpdateResult::default();
     let mut ingest_items: Vec<CollectedItem> = Vec::new();
@@ -716,7 +732,7 @@ pub async fn update_library(
                 .get(&fp.book_path)
                 .map(|item| item.format)
                 .or_else(|| LibraryItemFormat::from_path(book_path))
-                .and_then(|fmt| locate_metadata_path(&metadata_indices, book_path, fmt))
+                .and_then(|fmt| locate_metadata_path(metadata_indices.as_ref(), book_path, fmt))
         };
 
         let current_metadata_fp = match &current_metadata_path {
@@ -850,7 +866,15 @@ pub async fn update_library(
     }
 
     if !ingest_items.is_empty() {
-        let stats = ingest_paths(&ingest_items, config, repo, covers_dir, files_dir).await?;
+        let stats = ingest_paths_with_metadata_indices(
+            &ingest_items,
+            config,
+            repo,
+            covers_dir,
+            files_dir,
+            metadata_indices,
+        )
+        .await?;
         result.ingest_stats = Some(stats);
     }
 
