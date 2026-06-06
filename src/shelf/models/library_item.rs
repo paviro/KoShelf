@@ -24,7 +24,7 @@ impl std::fmt::Display for ContentType {
 }
 
 /// Supported library item formats (ebooks + comics)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LibraryItemFormat {
     Epub,

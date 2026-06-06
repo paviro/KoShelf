@@ -65,8 +65,14 @@ impl IngestStats {
 /// so we do it once and share the result.
 struct MetadataIndices {
     metadata_location: MetadataLocation,
-    docsettings_index: Option<HashMap<String, PathBuf>>,
+    docsettings_index: Option<HashMap<DocsettingsKey, PathBuf>>,
     hashdocsettings_index: Option<HashMap<String, PathBuf>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct DocsettingsKey {
+    sidecar_stem: String,
+    format: LibraryItemFormat,
 }
 
 impl MetadataIndices {
@@ -227,10 +233,10 @@ fn warn_parse_failure(
 // ── Index builders ──────────────────────────────────────────────────────
 
 /// Build an index of metadata files in a docsettings folder.
-/// Maps the book filename (e.g., "MyBook.epub") to the metadata file path.
-/// Returns an error if duplicate filenames are found.
-fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String, PathBuf>> {
-    let mut index: HashMap<String, PathBuf> = HashMap::new();
+/// Maps the KOReader sidecar stem and metadata format to the metadata file path.
+/// Returns an error if duplicate sidecar stems for the same format are found.
+fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<DocsettingsKey, PathBuf>> {
+    let mut index: HashMap<DocsettingsKey, PathBuf> = HashMap::new();
     let mut duplicates: Vec<String> = Vec::new();
 
     info!("Scanning docsettings folder: {:?}", docsettings_path);
@@ -251,31 +257,41 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
             && let Some(dir_name) = path.file_name().and_then(|s| s.to_str())
             && let Some(book_stem) = dir_name.strip_suffix(".sdr")
         {
-            let epub_metadata_path = path.join("metadata.epub.lua");
-            let fb2_metadata_path = path.join("metadata.fb2.lua");
-
-            if epub_metadata_path.exists() {
-                let book_filename = format!("{}.epub", book_stem);
-
-                match index.entry(book_filename.clone()) {
-                    Entry::Occupied(_) => {
-                        duplicates.push(book_filename);
-                    }
-                    Entry::Vacant(entry) => {
-                        debug!("Found docsettings metadata for: {}", book_filename);
-                        entry.insert(epub_metadata_path);
-                    }
+            let entries = match fs::read_dir(path) {
+                Ok(entries) => entries,
+                Err(e) => {
+                    warn!("Failed to read docsettings sidecar {:?}: {}", path, e);
+                    continue;
                 }
-            } else if fb2_metadata_path.exists() {
-                let book_filename = format!("{}.fb2", book_stem);
+            };
 
-                match index.entry(book_filename.clone()) {
-                    Entry::Occupied(_) => {
-                        duplicates.push(book_filename);
-                    }
+            for entry in entries.flatten() {
+                let metadata_path = entry.path();
+                if !metadata_path.is_file() {
+                    continue;
+                }
+
+                let Some(filename) = metadata_path.file_name().and_then(|s| s.to_str()) else {
+                    continue;
+                };
+                let Some(format) = LibraryItemFormat::from_metadata_filename(filename) else {
+                    continue;
+                };
+
+                let key = DocsettingsKey {
+                    sidecar_stem: book_stem.to_string(),
+                    format,
+                };
+                let duplicate_label = format!("{} ({:?})", book_stem, format);
+
+                match index.entry(key) {
+                    Entry::Occupied(_) => duplicates.push(duplicate_label),
                     Entry::Vacant(entry) => {
-                        debug!("Found docsettings metadata for: {}", book_filename);
-                        entry.insert(fb2_metadata_path);
+                        debug!(
+                            "Found docsettings metadata for sidecar stem '{}' ({:?})",
+                            book_stem, format
+                        );
+                        entry.insert(metadata_path);
                     }
                 }
             }
@@ -284,11 +300,11 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<String,
 
     if !duplicates.is_empty() {
         bail!(
-            "Found duplicate book filenames in docsettings folder: {:?}\n\n\
-            The --docsettings-path option matches books by filename only, not by their full path.\n\
+            "Found duplicate book sidecars in docsettings folder: {:?}\n\n\
+            The --docsettings-path option matches books by sidecar stem and format only, not by their full path.\n\
             This is because the folder structure inside docsettings reflects the device path where \n\
             KOReader was used (e.g., /home/user/books/), which may differ from your local books path.\n\n\
-            Unfortunately, KOShelf cannot distinguish between multiple books with the same filename \n\
+            Unfortunately, KOShelf cannot distinguish between multiple books with the same sidecar stem and format \n\
             when using --docsettings-path. Consider using --hashdocsettings-path instead, which \n\
             matches books by their content hash and doesn't have this limitation.",
             duplicates
@@ -372,14 +388,15 @@ fn locate_metadata_path(
             metadata_file.exists().then_some(metadata_file)
         }
         MetadataLocation::DocSettings(_) => {
-            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                indices
-                    .docsettings_index
-                    .as_ref()
-                    .and_then(|idx| idx.get(filename).cloned())
-            } else {
-                None
-            }
+            let sidecar_stem = path.file_stem().and_then(|s| s.to_str())?;
+            let key = DocsettingsKey {
+                sidecar_stem: sidecar_stem.to_string(),
+                format,
+            };
+            indices
+                .docsettings_index
+                .as_ref()
+                .and_then(|idx| idx.get(&key).cloned())
         }
         MetadataLocation::HashDocSettings(_) => match calculate_partial_md5(path) {
             Ok(hash) => {
@@ -875,7 +892,10 @@ async fn needs_stats_reload(item: &LibraryItem, repo: &LibraryRepository) -> boo
 
 #[cfg(test)]
 mod tests {
-    use super::{ingest_paths, kobo_hint_label, should_use_kobo_encryption_warning};
+    use super::{
+        MetadataIndices, build_docsettings_index, ingest_paths, kobo_hint_label,
+        locate_metadata_path, should_use_kobo_encryption_warning,
+    };
     use crate::app::config::SiteConfig;
     use crate::shelf::library::queries::LibraryListQuery;
     use crate::shelf::models::LibraryItemFormat;
@@ -954,6 +974,12 @@ mod tests {
         zip.finish().expect("zip finish");
     }
 
+    fn write_metadata(path: &Path) {
+        std::fs::create_dir_all(path.parent().expect("metadata parent"))
+            .expect("metadata parent dir");
+        std::fs::write(path, "return {}\n").expect("metadata file");
+    }
+
     fn kobo_hints(is_encrypted: bool, has_content_keys: bool) -> KoboFileHints {
         KoboFileHints {
             content_id: "matched-book".to_string(),
@@ -999,6 +1025,172 @@ mod tests {
 
         assert_eq!(stats.processed, 1);
         assert_eq!(stats.upserted, 1);
+        assert_eq!(stats.errors, 0);
+
+        let items = repo
+            .list_items(&LibraryListQuery::default())
+            .await
+            .expect("list items");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Extensionless Kobo EPUB");
+    }
+
+    #[test]
+    fn docsettings_lookup_matches_regular_epub_by_stem_and_format() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let metadata_path = dir
+            .path()
+            .join("mnt")
+            .join("onboard")
+            .join("books")
+            .join("Book Title.sdr")
+            .join("metadata.epub.lua");
+        write_metadata(&metadata_path);
+
+        let indices =
+            MetadataIndices::new(&MetadataLocation::DocSettings(dir.path().to_path_buf()))
+                .expect("metadata indices");
+        let book_path = dir.path().join("library").join("Book Title.epub");
+
+        assert_eq!(
+            locate_metadata_path(&indices, &book_path, LibraryItemFormat::Epub),
+            Some(metadata_path)
+        );
+    }
+
+    #[test]
+    fn docsettings_lookup_matches_extensionless_kobo_epub_by_stem_and_format() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let kobo_id = "428047c7-8b1e-4d15-80d1-4d12829cd185";
+        let metadata_path = dir
+            .path()
+            .join("mnt")
+            .join("onboard")
+            .join(".kobo")
+            .join("kepub")
+            .join(format!("{}.sdr", kobo_id))
+            .join("metadata.epub.lua");
+        write_metadata(&metadata_path);
+
+        let indices =
+            MetadataIndices::new(&MetadataLocation::DocSettings(dir.path().to_path_buf()))
+                .expect("metadata indices");
+        let book_path = dir.path().join("books").join(kobo_id);
+
+        assert_eq!(
+            locate_metadata_path(&indices, &book_path, LibraryItemFormat::Epub),
+            Some(metadata_path)
+        );
+    }
+
+    #[test]
+    fn docsettings_lookup_keeps_same_stem_different_formats_distinct() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let sidecar_dir = dir.path().join("mnt").join("onboard").join("Book.sdr");
+        let epub_metadata_path = sidecar_dir.join("metadata.epub.lua");
+        let fb2_metadata_path = sidecar_dir.join("metadata.fb2.lua");
+        write_metadata(&epub_metadata_path);
+        write_metadata(&fb2_metadata_path);
+
+        let indices =
+            MetadataIndices::new(&MetadataLocation::DocSettings(dir.path().to_path_buf()))
+                .expect("metadata indices");
+
+        assert_eq!(
+            locate_metadata_path(
+                &indices,
+                &dir.path().join("Book.epub"),
+                LibraryItemFormat::Epub
+            ),
+            Some(epub_metadata_path)
+        );
+        assert_eq!(
+            locate_metadata_path(
+                &indices,
+                &dir.path().join("Book.fb2"),
+                LibraryItemFormat::Fb2
+            ),
+            Some(fb2_metadata_path)
+        );
+    }
+
+    #[test]
+    fn docsettings_index_rejects_duplicate_same_stem_and_format() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write_metadata(
+            &dir.path()
+                .join("mnt")
+                .join("onboard")
+                .join("books")
+                .join("Book.sdr")
+                .join("metadata.epub.lua"),
+        );
+        write_metadata(
+            &dir.path()
+                .join("storage")
+                .join("emulated")
+                .join("0")
+                .join("books")
+                .join("Book.sdr")
+                .join("metadata.epub.lua"),
+        );
+
+        let err = build_docsettings_index(&dir.path().to_path_buf())
+            .expect_err("duplicate docsettings sidecar should fail");
+        assert!(
+            err.to_string()
+                .contains("Found duplicate book sidecars in docsettings folder")
+        );
+    }
+
+    #[tokio::test]
+    async fn ingests_extensionless_kobo_docsettings_metadata_when_unread_excluded() {
+        let library_dir = tempfile::tempdir().expect("library dir");
+        let output_dir = tempfile::tempdir().expect("output dir");
+        let docsettings_dir = tempfile::tempdir().expect("docsettings dir");
+        let covers_dir = output_dir.path().join("covers");
+        let files_dir = output_dir.path().join("files");
+        std::fs::create_dir_all(&covers_dir).expect("covers dir");
+        std::fs::create_dir_all(&files_dir).expect("files dir");
+
+        let kobo_id = "428047c7-8b1e-4d15-80d1-4d12829cd185";
+        let book_path = library_dir.path().join("books").join(kobo_id);
+        std::fs::create_dir_all(book_path.parent().expect("book parent")).expect("books dir");
+        write_minimal_epub(&book_path);
+        write_metadata(
+            &docsettings_dir
+                .path()
+                .join("mnt")
+                .join("onboard")
+                .join(".kobo")
+                .join("kepub")
+                .join(format!("{}.sdr", kobo_id))
+                .join("metadata.epub.lua"),
+        );
+
+        let repo = test_repo().await;
+        let mut config = test_config(library_dir.path(), output_dir.path());
+        config.include_unread = false;
+        config.metadata_location =
+            MetadataLocation::DocSettings(docsettings_dir.path().to_path_buf());
+
+        let stats = ingest_paths(
+            &[CollectedItem {
+                path: book_path,
+                format: LibraryItemFormat::Epub,
+                kobo_hints: Some(kobo_hints(false, false)),
+            }],
+            &config,
+            &repo,
+            &covers_dir,
+            &files_dir,
+        )
+        .await
+        .expect("ingest paths");
+
+        assert_eq!(stats.processed, 1);
+        assert_eq!(stats.upserted, 1);
+        assert_eq!(stats.skipped_unread, 0);
         assert_eq!(stats.errors, 0);
 
         let items = repo
