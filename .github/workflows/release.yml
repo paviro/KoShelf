@@ -25,6 +25,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_HTTP_MULTIPLEXING: "false"
   CARGO_NET_RETRY: "10"
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
   KOSHELF_SKIP_NPM_INSTALL: "1"
@@ -126,10 +127,19 @@ jobs:
         if: ${{ !matrix.gnu }}
         with:
           target: ${{ matrix.target }}
-      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      - name: Install Zig 0.16.0
         if: ${{ matrix.gnu }}
-        with:
-          version: 0.16.0
+        run: |
+          archive="$RUNNER_TEMP/zig.tar.xz"
+          install_dir="$RUNNER_TEMP/zig"
+          curl --fail --location --retry 5 --retry-all-errors \
+            --output "$archive" \
+            https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  $archive" | sha256sum --check
+          mkdir -p "$install_dir"
+          tar -C "$install_dir" --strip-components=1 -xf "$archive"
+          echo "$install_dir" >> "$GITHUB_PATH"
+          "$install_dir/zig" version
       - uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2
         with:
           tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild' || 'cargo-about@0.9.1' }}
@@ -176,9 +186,11 @@ jobs:
           - target: x86_64-pc-windows-msvc
             platform: windows-msvc-x86_64
             runner: windows-latest
+            msvc_arch: x64
           - target: aarch64-pc-windows-msvc
             platform: windows-msvc-aarch64
             runner: windows-11-arm
+            msvc_arch: arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -194,7 +206,11 @@ jobs:
       - uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2
         with:
           tool: cargo-about@0.9.1
+      # LuaJIT's MSVC build script uses this variable to select its ARM64 VM.
+      # Native GitHub Windows runners do not enter a Developer Command Prompt.
       - run: cargo build --release --locked --target ${{ matrix.target }}
+        env:
+          VSCMD_ARG_TGT_ARCH: ${{ matrix.msvc_arch }}
       - name: Package
         shell: pwsh
         run: |
