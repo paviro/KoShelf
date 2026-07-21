@@ -1,7 +1,5 @@
 [advisories]
 ignore = [
-    # Pulled in transitively by sqlx's macro support; KoShelf only uses SQLite.
-    "RUSTSEC-2023-0071",
     # `rustybuzz` unmaintained; transitive via resvg/usvg (SVG share images).
     # Not a vulnerability and no upstream replacement yet.
     "RUSTSEC-2026-0206",
