@@ -99,18 +99,22 @@ jobs:
             platform: linux-gnu-x86_64
             runner: ubuntu-latest
             gnu: true
+            cxxflags: '-D__builtin_cpu_supports(x)=0'
           - target: aarch64-unknown-linux-gnu
             platform: linux-gnu-aarch64
             runner: ubuntu-latest
             gnu: true
+            cxxflags: ''
           - target: x86_64-unknown-linux-musl
             platform: linux-musl-x86_64
             runner: ubuntu-latest
             gnu: false
+            cxxflags: ''
           - target: aarch64-unknown-linux-musl
             platform: linux-musl-aarch64
             runner: ubuntu-24.04-arm
             gnu: false
+            cxxflags: ''
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -146,6 +150,9 @@ jobs:
       - if: ${{ matrix.gnu }}
         run: cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
         env:
+          # Zig omits the __cpu_model runtime used by unrar's optional x86
+          # dispatch. The x86_64 matrix value selects its scalar fallback.
+          CXXFLAGS: ${{ matrix.cxxflags }}
           # LuaJIT's auxiliary executable needs Zig's unwind runtime explicitly.
           TARGET_LIBS: -lunwind
           # The host strip cannot process a cross-compiled executable. This
