@@ -69,16 +69,66 @@ impl LibraryItemFormat {
         }
     }
 
+    /// Get the KOReader metadata filename for this file path.
+    ///
+    /// KOReader stores `.fb2.zip` sidecars as `*.fb2.sdr/metadata.zip.lua`
+    /// because it strips only the final suffix for sidecar handling.
+    pub fn metadata_filename_for_path(&self, path: &Path) -> &'static str {
+        let filename = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        if matches!(self, Self::Fb2) && filename.ends_with(".fb2.zip") {
+            return "metadata.zip.lua";
+        }
+
+        self.metadata_filename()
+    }
+
+    /// Build the book filename a sidecar refers to, given the sidecar stem
+    /// (the `.sdr` directory name without the suffix) and the metadata
+    /// filename found inside it. Inverse of `metadata_filename_for_path`:
+    /// `metadata.zip.lua` under `<name>.fb2.sdr` means the book is
+    /// `<name>.fb2.zip`, any other metadata filename means `<stem>.<ext>`.
+    pub fn book_filename_from_sidecar(book_stem: &str, metadata_filename: &str) -> Option<String> {
+        let format = Self::from_sidecar_metadata_filename(book_stem, metadata_filename)?;
+        if metadata_filename == "metadata.zip.lua" {
+            return Some(format!("{}.zip", book_stem));
+        }
+        Some(format!("{}.{}", book_stem, format.extension()))
+    }
+
     /// Check if a filename is a KOReader metadata file for any supported format
     pub fn is_metadata_file(filename: &str) -> bool {
         matches!(
             filename,
             "metadata.epub.lua"
                 | "metadata.fb2.lua"
+                | "metadata.zip.lua"
                 | "metadata.mobi.lua"
                 | "metadata.cbz.lua"
                 | "metadata.cbr.lua"
         )
+    }
+
+    /// Check if a path points to a KOReader metadata file for a supported
+    /// format, using the sidecar directory for context: `metadata.zip.lua`
+    /// only counts inside a `*.fb2.sdr` directory (KoShelf supports zip
+    /// sidecars only for `.fb2.zip` books).
+    pub fn is_metadata_path(path: &Path) -> bool {
+        let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
+            return false;
+        };
+        if filename == "metadata.zip.lua" {
+            return path
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .is_some_and(|dir| dir.to_lowercase().ends_with(".fb2.sdr"));
+        }
+        Self::is_metadata_file(filename)
     }
 
     /// Derive format from a KOReader metadata filename (e.g. "metadata.epub.lua" → Epub)
@@ -91,6 +141,18 @@ impl LibraryItemFormat {
             "metadata.cbr.lua" => Some(Self::Cbr),
             _ => None,
         }
+    }
+
+    /// Derive format from a KOReader metadata filename with sidecar context.
+    ///
+    /// `metadata.zip.lua` is ambiguous on its own, but for KoShelf-supported
+    /// compound FB2 files KOReader writes it under `<name>.fb2.sdr`.
+    pub fn from_sidecar_metadata_filename(sidecar_stem: &str, filename: &str) -> Option<Self> {
+        if filename == "metadata.zip.lua" && sidecar_stem.to_lowercase().ends_with(".fb2") {
+            return Some(Self::Fb2);
+        }
+
+        Self::from_metadata_filename(filename)
     }
 
     /// Get the file extension string for this format

@@ -54,7 +54,7 @@ pub(super) fn locate_metadata_path(
         MetadataLocation::InBookFolder => {
             let book_stem = path.file_stem().and_then(|s| s.to_str())?;
             let sdr_path = path.parent()?.join(format!("{}.sdr", book_stem));
-            let metadata_file = sdr_path.join(format.metadata_filename());
+            let metadata_file = sdr_path.join(format.metadata_filename_for_path(path));
             metadata_file.exists().then_some(metadata_file)
         }
         MetadataLocation::DocSettings(_) => {
@@ -122,7 +122,9 @@ fn build_docsettings_index(docsettings_path: &PathBuf) -> Result<HashMap<Docsett
                 let Some(filename) = metadata_path.file_name().and_then(|s| s.to_str()) else {
                     continue;
                 };
-                let Some(format) = LibraryItemFormat::from_metadata_filename(filename) else {
+                let Some(format) =
+                    LibraryItemFormat::from_sidecar_metadata_filename(book_stem, filename)
+                else {
                     continue;
                 };
 
@@ -306,6 +308,45 @@ mod tests {
                 LibraryItemFormat::Fb2
             ),
             Some(fb2_metadata_path)
+        );
+    }
+
+    #[test]
+    fn in_book_lookup_matches_fb2_zip_metadata_zip_sidecar() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let book_path = dir.path().join("Book.fb2.zip");
+        let metadata_path = dir.path().join("Book.fb2.sdr").join("metadata.zip.lua");
+        write_metadata(&metadata_path);
+
+        let indices =
+            MetadataIndices::new(&MetadataLocation::InBookFolder).expect("metadata indices");
+
+        assert_eq!(
+            locate_metadata_path(&indices, &book_path, LibraryItemFormat::Fb2),
+            Some(metadata_path)
+        );
+    }
+
+    #[test]
+    fn docsettings_lookup_matches_fb2_zip_metadata_zip_by_sidecar_stem() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let metadata_path = dir
+            .path()
+            .join("mnt")
+            .join("onboard")
+            .join("books")
+            .join("Book.fb2.sdr")
+            .join("metadata.zip.lua");
+        write_metadata(&metadata_path);
+
+        let indices =
+            MetadataIndices::new(&MetadataLocation::DocSettings(dir.path().to_path_buf()))
+                .expect("metadata indices");
+        let book_path = dir.path().join("library").join("Book.fb2.zip");
+
+        assert_eq!(
+            locate_metadata_path(&indices, &book_path, LibraryItemFormat::Fb2),
+            Some(metadata_path)
         );
     }
 

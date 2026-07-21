@@ -324,6 +324,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn collects_fb2_zip_as_book() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let book_path = dir.path().join("book.fb2.zip");
+        fs::write(&book_path, b"not parsed here").expect("book file");
+
+        let items = collect_paths(&[dir.path().to_path_buf()], &CollectionOptions::default()).await;
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].path, book_path);
+        assert_eq!(
+            items[0].format,
+            crate::shelf::models::LibraryItemFormat::Fb2
+        );
+    }
+
+    #[tokio::test]
     async fn matches_file_url_by_final_filename() {
         let dir = tempfile::tempdir().expect("temp dir");
         let book_path = dir.path().join(".kobo").join("kepub").join("file row");

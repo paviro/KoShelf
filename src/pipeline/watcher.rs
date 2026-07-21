@@ -229,9 +229,7 @@ impl FileWatcher {
             if LibraryItemFormat::from_path(path).is_some() {
                 return true;
             }
-            if let Some(filename) = filename
-                && LibraryItemFormat::is_metadata_file(filename)
-            {
+            if LibraryItemFormat::is_metadata_path(path) {
                 return true;
             }
             if let Some(filename) = filename
@@ -331,9 +329,7 @@ fn log_accumulated_paths(
 
         if let Some(format) = LibraryItemFormat::from_path(path) {
             info!("{:?} file changed: {:?}", format, path);
-        } else if let Some(filename) = filename
-            && LibraryItemFormat::is_metadata_file(filename)
-        {
+        } else if LibraryItemFormat::is_metadata_path(path) {
             info!("Metadata file changed: {:?}", path);
         } else if let Some(filename) = filename
             && filename.ends_with(".sdr")

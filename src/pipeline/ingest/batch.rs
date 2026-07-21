@@ -221,6 +221,30 @@ mod tests {
         zip.finish().expect("zip finish");
     }
 
+    fn write_minimal_fb2_zip(path: &Path) {
+        let file = File::create(path).expect("fb2 zip file");
+        let mut zip = ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("book.fb2", options).expect("fb2 start");
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="utf-8"?>
+<FictionBook>
+  <description>
+    <title-info>
+      <book-title>Compressed FB2</book-title>
+      <author><first-name>Fixture</first-name><last-name>Author</last-name></author>
+      <lang>en</lang>
+    </title-info>
+  </description>
+  <body><section><title><p>Chapter 1</p></title><p>Text.</p></section></body>
+</FictionBook>"#,
+        )
+        .expect("fb2 write");
+
+        zip.finish().expect("zip finish");
+    }
+
     fn write_metadata(path: &Path) {
         std::fs::create_dir_all(path.parent().expect("metadata parent"))
             .expect("metadata parent dir");
@@ -335,5 +359,52 @@ mod tests {
             .expect("list items");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].title, "Extensionless Kobo EPUB");
+    }
+
+    #[tokio::test]
+    async fn ingests_fb2_zip_with_koreader_zip_metadata_when_unread_excluded() {
+        let library_dir = tempfile::tempdir().expect("library dir");
+        let output_dir = tempfile::tempdir().expect("output dir");
+
+        let book_path = library_dir.path().join("Book.fb2.zip");
+        write_minimal_fb2_zip(&book_path);
+        write_metadata(
+            &library_dir
+                .path()
+                .join("Book.fb2.sdr")
+                .join("metadata.zip.lua"),
+        );
+
+        let repo = test_repo().await;
+        let mut config = test_config(library_dir.path(), output_dir.path());
+        config.include_unread = false;
+        let media_dirs = resolve_media_dirs(output_dir.path(), config.is_internal_server);
+        std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
+        std::fs::create_dir_all(&media_dirs.files_dir).expect("files dir");
+
+        let stats = ingest_items(
+            &[CollectedItem {
+                path: book_path,
+                format: LibraryItemFormat::Fb2,
+                kobo_hints: None,
+            }],
+            &config,
+            &repo,
+            &media_dirs,
+        )
+        .await
+        .expect("ingest paths");
+
+        assert_eq!(stats.processed, 1);
+        assert_eq!(stats.upserted, 1);
+        assert_eq!(stats.skipped_unread, 0);
+        assert_eq!(stats.errors, 0);
+
+        let items = repo
+            .list_items(&LibraryListQuery::default())
+            .await
+            .expect("list items");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Compressed FB2");
     }
 }

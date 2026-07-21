@@ -67,7 +67,7 @@ pub async fn rebuild(
                     delete_book_paths.push(path.to_string_lossy().to_string());
                 }
             } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                if LibraryItemFormat::is_metadata_file(filename) {
+                if LibraryItemFormat::is_metadata_path(path) {
                     if let Some(book_path) =
                         derive_book_path_from_metadata_path(path, &config.metadata_location, repo)
                             .await
@@ -304,12 +304,12 @@ async fn derive_book_path_from_metadata_path(
     match metadata_location {
         MetadataLocation::InBookFolder => {
             let filename = metadata_path.file_name()?.to_str()?;
-            let format = LibraryItemFormat::from_metadata_filename(filename)?;
             let sdr_dir = metadata_path.parent()?;
             let sdr_name = sdr_dir.file_name()?.to_str()?;
             let book_stem = sdr_name.strip_suffix(".sdr")?;
+            let book_filename = LibraryItemFormat::book_filename_from_sidecar(book_stem, filename)?;
             let grandparent = sdr_dir.parent()?;
-            Some(grandparent.join(format!("{}.{}", book_stem, format.extension())))
+            Some(grandparent.join(book_filename))
         }
         MetadataLocation::DocSettings(_) | MetadataLocation::HashDocSettings(_) => {
             let meta_str = metadata_path.to_string_lossy();
@@ -340,6 +340,15 @@ fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
     let book_stem = sdr_name.strip_suffix(".sdr")?;
     let parent = sdr_path.parent()?;
 
+    // A `<name>.fb2.sdr` sidecar can also belong to a `<name>.fb2.zip` book
+    // (KOReader strips only the final suffix).
+    if book_stem.to_lowercase().ends_with(".fb2") {
+        let candidate = parent.join(format!("{}.zip", book_stem));
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
     for format in [
         LibraryItemFormat::Epub,
         LibraryItemFormat::Fb2,
@@ -357,8 +366,9 @@ fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::requires_full_library_sync;
+    use super::{derive_book_path_from_sdr_path, requires_full_library_sync};
     use crate::app::config::SiteConfig;
+    use crate::shelf::models::LibraryItemFormat;
     use crate::shelf::time_config::TimeConfig;
     use crate::source::scanner::MetadataLocation;
     use crate::store::lifecycle::{RuntimeDataPathOptions, resolve_runtime_data_policy};
@@ -410,5 +420,49 @@ mod tests {
         let mut regular_book_changed = HashSet::new();
         regular_book_changed.insert(dir.path().join("library").join("book.epub"));
         assert!(!requires_full_library_sync(&regular_book_changed, &config));
+    }
+
+    #[test]
+    fn sidecar_derives_book_filename_by_metadata_filename() {
+        assert_eq!(
+            LibraryItemFormat::book_filename_from_sidecar("Book.fb2", "metadata.zip.lua"),
+            Some("Book.fb2.zip".to_string())
+        );
+        // A plain FB2 whose name itself ends in .fb2 (Book.fb2.fb2) shares the
+        // sidecar stem but carries metadata.fb2.lua, not metadata.zip.lua.
+        assert_eq!(
+            LibraryItemFormat::book_filename_from_sidecar("Book.fb2", "metadata.fb2.lua"),
+            Some("Book.fb2.fb2".to_string())
+        );
+        assert_eq!(
+            LibraryItemFormat::book_filename_from_sidecar("Book", "metadata.fb2.lua"),
+            Some("Book.fb2".to_string())
+        );
+        assert_eq!(
+            LibraryItemFormat::book_filename_from_sidecar("Book", "metadata.zip.lua"),
+            None
+        );
+    }
+
+    #[test]
+    fn sdr_path_derivation_finds_fb2_zip_book() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let book_path = dir.path().join("Book.fb2.zip");
+        std::fs::write(&book_path, b"book").expect("book file");
+        let sdr_path = dir.path().join("Book.fb2.sdr");
+        std::fs::create_dir_all(&sdr_path).expect("sdr dir");
+
+        assert_eq!(derive_book_path_from_sdr_path(&sdr_path), Some(book_path));
+    }
+
+    #[test]
+    fn sdr_path_derivation_finds_double_extension_fb2_book() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let book_path = dir.path().join("Book.fb2.fb2");
+        std::fs::write(&book_path, b"book").expect("book file");
+        let sdr_path = dir.path().join("Book.fb2.sdr");
+        std::fs::create_dir_all(&sdr_path).expect("sdr dir");
+
+        assert_eq!(derive_book_path_from_sdr_path(&sdr_path), Some(book_path));
     }
 }
