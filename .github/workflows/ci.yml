@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref (e.g. new push to a PR) to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Write a stub LICENSES.json.gz instead of running cargo-about + the npm license
+  # checker; CI just needs the file to exist for the include_bytes! in the binary.
+  KOSHELF_SKIP_LICENSE_GENERATION: "1"
+  RUSTDOCFLAGS: "-D warnings"
+
+jobs:
+  # ── Repo-wide gates, run once on Linux ──────────────────────────────────────
+  rust-format:
+    name: Rust format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+      - run: cargo install cargo-audit --version 0.22.1 --locked
+      - run: cargo audit --deny warnings
+
+  # Frontend checks run standalone — they don't need the Rust toolchain, and the
+  # Rust jobs below drive the Vite build through build.rs to embed frontend/dist.
+  frontend:
+    name: Frontend (lint · format · typecheck · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run lint
+      - if: ${{ !cancelled() }}
+        run: npm --prefix frontend run format:check
+      - if: ${{ !cancelled() }}
+        run: npm --prefix frontend run typecheck
+      - if: ${{ !cancelled() }}
+        run: npm --prefix frontend run test
+
+  # ── Per-platform Rust jobs ──────────────────────────────────────────────────
+  # Linux is the primary one: it lints, tests, and builds docs. macOS and Windows
+  # are compile checks for the other platforms we ship. Every Rust job needs Node,
+  # because build.rs compiles the Vite frontend into $OUT_DIR/frontend_dist, which
+  # the binary embeds via include_dir! (so `cargo check` can't skip it).
+  linux:
+    name: Linux (lint · test · docs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --all-targets --locked
+      - if: ${{ !cancelled() }}
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - if: ${{ !cancelled() }}
+        run: cargo test --locked
+      - if: ${{ !cancelled() }}
+        run: cargo doc --no-deps --locked
+
+  macos:
+    name: macOS (check)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --all-targets --locked
+
+  windows:
+    name: Windows (check)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+      - uses: Swatinem/rust-cache@v2
+      # Releases ship the x86_64-pc-windows-gnu target, but this native msvc check
+      # is enough to catch Windows-specific compile breakage in CI.
+      - run: cargo check --all-targets --locked
