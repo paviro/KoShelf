@@ -145,6 +145,9 @@ jobs:
           tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild' || 'cargo-about@0.9.1' }}
       - if: ${{ matrix.gnu }}
         run: cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
+        env:
+          # LuaJIT's auxiliary executable needs Zig's unwind runtime explicitly.
+          TARGET_LIBS: -lunwind
       - if: ${{ !matrix.gnu }}
         run: cargo build --release --locked
       - name: Verify binary
