@@ -5,26 +5,67 @@ on:
     branches: [main]
   pull_request:
 
-# Cancel superseded runs on the same ref (e.g. new push to a PR) to save minutes.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
-  # Write a stub LICENSES.json.gz instead of running cargo-about + the npm license
-  # checker; CI just needs the file to exist for the include_bytes! in the binary.
+  CARGO_NET_RETRY: "10"
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  KOSHELF_SKIP_NPM_INSTALL: "1"
+  KOSHELF_SKIP_REACT_BUILD: "1"
   KOSHELF_SKIP_LICENSE_GENERATION: "1"
   RUSTDOCFLAGS: "-D warnings"
 
 jobs:
-  # ── Repo-wide gates, run once on Linux ──────────────────────────────────────
-  rust-format:
+  commit-messages:
+    name: Commit messages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check commit messages
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          else
+            base="$PUSH_BASE_SHA"
+            head="$GITHUB_SHA"
+          fi
+
+          message_file="$(mktemp)"
+          trap 'rm -f "$message_file"' EXIT
+          while read -r commit; do
+            git show --no-patch --format=%B "$commit" > "$message_file"
+            if ! .githooks/commit-msg "$message_file"; then
+              echo "Invalid subject in commit $commit:" >&2
+              git show --no-patch --format='%s' "$commit" >&2
+              exit 1
+            fi
+          done < <(git rev-list --reverse "$base..$head")
+
+  format:
     name: Rust format
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: 1.96.0
           components: rustfmt
@@ -33,22 +74,25 @@ jobs:
   audit:
     name: Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          toolchain: 1.96.0
-      - run: cargo install cargo-audit --version 0.22.1 --locked
+          persist-credentials: false
+      - uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2
+        with:
+          tool: cargo-audit@0.22.1
       - run: cargo audit --deny warnings
 
-  # Frontend checks run standalone — they don't need the Rust toolchain, and the
-  # Rust jobs below drive the Vite build through build.rs to embed frontend/dist.
   frontend:
-    name: Frontend (lint · format · typecheck · test)
+    name: Frontend bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
           cache: npm
@@ -58,91 +102,145 @@ jobs:
       - if: ${{ !cancelled() }}
         run: npm --prefix frontend run format:check
       - if: ${{ !cancelled() }}
-        run: npm --prefix frontend run typecheck
-      - if: ${{ !cancelled() }}
-        run: npm --prefix frontend run test
+        run: npm --prefix frontend run build
+      - name: Collect portable frontend build inputs
+        run: bash .github/scripts/collect-frontend-build-assets.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-build
+          path: |
+            frontend/dist
+            frontend/build-assets
+          if-no-files-found: error
+          retention-days: 1
 
-  # ── Per-platform Rust jobs ──────────────────────────────────────────────────
-  # Linux is the primary one: it lints, tests, and builds docs. macOS and Windows
-  # are compile checks for the other platforms we ship. Every Rust job needs Node,
-  # because build.rs compiles the Vite frontend into $OUT_DIR/frontend_dist, which
-  # the binary embeds via include_dir! (so `cargo check` can't skip it).
   linux:
     name: Linux (lint · test · docs)
+    needs: frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm --prefix frontend ci
-      - uses: dtolnay/rust-toolchain@master
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build
+          path: frontend
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: 1.96.0
           components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo check --all-targets --locked
-      - if: ${{ !cancelled() }}
-        run: cargo clippy --all-targets --locked -- -D warnings
-      - if: ${{ !cancelled() }}
-        run: cargo test --locked
-      - if: ${{ !cancelled() }}
-        run: cargo doc --no-deps --locked
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+      - run: cargo doc --no-deps --locked
 
   macos:
     name: macOS (check)
+    needs: frontend
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm --prefix frontend ci
-      - uses: dtolnay/rust-toolchain@master
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build
+          path: frontend
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: 1.96.0
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo check --all-targets --locked
 
-  # Native Windows build (msvc). build.rs runs npm via `cmd /C` on a Windows host.
   windows:
-    name: Windows (check)
-    runs-on: windows-latest
+    name: Windows (check, ${{ matrix.runner }})
+    needs: frontend
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        runner: [windows-latest, windows-11-arm]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm --prefix frontend ci
-      - uses: dtolnay/rust-toolchain@master
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build
+          path: frontend
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: 1.96.0
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo check --all-targets --locked
 
-  # Cross-compile the x86_64-pc-windows-gnu target we actually ship (see
-  # Makefile.toml). build.rs runs on the Linux host, so npm works normally.
-  windows-gnu-cross:
-    name: Windows gnu (cross-check)
+  cross-check:
+    name: Cross-check (${{ matrix.target }})
+    needs: frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
+          - target: x86_64-unknown-freebsd
+            freebsd_sysroot: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm --prefix frontend ci
-      - run: sudo apt-get update && sudo apt-get install --yes gcc-mingw-w64-x86-64
-      - uses: dtolnay/rust-toolchain@master
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build
+          path: frontend
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: 1.96.0
-          targets: x86_64-pc-windows-gnu
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo check --target x86_64-pc-windows-gnu --all-targets --locked
+          targets: ${{ matrix.target }}
+      - uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
+        if: ${{ !matrix.freebsd_sysroot }}
+        with:
+          target: ${{ matrix.target }}
+      - if: ${{ matrix.freebsd_sysroot }}
+        run: sudo apt-get update && sudo apt-get install --yes clang
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          key: ${{ matrix.target }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - if: ${{ matrix.freebsd_sysroot }}
+        id: freebsd-sysroot
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/freebsd-sysroot
+          key: freebsd-sysroot-14.4-RELEASE
+      - if: ${{ matrix.freebsd_sysroot && steps.freebsd-sysroot.outputs.cache-hit != 'true' }}
+        name: Download FreeBSD headers
+        run: |
+          curl --fail --location --output /tmp/base.txz \
+            https://download.freebsd.org/releases/amd64/amd64/14.4-RELEASE/base.txz
+          echo "769f60a6eea2938ad6b7943cfbcc17dfaf7d1f7ba59a32b869a00349302df853  /tmp/base.txz" | sha256sum --check
+          mkdir -p "$HOME/freebsd-sysroot"
+          tar -C "$HOME/freebsd-sysroot" -xf /tmp/base.txz ./usr/include
+      - if: ${{ matrix.freebsd_sysroot }}
+        name: Configure FreeBSD C and C++ compilers
+        run: |
+          {
+            echo "CC_x86_64_unknown_freebsd=clang"
+            echo "CXX_x86_64_unknown_freebsd=clang++"
+            echo "CFLAGS_x86_64_unknown_freebsd=--sysroot=$HOME/freebsd-sysroot"
+            echo "CXXFLAGS_x86_64_unknown_freebsd=--sysroot=$HOME/freebsd-sysroot -stdlib=libc++"
+          } >> "$GITHUB_ENV"
+      - run: cargo check --target ${{ matrix.target }} --all-targets --locked

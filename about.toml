@@ -26,7 +26,6 @@ accepted = [
 
 ignore-build-dependencies = true
 ignore-dev-dependencies = true
-filter-noassertion = true
 
 # libbz2-rs-sys: non-SPDX "bzip2-1.0.6" license identifier
 [libbz2-rs-sys.clarify]

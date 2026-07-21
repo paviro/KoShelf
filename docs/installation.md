@@ -45,9 +45,10 @@ Docker Image Repository: [koshelf-docker](https://github.com/DevTigro/koshelf-do
 
 Download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
 
-- Windows (x64)
-- macOS (Apple Silicon, Intel & Universal)
-- Linux (x64 and ARM64)
+- Windows MSVC (x86_64 and ARM64)
+- macOS (Intel and Apple Silicon)
+- Linux GNU/glibc (x86_64 and AArch64)
+- Linux musl, statically linked (x86_64 and AArch64)
 
 KoShelf is a command line tool — you need to run it from a terminal (macOS/Linux) or PowerShell/Command Prompt (Windows). Double-clicking the executable won't work since it requires command line arguments.
 
@@ -102,8 +103,9 @@ koshelf export ~/my-library-site --library-path ~/Books
 
 ### Prerequisites
 
-- Rust 1.70+ (for building)
+- Rust 1.96+ (for building)
 - Node.js and npm (React frontend build pipeline)
+- `cargo-about` for complete release-mode dependency licensing
 
 ### Building the tool
 
@@ -117,4 +119,7 @@ cargo build --release
 
 The binary will be available at `target/release/koshelf`.
 
-**Note:** The React frontend is built during `cargo build` and embedded into the binary.
+**Note:** The React frontend and third-party license report are built during
+`cargo build` and embedded into the binary. CI and release workflows build the
+frontend once and share it between platform runners; normal local builds use
+`frontend/node_modules` directly.

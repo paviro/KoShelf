@@ -13,8 +13,9 @@ pub(crate) fn compress_frontend_dist(out_dir: &str) {
     let dst = Path::new(out_dir).join("frontend_dist");
 
     if !src.exists() {
-        eprintln!("frontend/dist not found, skipping frontend compression");
-        return;
+        panic!(
+            "frontend/dist not found. Build the frontend or download the frontend-build artifact."
+        );
     }
 
     let mut total_original: u64 = 0;
@@ -85,21 +86,29 @@ fn is_compressible_extension(path: &Path) -> bool {
 pub(crate) fn compress_fonts(out_dir: &str) {
     let fonts = [
         (
+            "frontend/build-assets/fonts/Gelasio_400Regular.ttf",
             "frontend/node_modules/@expo-google-fonts/gelasio/400Regular/Gelasio_400Regular.ttf",
             "Gelasio_400Regular.ttf.gz",
         ),
         (
+            "frontend/build-assets/fonts/Gelasio_400Regular_Italic.ttf",
             "frontend/node_modules/@expo-google-fonts/gelasio/400Regular_Italic/Gelasio_400Regular_Italic.ttf",
             "Gelasio_400Regular_Italic.ttf.gz",
         ),
     ];
 
-    for (src, dst_name) in &fonts {
-        let src_path = Path::new(src);
-        if !src_path.exists() {
-            eprintln!("Font not found: {src}, skipping compression");
-            continue;
-        }
+    for (bundled_src, node_modules_src, dst_name) in &fonts {
+        let bundled_path = Path::new(bundled_src);
+        let node_modules_path = Path::new(node_modules_src);
+        let src_path = if bundled_path.is_file() {
+            bundled_path
+        } else if node_modules_path.is_file() {
+            node_modules_path
+        } else {
+            panic!(
+                "Font {dst_name} is missing from both the frontend-build artifact and node_modules"
+            );
+        };
 
         let data = fs::read(src_path)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", src_path.display(), e));

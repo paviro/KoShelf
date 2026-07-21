@@ -30,6 +30,13 @@ pub(crate) fn compile_react_frontend(skip_npm_install: bool, skip_react_build: b
     }
 
     if skip_react_build {
+        let dist_dir = frontend_dir.join("dist");
+        if !dist_dir.is_dir() {
+            panic!(
+                "KOSHELF_SKIP_REACT_BUILD is set but frontend/dist is missing. \
+                 Download the frontend-build artifact or build the frontend first."
+            );
+        }
         eprintln!("Skipping React frontend build (KOSHELF_SKIP_REACT_BUILD=1)");
         return;
     }

@@ -7,6 +7,19 @@ main_project_member = "."
 # Default environment variables
 [env]
 CARGO_BUILD_PROFILE = "release"
+CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER = "aarch64-unknown-linux-musl-gcc"
+CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER = "aarch64-linux-gnu-gcc"
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "x86_64-linux-gnu-gcc"
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "x86_64-unknown-linux-musl-gcc"
+CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "x86_64-w64-mingw32-gcc"
+CC_aarch64_unknown_linux_musl = "aarch64-unknown-linux-musl-gcc"
+CXX_aarch64_unknown_linux_musl = "aarch64-unknown-linux-musl-g++"
+CC_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-gcc"
+CXX_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-g++"
+CC_x86_64_unknown_linux_gnu = "x86_64-linux-gnu-gcc"
+CXX_x86_64_unknown_linux_gnu = "x86_64-linux-gnu-g++"
+CC_x86_64_unknown_linux_musl = "x86_64-unknown-linux-musl-gcc"
+CXX_x86_64_unknown_linux_musl = "x86_64-unknown-linux-musl-g++"
 
 # Production profile environment
 [env.production]
@@ -16,40 +29,42 @@ CARGO_BUILD_PROFILE = "release"
 [tasks.build-arm64-musl]
 description = "Build for ARM64 with musl"
 command = "cargo"
-args = ["build", "--release", "--target", "aarch64-unknown-linux-musl"]
+args = ["build", "--release", "--locked", "--target", "aarch64-unknown-linux-musl"]
 
 [tasks.build-arm64-gnu]
 description = "Build for ARM64 with glibc"
 command = "cargo"
-args = ["build", "--release", "--target", "aarch64-unknown-linux-gnu"]
+args = ["build", "--release", "--locked", "--target", "aarch64-unknown-linux-gnu"]
 
 # x86_64 Linux targets
 [tasks.build-x86-gnu]
 description = "Build for x86_64 Linux with glibc"
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-unknown-linux-gnu"]
+args = ["build", "--release", "--locked", "--target", "x86_64-unknown-linux-gnu"]
 
 [tasks.build-x86-musl]
 description = "Build for x86_64 Linux with musl"
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-unknown-linux-musl"]
+args = ["build", "--release", "--locked", "--target", "x86_64-unknown-linux-musl"]
 
 # Windows targets
 [tasks.build-windows-gnu]
 description = "Build for Windows x86_64 (MinGW)"
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-pc-windows-gnu"]
+args = ["build", "--release", "--locked", "--target", "x86_64-pc-windows-gnu"]
 
 # macOS targets
 [tasks.build-macos-intel]
 description = "Build for Intel macOS"
 command = "cargo"
-args = ["build", "--release", "--target", "x86_64-apple-darwin"]
+args = ["build", "--release", "--locked", "--target", "x86_64-apple-darwin"]
+env_files = ["./.env"]
 
 [tasks.build-macos-silicon]
 description = "Build for Apple Silicon macOS"
 command = "cargo"
-args = ["build", "--release", "--target", "aarch64-apple-darwin"]
+args = ["build", "--release", "--locked", "--target", "aarch64-apple-darwin"]
+env_files = ["./.env"]
 
 [tasks.build-macos-universal]
 description = "Build universal macOS binary (Intel + Apple Silicon)"
@@ -109,7 +124,7 @@ dependencies = [
 [tasks.run-tests]
 description = "Execute the full test suite before building releases"
 command = "cargo"
-args = ["test"]
+args = ["test", "--locked"]
 
 [tasks.clean-all]
 description = "Clean all build artifacts"
@@ -242,17 +257,49 @@ dependencies = [
     "package-macos-universal"
 ]
 
-# Build and package in one go
+# Build, package, sign, and notarize everything available from a Mac.
 [tasks.release-all]
-description = "Build and package all platforms"
+description = "Build, package, sign and notarize all local release artifacts"
 dependencies = [
+    "check-apple-credentials",
     "run-tests",
     "build-all",
     "package-all",
     "notarize-macos-intel",
     "notarize-macos-silicon",
     "notarize-macos-universal"
-] 
+]
+
+[tasks.release]
+description = "Build, package, sign and notarize all local release artifacts"
+dependencies = ["release-all"]
+
+[tasks.check-apple-credentials]
+description = "Fail early unless the signing identity and notarization keychain profile are set up"
+script = '''
+if [ -f ./.env ]; then
+    set -a
+    . ./.env
+    set +a
+fi
+if [ -z "$APPLE_DEVELOPER_ID" ]; then
+    echo "release needs APPLE_DEVELOPER_ID for signing; set it in ./.env," >&2
+    echo "or use \`cargo build --release\` for an unsigned local build." >&2
+    exit 1
+fi
+if [ -z "$APPLE_NOTARY_PROFILE" ]; then
+    echo "release needs APPLE_NOTARY_PROFILE — the name of a notarytool keychain profile; set it in ./.env." >&2
+    echo "Create one with:" >&2
+    echo "  xcrun notarytool store-credentials <name> --apple-id <apple-id> --team-id <team-id>" >&2
+    exit 1
+fi
+if ! xcrun notarytool history --keychain-profile "$APPLE_NOTARY_PROFILE" >/dev/null 2>&1; then
+    echo "the \"$APPLE_NOTARY_PROFILE\" keychain profile does not work; create it with" >&2
+    echo "  xcrun notarytool store-credentials \"$APPLE_NOTARY_PROFILE\" --apple-id <apple-id> --team-id <team-id>" >&2
+    exit 1
+fi
+echo "Signing identity and notarization profile present."
+'''
 
 [tasks.sign-macos-intel]
 description = "Sign Intel macOS binary if APPLE_DEVELOPER_ID is set"
@@ -261,15 +308,11 @@ env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
 BINARY_PATH="target/x86_64-apple-darwin/release/koshelf"
-if [ -n "$APPLE_DEVELOPER_ID" ]; then
-    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
-        echo "✅ Successfully signed Intel macOS binary."
-    else
-        echo "❌ Failed to sign Intel macOS binary."
-    fi
-else
-    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Intel macOS binary."
+if [ -z "$APPLE_DEVELOPER_ID" ]; then
+    echo "APPLE_DEVELOPER_ID not set, cannot sign Intel macOS binary." >&2
+    exit 1
 fi
+codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"
 '''
 
 [tasks.sign-macos-silicon]
@@ -279,15 +322,11 @@ env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
 BINARY_PATH="target/aarch64-apple-darwin/release/koshelf"
-if [ -n "$APPLE_DEVELOPER_ID" ]; then
-    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
-        echo "✅ Successfully signed Apple Silicon macOS binary."
-    else
-        echo "❌ Failed to sign Apple Silicon macOS binary."
-    fi
-else
-    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Apple Silicon macOS binary."
+if [ -z "$APPLE_DEVELOPER_ID" ]; then
+    echo "APPLE_DEVELOPER_ID not set, cannot sign Apple Silicon macOS binary." >&2
+    exit 1
 fi
+codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"
 '''
 
 [tasks.sign-macos-universal]
@@ -297,70 +336,36 @@ env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
 BINARY_PATH="target/universal-apple-darwin/release/koshelf"
-if [ -n "$APPLE_DEVELOPER_ID" ]; then
-    if codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"; then
-        echo "✅ Successfully signed Universal macOS binary."
-    else
-        echo "❌ Failed to sign Universal macOS binary."
-    fi
-else
-    echo "APPLE_DEVELOPER_ID not set, skipping code signing for Universal macOS binary."
+if [ -z "$APPLE_DEVELOPER_ID" ]; then
+    echo "APPLE_DEVELOPER_ID not set, cannot sign Universal macOS binary." >&2
+    exit 1
 fi
-''' 
+codesign --sign "$APPLE_DEVELOPER_ID" --timestamp --options runtime "$BINARY_PATH"
+'''
 
 [tasks.notarize-macos-intel]
-description = "Notarize Intel macOS zip if APPLE_USERNAME and APPLE_PASSWORD are set"
+description = "Notarize Intel macOS zip via the notarytool keychain profile"
 dependencies = ["package-macos-intel"]
 env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
-ZIP_PATH="release/apple-darwin-x86_64.zip"
-TEAM_ID=$(echo "$APPLE_DEVELOPER_ID" | sed -n 's/.*(\(.*\)).*/\1/p')
-if [ -n "$APPLE_USERNAME" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$TEAM_ID" ]; then
-    if xcrun notarytool submit "$ZIP_PATH" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$TEAM_ID" --wait; then
-        echo "✅ Successfully notarized Intel macOS zip."
-    else
-        echo "❌ Failed to notarize Intel macOS zip."
-    fi
-else
-    echo "APPLE_USERNAME, APPLE_PASSWORD, or APPLE_DEVELOPER_ID not set, skipping notarization for Intel macOS zip."
-fi
+xcrun notarytool submit "release/apple-darwin-x86_64.zip" --keychain-profile "$APPLE_NOTARY_PROFILE" --wait
 '''
 
 [tasks.notarize-macos-silicon]
-description = "Notarize Apple Silicon macOS zip if APPLE_USERNAME and APPLE_PASSWORD are set"
+description = "Notarize Apple Silicon macOS zip via the notarytool keychain profile"
 dependencies = ["package-macos-silicon"]
 env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
-ZIP_PATH="release/apple-darwin-aarch64.zip"
-TEAM_ID=$(echo "$APPLE_DEVELOPER_ID" | sed -n 's/.*(\(.*\)).*/\1/p')
-if [ -n "$APPLE_USERNAME" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$TEAM_ID" ]; then
-    if xcrun notarytool submit "$ZIP_PATH" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$TEAM_ID" --wait; then
-        echo "✅ Successfully notarized Apple Silicon macOS zip."
-    else
-        echo "❌ Failed to notarize Apple Silicon macOS zip."
-    fi
-else
-    echo "APPLE_USERNAME, APPLE_PASSWORD, or APPLE_DEVELOPER_ID not set, skipping notarization for Apple Silicon macOS zip."
-fi
+xcrun notarytool submit "release/apple-darwin-aarch64.zip" --keychain-profile "$APPLE_NOTARY_PROFILE" --wait
 '''
 
 [tasks.notarize-macos-universal]
-description = "Notarize Universal macOS zip if APPLE_USERNAME and APPLE_PASSWORD are set"
+description = "Notarize Universal macOS zip via the notarytool keychain profile"
 dependencies = ["package-macos-universal"]
 env_files = ["./.env"]
 condition = { files_exist = ["./.env"] }
 script = '''
-ZIP_PATH="release/apple-darwin-universal.zip"
-TEAM_ID=$(echo "$APPLE_DEVELOPER_ID" | sed -n 's/.*(\(.*\)).*/\1/p')
-if [ -n "$APPLE_USERNAME" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$TEAM_ID" ]; then
-    if xcrun notarytool submit "$ZIP_PATH" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$TEAM_ID" --wait; then
-        echo "✅ Successfully notarized Universal macOS zip."
-    else
-        echo "❌ Failed to notarize Universal macOS zip."
-    fi
-else
-    echo "APPLE_USERNAME, APPLE_PASSWORD, or APPLE_DEVELOPER_ID not set, skipping notarization for Universal macOS zip."
-fi
-''' 
+xcrun notarytool submit "release/apple-darwin-universal.zip" --keychain-profile "$APPLE_NOTARY_PROFILE" --wait
+'''

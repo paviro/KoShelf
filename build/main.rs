@@ -14,6 +14,7 @@ fn main() {
     rerun_if_changed_recursive(Path::new("frontend/locales"));
     rerun_if_changed_recursive(Path::new("frontend/src"));
     rerun_if_changed_recursive(Path::new("frontend/public"));
+    rerun_if_changed_recursive(Path::new("frontend/build-assets"));
     println!("cargo:rerun-if-changed=frontend/index.html");
     println!("cargo:rerun-if-changed=frontend/package.json");
     println!("cargo:rerun-if-changed=frontend/package-lock.json");

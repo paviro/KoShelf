@@ -87,7 +87,14 @@ In Vite dev mode, the app defaults to `internal` server mode so requests go to `
 
 `cargo build` / `cargo run` triggers `build.rs`, which builds this frontend and embeds the resulting assets into the binary.
 
+CI and release workflows build the frontend once on Linux, then upload
+`frontend/dist`, the two Gelasio source fonts, and a portable npm license
+snapshot as the `frontend-build` artifact. Every Rust platform job downloads
+that artifact, so all binaries embed identical frontend bytes without needing
+Node or `node_modules` on the target runner. Local builds continue to build
+from `node_modules` when `frontend/build-assets` is absent.
+
 Useful environment flags:
 
-- `KOSHELF_SKIP_REACT_BUILD=1`: skip frontend build in Rust build pipeline
+- `KOSHELF_SKIP_REACT_BUILD=1`: use an existing `frontend/dist` instead of rebuilding it
 - `KOSHELF_SKIP_NPM_INSTALL=1`: disable automatic `npm install`/`npm ci` in build script

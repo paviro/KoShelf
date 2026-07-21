@@ -8,6 +8,8 @@ use std::process::Command;
 
 use super::shared::{newest_mtime, write_if_changed};
 
+const FRONTEND_LICENSE_SNAPSHOT: &str = "frontend/build-assets/npm-licenses.json";
+
 #[derive(serde::Serialize)]
 struct LicenseGroup {
     license: String,
@@ -21,28 +23,51 @@ struct LicenseDep {
     version: String,
 }
 
+#[derive(serde::Deserialize)]
+struct CargoAboutOutput {
+    licenses: Vec<CargoAboutLicense>,
+}
+
+#[derive(serde::Deserialize)]
+struct CargoAboutLicense {
+    id: String,
+    text: String,
+    used_by: Vec<CargoAboutUsedBy>,
+}
+
+#[derive(serde::Deserialize)]
+struct CargoAboutUsedBy {
+    #[serde(rename = "crate")]
+    krate: CargoAboutCrate,
+}
+
+#[derive(serde::Deserialize)]
+struct CargoAboutCrate {
+    name: String,
+    version: String,
+}
+
 /// Generate third-party license text for embedding in the binary.
 /// Combines Rust dependency licenses (via cargo-about) and frontend npm dependency
-/// licenses (via license-checker-rseidelsohn).
+/// licenses (via the portable frontend artifact or license-checker-rseidelsohn).
 pub(crate) fn generate_licenses(out_dir: &str, skip_generation: bool) {
     let output_path = Path::new(out_dir).join("LICENSES.json.gz");
 
     if skip_generation {
         eprintln!("Skipping license generation (KOSHELF_SKIP_LICENSE_GENERATION=1)");
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
-        encoder.write_all(b"[]").unwrap();
-        let compressed = encoder.finish().unwrap();
-        let _wrote = write_if_changed(&output_path, &compressed)
-            .unwrap_or_else(|e| panic!("Failed to write license placeholder: {}", e));
+        write_gzipped(&output_path, b"[]");
         return;
     }
 
-    // Skip regeneration when the output is already newer than all inputs.
-    let input_paths: [&Path; 3] = [
+    let snapshot_path = Path::new(FRONTEND_LICENSE_SNAPSHOT);
+    let mut input_paths: Vec<&Path> = vec![
         Path::new("Cargo.lock"),
         Path::new("about.toml"),
         Path::new("frontend/package-lock.json"),
     ];
+    if snapshot_path.is_file() {
+        input_paths.push(snapshot_path);
+    }
 
     if let Ok(output_mtime) = fs::metadata(&output_path).and_then(|m| m.modified())
         && let Some(newest_input) = newest_mtime(&input_paths)
@@ -52,93 +77,15 @@ pub(crate) fn generate_licenses(out_dir: &str, skip_generation: bool) {
         return;
     }
 
-    let mut groups: Vec<LicenseGroup> = Vec::new();
+    let release = std::env::var("PROFILE").as_deref() == Ok("release");
+    let mut groups = collect_rust_licenses(out_dir, release);
+    groups.extend(collect_frontend_licenses(release));
 
-    // ── Rust dependency licenses (cargo-about) ──────────────────────────
-    // Filter by current build target so only actual dependencies are included
-    // (e.g. no windows-* crates on macOS builds and vice versa).
-    let target = std::env::var("TARGET").expect("TARGET env var not set");
-
-    eprintln!("Generating Rust dependency licenses (target: {target})...");
-    let cargo_about = Command::new("cargo")
-        .args(["about", "generate", "--format", "json", "--target", &target])
-        .output();
-
-    let cargo_about_output = match cargo_about {
-        Ok(result) if result.status.success() => result.stdout,
-        Ok(result) => {
-            let stderr = String::from_utf8_lossy(&result.stderr);
-            let stdout = &result.stdout;
-            if !stdout.is_empty() {
-                eprintln!(
-                    "cargo-about produced warnings but generated output:\n{}",
-                    stderr
-                );
-                stdout.clone()
-            } else {
-                panic!("cargo-about failed to generate license output:\n{}", stderr);
-            }
-        }
-        Err(e) => {
-            panic!(
-                "Failed to run cargo-about. Install it with: cargo install cargo-about\nError: {}",
-                e
-            );
-        }
-    };
-
-    #[derive(serde::Deserialize)]
-    struct CargoAboutOutput {
-        licenses: Vec<CargoAboutLicense>,
-    }
-    #[derive(serde::Deserialize)]
-    struct CargoAboutLicense {
-        id: String,
-        text: String,
-        used_by: Vec<CargoAboutUsedBy>,
-    }
-    #[derive(serde::Deserialize)]
-    struct CargoAboutUsedBy {
-        #[serde(rename = "crate")]
-        krate: CargoAboutCrate,
-    }
-    #[derive(serde::Deserialize)]
-    struct CargoAboutCrate {
-        name: String,
-        version: String,
-    }
-
-    let parsed: CargoAboutOutput = serde_json::from_slice(&cargo_about_output)
-        .expect("Failed to parse cargo-about JSON output");
-
-    groups.extend(parsed.licenses.into_iter().map(|lic| {
-        LicenseGroup {
-            license: lic.id,
-            text: lic.text,
-            dependencies: lic
-                .used_by
-                .into_iter()
-                .map(|u| LicenseDep {
-                    name: u.krate.name,
-                    version: u.krate.version,
-                })
-                .collect(),
-        }
-    }));
-
-    // ── Frontend dependency licenses (license-checker-rseidelsohn) ─────
-    let frontend_dir = Path::new("frontend");
-    if frontend_dir.join("node_modules").exists() {
-        eprintln!("Generating frontend dependency licenses...");
-        groups.extend(collect_frontend_licenses());
-    }
-
-    // Merge groups that share identical (license, text) pairs.
     let mut merged: Vec<LicenseGroup> = Vec::new();
     for group in groups {
         if let Some(existing) = merged
             .iter_mut()
-            .find(|g| g.license == group.license && g.text == group.text)
+            .find(|candidate| candidate.license == group.license && candidate.text == group.text)
         {
             existing.dependencies.extend(group.dependencies);
         } else {
@@ -151,46 +98,95 @@ pub(crate) fn generate_licenses(out_dir: &str, skip_generation: bool) {
             .sort_by(|a, b| a.name.cmp(&b.name).then(a.version.cmp(&b.version)));
     }
 
-    let json = serde_json::to_string(&merged).expect("Failed to serialize license data");
-
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
-    encoder.write_all(json.as_bytes()).unwrap();
-    let compressed = encoder.finish().unwrap();
-
+    let json = serde_json::to_vec(&merged).expect("Failed to serialize license data");
+    let compressed = gzip(&json);
     eprintln!(
         "License data: {} bytes JSON -> {} bytes gzip ({:.1}%)",
         json.len(),
         compressed.len(),
         (compressed.len() as f64 / json.len() as f64) * 100.0
     );
-
-    // Always write (not write_if_changed) to update mtime for the cache check.
-    fs::write(&output_path, &compressed)
-        .unwrap_or_else(|e| panic!("Failed to write compressed license file: {}", e));
-
+    fs::write(&output_path, compressed)
+        .unwrap_or_else(|error| panic!("Failed to write compressed license file: {error}"));
     eprintln!("License generation completed: {}", output_path.display());
 }
 
-/// Parse the `accepted` list from about.toml (shared with cargo-about).
-fn accepted_licenses() -> Vec<String> {
-    let content = fs::read_to_string("about.toml").expect("Failed to read about.toml");
-    let toml: toml::Value = toml::from_str(&content).expect("Failed to parse about.toml");
+fn collect_rust_licenses(out_dir: &str, release: bool) -> Vec<LicenseGroup> {
+    let target = std::env::var("TARGET").expect("TARGET env var not set");
+    let about_json_path = Path::new(out_dir).join("cargo-about.json");
 
-    toml["accepted"]
-        .as_array()
-        .expect("about.toml must contain an 'accepted' array")
-        .iter()
-        .map(|v| {
-            v.as_str()
-                .expect("Each accepted license must be a string")
-                .to_string()
+    eprintln!("Generating Rust dependency licenses (target: {target})...");
+    let result = Command::new("cargo")
+        .args([
+            "about",
+            "generate",
+            "--format",
+            "json",
+            "--target",
+            &target,
+            "--output-file",
+        ])
+        .arg(&about_json_path)
+        .output();
+
+    let json = match result {
+        Ok(result) if result.status.success() => fs::read(&about_json_path)
+            .unwrap_or_else(|error| panic!("Failed to read cargo-about output: {error}")),
+        Ok(result) => {
+            let details = String::from_utf8_lossy(&result.stderr);
+            let message = format!(
+                "cargo-about failed to generate license output: {}",
+                details.trim()
+            );
+            return missing_license_source(release, &message);
+        }
+        Err(error) => {
+            let message = format!(
+                "cargo-about could not be started ({error}). Install it with: \
+                 cargo install cargo-about --locked"
+            );
+            return missing_license_source(release, &message);
+        }
+    };
+
+    let parsed: CargoAboutOutput =
+        serde_json::from_slice(&json).expect("Failed to parse cargo-about JSON output");
+    parsed
+        .licenses
+        .into_iter()
+        .map(|license| LicenseGroup {
+            license: license.id,
+            text: license.text,
+            dependencies: license
+                .used_by
+                .into_iter()
+                .map(|used| LicenseDep {
+                    name: used.krate.name,
+                    version: used.krate.version,
+                })
+                .collect(),
         })
         .collect()
 }
 
-fn collect_frontend_licenses() -> Vec<LicenseGroup> {
-    let only_allow = accepted_licenses().join(";");
+fn collect_frontend_licenses(release: bool) -> Vec<LicenseGroup> {
+    let snapshot_path = Path::new(FRONTEND_LICENSE_SNAPSHOT);
+    if snapshot_path.is_file() {
+        eprintln!("Loading frontend dependency licenses from the frontend-build artifact...");
+        let json = fs::read(snapshot_path)
+            .unwrap_or_else(|error| panic!("Failed to read {}: {error}", snapshot_path.display()));
+        return parse_frontend_licenses(&json, true);
+    }
 
+    if !Path::new("frontend/node_modules").is_dir() {
+        return missing_license_source(
+            release,
+            "Frontend license data is unavailable: neither the frontend-build artifact nor frontend/node_modules exists",
+        );
+    }
+
+    eprintln!("Generating frontend dependency licenses from node_modules...");
+    let only_allow = accepted_licenses().join(";");
     let result = Command::new("npx")
         .args([
             "license-checker-rseidelsohn",
@@ -205,72 +201,119 @@ fn collect_frontend_licenses() -> Vec<LicenseGroup> {
         .output();
 
     let result = match result {
-        Ok(r) => r,
-        Err(e) => panic!(
-            "Failed to run license-checker-rseidelsohn. \
-             Install it with: npm --prefix frontend install --save-dev license-checker-rseidelsohn\n\
-             Error: {}",
-            e
-        ),
+        Ok(result) if result.status.success() => result,
+        Ok(result) => {
+            let details = String::from_utf8_lossy(&result.stderr);
+            let message = format!("Frontend license check failed: {}", details.trim());
+            return missing_license_source(release, &message);
+        }
+        Err(error) => {
+            let message = format!("license-checker-rseidelsohn could not be started: {error}");
+            return missing_license_source(release, &message);
+        }
     };
 
-    if !result.status.success() {
-        panic!(
-            "Frontend license check failed (a dependency may use a disallowed license):\n{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
-    }
+    parse_frontend_licenses(&result.stdout, false)
+}
 
+fn parse_frontend_licenses(json: &[u8], portable_snapshot: bool) -> Vec<LicenseGroup> {
     let json: serde_json::Value =
-        serde_json::from_slice(&result.stdout).expect("Failed to parse license-checker JSON");
-
+        serde_json::from_slice(json).expect("Failed to parse frontend license JSON");
     let packages = json
         .as_object()
-        .expect("Expected JSON object from license-checker");
-
-    // Group packages by their license text to avoid repetition.
+        .expect("Expected a JSON object from the frontend license checker");
     let mut groups: BTreeMap<String, (String, Option<String>, Vec<LicenseDep>)> = BTreeMap::new();
 
-    for (pkg_id, info) in packages {
+    for (package_id, info) in packages {
         let license_id = info["licenses"].as_str().unwrap_or("Unknown").to_string();
-
-        // Read the actual license file if it exists and is not a README fallback.
-        let license_text = info["licenseFile"]
-            .as_str()
-            .filter(|p| {
-                let name = p.rsplit('/').next().unwrap_or("").to_lowercase();
-                name.starts_with("licen") || name.starts_with("copying")
-            })
-            .and_then(|p| fs::read_to_string(p).ok())
-            .map(|t| t.trim().to_string());
-
-        // Split "pkg@version" into name and version.
-        let (name, version) = match pkg_id.rfind('@') {
-            Some(pos) => (&pkg_id[..pos], &pkg_id[pos + 1..]),
-            None => (pkg_id.as_str(), ""),
+        let license_file = info["licenseFile"].as_str();
+        let is_license_file = license_file.is_some_and(|path| {
+            let name = path
+                .rsplit(['/', '\\'])
+                .next()
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            name.starts_with("licen") || name.starts_with("copying")
+        });
+        let license_text = if is_license_file && portable_snapshot {
+            info["licenseText"]
+                .as_str()
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_owned)
+        } else if is_license_file {
+            license_file
+                .and_then(|path| fs::read_to_string(path).ok())
+                .map(|text| text.trim().to_owned())
+        } else {
+            None
         };
 
+        let (name, version) = package_id
+            .rfind('@')
+            .map_or((package_id.as_str(), ""), |position| {
+                (&package_id[..position], &package_id[position + 1..])
+            });
         let key = license_text.clone().unwrap_or_else(|| license_id.clone());
         let entry = groups
             .entry(key)
             .or_insert_with(|| (license_id, license_text, Vec::new()));
         entry.2.push(LicenseDep {
-            name: name.to_string(),
-            version: version.to_string(),
+            name: name.to_owned(),
+            version: version.to_owned(),
         });
     }
 
     groups
         .into_values()
-        .map(|(license_id, text, deps)| {
-            let text = text.unwrap_or_else(|| {
-                format!("(No license file found. SPDX identifier: {})", license_id)
-            });
-            LicenseGroup {
-                license: license_id,
-                text,
-                dependencies: deps,
-            }
+        .map(|(license, text, dependencies)| LicenseGroup {
+            text: text
+                .unwrap_or_else(|| format!("(No license file found. SPDX identifier: {license})")),
+            license,
+            dependencies,
         })
         .collect()
+}
+
+fn accepted_licenses() -> Vec<String> {
+    let content = fs::read_to_string("about.toml").expect("Failed to read about.toml");
+    let toml: toml::Value = toml::from_str(&content).expect("Failed to parse about.toml");
+    toml["accepted"]
+        .as_array()
+        .expect("about.toml must contain an accepted array")
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .expect("Each accepted license must be a string")
+                .to_owned()
+        })
+        .collect()
+}
+
+fn missing_license_source(release: bool, message: &str) -> Vec<LicenseGroup> {
+    if release {
+        panic!(
+            "{message}. Release builds must contain complete third-party license data; \
+             set KOSHELF_SKIP_LICENSE_GENERATION=1 only to opt out explicitly."
+        );
+    }
+    println!("cargo:warning={message}; the unavailable license source will be omitted");
+    Vec::new()
+}
+
+fn write_gzipped(path: &Path, bytes: &[u8]) {
+    let compressed = gzip(bytes);
+    write_if_changed(path, &compressed)
+        .unwrap_or_else(|error| panic!("Failed to write {}: {error}", path.display()));
+}
+
+fn gzip(bytes: &[u8]) -> Vec<u8> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
+    encoder
+        .write_all(bytes)
+        .expect("Failed to compress license data");
+    encoder
+        .finish()
+        .expect("Failed to finish license compression")
 }
