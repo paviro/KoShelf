@@ -87,6 +87,35 @@ koshelf serve --library-path ~/syncthing/Books \
 
 With this setup, each Syncthing update refreshes the site with your latest reading progress, highlights, and statistics.
 
+## Reading Statistics from Multiple Devices
+
+When you read on more than one device, there are three ways to get all reading statistics into KoShelf:
+
+### 1. Sync the database file itself (e.g. Syncthing)
+
+Sync `statistics.sqlite3` between devices with a file sync tool so all devices share one database, and point `--statistics-db` at any synced copy.
+
+This only works with **strictly serial reading**: finish on one device, let the sync complete, then pick up the next device. SQLite files cannot be merged at the file level — if two devices write to their copies before syncing, one version wins (or the sync tool creates a conflict file) and the other device's sessions are silently lost.
+
+### 2. KOReader's built-in statistics sync
+
+The statistics plugin can synchronize through KOReader's cloud storage (WebDAV or Dropbox): each device merges the shared history into its own database, so every synced device converges to the complete reading history. This handles concurrent reading correctly and also shows combined statistics on the devices themselves.
+
+With this setup KoShelf only needs **one** database — point `--statistics-db` at (a synced copy of) any device's `statistics.sqlite3` after it has synced.
+
+### 3. Supply each device's database to KoShelf
+
+If you don't want to sync anything between devices, give KoShelf every device's database directly — pass `-s`/`--statistics-db` multiple times or use a path array in `koshelf.toml`:
+
+```bash
+koshelf serve -i ~/Books \
+              -s ~/syncthing/Kobo/statistics.sqlite3 \
+              -s ~/syncthing/Boox/statistics.sqlite3 \
+              --data-path ~/koshelf-data
+```
+
+KoShelf merges the databases in memory on every load using the same semantics as KOReader's own sync; the source files are never modified, and overlapping or partially synced databases never double count. The devices themselves won't show combined statistics; only KoShelf does. See [Statistics Database](statistics_database.md#merging-multiple-databases) for the technical merge details.
+
 ## User-Contributed Setups
 
 See [Syncthing Setups](syncthing_setups/README.md) for community-contributed guides on how to sync your devices with KoShelf.

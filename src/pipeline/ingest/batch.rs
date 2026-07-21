@@ -168,7 +168,7 @@ mod tests {
             include_unread: true,
             library_paths: vec![library_path.to_path_buf()],
             metadata_location: MetadataLocation::InBookFolder,
-            statistics_db_path: None,
+            statistics_db_paths: vec![],
             kobo_db_path: None,
             heatmap_scale_max: None,
             time_config: TimeConfig::from_cli(&None, &None).expect("time config"),

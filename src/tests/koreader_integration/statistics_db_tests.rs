@@ -337,6 +337,459 @@ async fn test_statistics_parser_deduplicates_by_md5() {
     assert!(stats.stats_by_md5.contains_key("shared-md5"));
 }
 
+async fn seed_book_row(
+    pool: &SqlitePool,
+    id: i64,
+    title: &str,
+    authors: &str,
+    last_open: i64,
+    pages: i64,
+    md5: &str,
+) {
+    seed_book_row_full(pool, id, title, Some(authors), last_open, pages, md5, 0, 0).await;
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn seed_book_row_full(
+    pool: &SqlitePool,
+    id: i64,
+    title: &str,
+    authors: Option<&str>,
+    last_open: i64,
+    pages: i64,
+    md5: &str,
+    total_read_time: i64,
+    total_read_pages: i64,
+) {
+    sqlx::query(
+        "INSERT INTO book (id, title, authors, notes, last_open, highlights, pages, series, language, md5, total_read_time, total_read_pages)
+         VALUES (?1, ?2, ?3, 0, ?4, 0, ?5, NULL, 'en', ?6, ?7, ?8)",
+    )
+    .bind(id)
+    .bind(title)
+    .bind(authors)
+    .bind(last_open)
+    .bind(pages)
+    .bind(md5)
+    .bind(total_read_time)
+    .bind(total_read_pages)
+    .execute(pool)
+    .await
+    .expect("Failed to seed book");
+}
+
+async fn seed_page_stat_row(
+    pool: &SqlitePool,
+    id_book: i64,
+    page: i64,
+    start_time: i64,
+    duration: i64,
+    total_pages: i64,
+) {
+    sqlx::query(
+        "INSERT INTO page_stat_data (id_book, page, start_time, duration, total_pages)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+    )
+    .bind(id_book)
+    .bind(page)
+    .bind(start_time)
+    .bind(duration)
+    .bind(total_pages)
+    .execute(pool)
+    .await
+    .expect("Failed to seed page_stat_data");
+}
+
+#[tokio::test]
+async fn test_parse_merged_combines_disjoint_books() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    seed_book_row(&db_a.pool, 1, "Book A", "Author A", 100, 100, "md5-a").await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    seed_book_row(&db_b.pool, 1, "Book B", "Author B", 200, 100, "md5-b").await;
+    seed_page_stat_row(&db_b.pool, 1, 2, 2_000, 30, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(stats.books.len(), 2, "disjoint books should both survive");
+    let book_a = stats.stats_by_md5.get("md5-a").expect("md5-a present");
+    assert_eq!(book_a.total_read_time, Some(60));
+    assert_eq!(book_a.total_read_pages, Some(1));
+    let book_b = stats.stats_by_md5.get("md5-b").expect("md5-b present");
+    assert_eq!(book_b.total_read_time, Some(30));
+    assert_eq!(book_b.total_read_pages, Some(1));
+    assert_eq!(stats.page_stats.len(), 2);
+}
+
+#[tokio::test]
+async fn test_parse_merged_combines_sessions_of_shared_book() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    seed_book_row(&db_a.pool, 1, "Shared", "Author", 100, 100, "md5-s").await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    // Same book on device B under a different autoincrement id
+    seed_book_row(&db_b.pool, 7, "Shared", "Author", 200, 100, "md5-s").await;
+    seed_page_stat_row(&db_b.pool, 7, 2, 2_000, 30, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(
+        stats.books.len(),
+        1,
+        "same (title, authors, md5) should merge"
+    );
+    let book = &stats.books[0];
+    assert_eq!(book.last_open, Some(200), "most recent last_open wins");
+    assert_eq!(
+        book.total_read_time,
+        Some(90),
+        "durations from both devices"
+    );
+    assert_eq!(
+        book.total_read_pages,
+        Some(2),
+        "distinct pages from both devices"
+    );
+    assert_eq!(stats.page_stats.len(), 2);
+    assert!(stats.page_stats.iter().all(|ps| ps.id_book == book.id));
+}
+
+#[tokio::test]
+async fn test_parse_merged_overlapping_sessions_keep_max_duration() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    seed_book_row(&db_a.pool, 1, "Shared", "Author", 100, 100, "md5-s").await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    // Same session recorded on both devices with differing durations
+    seed_book_row(&db_b.pool, 1, "Shared", "Author", 100, 100, "md5-s").await;
+    seed_page_stat_row(&db_b.pool, 1, 1, 1_000, 90, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(stats.books.len(), 1);
+    assert_eq!(
+        stats.page_stats.len(),
+        1,
+        "identical session must not double count"
+    );
+    assert_eq!(stats.page_stats[0].duration, 90, "MAX(duration) wins");
+    assert_eq!(stats.books[0].total_read_time, Some(90));
+    assert_eq!(stats.books[0].total_read_pages, Some(1));
+}
+
+#[tokio::test]
+async fn test_parse_merged_same_db_twice_matches_single_parse() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db = TestDatabase::new(&artifacts.statements).await;
+
+    seed_book_row(&db.pool, 1, "Book", "Author", 100, 100, "md5-a").await;
+    seed_page_stat_row(&db.pool, 1, 1, 1_000, 60, 100).await;
+    seed_page_stat_row(&db.pool, 1, 2, 2_000, 30, 100).await;
+
+    let single = StatisticsParser::parse(&db.path)
+        .await
+        .expect("parse failed");
+    let merged = StatisticsParser::parse_merged(&[db.path.clone(), db.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(merged.books.len(), single.books.len());
+    assert_eq!(merged.page_stats.len(), single.page_stats.len());
+    assert_eq!(
+        merged.books[0].total_read_time,
+        Some(90),
+        "merging a database with itself must be a no-op"
+    );
+    assert_eq!(merged.books[0].total_read_pages, Some(2));
+}
+
+#[tokio::test]
+async fn test_parse_merged_rescales_to_most_recent_pagination() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    // Device A renders the book at 100 pages, device B (read more recently) at 200.
+    seed_book_row(&db_a.pool, 1, "Shared", "Author", 100, 100, "md5-s").await;
+    seed_page_stat_row(&db_a.pool, 1, 10, 1_000, 60, 100).await;
+    seed_book_row(&db_b.pool, 1, "Shared", "Author", 200, 200, "md5-s").await;
+    seed_page_stat_row(&db_b.pool, 1, 30, 2_000, 30, 200).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(stats.books.len(), 1);
+    let book = &stats.books[0];
+    assert_eq!(
+        book.pages,
+        Some(200),
+        "pages follow the most recently opened device"
+    );
+
+    // Device A's page 10/100 rescales to pages 19-20 of 200, splitting its 60s evenly
+    // (KOReader page_stat view semantics); device B's row is already in target scale.
+    let mut rescaled: Vec<(i64, i64)> = stats
+        .page_stats
+        .iter()
+        .map(|ps| (ps.page, ps.duration))
+        .collect();
+    rescaled.sort_unstable();
+    assert_eq!(rescaled, vec![(19, 30), (20, 30), (30, 30)]);
+    assert_eq!(
+        book.total_read_time,
+        Some(90),
+        "duration preserved across rescaling"
+    );
+    assert_eq!(book.total_read_pages, Some(3));
+}
+
+#[tokio::test]
+async fn test_parse_merged_then_deduplicates_by_md5() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    // Same file, but authors metadata was edited on device B → different book identity
+    seed_book_row(&db_a.pool, 1, "Book", "Author A", 100, 300, "shared-md5").await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 300).await;
+    seed_book_row(&db_b.pool, 1, "Book", "Author B", 200, 300, "shared-md5").await;
+    seed_page_stat_row(&db_b.pool, 1, 2, 2_000, 30, 300).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(stats.books.len(), 1, "same-md5 rows collapse in dedup");
+    let book = &stats.books[0];
+    assert_eq!(book.authors, "Author B", "canonical = most recently opened");
+    assert_eq!(
+        book.total_read_time,
+        Some(90),
+        "summed without double counting"
+    );
+    assert_eq!(book.total_read_pages, Some(2));
+    assert_eq!(stats.page_stats.len(), 2);
+    assert!(stats.page_stats.iter().all(|ps| ps.id_book == book.id));
+}
+
+#[tokio::test]
+async fn test_parse_merged_rejects_pre_2020_schema() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    seed_book_row(&db_a.pool, 1, "Book", "Author", 100, 100, "md5-a").await;
+
+    // Old KOReader schema without page_stat_data
+    let old_statements = vec![
+        "CREATE TABLE book (id integer PRIMARY KEY autoincrement, title text, authors text, \
+         notes integer, last_open integer, highlights integer, pages integer, series text, \
+         language text, md5 text, total_read_time integer, total_read_pages integer)"
+            .to_string(),
+    ];
+    let db_old = TestDatabase::new(&old_statements).await;
+
+    let err = StatisticsParser::parse_merged(&[db_a.path.clone(), db_old.path.clone()])
+        .await
+        .expect_err("pre-2020.10 schema must be rejected");
+    let message = format!("{:#}", err);
+    assert!(
+        message.contains("unsupported KOReader schema"),
+        "error should explain the schema problem: {message}"
+    );
+    assert!(
+        message.contains(db_old.path.to_string_lossy().as_ref()),
+        "error should name the offending database: {message}"
+    );
+}
+
+#[tokio::test]
+async fn test_parse_merged_matches_null_and_empty_authors() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    // Same book and same session, but authors is NULL on one device and ''
+    // on the other (KOReader treats both as "no author").
+    seed_book_row_full(&db_a.pool, 1, "Book", None, 100, 100, "md5-s", 0, 0).await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    seed_book_row_full(&db_b.pool, 1, "Book", Some(""), 100, 100, "md5-s", 0, 0).await;
+    seed_page_stat_row(&db_b.pool, 1, 1, 1_000, 60, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    assert_eq!(stats.books.len(), 1, "NULL and '' authors should match");
+    assert_eq!(
+        stats.page_stats.len(),
+        1,
+        "identical session must not double count across NULL/'' authors"
+    );
+    assert_eq!(stats.books[0].total_read_time, Some(60));
+}
+
+#[tokio::test]
+async fn test_parse_merged_survives_duplicate_null_author_rows() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    // KOReader's UNIQUE index on (title, authors, md5) treats NULLs as
+    // distinct, so a device DB can legitimately hold a NULL-authors and an
+    // ''-authors row for the same book. A NULL→'' normalization would
+    // violate the index here; the merge must survive this.
+    seed_book_row_full(&db_a.pool, 1, "Book", None, 100, 100, "md5-s", 0, 0).await;
+    seed_book_row_full(&db_a.pool, 2, "Book", Some(""), 150, 100, "md5-s", 0, 0).await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    seed_page_stat_row(&db_a.pool, 2, 2, 2_000, 30, 100).await;
+    seed_book_row_full(&db_b.pool, 1, "Book", Some(""), 200, 100, "md5-s", 0, 0).await;
+    seed_page_stat_row(&db_b.pool, 1, 3, 3_000, 15, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge must not trip the unique index on legacy duplicate rows");
+
+    assert_eq!(stats.books.len(), 1, "same-md5 rows collapse in dedup");
+    assert_eq!(stats.page_stats.len(), 3);
+    assert_eq!(
+        stats.books[0].total_read_time,
+        Some(105),
+        "sessions from all three rows survive without double counting"
+    );
+}
+
+#[tokio::test]
+async fn test_parse_merged_preserves_stored_totals_without_page_stats() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    // Raw page_stat_data was trimmed in KOReader but the stored totals
+    // remain; merging must not zero them out.
+    seed_book_row_full(
+        &db_a.pool,
+        1,
+        "Legacy",
+        Some("Author"),
+        100,
+        100,
+        "md5-l",
+        3_600,
+        42,
+    )
+    .await;
+    seed_book_row_full(
+        &db_b.pool,
+        1,
+        "Legacy",
+        Some("Author"),
+        200,
+        100,
+        "md5-l",
+        7_200,
+        80,
+    )
+    .await;
+    seed_book_row_full(
+        &db_b.pool,
+        2,
+        "Fresh",
+        Some("Author"),
+        200,
+        100,
+        "md5-f",
+        0,
+        0,
+    )
+    .await;
+    seed_page_stat_row(&db_b.pool, 2, 1, 1_000, 60, 100).await;
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("merge failed");
+
+    let legacy = stats.stats_by_md5.get("md5-l").expect("legacy book");
+    assert_eq!(
+        legacy.total_read_time,
+        Some(7_200),
+        "stored totals survive (larger device total wins)"
+    );
+    assert_eq!(legacy.total_read_pages, Some(80));
+    let fresh = stats.stats_by_md5.get("md5-f").expect("fresh book");
+    assert_eq!(
+        fresh.total_read_time,
+        Some(60),
+        "books with raw rows still get recomputed totals"
+    );
+}
+
+#[tokio::test]
+async fn test_parse_merged_accepts_read_only_sources() {
+    let koreader_dir = get_koreader_dir();
+    let lua = unsafe { Lua::unsafe_new_with(StdLib::ALL, LuaOptions::default()) };
+    let artifacts = load_statistics_artifacts(&lua, koreader_dir.path());
+    let db_a = TestDatabase::new(&artifacts.statements).await;
+    let db_b = TestDatabase::new(&artifacts.statements).await;
+
+    seed_book_row(&db_a.pool, 1, "Book A", "Author A", 100, 100, "md5-a").await;
+    seed_page_stat_row(&db_a.pool, 1, 1, 1_000, 60, 100).await;
+    seed_book_row(&db_b.pool, 1, "Book B", "Author B", 200, 100, "md5-b").await;
+    seed_page_stat_row(&db_b.pool, 1, 2, 2_000, 30, 100).await;
+
+    // e.g. Syncthing "sync permissions" from a device where the file is 0444
+    for path in [&db_a.path, &db_b.path] {
+        let mut permissions = std::fs::metadata(path).expect("db metadata").permissions();
+        permissions.set_readonly(true);
+        std::fs::set_permissions(path, permissions).expect("set read-only");
+    }
+
+    let stats = StatisticsParser::parse_merged(&[db_a.path.clone(), db_b.path.clone()])
+        .await
+        .expect("read-only sources must still merge");
+
+    assert_eq!(stats.books.len(), 2);
+
+    // Restore so TempDir cleanup can delete the files on all platforms.
+    for path in [&db_a.path, &db_b.path] {
+        let mut permissions = std::fs::metadata(path).expect("db metadata").permissions();
+        #[allow(clippy::permissions_set_readonly_false)]
+        permissions.set_readonly(false);
+        std::fs::set_permissions(path, permissions).expect("restore permissions");
+    }
+}
+
 fn build_statistics_lua_script(root: &Path) -> String {
     let mocks = compose_lua_mocks(LUA_STATISTICS_MOCKS_EXTRA);
     LUA_STATISTICS_TEMPLATE

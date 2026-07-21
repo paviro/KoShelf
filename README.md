@@ -80,7 +80,7 @@ For all subcommands, options, environment variables, and examples, see the [Conf
 |-------|-------------|
 | [Installation](docs/installation.md) | Home Assistant, Docker, prebuilt binaries, building from source |
 | [Configuration](docs/configuration.md) | Subcommands, CLI options, environment variables, config file, examples |
-| [KoReader Setup](docs/koreader-setup.md) | Metadata storage options (sdr/hashdocsettings/docsettings), deployment setup |
+| [KoReader Setup](docs/koreader-setup.md) | Metadata storage options (sdr/hashdocsettings/docsettings), deployment setup, reading statistics from multiple devices |
 | [Authentication](docs/authentication.md) | Password authentication for serve mode |
 | [Supported Data](docs/supported-data.md) | Supported formats and extracted metadata fields |
 | [Stable Page Metadata](docs/stable-page-metadata.md) | KOReader stable page metadata & synthetic page scaling |

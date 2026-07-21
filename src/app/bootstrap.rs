@@ -62,7 +62,7 @@ fn build_site_config(
         include_unread: common.include_unread,
         library_paths: common.library_path.clone(),
         metadata_location: metadata_location(common),
-        statistics_db_path: common.statistics_db.clone(),
+        statistics_db_paths: common.statistics_db.clone(),
         kobo_db_path: common.kobo_db.clone(),
         heatmap_scale_max,
         time_config: TimeConfig::from_cli(&common.timezone, &common.day_start_time)?,

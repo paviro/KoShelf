@@ -5,17 +5,47 @@ use log::{debug, info, warn};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use tempfile::TempDir;
 
 /// Reads KOReader's `statistics.sqlite3` database to extract book metadata and page-level reading history.
 pub struct StatisticsParser;
 
+/// Clear a read-only bit inherited from the source file via `fs::copy`.
+fn make_writable(path: &Path) -> Result<()> {
+    let mut permissions = std::fs::metadata(path)
+        .with_context(|| format!("Failed to read permissions of {:?}", path))?
+        .permissions();
+    if permissions.readonly() {
+        #[allow(clippy::permissions_set_readonly_false)]
+        permissions.set_readonly(false);
+        std::fs::set_permissions(path, permissions)
+            .with_context(|| format!("Failed to make {:?} writable", path))?;
+    }
+    Ok(())
+}
+
 impl StatisticsParser {
     /// Copy the database to a temp file (to avoid locking the live DB) and parse all books and page stats.
+    #[cfg(test)]
     pub async fn parse<P: AsRef<Path>>(path: P) -> Result<StatisticsData> {
-        info!("Opening statistics database: {:?}", path.as_ref());
+        Self::parse_merged(&[path.as_ref().to_path_buf()]).await
+    }
+
+    /// Parse one or more statistics databases, merging additional ones into the
+    /// first using KOReader's own sync semantics (statistics.koplugin `onSync`):
+    /// books are matched by (title, authors, md5), raw `page_stat_data` rows are
+    /// merged with MAX(duration) on identical (id_book, page, start_time), and
+    /// per-book totals are recomputed afterwards. Merging raw rows (rather than
+    /// the rescaled `page_stat` view) lets the view rescale reading history to a
+    /// single pagination even when devices disagree on page counts.
+    pub async fn parse_merged(paths: &[PathBuf]) -> Result<StatisticsData> {
+        let (primary, rest) = paths
+            .split_first()
+            .context("No statistics database paths provided")?;
+
+        info!("Opening statistics database: {:?}", primary);
 
         let temp_dir = TempDir::new().with_context(|| "Failed to create temporary directory")?;
         let temp_db_path = temp_dir.path().join("statistics.db");
@@ -24,9 +54,17 @@ impl StatisticsParser {
             "Copying database to temporary directory: {:?}",
             temp_db_path
         );
-        copy_sqlite_snapshot(path.as_ref(), &temp_db_path)?;
+        copy_sqlite_snapshot(primary, &temp_db_path)?;
+        if !rest.is_empty() {
+            // fs::copy preserves permission bits, but the merge writes to the
+            // temp copies — a read-only source (e.g. Syncthing permission
+            // sync) must not make them read-only too.
+            make_writable(&temp_db_path)?;
+        }
 
-        let url = format!("sqlite:{}?mode=ro", temp_db_path.display());
+        // The temp copy is opened writable only when there are databases to merge in.
+        let mode = if rest.is_empty() { "ro" } else { "rw" };
+        let url = format!("sqlite:{}?mode={}", temp_db_path.display(), mode);
         let options = SqliteConnectOptions::from_str(&url)
             .with_context(|| format!("Failed to parse statistics DB URL for {:?}", temp_db_path))?;
 
@@ -40,6 +78,30 @@ impl StatisticsParser {
                     temp_db_path
                 )
             })?;
+
+        if !rest.is_empty() {
+            Self::ensure_mergeable_schema(&pool, "main", primary).await?;
+
+            for (index, income) in rest.iter().enumerate() {
+                info!("Merging statistics database: {:?}", income);
+                let income_copy = temp_dir.path().join(format!("income_{index}.db"));
+                copy_sqlite_snapshot(income, &income_copy)?;
+                make_writable(&income_copy)?;
+                Self::merge_attached_db(&pool, &income_copy, income).await?;
+            }
+
+            // KOReader's final sync step: recompute totals from the merged page
+            // stats. Books without raw rows (history trimmed in KOReader) keep
+            // their stored totals instead of being zeroed out.
+            sqlx::query(
+                "UPDATE book SET (total_read_pages, total_read_time) = \
+                 (SELECT count(DISTINCT page), sum(duration) FROM page_stat WHERE id_book = book.id) \
+                 WHERE EXISTS (SELECT 1 FROM page_stat WHERE id_book = book.id)",
+            )
+            .execute(&pool)
+            .await
+            .context("Failed to recompute book totals after merging statistics databases")?;
+        }
 
         let mut books = Self::parse_books(&pool).await?;
         let mut page_stats = Self::parse_page_stats(&pool).await?;
@@ -67,10 +129,139 @@ impl StatisticsParser {
         Ok(stats_data)
     }
 
+    /// Merging needs `page_stat_data` (raw rows with total_pages and the
+    /// UNIQUE(id_book, page, start_time) constraint), present since KOReader
+    /// schema 20201010 (release 2020.10).
+    async fn ensure_mergeable_schema(pool: &SqlitePool, schema: &str, source: &Path) -> Result<()> {
+        let row = sqlx::query(
+            "SELECT 1 FROM pragma_table_list \
+             WHERE schema = ?1 AND name = 'page_stat_data' AND type = 'table'",
+        )
+        .bind(schema)
+        .fetch_optional(pool)
+        .await
+        .with_context(|| format!("Failed to inspect schema of {:?}", source))?;
+        if row.is_none() {
+            anyhow::bail!(
+                "Statistics database {:?} uses an unsupported KOReader schema (missing page_stat_data table). \
+                 Merging multiple databases requires KOReader 2020.10 or newer.",
+                source
+            );
+        }
+        Ok(())
+    }
+
+    /// Merge one additional statistics database into the primary temp copy.
+    /// SQL adapted from KOReader statistics.koplugin `onSync` (2-way merge; the
+    /// cached-DB deletion propagation only applies to cloud sync).
+    async fn merge_attached_db(pool: &SqlitePool, income_copy: &Path, source: &Path) -> Result<()> {
+        sqlx::query("ATTACH DATABASE ?1 AS income_db")
+            .bind(income_copy.display().to_string())
+            .execute(pool)
+            .await
+            .with_context(|| format!("Failed to attach statistics database {:?}", source))?;
+
+        let merge_result = Self::run_merge_statements(pool, source).await;
+
+        let detach_result = sqlx::query("DETACH DATABASE income_db")
+            .execute(pool)
+            .await
+            .with_context(|| format!("Failed to detach statistics database {:?}", source));
+
+        merge_result.and(detach_result.map(|_| ()))
+    }
+
+    async fn run_merge_statements(pool: &SqlitePool, source: &Path) -> Result<()> {
+        Self::ensure_mergeable_schema(pool, "income_db", source).await?;
+
+        // Books are matched NULL-safely rather than by KOReader's plain
+        // (title, authors, md5) tuple: modern KOReader can still insert
+        // NULL-authors rows (they are distinct under its UNIQUE index, so
+        // normalizing them to '' here could violate that index and abort the
+        // merge), and plain row-value comparison silently skips NULL columns.
+        // The macro splices the shared predicate at compile time so every
+        // statement stays a static string literal.
+        macro_rules! with_book_match {
+            ($before:literal, $after:literal) => {
+                concat!(
+                    $before,
+                    "b.title IS i.title \
+                     AND IFNULL(b.authors, '') = IFNULL(i.authors, '') \
+                     AND b.md5 IS i.md5",
+                    $after
+                )
+            };
+        }
+
+        let statements: [&'static str; 6] = [
+            // Most recently opened wins for last_open and pages, so the
+            // page_stat view rescales to the pagination of the device the
+            // book was last read on (mirrors deduplicate_by_md5's policy).
+            with_book_match!(
+                "UPDATE book AS b \
+                 SET last_open = i.last_open, pages = i.pages \
+                 FROM income_db.book AS i \
+                 WHERE ",
+                " AND IFNULL(i.last_open, 0) > IFNULL(b.last_open, 0)"
+            ),
+            // Totals are recomputed from merged sessions afterwards, but only
+            // for books that still have raw rows; MAX them here so stored
+            // legacy totals (raw history trimmed in KOReader) survive.
+            with_book_match!(
+                "UPDATE book AS b \
+                 SET notes = MAX(IFNULL(b.notes, 0), IFNULL(i.notes, 0)), \
+                     highlights = MAX(IFNULL(b.highlights, 0), IFNULL(i.highlights, 0)), \
+                     total_read_time = MAX(IFNULL(b.total_read_time, 0), IFNULL(i.total_read_time, 0)), \
+                     total_read_pages = MAX(IFNULL(b.total_read_pages, 0), IFNULL(i.total_read_pages, 0)) \
+                 FROM income_db.book AS i \
+                 WHERE ",
+                ""
+            ),
+            // Only the columns KoShelf reads.
+            with_book_match!(
+                "INSERT INTO book (title, authors, notes, last_open, highlights, pages, md5, \
+                                   total_read_time, total_read_pages) \
+                 SELECT title, authors, notes, last_open, highlights, pages, md5, \
+                        total_read_time, total_read_pages \
+                 FROM income_db.book AS i \
+                 WHERE NOT EXISTS (SELECT 1 FROM book b WHERE ",
+                ")"
+            ),
+            // Book ids are independent autoincrements per database, so map
+            // income ids to primary ids before copying page stats. MIN +
+            // GROUP BY guarantees one primary book per income book even if
+            // several primary rows match (e.g. NULL- and ''-authors variants).
+            with_book_match!(
+                "CREATE TEMP TABLE book_id_map AS \
+                 SELECT MIN(b.id) AS mid, i.id AS iid \
+                 FROM book b \
+                 INNER JOIN income_db.book i \
+                 ON ",
+                " GROUP BY i.id"
+            ),
+            "INSERT INTO page_stat_data (id_book, page, start_time, duration, total_pages) \
+                 SELECT map.mid, page, start_time, duration, total_pages \
+                 FROM income_db.page_stat_data \
+                 INNER JOIN book_id_map AS map ON id_book = map.iid \
+             ON CONFLICT(id_book, page, start_time) DO UPDATE SET \
+                 duration = MAX(duration, excluded.duration)",
+            "DROP TABLE book_id_map",
+        ];
+
+        for statement in statements {
+            sqlx::query(statement)
+                .execute(pool)
+                .await
+                .with_context(|| format!("Failed to merge statistics database {:?}", source))?;
+        }
+
+        Ok(())
+    }
+
     /// Parse book entries from the database
     async fn parse_books(pool: &SqlitePool) -> Result<Vec<StatBook>> {
         let rows = sqlx::query(
-            "SELECT id, title, authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages FROM book",
+            "SELECT id, title, IFNULL(authors, '') AS authors, notes, last_open, highlights, pages, md5, total_read_time, total_read_pages FROM book",
         )
         .fetch_all(pool)
         .await

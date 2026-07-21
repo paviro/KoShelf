@@ -60,10 +60,10 @@ fn merge_common_with_file_config(
         {
             common.hashdocsettings_path = Some(p.clone());
         }
-        if let Some(ref p) = lib.statistics_db
+        if let Some(ref dbs) = lib.statistics_db
             && not_explicit(matches, "statistics_db")
         {
-            common.statistics_db = Some(p.clone());
+            common.statistics_db = dbs.clone();
         }
         if let Some(ref p) = lib.kobo_db
             && not_explicit(matches, "kobo_db")

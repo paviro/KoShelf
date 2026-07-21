@@ -175,4 +175,35 @@ When syncing between devices:
 1. Books are matched by `(title, authors, md5)`
 2. Page statistics are merged, keeping maximum duration for conflicts
 3. Deleted books are tracked through cached database comparison
-4. `last_open` timestamps determine most recent device access
+
+## Merging Multiple Databases
+
+KoShelf can be given several statistics databases (one per device); see
+[Reading Statistics from Multiple Devices](koreader-setup.md#reading-statistics-from-multiple-devices)
+for when to use this versus syncing. The databases are merged in memory on
+every load — the source files are never modified.
+
+The merge replicates KOReader's own statistics sync (`onSync` in the
+statistics plugin):
+
+1. Books are matched across databases by `(title, authors, md5)`; the partial
+   MD5 is stable across devices for the same file, so renames and different
+   folder layouts don't matter.
+2. Raw `page_stat_data` rows are combined. If the exact same reading session
+   (`id_book`, `page`, `start_time`) appears in more than one database, the
+   maximum duration is kept — so passing overlapping or partially synced
+   databases never double counts.
+3. `pages` and `last_open` follow the most recently opened copy, and the
+   `page_stat` view rescales all history to that device's pagination even when
+   devices rendered the book with different page counts.
+4. `total_read_time` and `total_read_pages` are recomputed from the merged
+   sessions.
+
+Requirements and caveats:
+
+- All databases need the modern statistics schema (KOReader 2020.10 or newer).
+  Older databases are rejected with an error naming the offending file.
+- The `KOSHELF_STATISTICS_DB` environment variable accepts a single path; use
+  repeated CLI flags or the config file to supply several.
+- In `serve`/`--watch` mode every database is watched, and a change to any of
+  them triggers a full re-merge.

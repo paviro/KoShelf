@@ -18,8 +18,8 @@ pub struct SiteConfig {
     pub library_paths: Vec<PathBuf>,
     /// Where to look for KoReader metadata
     pub metadata_location: MetadataLocation,
-    /// Path to the statistics database (optional)
-    pub statistics_db_path: Option<PathBuf>,
+    /// Paths to statistics databases (empty when none; multiple are merged)
+    pub statistics_db_paths: Vec<PathBuf>,
     /// Path to KoboReader.sqlite for extensionless kepub discovery (optional)
     pub kobo_db_path: Option<PathBuf>,
     /// Maximum value for heatmap scale (optional)

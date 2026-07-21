@@ -36,7 +36,7 @@ pub async fn rebuild(
         accumulated_paths.len()
     );
 
-    let stats_changed = config.statistics_db_path.as_ref().is_some_and(|db_path| {
+    let stats_changed = config.statistics_db_paths.iter().any(|db_path| {
         accumulated_paths
             .iter()
             .any(|path| is_sqlite_db_or_companion(path, db_path))
@@ -386,7 +386,7 @@ mod tests {
             include_unread: true,
             library_paths: vec![output_dir.join("library")],
             metadata_location: MetadataLocation::InBookFolder,
-            statistics_db_path: None,
+            statistics_db_paths: vec![],
             kobo_db_path,
             heatmap_scale_max: None,
             time_config: TimeConfig::from_cli(&None, &None).expect("time config"),

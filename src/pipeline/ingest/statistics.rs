@@ -9,8 +9,9 @@ use crate::source::koreader::StatisticsParser;
 use crate::store::memory::ReadingData;
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
-use log::info;
+use log::{info, warn};
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 /// Load and process reading statistics using DB queries for filtering and tagging.
 ///
@@ -19,16 +20,26 @@ pub async fn load_reading_data(
     config: &SiteConfig,
     repo: &LibraryRepository,
 ) -> Result<Option<ReadingData>> {
-    let stats_path = match config.statistics_db_path.as_ref() {
-        Some(p) if p.exists() => p,
-        Some(p) => {
-            info!("Statistics database not found: {:?}", p);
-            return Ok(None);
-        }
-        None => return Ok(None),
-    };
+    let existing_dbs: Vec<PathBuf> = config
+        .statistics_db_paths
+        .iter()
+        .filter(|p| {
+            let exists = p.exists();
+            if !exists {
+                warn!(
+                    "Statistics database not found, its history is missing from this build: {:?}",
+                    p
+                );
+            }
+            exists
+        })
+        .cloned()
+        .collect();
+    if existing_dbs.is_empty() {
+        return Ok(None);
+    }
 
-    let mut data = StatisticsParser::parse(stats_path).await?;
+    let mut data = StatisticsParser::parse_merged(&existing_dbs).await?;
     let total_books = data.books.len();
 
     if config.min_pages_per_day.is_some() || config.min_time_per_day.is_some() {

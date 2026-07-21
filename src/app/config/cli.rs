@@ -81,9 +81,10 @@ pub struct CommonArgs {
     #[arg(long, env = "KOSHELF_HASHDOCSETTINGS_PATH")]
     pub hashdocsettings_path: Option<PathBuf>,
 
-    /// Path to the statistics.sqlite3 file for additional reading stats (optional if library_path is provided)
-    #[arg(short, long, env = "KOSHELF_STATISTICS_DB")]
-    pub statistics_db: Option<PathBuf>,
+    /// Path to the statistics.sqlite3 file for additional reading stats (optional if library_path is provided).
+    /// Can be specified multiple times to merge stats from several devices.
+    #[arg(short, long, env = "KOSHELF_STATISTICS_DB", action = clap::ArgAction::Append)]
+    pub statistics_db: Vec<PathBuf>,
 
     /// Path to Kobo's KoboReader.sqlite database for matching extensionless kepub files. Requires --library-path.
     #[arg(long, env = "KOSHELF_KOBO_DB")]
@@ -242,7 +243,7 @@ pub fn parse_trusted_proxy_nets(entries: &[String]) -> Result<Vec<IpNet>> {
 
 impl CommonArgs {
     pub fn validate(&self) -> Result<()> {
-        if self.library_path.is_empty() && self.statistics_db.is_none() {
+        if self.library_path.is_empty() && self.statistics_db.is_empty() {
             anyhow::bail!("Either --library-path or --statistics-db (or both) must be provided");
         }
 
@@ -304,10 +305,17 @@ impl CommonArgs {
             }
         }
 
-        if let Some(ref stats_path) = self.statistics_db
-            && !stats_path.exists()
-        {
-            anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
+        let mut seen_stats_dbs = std::collections::HashSet::new();
+        for stats_path in &self.statistics_db {
+            if !stats_path.exists() {
+                anyhow::bail!("Statistics database does not exist: {:?}", stats_path);
+            }
+            let canonical = stats_path
+                .canonicalize()
+                .unwrap_or_else(|_| stats_path.clone());
+            if !seen_stats_dbs.insert(canonical) {
+                anyhow::bail!("Statistics database supplied twice: {:?}", stats_path);
+            }
         }
 
         if let Some(ref kobo_db_path) = self.kobo_db
@@ -380,6 +388,83 @@ mod tests {
     #[test]
     fn parse_time_off_alias_maps_to_none() {
         assert_eq!(parse_time_to_seconds("off").unwrap(), None);
+    }
+
+    #[test]
+    fn statistics_db_flag_is_repeatable() {
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "-s",
+                "/kobo/statistics.sqlite3",
+                "--statistics-db",
+                "/boox/statistics.sqlite3",
+            ])
+            .expect("CLI args should parse");
+
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let CliCommand::Serve(args) = cli.command else {
+            panic!("expected serve command");
+        };
+        assert_eq!(
+            args.common.statistics_db,
+            vec![
+                PathBuf::from("/kobo/statistics.sqlite3"),
+                PathBuf::from("/boox/statistics.sqlite3"),
+            ]
+        );
+    }
+
+    #[test]
+    fn validate_rejects_duplicate_statistics_dbs() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let db_path = dir.path().join("statistics.sqlite3");
+        std::fs::write(&db_path, b"db").expect("db file");
+
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "-s",
+                db_path.to_str().unwrap(),
+                "-s",
+                db_path.to_str().unwrap(),
+            ])
+            .expect("CLI args should parse");
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let CliCommand::Serve(args) = cli.command else {
+            panic!("expected serve command");
+        };
+
+        let err = args.common.validate().expect_err("duplicates should fail");
+        assert!(err.to_string().contains("supplied twice"), "{err}");
+    }
+
+    #[test]
+    fn validate_rejects_missing_statistics_db_among_several() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let existing = dir.path().join("statistics.sqlite3");
+        std::fs::write(&existing, b"db").expect("db file");
+        let missing = dir.path().join("missing.sqlite3");
+
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "-s",
+                existing.to_str().unwrap(),
+                "-s",
+                missing.to_str().unwrap(),
+            ])
+            .expect("CLI args should parse");
+        let cli = Cli::from_arg_matches(&matches).expect("CLI should convert from matches");
+        let CliCommand::Serve(args) = cli.command else {
+            panic!("expected serve command");
+        };
+
+        let err = args.common.validate().expect_err("missing db should fail");
+        assert!(err.to_string().contains("does not exist"), "{err}");
     }
 
     #[test]

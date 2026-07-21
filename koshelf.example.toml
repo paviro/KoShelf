@@ -7,6 +7,8 @@ paths = ["/path/to/books", "/path/to/comics"]
 # docsettings_path = "/path/to/docsettings"
 # hashdocsettings_path = "/path/to/hashdocsettings"
 # statistics_db = "/path/to/statistics.sqlite3"
+# Or merge reading stats from several devices:
+# statistics_db = ["/kobo/statistics.sqlite3", "/boox/statistics.sqlite3"]
 # kobo_db = "/path/to/KoboReader.sqlite"
 # include_unread = false
 
