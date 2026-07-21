@@ -1,0 +1,21 @@
+#!/bin/sh
+
+message_file=$1
+subject=$(sed -n '1p' "$message_file")
+
+if printf '%s\n' "$subject" \
+    | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)\([[:alnum:]_.-]+\)!?: .+'; then
+    exit 0
+fi
+
+cat >&2 <<'EOF'
+Invalid commit message.
+
+Use: type(scope): description
+  or type(scope)!: description for a breaking change
+Example: feat(reader): add keyboard navigation
+
+Allowed types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+EOF
+
+exit 1

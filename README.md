@@ -88,6 +88,18 @@ For all subcommands, options, environment variables, and examples, see the [Conf
 | [API Reference](docs/API.md) | REST API endpoints, parameters, and response schemas |
 | [Syncthing Setups](docs/syncthing_setups/README.md) | Community-contributed device sync guides |
 
+## Development
+
+Enable the repository's Git hooks after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Commit messages must use the `type(scope): description` format, for example
+`feat(reader): add keyboard navigation`. Add `!` after the scope for a breaking
+change, for example `feat(api)!: remove deprecated endpoint`.
+
 ## Credits
 
 Design and feature inspiration comes from [KoInsight](https://github.com/GeorgeSG/KoInsight), an excellent alternative that focuses on reading statistics and can also act as a KOReader sync server.
