@@ -203,6 +203,10 @@ pub fn ensure_plain_directory(path: &Path) -> Result<()> {
 /// Create or update a symlink `files_dir/{id}.{format}` → `source_path`.
 ///
 /// If a symlink already exists but points to a different target, it is replaced.
+///
+/// The target is stored as an absolute, canonical path: a relative target is
+/// resolved against the link's own directory, not the process working directory,
+/// so a relative `source_path` would otherwise create a dangling link.
 pub fn sync_item_file_symlink(
     item_id: &str,
     format: &str,
@@ -219,11 +223,14 @@ pub fn sync_item_file_symlink(
     })?;
 
     let link_path = files_dir.join(basename);
+    let symlink_target = absolute_symlink_target(source_path)?;
 
-    if link_path.exists() {
+    // `symlink_metadata` rather than `exists` so a broken (dangling) link is still
+    // detected and replaced instead of failing symlink creation below.
+    if fs::symlink_metadata(&link_path).is_ok() {
         if link_path.is_symlink() {
             match fs::read_link(&link_path) {
-                Ok(existing_target) if existing_target == source_path => return Ok(()),
+                Ok(existing_target) if existing_target == symlink_target => return Ok(()),
                 _ => {
                     fs::remove_file(&link_path).with_context(|| {
                         format!("Failed to remove stale file symlink {:?}", link_path)
@@ -237,17 +244,35 @@ pub fn sync_item_file_symlink(
     }
 
     #[cfg(unix)]
-    std::os::unix::fs::symlink(source_path, &link_path)
+    std::os::unix::fs::symlink(&symlink_target, &link_path)
         .with_context(|| format!("Failed to create file symlink {:?}", link_path))?;
 
     #[cfg(not(unix))]
     {
         // On non-Unix platforms, fall back to a hard copy.
-        fs::copy(source_path, &link_path)
+        fs::copy(&symlink_target, &link_path)
             .with_context(|| format!("Failed to copy item file to {:?}", link_path))?;
     }
 
     Ok(())
+}
+
+/// Resolve a (possibly relative) book path to an absolute, canonical path.
+fn absolute_symlink_target(source_path: &Path) -> Result<PathBuf> {
+    let absolute = if source_path.is_absolute() {
+        source_path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("Failed to resolve current directory for item file symlink")?
+            .join(source_path)
+    };
+
+    fs::canonicalize(&absolute).with_context(|| {
+        format!(
+            "Failed to resolve item file source path {:?} (from {:?})",
+            absolute, source_path
+        )
+    })
 }
 
 /// Remove all item file entries for a given item ID from `files_dir`.
@@ -312,4 +337,47 @@ pub fn cleanup_stale_files_by_ids(current_ids: &HashSet<String>, files_dir: &Pat
 
 pub(crate) fn is_canonical_item_id(item_id: &str) -> bool {
     item_id.len() == 32 && item_id.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CANONICAL_ID: &str = "0123456789abcdef0123456789abcdef";
+
+    #[cfg(unix)]
+    #[test]
+    fn sync_item_file_symlink_resolves_relative_source_to_absolute() {
+        // Work inside a temp dir under CWD so a relative source path is meaningful.
+        let base = tempfile::Builder::new()
+            .prefix("koshelf-media-")
+            .tempdir_in(std::env::current_dir().expect("cwd"))
+            .expect("base dir");
+        let files_dir = base.path().join("files");
+        fs::create_dir_all(&files_dir).expect("files dir");
+
+        let source_path = base.path().join("book.epub");
+        fs::write(&source_path, b"book").expect("book write");
+
+        // Build a path relative to the current working directory.
+        let cwd = std::env::current_dir().expect("cwd");
+        let relative_source = source_path
+            .strip_prefix(&cwd)
+            .expect("source under cwd")
+            .to_path_buf();
+        assert!(relative_source.is_relative());
+
+        sync_item_file_symlink(CANONICAL_ID, "epub", &relative_source, &files_dir)
+            .expect("file link");
+
+        let link_path = files_dir.join(format!("{CANONICAL_ID}.epub"));
+        let target = fs::read_link(&link_path).expect("read link");
+        assert!(target.is_absolute(), "symlink target should be absolute");
+        assert!(link_path.exists(), "symlink should resolve to an existing file");
+
+        // A second call with the same source is idempotent.
+        sync_item_file_symlink(CANONICAL_ID, "epub", &relative_source, &files_dir)
+            .expect("idempotent file link");
+        assert_eq!(fs::read_link(&link_path).expect("read link"), target);
+    }
 }
