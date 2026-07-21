@@ -11,6 +11,10 @@ CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER = "aarch64-unknown-linux-musl-gcc
 CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER = "aarch64-linux-gnu-gcc"
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "x86_64-linux-gnu-gcc"
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "x86_64-unknown-linux-musl-gcc"
+CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER = "i686-unknown-linux-gnu-gcc"
+CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_LINKER = "i686-unknown-linux-musl-gcc"
+CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER = "armv7-unknown-linux-gnueabihf-gcc"
+CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER = "armv7-unknown-linux-musleabihf-gcc"
 CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "x86_64-w64-mingw32-gcc"
 CC_aarch64_unknown_linux_musl = "aarch64-unknown-linux-musl-gcc"
 CXX_aarch64_unknown_linux_musl = "aarch64-unknown-linux-musl-g++"
@@ -20,6 +24,14 @@ CC_x86_64_unknown_linux_gnu = "x86_64-linux-gnu-gcc"
 CXX_x86_64_unknown_linux_gnu = "x86_64-linux-gnu-g++"
 CC_x86_64_unknown_linux_musl = "x86_64-unknown-linux-musl-gcc"
 CXX_x86_64_unknown_linux_musl = "x86_64-unknown-linux-musl-g++"
+CC_i686_unknown_linux_gnu = "i686-unknown-linux-gnu-gcc"
+CXX_i686_unknown_linux_gnu = "i686-unknown-linux-gnu-g++"
+CC_i686_unknown_linux_musl = "i686-unknown-linux-musl-gcc"
+CXX_i686_unknown_linux_musl = "i686-unknown-linux-musl-g++"
+CC_armv7_unknown_linux_gnueabihf = "armv7-unknown-linux-gnueabihf-gcc"
+CXX_armv7_unknown_linux_gnueabihf = "armv7-unknown-linux-gnueabihf-g++"
+CC_armv7_unknown_linux_musleabihf = "armv7-unknown-linux-musleabihf-gcc"
+CXX_armv7_unknown_linux_musleabihf = "armv7-unknown-linux-musleabihf-g++"
 
 # Production profile environment
 [env.production]
@@ -46,6 +58,28 @@ args = ["build", "--release", "--locked", "--target", "x86_64-unknown-linux-gnu"
 description = "Build for x86_64 Linux with musl"
 command = "cargo"
 args = ["build", "--release", "--locked", "--target", "x86_64-unknown-linux-musl"]
+
+# 32-bit x86 Linux targets
+[tasks.build-i686-gnu]
+description = "Build for 32-bit x86 Linux with glibc"
+command = "cargo"
+args = ["build", "--release", "--locked", "--target", "i686-unknown-linux-gnu"]
+
+[tasks.build-i686-musl]
+description = "Build for 32-bit x86 Linux with musl"
+command = "cargo"
+args = ["build", "--release", "--locked", "--target", "i686-unknown-linux-musl"]
+
+# 32-bit ARMv7 Linux targets (hard-float)
+[tasks.build-armv7-gnu]
+description = "Build for 32-bit ARMv7 Linux with glibc (hard-float)"
+command = "cargo"
+args = ["build", "--release", "--locked", "--target", "armv7-unknown-linux-gnueabihf"]
+
+[tasks.build-armv7-musl]
+description = "Build for 32-bit ARMv7 Linux with musl (hard-float)"
+command = "cargo"
+args = ["build", "--release", "--locked", "--target", "armv7-unknown-linux-musleabihf"]
 
 # Windows targets
 [tasks.build-windows-gnu]
@@ -85,6 +119,10 @@ dependencies = [
     "build-arm64-gnu",
     "build-x86-gnu",
     "build-x86-musl",
+    "build-i686-gnu",
+    "build-i686-musl",
+    "build-armv7-gnu",
+    "build-armv7-musl",
     "build-windows-gnu",
     "build-macos-intel",
     "build-macos-silicon",
@@ -104,7 +142,11 @@ dependencies = [
     "build-arm64-musl",
     "build-arm64-gnu",
     "build-x86-gnu",
-    "build-x86-musl"
+    "build-x86-musl",
+    "build-i686-gnu",
+    "build-i686-musl",
+    "build-armv7-gnu",
+    "build-armv7-musl"
 ]
 
 [tasks.build-windows-all]
@@ -191,6 +233,58 @@ zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
 '''
 
+[tasks.package-i686-gnu]
+description = "Package 32-bit x86 gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="i686-unknown-linux-gnu"
+PLATFORM="linux-gnu-i686"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-i686-musl]
+description = "Package 32-bit x86 musl binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="i686-unknown-linux-musl"
+PLATFORM="linux-musl-i686"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-armv7-gnu]
+description = "Package 32-bit ARMv7 gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="armv7-unknown-linux-gnueabihf"
+PLATFORM="linux-gnu-armv7"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-armv7-musl]
+description = "Package 32-bit ARMv7 musl binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="armv7-unknown-linux-musleabihf"
+PLATFORM="linux-musl-armv7"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
 [tasks.package-windows-gnu]
 description = "Package Windows gnu binary"
 dependencies = ["create-release-dir"]
@@ -251,6 +345,10 @@ dependencies = [
     "package-arm64-gnu",
     "package-x86-gnu", 
     "package-x86-musl",
+    "package-i686-gnu",
+    "package-i686-musl",
+    "package-armv7-gnu",
+    "package-armv7-musl",
     "package-windows-gnu",
     "package-macos-intel",
     "package-macos-silicon",
