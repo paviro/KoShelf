@@ -7,7 +7,8 @@
 
 use anyhow::{Context, Result, anyhow};
 use log::warn;
-use mlua::{ChunkMode, Lua, LuaOptions, StdLib, Table, Value};
+use mlua::chunk::ChunkMode;
+use mlua::{Lua, LuaOptions, StdLib, Table, Value};
 use std::collections::HashSet;
 use std::fmt::Write as FmtWrite;
 use std::fs::{self, File};

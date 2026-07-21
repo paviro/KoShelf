@@ -4,7 +4,8 @@ use crate::shelf::models::{
 };
 use anyhow::{Context, Result, anyhow};
 use log::{debug, warn};
-use mlua::{ChunkMode, Lua, LuaOptions, StdLib, Table, Value};
+use mlua::chunk::ChunkMode;
+use mlua::{Lua, LuaOptions, StdLib, Table, Value};
 use std::fs;
 use std::path::Path;
 
