@@ -54,7 +54,7 @@ pub enum CliCommand {
     ListLanguages,
 
     /// Print third-party dependency licenses and exit.
-    /// Use 'licenses <dependency>' to view the full license text for a specific dependency.
+    /// Use `licenses <dependency>` to view the full license text for a specific dependency.
     Licenses {
         /// Show the full license text for a specific dependency.
         dependency: Option<String>,

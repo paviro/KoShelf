@@ -121,7 +121,7 @@ fn get_koreader_samples(lua: &Lua, koreader_path: &Path, filepath: &Path) -> Vec
         .unwrap_or_else(|e| panic!("Failed to load KoReader sampling function: {}", e));
 
     let filepath_str = filepath.to_string_lossy().to_string();
-    let samples: mlua::String = get_samples_fn
+    let samples: mlua::LuaString = get_samples_fn
         .call(filepath_str)
         .expect("Failed to get samples from KoReader Lua");
 
