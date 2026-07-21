@@ -131,6 +131,7 @@ jobs:
             platform: linux-gnu-armv7
             runner: ubuntu-latest
             gnu: true
+            arm_gnu: true
             host_multilib: true
             cxxflags: ''
           - target: armv7-unknown-linux-musleabihf
@@ -156,6 +157,12 @@ jobs:
       - name: Install 32-bit host compiler
         if: ${{ matrix.host_multilib }}
         run: sudo apt-get update && sudo apt-get install --yes gcc-multilib
+      # Zig 0.16's ARM compiler_rt omits the 64-bit integer-to-float helpers
+      # LuaJIT uses. Supply only GCC's static runtime; glibc still comes from
+      # Zig and the resulting symbol floor is verified below.
+      - name: Install ARM GCC runtime
+        if: ${{ matrix.arm_gnu }}
+        run: sudo apt-get install --yes libgcc-13-dev-armhf-cross
       - uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
         if: ${{ !matrix.gnu }}
         with:
@@ -177,13 +184,23 @@ jobs:
         with:
           tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild' || 'cargo-about@0.9.1' }}
       - if: ${{ matrix.gnu }}
-        run: cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
+        run: |
+          target_libs=-lunwind
+          if [ "$ARM_GNU" = "true" ]; then
+            libgcc="$(find /usr/lib/gcc-cross/arm-linux-gnueabihf -name libgcc.a -print -quit)"
+            if [ -z "$libgcc" ]; then
+              echo "ARM libgcc.a was not found" >&2
+              exit 1
+            fi
+            target_libs="$target_libs $libgcc"
+          fi
+          TARGET_LIBS="$target_libs" \
+            cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
         env:
+          ARM_GNU: ${{ matrix.arm_gnu }}
           # Zig omits the __cpu_model runtime used by unrar's optional x86
           # dispatch. The x86 matrix values select its scalar fallback.
           CXXFLAGS: ${{ matrix.cxxflags }}
-          # LuaJIT's auxiliary executable needs Zig's unwind runtime explicitly.
-          TARGET_LIBS: -lunwind
           # The host strip cannot process a cross-compiled executable. This
           # executable is only a build byproduct; KoShelf is verified below.
           TARGET_STRIP: "true"
