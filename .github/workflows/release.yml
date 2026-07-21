@@ -148,6 +148,9 @@ jobs:
         env:
           # LuaJIT's auxiliary executable needs Zig's unwind runtime explicitly.
           TARGET_LIBS: -lunwind
+          # The host strip cannot process a cross-compiled executable. This
+          # executable is only a build byproduct; KoShelf is verified below.
+          TARGET_STRIP: "true"
       - if: ${{ !matrix.gnu }}
         run: cargo build --release --locked
       - name: Verify binary
