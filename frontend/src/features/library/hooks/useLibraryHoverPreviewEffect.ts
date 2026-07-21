@@ -449,8 +449,7 @@ class HoverPreviewManager {
 
         const itemId = card.dataset.libraryItemId;
         const collection = card.dataset.libraryCollection as
-            | LibraryCollection
-            | undefined;
+            LibraryCollection | undefined;
 
         if (!itemId || (collection !== 'books' && collection !== 'comics')) {
             return fallback;

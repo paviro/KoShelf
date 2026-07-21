@@ -63,8 +63,7 @@ export function attachHighlightDrawListener(
 
     const listener = (event: Event) => {
         const detail = (event as CustomEvent).detail as
-            | DrawAnnotationDetail
-            | undefined;
+            DrawAnnotationDetail | undefined;
         if (typeof detail?.draw !== 'function') {
             return;
         }

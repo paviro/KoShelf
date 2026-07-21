@@ -3,8 +3,7 @@ export type OverlayPlacement = 'top' | 'bottom' | 'left' | 'right';
 export type OverlayAlignment = 'center' | 'start' | 'end';
 
 export type OverlayAlignmentOption =
-    | OverlayAlignment
-    | Partial<Record<OverlayPlacement, OverlayAlignment>>;
+    OverlayAlignment | Partial<Record<OverlayPlacement, OverlayAlignment>>;
 
 export type ViewportInset = {
     top?: number;

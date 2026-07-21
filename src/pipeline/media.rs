@@ -373,7 +373,10 @@ mod tests {
         let link_path = files_dir.join(format!("{CANONICAL_ID}.epub"));
         let target = fs::read_link(&link_path).expect("read link");
         assert!(target.is_absolute(), "symlink target should be absolute");
-        assert!(link_path.exists(), "symlink should resolve to an existing file");
+        assert!(
+            link_path.exists(),
+            "symlink should resolve to an existing file"
+        );
 
         // A second call with the same source is idempotent.
         sync_item_file_symlink(CANONICAL_ID, "epub", &relative_source, &files_dir)

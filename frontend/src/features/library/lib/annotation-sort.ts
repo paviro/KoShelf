@@ -1,10 +1,7 @@
 import type { LibraryAnnotation } from '../api/library-data';
 
 export type AnnotationSortOrder =
-    | 'date-asc'
-    | 'date-desc'
-    | 'page-asc'
-    | 'page-desc';
+    'date-asc' | 'date-desc' | 'page-asc' | 'page-desc';
 
 export type SortedAnnotationEntry = {
     annotation: LibraryAnnotation;

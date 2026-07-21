@@ -21,8 +21,7 @@ function resolveSectionIndexForHighlight(
     annotation: LibraryAnnotation,
 ): number {
     let resolvedNavigation:
-        | ReturnType<ReaderTargetingView['resolveNavigation']>
-        | undefined;
+        ReturnType<ReaderTargetingView['resolveNavigation']> | undefined;
 
     try {
         resolvedNavigation = view.resolveNavigation(cfi);

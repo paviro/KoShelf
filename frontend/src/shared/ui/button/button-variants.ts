@@ -1,11 +1,6 @@
 export type ButtonVariant = 'outline' | 'neutral' | 'gradient' | 'ghost';
 export type ButtonColor =
-    | 'primary'
-    | 'secondary'
-    | 'danger'
-    | 'purple'
-    | 'blue'
-    | 'green';
+    'primary' | 'secondary' | 'danger' | 'purple' | 'blue' | 'green';
 type ButtonSize = keyof typeof SIZE_CLASSES;
 
 const COLOR_TOKENS: Record<
