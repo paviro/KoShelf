@@ -1,6 +1,24 @@
 use std::path::Path;
 use std::process::Command;
 
+/// Build a `Command` invoking npm with the given args.
+///
+/// On Windows `npm` is a `npm.cmd` shim that `Command::new("npm")` can't spawn
+/// directly, so we go through `cmd /C npm`. This keys off the build host
+/// (`cfg!(windows)` in a build script reflects the host, not the target), so a
+/// unix host cross-compiling to `x86_64-pc-windows-gnu` still uses a plain `npm`.
+fn npm_command(args: &[&str]) -> Command {
+    let mut cmd = if cfg!(windows) {
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/C").arg("npm");
+        cmd
+    } else {
+        Command::new("npm")
+    };
+    cmd.args(args);
+    cmd
+}
+
 /// Build the React+Vite frontend used by the runtime and static export paths.
 pub(crate) fn compile_react_frontend(skip_npm_install: bool, skip_react_build: bool) {
     let frontend_dir = Path::new("frontend");
@@ -39,15 +57,13 @@ pub(crate) fn compile_react_frontend(skip_npm_install: bool, skip_react_build: b
         }
 
         eprintln!("Installing frontend npm dependencies...");
-        let mut cmd = Command::new("npm");
-        cmd.args(["--prefix", "frontend"]);
-        if frontend_lock.exists() {
-            cmd.arg("ci");
+        let install_subcommand = if frontend_lock.exists() {
+            "ci"
         } else {
-            cmd.arg("install");
-        }
+            "install"
+        };
 
-        let install_output = cmd
+        let install_output = npm_command(&["--prefix", "frontend", install_subcommand])
             .output()
             .expect("Failed to install frontend npm dependencies.");
         if !install_output.status.success() {
@@ -60,8 +76,7 @@ pub(crate) fn compile_react_frontend(skip_npm_install: bool, skip_react_build: b
     }
 
     eprintln!("Building React frontend with Vite...");
-    let build_output = Command::new("npm")
-        .args(["--prefix", "frontend", "run", "build"])
+    let build_output = npm_command(&["--prefix", "frontend", "run", "build"])
         .output()
         .expect("Failed to run frontend build.");
 

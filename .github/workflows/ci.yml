@@ -108,6 +108,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-targets --locked
 
+  # Native Windows build (msvc). build.rs runs npm via `cmd /C` on a Windows host.
   windows:
     name: Windows (check)
     runs-on: windows-latest
@@ -123,6 +124,25 @@ jobs:
         with:
           toolchain: 1.96.0
       - uses: Swatinem/rust-cache@v2
-      # Releases ship the x86_64-pc-windows-gnu target, but this native msvc check
-      # is enough to catch Windows-specific compile breakage in CI.
       - run: cargo check --all-targets --locked
+
+  # Cross-compile the x86_64-pc-windows-gnu target we actually ship (see
+  # Makefile.toml). build.rs runs on the Linux host, so npm works normally.
+  windows-gnu-cross:
+    name: Windows gnu (cross-check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: sudo apt-get update && sudo apt-get install --yes gcc-mingw-w64-x86-64
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: x86_64-pc-windows-gnu
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --target x86_64-pc-windows-gnu --all-targets --locked
