@@ -58,7 +58,7 @@ ammonia = "4.1.2"
 # Web server (for live server mode)
 axum = "0.8.9"
 tower = "0.5.3"
-tower-http = { version = "0.6.11", features = [
+tower-http = { version = "0.7.0", features = [
     "fs",
     "set-header",
     "compression-gzip",
