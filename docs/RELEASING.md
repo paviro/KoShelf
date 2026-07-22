@@ -24,7 +24,7 @@ one day.
 
 | Runner | Artifacts |
 | --- | --- |
-| `ubuntu-latest` | `linux-gnu-{x86_64,aarch64}` and `linux-musl-x86_64` |
+| `ubuntu-latest` | `linux-gnu-{x86_64,aarch64,i686,armv7}` and `linux-musl-{x86_64,i686,armv7}` |
 | `ubuntu-24.04-arm` | `linux-musl-aarch64` |
 | `windows-latest` | `windows-msvc-x86_64` |
 | `windows-11-arm` | `windows-msvc-aarch64` |
@@ -33,6 +33,10 @@ one day.
 GNU builds use cargo-zigbuild with a glibc 2.17 floor. Musl builds are
 statically linked. All target jobs download the same frontend build, fonts,
 and npm license snapshot; each target adds its own Rust dependency licenses.
+
+The workflow rejects GNU binaries with symbols newer than glibc 2.17 and musl
+binaries with a dynamic interpreter or shared-library dependency. macOS builds
+pin and verify macOS 10.12 for Intel and macOS 11 for Apple Silicon.
 
 The local cargo-make configuration also retains Windows GNU and universal
 macOS packages for convenience. Those are not GitHub Release artifacts.
@@ -67,7 +71,7 @@ movement, and deletion to repository administrators.
 
 ## Verification
 
-Every release must contain exactly eight ZIPs plus `SHA256SUMS`. Verify a
+Every release must contain exactly 12 ZIPs plus `SHA256SUMS`. Verify a
 download with the checksum file and its GitHub provenance attestation:
 
 ```bash
@@ -76,4 +80,5 @@ gh attestation verify linux-gnu-x86_64.zip --repo paviro/KoShelf
 ```
 
 The workflow additionally checks the GNU symbol-version ceiling, static musl
-linkage, macOS signatures, and the exact artifact filename set before publish.
+linkage, minimum macOS versions, macOS signatures, and the exact artifact
+filename set before publish.

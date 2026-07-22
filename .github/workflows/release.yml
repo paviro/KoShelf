@@ -223,9 +223,15 @@ jobs:
               echo "glibc symbols above 2.17: $bad" >&2
               exit 1
             fi
-          elif ! file "$bin" | grep -q 'static'; then
-            echo "musl artifact is not statically linked" >&2
-            exit 1
+          else
+            if readelf -lW "$bin" | grep -q ' INTERP '; then
+              echo "musl binary has a dynamic interpreter" >&2
+              exit 1
+            fi
+            if readelf -dW "$bin" | grep -q '(NEEDED)'; then
+              echo "musl binary has a shared-library dependency" >&2
+              exit 1
+            fi
           fi
       - name: Package
         run: |
@@ -302,9 +308,11 @@ jobs:
           - target: x86_64-apple-darwin
             platform: apple-darwin-x86_64
             task: notarize-macos-intel
+            min_macos: "10.12"
           - target: aarch64-apple-darwin
             platform: apple-darwin-aarch64
             task: notarize-macos-silicon
+            min_macos: "11.0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -344,6 +352,20 @@ jobs:
         with:
           tool: cargo-make,cargo-about@0.9.1
       - run: cargo make ${{ matrix.task }}
+      - name: Verify minimum macOS version
+        env:
+          TARGET: ${{ matrix.target }}
+          MIN_MACOS: ${{ matrix.min_macos }}
+        run: |
+          bin="target/$TARGET/release/koshelf"
+          build="$(xcrun vtool -show-build "$bin")"
+          if ! awk -v minimum="$MIN_MACOS" \
+              '($1 == "minos" || $1 == "version") && $2 == minimum { found = 1 } END { exit !found }' \
+              <<< "$build"; then
+            echo "$bin does not declare macOS $MIN_MACOS" >&2
+            printf '%s\n' "$build" >&2
+            exit 1
+          fi
       - name: Verify signature
         run: codesign --verify --strict --verbose=2 target/${{ matrix.target }}/release/koshelf
       - name: Remove credentials

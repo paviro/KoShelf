@@ -43,12 +43,20 @@ Docker Image Repository: [koshelf-docker](https://github.com/DevTigro/koshelf-do
 
 ## Prebuilt Binaries
 
-Download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases). Binaries are available for:
+Download a prebuilt binary from the [releases page](https://github.com/paviro/koshelf/releases).
 
-- Windows MSVC (x86_64 and ARM64)
-- macOS (Intel and Apple Silicon)
-- Linux GNU/glibc (x86_64 and AArch64)
-- Linux musl, statically linked (x86_64 and AArch64)
+| Platform | Architectures | Minimum system |
+| --- | --- | --- |
+| Linux glibc | x86_64, i686, ARMv7 | Linux 3.2 and glibc 2.17 |
+| Linux glibc | ARM64 | Linux 4.1 and glibc 2.17 |
+| Linux musl | x86_64, ARM64, i686, ARMv7 | Static; no host glibc requirement |
+| Windows MSVC | x86_64, ARM64 | Windows 10 or Windows Server 2016 |
+| macOS | Intel | macOS 10.12 |
+| macOS | Apple Silicon | macOS 11 |
+
+The static Linux builds do not have an exact minimum kernel guarantee; use the
+glibc builds when the documented kernel floor matters. Compatibility with an
+old OS does not mean that OS still receives security updates.
 
 KoShelf is a command line tool — you need to run it from a terminal (macOS/Linux) or PowerShell/Command Prompt (Windows). Double-clicking the executable won't work since it requires command line arguments.
 

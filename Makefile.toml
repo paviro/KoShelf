@@ -89,15 +89,17 @@ args = ["build", "--release", "--locked", "--target", "x86_64-pc-windows-gnu"]
 
 # macOS targets
 [tasks.build-macos-intel]
-description = "Build for Intel macOS"
+description = "Build for Intel macOS 10.12 and newer"
 command = "cargo"
 args = ["build", "--release", "--locked", "--target", "x86_64-apple-darwin"]
+env = { MACOSX_DEPLOYMENT_TARGET = "10.12" }
 env_files = ["./.env"]
 
 [tasks.build-macos-silicon]
-description = "Build for Apple Silicon macOS"
+description = "Build for Apple Silicon macOS 11 and newer"
 command = "cargo"
 args = ["build", "--release", "--locked", "--target", "aarch64-apple-darwin"]
+env = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 env_files = ["./.env"]
 
 [tasks.build-macos-universal]
