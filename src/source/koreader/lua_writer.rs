@@ -210,7 +210,9 @@ fn write_table(
             // The upper bound is exclusive: 2^63 (-(i64::MIN as f64)) is
             // exactly representable as f64 but not as i64, and the saturating
             // `as i64` cast would silently turn it into i64::MAX.
-            Value::Number(n) if n.trunc() == n && n >= i64::MIN as f64 && n < -(i64::MIN as f64) => {
+            Value::Number(n)
+                if n.trunc() == n && n >= i64::MIN as f64 && n < -(i64::MIN as f64) =>
+            {
                 int_entries.push((n as i64, val));
             }
             Value::String(s) => {
