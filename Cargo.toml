@@ -54,7 +54,7 @@ indicatif = "0.18.4"
 # XML parsing
 quick-xml = "0.41.0"
 # HTML sanitization
-ammonia = "4.1.2"
+ammonia = "4.1.4"
 # Web server (for live server mode)
 axum = "0.8.9"
 tower = "0.5.3"
