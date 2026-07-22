@@ -41,6 +41,25 @@ pin and verify macOS 10.12 for Intel and macOS 11 for Apple Silicon.
 The local cargo-make configuration also retains Windows GNU and universal
 macOS packages for convenience. Those are not GitHub Release artifacts.
 
+## Local release prerequisites
+
+`cargo make release` cross-compiles every Linux and Windows artifact locally
+and needs a cross toolchain on `PATH` for each of them, using exactly the
+binary names configured in `Makefile.toml` and `.cargo/config.toml`:
+
+| Prefix | Source |
+| --- | --- |
+| `x86_64-linux-gnu-`, `aarch64-linux-gnu-` | Homebrew glibc cross toolchains |
+| `x86_64-unknown-linux-musl-`, `aarch64-unknown-linux-musl-` | musl cross toolchains |
+| `i686-unknown-linux-gnu-`, `i686-unknown-linux-musl-` | 32-bit x86 cross toolchains |
+| `armv7-unknown-linux-gnueabihf-`, `armv7-unknown-linux-musleabihf-` | 32-bit ARM cross toolchains |
+| `x86_64-w64-mingw32-` | `mingw-w64` |
+
+The i686 and ARMv7 toolchains became required when the 32-bit Linux targets
+were added; without them `cargo make release` aborts with "linker … not
+found". Each target also needs its Rust standard library
+(`rustup target add <target>`).
+
 ## Protected release environment
 
 Create a protected GitHub environment named `release`, require reviewer
