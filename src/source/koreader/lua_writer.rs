@@ -196,7 +196,7 @@ fn write_table(
         }
 
         match key {
-            Value::Integer(i) => int_entries.push((i, val)),
+            Value::Integer(i) => int_entries.push((i64::from(i), val)),
             Value::Number(n) if n == (n as i64) as f64 => {
                 int_entries.push((n as i64, val));
             }
