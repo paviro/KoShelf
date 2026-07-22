@@ -224,7 +224,10 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Install 32-bit host compiler
         if: ${{ matrix.host_multilib }}
-        run: sudo apt-get update && sudo apt-get install --yes gcc-multilib
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install --yes gcc-multilib linux-libc-dev:i386
       - uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
         if: ${{ !matrix.freebsd_sysroot }}
         with:

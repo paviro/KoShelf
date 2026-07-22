@@ -156,7 +156,10 @@ jobs:
       # the target, so 32-bit targets need a runnable 32-bit host compiler.
       - name: Install 32-bit host compiler
         if: ${{ matrix.host_multilib }}
-        run: sudo apt-get update && sudo apt-get install --yes gcc-multilib
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install --yes gcc-multilib linux-libc-dev:i386
       # Zig 0.16's ARM compiler_rt omits the 64-bit integer-to-float helpers
       # LuaJIT uses. Supply only GCC's static runtime; glibc still comes from
       # Zig and the resulting symbol floor is verified below.
@@ -186,6 +189,7 @@ jobs:
       - if: ${{ matrix.gnu }}
         run: |
           target_libs=-lunwind
+          rustflags=
           if [ "$ARM_GNU" = "true" ]; then
             libgcc="$(find /usr/lib/gcc-cross/arm-linux-gnueabihf -name libgcc.a -print -quit)"
             if [ -z "$libgcc" ]; then
@@ -193,8 +197,10 @@ jobs:
               exit 1
             fi
             target_libs="$target_libs $libgcc"
+            rustflags="-Clink-arg=$libgcc"
           fi
           TARGET_LIBS="$target_libs" \
+            RUSTFLAGS="$rustflags" \
             cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
         env:
           ARM_GNU: ${{ matrix.arm_gnu }}
