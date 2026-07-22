@@ -209,6 +209,9 @@ jobs:
             host_multilib: true
           - target: armv7-unknown-linux-musleabihf
             host_multilib: true
+          # Mainline LuaJIT has no riscv64 backend; this row exercises the
+          # vendored PUC Lua 5.1 fallback (see Cargo.toml).
+          - target: riscv64gc-unknown-linux-gnu
           - target: x86_64-unknown-freebsd
             freebsd_sysroot: true
     steps:

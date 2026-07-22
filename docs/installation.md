@@ -49,7 +49,9 @@ Download a prebuilt binary from the [releases page](https://github.com/paviro/ko
 | --- | --- | --- |
 | Linux glibc | x86_64, i686, ARMv7 | Linux 3.2 and glibc 2.17 |
 | Linux glibc | ARM64 | Linux 4.1 and glibc 2.17 |
-| Linux musl | x86_64, ARM64, i686, ARMv7 | Static; no host glibc requirement |
+| Linux glibc | riscv64 | Linux 4.15 and glibc 2.27 |
+| Linux musl | x86_64, ARM64, i686, ARMv7, riscv64 | Static; no host glibc requirement |
+| FreeBSD | x86_64, ARM64 | FreeBSD 14 |
 | Windows MSVC | x86_64, ARM64 | Windows 10 or Windows Server 2016 |
 | macOS | Intel | macOS 10.12 |
 | macOS | Apple Silicon | macOS 11 |

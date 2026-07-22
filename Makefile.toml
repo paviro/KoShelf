@@ -32,6 +32,9 @@ CC_armv7_unknown_linux_gnueabihf = "armv7-unknown-linux-gnueabihf-gcc"
 CXX_armv7_unknown_linux_gnueabihf = "armv7-unknown-linux-gnueabihf-g++"
 CC_armv7_unknown_linux_musleabihf = "armv7-unknown-linux-musleabihf-gcc"
 CXX_armv7_unknown_linux_musleabihf = "armv7-unknown-linux-musleabihf-g++"
+# The aarch64 FreeBSD slice is Tier 3 (no rustup std); this nightly must match
+# the pin in .github/workflows/release.yml.
+FREEBSD_NIGHTLY = "nightly-2026-07-15"
 
 # Production profile environment
 [env.production]
@@ -81,6 +84,70 @@ description = "Build for 32-bit ARMv7 Linux with musl (hard-float)"
 command = "cargo"
 args = ["build", "--release", "--locked", "--target", "armv7-unknown-linux-musleabihf"]
 
+# 64-bit RISC-V Linux targets. No riscv64 cross gcc ships via Homebrew, so
+# these cross-compile with cargo-zigbuild (zig supplies libc and the linker).
+# Mainline LuaJIT has no riscv64 backend; mlua builds vendored PUC Lua 5.1 on
+# this arch instead (see Cargo.toml).
+[tasks.build-riscv64-gnu]
+description = "Cross-compile for riscv64 Linux with glibc 2.27+ (cargo-zigbuild)"
+command = "cargo"
+args = [
+    "zigbuild",
+    "--release",
+    "--locked",
+    "--target",
+    "riscv64gc-unknown-linux-gnu.2.27",
+]
+
+[tasks.build-riscv64-musl]
+description = "Cross-compile for riscv64 Linux with musl (cargo-zigbuild)"
+command = "cargo"
+args = [
+    "zigbuild",
+    "--release",
+    "--locked",
+    "--target",
+    "riscv64gc-unknown-linux-musl",
+]
+# riscv64 musl is a newer target that defaults to dynamic linking, unlike the
+# older musl targets; force the static binary the musl artifacts promise.
+env = { CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_MUSL_RUSTFLAGS = "-C target-feature=+crt-static" }
+
+# FreeBSD targets, cross-compiled with cargo-zigbuild: zig ships the
+# FreeBSD 14+ libc stubs and headers, so no BSD host is needed. TARGET_LIBS
+# and TARGET_STRIP configure the vendored LuaJIT build as in release.yml;
+# the CXXFLAGS define selects unrar's scalar fallback because zig omits the
+# __cpu_model runtime its optional x86 dispatch uses.
+#
+# TARGET_SYS steers only LuaJIT's host-side buildvm: without it the Makefile
+# assumes the macOS host and demands MACOSX_DEPLOYMENT_TARGET. "Linux" gives
+# buildvm the POSIX ELF defines — the same thing the Linux CI runners produce
+# by default — while the FreeBSD target code detects its OS from __FreeBSD__
+# in zig's headers. ("FreeBSD" is not a value LuaJIT's Makefile knows; it
+# would map to the non-POSIX LUAJIT_OS_OTHER and drop POSIX library defs.)
+[tasks.build-freebsd-x86]
+description = "Cross-compile for x86_64 FreeBSD 14+ (cargo-zigbuild)"
+command = "cargo"
+args = ["zigbuild", "--release", "--locked", "--target", "x86_64-unknown-freebsd"]
+env = { CXXFLAGS = "-D__builtin_cpu_supports(x)=0", TARGET_LIBS = "-lunwind", TARGET_STRIP = "true", TARGET_SYS = "Linux" }
+
+# Cargo-make would try to install the target for a `+toolchain` argument, so
+# the nightly is selected via RUSTUP_TOOLCHAIN instead. Install it first:
+#   rustup toolchain install nightly-2026-07-15 --component rust-src
+[tasks.build-freebsd-arm64]
+description = "Cross-compile for aarch64 FreeBSD 14+ (Tier 3, nightly + build-std)"
+command = "cargo"
+args = [
+    "zigbuild",
+    "--release",
+    "--locked",
+    "--target",
+    "aarch64-unknown-freebsd",
+    "-Z",
+    "build-std=std,panic_abort",
+]
+env = { RUSTUP_TOOLCHAIN = "${FREEBSD_NIGHTLY}", TARGET_LIBS = "-lunwind", TARGET_STRIP = "true", TARGET_SYS = "Linux" }
+
 # Windows targets
 [tasks.build-windows-gnu]
 description = "Build for Windows x86_64 (MinGW)"
@@ -125,6 +192,10 @@ dependencies = [
     "build-i686-musl",
     "build-armv7-gnu",
     "build-armv7-musl",
+    "build-riscv64-gnu",
+    "build-riscv64-musl",
+    "build-freebsd-x86",
+    "build-freebsd-arm64",
     "build-windows-gnu",
     "build-macos-intel",
     "build-macos-silicon",
@@ -148,7 +219,9 @@ dependencies = [
     "build-i686-gnu",
     "build-i686-musl",
     "build-armv7-gnu",
-    "build-armv7-musl"
+    "build-armv7-musl",
+    "build-riscv64-gnu",
+    "build-riscv64-musl"
 ]
 
 [tasks.build-windows-all]
@@ -287,6 +360,58 @@ zip "${PLATFORM}.zip" "${BINARY_NAME}"
 rm "${BINARY_NAME}"
 '''
 
+[tasks.package-riscv64-gnu]
+description = "Package riscv64 gnu binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="riscv64gc-unknown-linux-gnu"
+PLATFORM="linux-gnu-riscv64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-riscv64-musl]
+description = "Package riscv64 musl binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="riscv64gc-unknown-linux-musl"
+PLATFORM="linux-musl-riscv64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-freebsd-x86]
+description = "Package x86_64 FreeBSD binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="x86_64-unknown-freebsd"
+PLATFORM="freebsd-x86_64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
+[tasks.package-freebsd-arm64]
+description = "Package aarch64 FreeBSD binary"
+dependencies = ["create-release-dir"]
+script = '''
+BINARY_NAME="koshelf"
+TARGET="aarch64-unknown-freebsd"
+PLATFORM="freebsd-aarch64"
+cp "target/${TARGET}/release/${BINARY_NAME}" "release/"
+cd release
+zip "${PLATFORM}.zip" "${BINARY_NAME}"
+rm "${BINARY_NAME}"
+'''
+
 [tasks.package-windows-gnu]
 description = "Package Windows gnu binary"
 dependencies = ["create-release-dir"]
@@ -351,6 +476,10 @@ dependencies = [
     "package-i686-musl",
     "package-armv7-gnu",
     "package-armv7-musl",
+    "package-riscv64-gnu",
+    "package-riscv64-musl",
+    "package-freebsd-x86",
+    "package-freebsd-arm64",
     "package-windows-gnu",
     "package-macos-intel",
     "package-macos-silicon",
