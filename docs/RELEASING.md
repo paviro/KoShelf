@@ -24,8 +24,8 @@ one day.
 
 | Runner | Artifacts |
 | --- | --- |
-| `ubuntu-latest` | `linux-gnu-{x86_64,aarch64,i686,armv7}` and `linux-musl-{x86_64,i686,armv7}` |
-| `ubuntu-24.04-arm` | `linux-musl-aarch64` |
+| `ubuntu-latest` | `linux-gnu-{x86_64,i686,armv7}` and `linux-musl-{x86_64,i686,armv7}` |
+| `ubuntu-24.04-arm` | `linux-{gnu,musl}-aarch64` |
 | `windows-latest` | `windows-msvc-x86_64` |
 | `windows-11-arm` | `windows-msvc-aarch64` |
 | `macos-latest` | `apple-darwin-{x86_64,aarch64}` |
@@ -36,7 +36,11 @@ and npm license snapshot; each target adds its own Rust dependency licenses.
 
 The workflow rejects GNU binaries with symbols newer than glibc 2.17 and musl
 binaries with a dynamic interpreter or shared-library dependency. macOS builds
-pin and verify macOS 10.12 for Intel and macOS 11 for Apple Silicon.
+pin and verify macOS 10.12 for Intel and macOS 11 for Apple Silicon. Every
+artifact also gets a `--version` smoke test, with `LD_BIND_NOW=1` for Linux GNU
+builds so the complete symbol chain must resolve. The binaries run natively,
+including 32-bit x86 and Intel macOS under Rosetta, except for ARMv7, which runs
+under qemu-user.
 
 The local cargo-make configuration also retains Windows GNU and universal
 macOS packages for convenience. Those are not GitHub Release artifacts.
@@ -98,6 +102,6 @@ sha256sum --check SHA256SUMS
 gh attestation verify linux-gnu-x86_64.zip --repo paviro/KoShelf
 ```
 
-The workflow additionally checks the GNU symbol-version ceiling, static musl
-linkage, minimum macOS versions, macOS signatures, and the exact artifact
-filename set before publish.
+The workflow additionally checks that every binary starts, along with the GNU
+symbol-version ceiling, static musl linkage, minimum macOS versions, macOS
+signatures, and the exact artifact filename set before publish.
