@@ -99,8 +99,6 @@ jobs:
             platform: linux-gnu-x86_64
             runner: ubuntu-latest
             gnu: true
-            zig_arch: x86_64
-            zig_sha256: 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
             x86_gnu: true
             cxxflags: ''
           # Build on the ARM runner so the smoke test runs on real hardware.
@@ -109,8 +107,6 @@ jobs:
             platform: linux-gnu-aarch64
             runner: ubuntu-24.04-arm
             gnu: true
-            zig_arch: aarch64
-            zig_sha256: ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17
             cxxflags: ''
           - target: x86_64-unknown-linux-musl
             platform: linux-musl-x86_64
@@ -126,8 +122,6 @@ jobs:
             platform: linux-gnu-i686
             runner: ubuntu-latest
             gnu: true
-            zig_arch: x86_64
-            zig_sha256: 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
             host_multilib: true
             cxxflags: '-D__builtin_cpu_supports(x)=0'
           # GCC 13 ICEs while expanding debug locations in unrar's SSE
@@ -145,8 +139,6 @@ jobs:
             platform: linux-gnu-armv7
             runner: ubuntu-latest
             gnu: true
-            zig_arch: x86_64
-            zig_sha256: 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
             arm_gnu: true
             host_multilib: true
             smoke_prefix: qemu-arm -L /usr/arm-linux-gnueabihf
@@ -188,22 +180,17 @@ jobs:
         if: ${{ !matrix.gnu }}
         with:
           target: ${{ matrix.target }}
-      - name: Install Zig 0.16.0
+      # Current stable Zig, tested by cargo-zigbuild in its own CI. Downloads
+      # via the community mirror pool with minisign verification, as Zig asks
+      # of CI automations.
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         if: ${{ matrix.gnu }}
-        run: |
-          archive="$RUNNER_TEMP/zig.tar.xz"
-          install_dir="$RUNNER_TEMP/zig"
-          curl --fail --location --retry 5 --retry-all-errors \
-            --output "$archive" \
-            https://ziglang.org/download/0.16.0/zig-${{ matrix.zig_arch }}-linux-0.16.0.tar.xz
-          echo "${{ matrix.zig_sha256 }}  $archive" | sha256sum --check
-          mkdir -p "$install_dir"
-          tar -C "$install_dir" --strip-components=1 -xf "$archive"
-          echo "$install_dir" >> "$GITHUB_PATH"
-          "$install_dir/zig" version
+        with:
+          version: 0.16.0
+          cache-key: ${{ matrix.target }}
       - uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2
         with:
-          tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild' || 'cargo-about@0.9.1' }}
+          tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild@0.23.0' || 'cargo-about@0.9.1' }}
       - if: ${{ matrix.gnu }}
         run: |
           target_libs=-lunwind
@@ -406,7 +393,7 @@ jobs:
             --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$team_id" >/dev/null
       - uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2
         with:
-          tool: cargo-make,cargo-about@0.9.1
+          tool: cargo-make@0.37.24,cargo-about@0.9.1
       - run: cargo make ${{ matrix.task }}
       - name: Verify minimum macOS version
         env:
