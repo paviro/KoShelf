@@ -199,6 +199,9 @@ jobs:
           - target: aarch64-unknown-linux-musl
           - target: i686-unknown-linux-gnu
             host_multilib: true
+            # GCC 13 ICEs while expanding debug locations in unrar's SSE
+            # translation unit. Rust debug info remains enabled.
+            cxxflags: -g0
           - target: i686-unknown-linux-musl
             host_multilib: true
           - target: armv7-unknown-linux-gnueabihf
@@ -256,3 +259,5 @@ jobs:
             echo "CXXFLAGS_x86_64_unknown_freebsd=--sysroot=$HOME/freebsd-sysroot -stdlib=libc++"
           } >> "$GITHUB_ENV"
       - run: cargo check --target ${{ matrix.target }} --all-targets --locked
+        env:
+          CXXFLAGS: ${{ matrix.cxxflags }}
