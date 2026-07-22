@@ -20,6 +20,16 @@ const MAX_DEPTH: usize = 64;
 const INDENT: &str = "    ";
 const BACKUP_MIN_AGE_SECS: u64 = 60;
 
+#[cfg(target_pointer_width = "32")]
+fn lua_integer_key(value: mlua::Integer) -> i64 {
+    i64::from(value)
+}
+
+#[cfg(target_pointer_width = "64")]
+fn lua_integer_key(value: mlua::Integer) -> i64 {
+    value
+}
+
 /// Round-trip writer for KoReader metadata sidecar files.
 ///
 /// Like `LuaParser`, the inner `mlua::Lua` is **not `Sync`**. Create a
@@ -196,7 +206,7 @@ fn write_table(
         }
 
         match key {
-            Value::Integer(i) => int_entries.push((i64::from(i), val)),
+            Value::Integer(i) => int_entries.push((lua_integer_key(i), val)),
             Value::Number(n) if n == (n as i64) as f64 => {
                 int_entries.push((n as i64, val));
             }
