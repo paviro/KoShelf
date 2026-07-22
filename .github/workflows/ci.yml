@@ -244,7 +244,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/freebsd-sysroot
-          key: freebsd-sysroot-14.4-RELEASE-v2
+          key: freebsd-sysroot-14.4-RELEASE-v3
       - if: ${{ matrix.freebsd_sysroot && steps.freebsd-sysroot.outputs.cache-hit != 'true' }}
         name: Download FreeBSD sysroot
         run: |
@@ -252,7 +252,11 @@ jobs:
             https://download.freebsd.org/releases/amd64/amd64/14.4-RELEASE/base.txz
           echo "769f60a6eea2938ad6b7943cfbcc17dfaf7d1f7ba59a32b869a00349302df853  /tmp/base.txz" | sha256sum --check
           mkdir -p "$HOME/freebsd-sysroot"
-          tar -C "$HOME/freebsd-sysroot" -xf /tmp/base.txz ./lib ./usr/include ./usr/lib
+          # This job only runs cargo check, which never links, so keep the
+          # cached sysroot small: skip static archives and clang's resources.
+          tar -C "$HOME/freebsd-sysroot" \
+            --exclude '*.a' --exclude './usr/lib/clang' \
+            -xf /tmp/base.txz ./lib ./usr/include ./usr/lib
       - if: ${{ matrix.freebsd_sysroot }}
         name: Configure FreeBSD C and C++ compilers
         run: |
