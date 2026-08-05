@@ -185,7 +185,7 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
@@ -215,7 +215,7 @@ jobs:
         with:
           version: 0.16.0
           cache-key: ${{ matrix.target }}
-      - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2.85.4
+      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
         with:
           tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild@0.23.0' || 'cargo-about@0.9.1' }}
       - if: ${{ matrix.gnu }}
@@ -360,7 +360,7 @@ jobs:
           name: frontend-build
           path: frontend
       # Tier 3 has no rustup target to add; build-std needs rust-src instead.
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: ${{ matrix.toolchain }}
           targets: ${{ matrix.build_std && '' || matrix.target }}
@@ -370,7 +370,7 @@ jobs:
         with:
           version: 0.16.0
           cache-key: ${{ matrix.target }}
-      - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2.85.4
+      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
         with:
           tool: cargo-about@0.9.1,cargo-zigbuild@0.23.0
       - if: ${{ !matrix.build_std }}
@@ -450,11 +450,11 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
-      - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2.85.4
+      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
         with:
           tool: cargo-about@0.9.1
       # LuaJIT's MSVC build script uses this variable to select its ARM64 VM.
@@ -503,7 +503,7 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
@@ -530,7 +530,7 @@ jobs:
           } > ./.env
           xcrun notarytool store-credentials koshelf-notary \
             --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$team_id" >/dev/null
-      - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2.85.4
+      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
         with:
           tool: cargo-make@0.37.24,cargo-about@0.9.1
       - run: cargo make ${{ matrix.task }}
