@@ -185,7 +185,7 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
@@ -215,7 +215,7 @@ jobs:
         with:
           version: 0.16.0
           cache-key: ${{ matrix.target }}
-      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: ${{ matrix.gnu && 'cargo-about@0.9.1,cargo-zigbuild@0.23.0' || 'cargo-about@0.9.1' }}
       - if: ${{ matrix.gnu }}
@@ -360,7 +360,7 @@ jobs:
           name: frontend-build
           path: frontend
       # Tier 3 has no rustup target to add; build-std needs rust-src instead.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: ${{ matrix.toolchain }}
           targets: ${{ matrix.build_std && '' || matrix.target }}
@@ -370,7 +370,7 @@ jobs:
         with:
           version: 0.16.0
           cache-key: ${{ matrix.target }}
-      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-about@0.9.1,cargo-zigbuild@0.23.0
       - if: ${{ !matrix.build_std }}
@@ -450,11 +450,11 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
-      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-about@0.9.1
       # LuaJIT's MSVC build script uses this variable to select its ARM64 VM.
@@ -503,7 +503,7 @@ jobs:
         with:
           name: frontend-build
           path: frontend
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           targets: ${{ matrix.target }}
@@ -530,7 +530,7 @@ jobs:
           } > ./.env
           xcrun notarytool store-credentials koshelf-notary \
             --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$team_id" >/dev/null
-      - uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2.85.7
+      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
         with:
           tool: cargo-make@0.37.24,cargo-about@0.9.1
       - run: cargo make ${{ matrix.task }}
@@ -612,13 +612,13 @@ jobs:
         working-directory: assets
         run: sha256sum -- *.zip > SHA256SUMS
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             assets/*.zip
             assets/SHA256SUMS
       - name: Publish
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
