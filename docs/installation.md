@@ -113,8 +113,8 @@ koshelf export ~/my-library-site --library-path ~/Books
 
 ### Prerequisites
 
-- Rust 1.96+ (for building)
-- Node.js and npm (React frontend build pipeline)
+- Rust 1.99+ (for building)
+- Node.js 26 and npm 11 or newer (React frontend build pipeline)
 - `cargo-about` for complete release-mode dependency licensing
 
 ### Building the tool

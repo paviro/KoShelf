@@ -65,6 +65,9 @@ impl ComicParser {
 
         let image_count = zip
             .file_names()
+            .collect::<zip::result::ZipResult<Vec<_>>>()
+            .context("Failed to decode CBZ file names")?
+            .into_iter()
             .filter(|name| {
                 let lower_name = name.to_lowercase();
                 IMAGE_EXTENSIONS.iter().any(|ext| lower_name.ends_with(ext))
@@ -255,7 +258,7 @@ impl ComicParser {
                     let tag_name = e.local_name();
 
                     // Skip the root ComicInfo element - we want its children
-                    if tag_name.as_ref() == b"ComicInfo" {
+                    if tag_name.as_ref() == "ComicInfo" {
                         continue;
                     }
 
@@ -267,19 +270,19 @@ impl ComicParser {
                         }
 
                         match tag_name.as_ref() {
-                            b"Title" => title = Some(text),
-                            b"Series" => series = Some(text),
-                            b"Number" => number = Some(text),
-                            b"Summary" => {
+                            "Title" => title = Some(text),
+                            "Series" => series = Some(text),
+                            "Number" => number = Some(text),
+                            "Summary" => {
                                 let cleaned = sanitize_html(&text);
                                 let trimmed = cleaned.trim();
                                 if !trimmed.is_empty() {
                                     summary = Some(trimmed.to_string());
                                 }
                             }
-                            b"Publisher" => publisher = Some(text),
-                            b"LanguageISO" => language = Some(text),
-                            b"Writer" => {
+                            "Publisher" => publisher = Some(text),
+                            "LanguageISO" => language = Some(text),
+                            "Writer" => {
                                 // Writers are comma-separated
                                 for writer in text.split(',').map(|s| s.trim().to_string()) {
                                     if !writer.is_empty() && !authors.contains(&writer) {
@@ -287,8 +290,8 @@ impl ComicParser {
                                     }
                                 }
                             }
-                            b"Penciller" | b"Inker" | b"Colorist" | b"Letterer"
-                            | b"CoverArtist" | b"Editor" => {
+                            "Penciller" | "Inker" | "Colorist" | "Letterer" | "CoverArtist"
+                            | "Editor" => {
                                 // Add other creators to authors list
                                 for creator in text.split(',').map(|s| s.trim().to_string()) {
                                     if !creator.is_empty() && !authors.contains(&creator) {
@@ -296,7 +299,7 @@ impl ComicParser {
                                     }
                                 }
                             }
-                            b"Genre" => {
+                            "Genre" => {
                                 // Genres are comma-separated
                                 for genre in text.split(',').map(|s| s.trim().to_string()) {
                                     if !genre.is_empty() && !subjects.contains(&genre) {
@@ -373,6 +376,9 @@ impl ComicParser {
         // using an iterator to avoid checking every file if not needed and avoiding allocations
         let cover_file_name = zip
             .file_names()
+            .collect::<zip::result::ZipResult<Vec<_>>>()
+            .context("Failed to decode CBZ file names")?
+            .into_iter()
             .filter(|name| {
                 let lower_name = name.to_lowercase();
                 IMAGE_EXTENSIONS.iter().any(|ext| lower_name.ends_with(ext))
@@ -413,6 +419,38 @@ impl ComicParser {
 #[cfg(test)]
 mod tests {
     use super::ComicParser;
+
+    #[test]
+    fn cbz_counts_images_and_selects_first_cover_after_decoding_names() {
+        use std::fs::File;
+        use std::io::Write;
+        use zip::ZipWriter;
+        use zip::write::SimpleFileOptions;
+
+        let dir = tempfile::tempdir().expect("temporary directory");
+        let path = dir.path().join("comic.cbz");
+        let mut zip = ZipWriter::new(File::create(&path).expect("comic file"));
+        for (name, content) in [
+            ("02-page.PNG", b"second page".as_slice()),
+            ("01-café.jpg", b"first page".as_slice()),
+            ("notes.txt", b"not an image".as_slice()),
+            (
+                "ComicInfo.xml",
+                "<ComicInfo><Title>Café &amp; Comics</Title></ComicInfo>".as_bytes(),
+            ),
+        ] {
+            zip.start_file(name, SimpleFileOptions::default())
+                .expect("archive entry");
+            zip.write_all(content).expect("entry content");
+        }
+        zip.finish().expect("finished archive");
+
+        let parsed = ComicParser::parse_cbz_sync(&path).expect("CBZ should parse");
+        assert_eq!(parsed.title, "Café & Comics");
+        assert_eq!(parsed.pages, Some(2));
+        assert_eq!(parsed.cover_data.as_deref(), Some(b"first page".as_slice()));
+        assert_eq!(parsed.cover_mime_type.as_deref(), Some("image/jpeg"));
+    }
 
     #[test]
     fn comic_info_summary_is_sanitized() {

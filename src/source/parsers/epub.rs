@@ -144,10 +144,10 @@ impl EpubParser {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) => {
-                    if e.local_name().as_ref() == b"rootfile" {
+                    if e.local_name().as_ref() == "rootfile" {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if key == b"full-path" {
+                            if key == "full-path" {
                                 return Ok(xml_attr_value(&attr)?.into_owned());
                             }
                         }
@@ -191,23 +191,23 @@ impl EpubParser {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     let local_name = e.local_name();
-                    if local_name.as_ref() == b"metadata" {
+                    if local_name.as_ref() == "metadata" {
                         in_metadata = true;
-                    } else if local_name.as_ref() == b"manifest" {
+                    } else if local_name.as_ref() == "manifest" {
                         in_manifest = true;
                     } else if in_metadata {
                         match local_name.as_ref() {
-                            b"title" => {
+                            "title" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
                                     title = Some(decode_xml_text(&text));
                                 }
                             }
-                            b"creator" => {
+                            "creator" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
                                     authors.push(decode_xml_text(&text_content));
                                 }
                             }
-                            b"description" => match reader.read_text(e.name()) {
+                            "description" => match reader.read_text(e.name()) {
                                 Ok(raw_text) => {
                                     let raw_text = decode_xml_text(&raw_text);
                                     let cleaned = sanitize_html(&raw_text);
@@ -221,21 +221,21 @@ impl EpubParser {
                                     debug!("Error reading description: {:?}", e);
                                 }
                             },
-                            b"publisher" => {
+                            "publisher" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
                                     publisher = Some(decode_xml_text(&text));
                                 }
                             }
-                            b"language" => {
+                            "language" => {
                                 if let Ok(text) = reader.read_text(e.name()) {
                                     language = Some(decode_xml_text(&text));
                                 }
                             }
-                            b"identifier" => {
+                            "identifier" => {
                                 let mut scheme = None;
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
-                                    if key == b"opf:scheme" || key == b"scheme" {
+                                    if key == "opf:scheme" || key == "scheme" {
                                         scheme = Some(xml_attr_value(&attr)?.into_owned());
                                     }
                                 }
@@ -253,7 +253,7 @@ impl EpubParser {
                                     identifiers.push(Identifier::new(final_scheme, final_value));
                                 }
                             }
-                            b"subject" => {
+                            "subject" => {
                                 if let Ok(text_content) = reader.read_text(e.name()) {
                                     let subject = decode_xml_text(&text_content);
                                     if !subject.is_empty() {
@@ -261,7 +261,7 @@ impl EpubParser {
                                     }
                                 }
                             }
-                            b"meta" => {
+                            "meta" => {
                                 let mut property = None;
                                 let mut id = None;
                                 let mut refines = None;
@@ -272,17 +272,17 @@ impl EpubParser {
                                 for attr in e.attributes().flatten() {
                                     let key = attr.key.as_ref();
                                     match key {
-                                        b"property" => {
+                                        "property" => {
                                             property = Some(xml_attr_value(&attr)?.into_owned())
                                         }
-                                        b"id" => id = Some(xml_attr_value(&attr)?.into_owned()),
-                                        b"refines" => {
+                                        "id" => id = Some(xml_attr_value(&attr)?.into_owned()),
+                                        "refines" => {
                                             refines = Some(xml_attr_value(&attr)?.into_owned())
                                         }
-                                        b"name" => {
+                                        "name" => {
                                             name_attr = Some(xml_attr_value(&attr)?.into_owned())
                                         }
-                                        b"content" => {
+                                        "content" => {
                                             content_attr = Some(xml_attr_value(&attr)?.into_owned())
                                         }
                                         _ => {}
@@ -334,14 +334,14 @@ impl EpubParser {
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local_name = e.local_name();
-                    if in_metadata && local_name.as_ref() == b"meta" {
+                    if in_metadata && local_name.as_ref() == "meta" {
                         let mut name_attr = None;
                         let mut content_attr = None;
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
                             match key {
-                                b"name" => name_attr = Some(xml_attr_value(&attr)?.into_owned()),
-                                b"content" => {
+                                "name" => name_attr = Some(xml_attr_value(&attr)?.into_owned()),
+                                "content" => {
                                     content_attr = Some(xml_attr_value(&attr)?.into_owned())
                                 }
                                 _ => {}
@@ -356,17 +356,17 @@ impl EpubParser {
                                 cal_series_number = Some(c);
                             }
                         }
-                    } else if in_manifest && local_name.as_ref() == b"item" {
+                    } else if in_manifest && local_name.as_ref() == "item" {
                         // Look for nav document in manifest
                         let mut href = None;
                         let mut properties = None;
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if key == b"href" {
+                            if key == "href" {
                                 if let Ok(h) = xml_attr_value(&attr) {
                                     href = Some(h.into_owned());
                                 }
-                            } else if key == b"properties"
+                            } else if key == "properties"
                                 && let Ok(p) = xml_attr_value(&attr)
                             {
                                 properties = Some(p.into_owned());
@@ -380,9 +380,9 @@ impl EpubParser {
                     }
                 }
                 Ok(Event::End(ref e)) => {
-                    if e.local_name().as_ref() == b"metadata" {
+                    if e.local_name().as_ref() == "metadata" {
                         in_metadata = false;
-                    } else if e.local_name().as_ref() == b"manifest" {
+                    } else if e.local_name().as_ref() == "manifest" {
                         in_manifest = false;
                     }
                 }
@@ -442,7 +442,7 @@ impl EpubParser {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) => {
-                    if e.local_name().as_ref() == b"item" {
+                    if e.local_name().as_ref() == "item" {
                         let mut id = None;
                         let mut href = None;
                         let mut media_type = None;
@@ -450,13 +450,13 @@ impl EpubParser {
 
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if key == b"id" {
+                            if key == "id" {
                                 id = Some(xml_attr_value(&attr)?.into_owned());
-                            } else if key == b"href" {
+                            } else if key == "href" {
                                 href = Some(xml_attr_value(&attr)?.into_owned());
-                            } else if key == b"media-type" {
+                            } else if key == "media-type" {
                                 media_type = Some(xml_attr_value(&attr)?.into_owned());
-                            } else if key == b"properties" {
+                            } else if key == "properties" {
                                 properties = Some(xml_attr_value(&attr)?.into_owned());
                             }
                         }
@@ -515,11 +515,11 @@ impl EpubParser {
                     let local_name = e.local_name();
 
                     // Check for nav with epub:type="page-list"
-                    if local_name.as_ref() == b"nav" {
+                    if local_name.as_ref() == "nav" {
                         for attr in e.attributes().flatten() {
                             // Look for epub:type attribute (either with or without namespace prefix)
                             let key = attr.key.as_ref();
-                            if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
+                            if (key == "epub:type" || key.ends_with(":type") || key == "type")
                                 && let Ok(val) = xml_attr_value(&attr)
                                 && val.contains("page-list")
                             {
@@ -529,12 +529,12 @@ impl EpubParser {
                     }
 
                     // Count anchor elements in page-list (each represents a page)
-                    if in_page_list && local_name.as_ref() == b"a" {
+                    if in_page_list && local_name.as_ref() == "a" {
                         page_count += 1;
                     }
                 }
                 Ok(Event::End(ref e)) => {
-                    if e.local_name().as_ref() == b"nav" {
+                    if e.local_name().as_ref() == "nav" {
                         in_page_list = false;
                     }
                 }
@@ -637,28 +637,28 @@ impl EpubParser {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"manifest" {
+                    if local.as_ref() == "manifest" {
                         in_manifest = true;
-                    } else if local.as_ref() == b"spine" {
+                    } else if local.as_ref() == "spine" {
                         in_spine = true;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"toc"
+                            if attr.key.as_ref() == "toc"
                                 && let Ok(v) = xml_attr_value(&attr)
                             {
                                 ncx_toc_id = Some(v.into_owned());
                             }
                         }
-                    } else if in_manifest && local.as_ref() == b"item" {
+                    } else if in_manifest && local.as_ref() == "item" {
                         let mut id = None;
                         let mut href = None;
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
-                                b"id" => {
+                                "id" => {
                                     if let Ok(v) = xml_attr_value(&attr) {
                                         id = Some(v.into_owned());
                                     }
                                 }
-                                b"href" => {
+                                "href" => {
                                     if let Ok(v) = xml_attr_value(&attr) {
                                         href = Some(v.into_owned());
                                     }
@@ -669,9 +669,9 @@ impl EpubParser {
                         if let (Some(id), Some(href)) = (id, href) {
                             manifest_map.insert(id, href);
                         }
-                    } else if in_spine && local.as_ref() == b"itemref" {
+                    } else if in_spine && local.as_ref() == "itemref" {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"idref"
+                            if attr.key.as_ref() == "idref"
                                 && let Ok(v) = xml_attr_value(&attr)
                             {
                                 spine_idrefs.push(v.into_owned());
@@ -681,9 +681,9 @@ impl EpubParser {
                 }
                 Ok(Event::End(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"manifest" {
+                    if local.as_ref() == "manifest" {
                         in_manifest = false;
-                    } else if local.as_ref() == b"spine" {
+                    } else if local.as_ref() == "spine" {
                         in_spine = false;
                     }
                 }
@@ -737,23 +737,23 @@ impl EpubParser {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"nav" {
+                    if local.as_ref() == "nav" {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if (key == b"epub:type" || key.ends_with(b":type") || key == b"type")
+                            if (key == "epub:type" || key.ends_with(":type") || key == "type")
                                 && let Ok(val) = xml_attr_value(&attr)
                                 && val.contains("toc")
                             {
                                 in_toc = true;
                             }
                         }
-                    } else if in_toc && local.as_ref() == b"ol" {
+                    } else if in_toc && local.as_ref() == "ol" {
                         depth += 1;
-                    } else if in_toc && depth >= 1 && local.as_ref() == b"a" {
+                    } else if in_toc && depth >= 1 && local.as_ref() == "a" {
                         // Extract href and text from anchors at any nesting depth.
                         let mut href = None;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"href"
+                            if attr.key.as_ref() == "href"
                                 && let Ok(v) = xml_attr_value(&attr)
                             {
                                 href = Some(v.into_owned());
@@ -770,10 +770,10 @@ impl EpubParser {
                 }
                 Ok(Event::End(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"nav" {
+                    if local.as_ref() == "nav" {
                         in_toc = false;
                         depth = 0;
-                    } else if in_toc && local.as_ref() == b"ol" {
+                    } else if in_toc && local.as_ref() == "ol" {
                         depth = depth.saturating_sub(1);
                     }
                 }
@@ -804,15 +804,15 @@ impl EpubParser {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"navMap" {
+                    if local.as_ref() == "navMap" {
                         in_nav_map = true;
-                    } else if in_nav_map && local.as_ref() == b"navPoint" {
+                    } else if in_nav_map && local.as_ref() == "navPoint" {
                         nav_point_depth += 1;
                         current_title = None;
                         current_src = None;
                     } else if in_nav_map
                         && nav_point_depth >= 1
-                        && local.as_ref() == b"text"
+                        && local.as_ref() == "text"
                         && let Ok(text) = reader.read_text(e.name())
                     {
                         current_title = Some(decode_xml_text(&text).trim().to_string());
@@ -820,9 +820,9 @@ impl EpubParser {
                 }
                 Ok(Event::Empty(ref e)) => {
                     let local = e.local_name();
-                    if in_nav_map && nav_point_depth >= 1 && local.as_ref() == b"content" {
+                    if in_nav_map && nav_point_depth >= 1 && local.as_ref() == "content" {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"src"
+                            if attr.key.as_ref() == "src"
                                 && let Ok(v) = xml_attr_value(&attr)
                             {
                                 current_src = Some(v.into_owned());
@@ -832,9 +832,9 @@ impl EpubParser {
                 }
                 Ok(Event::End(ref e)) => {
                     let local = e.local_name();
-                    if local.as_ref() == b"navMap" {
+                    if local.as_ref() == "navMap" {
                         in_nav_map = false;
-                    } else if in_nav_map && local.as_ref() == b"navPoint" {
+                    } else if in_nav_map && local.as_ref() == "navPoint" {
                         if let (Some(src), Some(title)) = (current_src.take(), current_title.take())
                             && !title.is_empty()
                         {

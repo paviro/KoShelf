@@ -78,7 +78,7 @@ found". Each target also needs its Rust standard library
 (`rustup target add <target>`).
 
 The riscv64 and FreeBSD tasks need no cross gcc: they build with
-`cargo-zigbuild`, which needs `zig` 0.16 and `cargo-zigbuild` on `PATH`. The
+`cargo-zigbuild`, which needs `zig` 0.17 and `cargo-zigbuild` 0.23.4 on `PATH`. The
 aarch64 FreeBSD task additionally needs the pinned nightly with its source
 component:
 

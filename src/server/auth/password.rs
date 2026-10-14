@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use argon2::password_hash::{PasswordHash, SaltString};
+use argon2::password_hash::phc::PasswordHash;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use rusty_paseto::core::Key;
 use sqlx::{Row, SqlitePool};
@@ -52,11 +52,8 @@ pub fn hash_password(raw: &str) -> Result<String> {
 
     let salt_bytes = Key::<16>::try_new_random()
         .map_err(|error| anyhow::anyhow!("Failed to generate password salt: {error}"))?;
-    let salt = SaltString::encode_b64(salt_bytes.as_slice())
-        .map_err(|error| anyhow::anyhow!("Failed to encode password salt: {error}"))?;
-
     let hash = Argon2::default()
-        .hash_password(raw.as_bytes(), &salt)
+        .hash_password_with_salt(raw.as_bytes(), salt_bytes.as_slice())
         .map_err(|error| anyhow::anyhow!("Failed to hash password: {error}"))?
         .to_string();
 
@@ -192,9 +189,29 @@ mod tests {
     use super::{
         PasswordLengthError, generate_random_password, generate_token_key, get_stored_auth,
         hash_password, set_password_hash_and_revoke_sessions, set_stored_auth,
-        validate_password_length,
+        validate_password_length, verify_password,
     };
     use crate::store::sqlite::{open_library_pool_in_memory, run_koshelf_migrations};
+
+    #[test]
+    fn verifies_legacy_argon2_phc_hash() {
+        // Argon2 0.5.3's reference_argon2id_v0x13_2_8_1 test vector.
+        let legacy =
+            "$argon2id$v=19$m=256,t=2,p=1$c29tZXNhbHQ$nf65EOgLrQMR/uIPnA4rEsF5h7TKyQwu9U1bMCHGi/4";
+        assert!(verify_password("password", legacy));
+        assert!(!verify_password("wrong-password", legacy));
+        assert!(!verify_password("password", "invalid-hash"));
+    }
+
+    #[test]
+    fn password_hash_preserves_parameters_and_uses_unique_salts() {
+        let first = hash_password("test-password").expect("hashing should succeed");
+        let second = hash_password("test-password").expect("hashing should succeed");
+        assert!(first.starts_with("$argon2id$v=19$m=19456,t=2,p=1$"));
+        assert_ne!(first, second);
+        assert!(verify_password("test-password", &first));
+        assert!(!verify_password("wrong-password", &first));
+    }
 
     #[test]
     fn generated_password_has_expected_format() {

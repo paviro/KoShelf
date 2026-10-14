@@ -49,6 +49,8 @@ Feature folders use this baseline shape where relevant:
 
 ## Commands
 
+Use Node.js 26 and npm 11 or newer. CI uses Node.js 26.11.1.
+
 Run from repo root:
 
 ```bash

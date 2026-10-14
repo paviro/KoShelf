@@ -108,13 +108,13 @@ impl Fb2Parser {
         // Find the .fb2 or .xml file inside the archive
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i)?;
-            let entry_name = entry.name().to_lowercase();
+            let entry_name = entry.name()?.to_lowercase();
             if entry_name.ends_with(".fb2") || entry_name.ends_with(".xml") {
                 let mut content = String::new();
                 entry.read_to_string(&mut content)?;
                 debug!(
                     "Extracted FB2 or XML from zip: {} ({} bytes)",
-                    entry.name(),
+                    entry.name()?,
                     content.len()
                 );
                 return Ok(content);
@@ -163,28 +163,28 @@ impl Fb2Parser {
                     let name = local_name.as_ref();
 
                     match name {
-                        b"description" => in_description = true,
-                        b"title-info" if in_description => in_title_info = true,
-                        b"publish-info" if in_description => in_publish_info = true,
-                        b"coverpage" if in_title_info => in_coverpage = true,
-                        b"author" if in_title_info => {
+                        "description" => in_description = true,
+                        "title-info" if in_description => in_title_info = true,
+                        "publish-info" if in_description => in_publish_info = true,
+                        "coverpage" if in_title_info => in_coverpage = true,
+                        "author" if in_title_info => {
                             in_author = true;
                             first_name.clear();
                             middle_name.clear();
                             last_name.clear();
                         }
                         // title-info elements
-                        b"book-title" if in_title_info => {
+                        "book-title" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 title = Some(decode_xml_text(&text));
                             }
                         }
-                        b"lang" if in_title_info => {
+                        "lang" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 language = Some(decode_xml_text(&text));
                             }
                         }
-                        b"genre" if in_title_info => {
+                        "genre" if in_title_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 let genre = decode_xml_text(&text);
                                 if !genre.is_empty() {
@@ -192,7 +192,7 @@ impl Fb2Parser {
                                 }
                             }
                         }
-                        b"annotation" if in_title_info => {
+                        "annotation" if in_title_info => {
                             // Read the entire annotation content (may contain nested XML)
                             if let Ok(text) = reader.read_text(e.name()) {
                                 let text = decode_xml_text(&text);
@@ -203,28 +203,28 @@ impl Fb2Parser {
                             }
                         }
                         // Author name parts
-                        b"first-name" if in_author => {
+                        "first-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 first_name = decode_xml_text(&text);
                             }
                         }
-                        b"middle-name" if in_author => {
+                        "middle-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 middle_name = decode_xml_text(&text);
                             }
                         }
-                        b"last-name" if in_author => {
+                        "last-name" if in_author => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 last_name = decode_xml_text(&text);
                             }
                         }
                         // publish-info elements
-                        b"publisher" if in_publish_info => {
+                        "publisher" if in_publish_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 publisher = Some(decode_xml_text(&text));
                             }
                         }
-                        b"isbn" if in_publish_info => {
+                        "isbn" if in_publish_info => {
                             if let Ok(text) = reader.read_text(e.name()) {
                                 let isbn = decode_xml_text(&text);
                                 if !isbn.is_empty() {
@@ -233,11 +233,11 @@ impl Fb2Parser {
                             }
                         }
                         // Cover image
-                        b"image" if in_coverpage => {
+                        "image" if in_coverpage => {
                             for attr in e.attributes().flatten() {
                                 let key = attr.key.as_ref();
                                 // Handle both href and l:href (XLink namespace)
-                                if (key == b"href" || key.ends_with(b":href"))
+                                if (key == "href" || key.ends_with(":href"))
                                     && let Ok(href) = xml_attr_value(&attr)
                                 {
                                     cover_href = Some(href.trim_start_matches('#').to_string());
@@ -253,15 +253,15 @@ impl Fb2Parser {
                     let name = local_name.as_ref();
 
                     // Handle <sequence name="..." number="..."/> for series
-                    if name == b"sequence" && in_title_info {
+                    if name == "sequence" && in_title_info {
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
-                                b"name" => {
+                                "name" => {
                                     if let Ok(val) = xml_attr_value(&attr) {
                                         series = Some(val.into_owned());
                                     }
                                 }
-                                b"number" => {
+                                "number" => {
                                     if let Ok(val) = xml_attr_value(&attr) {
                                         series_number = Some(val.into_owned());
                                     }
@@ -271,10 +271,10 @@ impl Fb2Parser {
                         }
                     }
                     // Handle self-closing <image .../> in coverpage
-                    else if name == b"image" && in_coverpage {
+                    else if name == "image" && in_coverpage {
                         for attr in e.attributes().flatten() {
                             let key = attr.key.as_ref();
-                            if (key == b"href" || key.ends_with(b":href"))
+                            if (key == "href" || key.ends_with(":href"))
                                 && let Ok(href) = xml_attr_value(&attr)
                             {
                                 cover_href = Some(href.trim_start_matches('#').to_string());
@@ -288,11 +288,11 @@ impl Fb2Parser {
                     let name = local_name.as_ref();
 
                     match name {
-                        b"description" => in_description = false,
-                        b"title-info" => in_title_info = false,
-                        b"publish-info" => in_publish_info = false,
-                        b"coverpage" => in_coverpage = false,
-                        b"author" if in_author => {
+                        "description" => in_description = false,
+                        "title-info" => in_title_info = false,
+                        "publish-info" => in_publish_info = false,
+                        "coverpage" => in_coverpage = false,
+                        "author" if in_author => {
                             // Build full author name from parts
                             let mut parts = Vec::new();
                             if !first_name.is_empty() {
@@ -370,11 +370,11 @@ impl Fb2Parser {
                 Ok(Event::Start(ref e)) => {
                     let name = e.local_name();
                     match name.as_ref() {
-                        b"body" if !in_body && !body_done => {
+                        "body" if !in_body && !body_done => {
                             in_body = true;
                             body_start = reader.buffer_position();
                         }
-                        b"section" if in_body => {
+                        "section" if in_body => {
                             section_depth += 1;
                             if section_depth == 1 {
                                 current_section_pos = reader.buffer_position();
@@ -382,7 +382,7 @@ impl Fb2Parser {
                                 awaiting_first_p = true;
                             }
                         }
-                        b"title" if in_body && section_depth >= 1 => {
+                        "title" if in_body && section_depth >= 1 => {
                             let pos = reader.buffer_position();
                             if let Ok(inner) = reader.read_text(e.name()) {
                                 let text = Self::strip_xml_tags(&decode_xml_text(&inner));
@@ -392,7 +392,7 @@ impl Fb2Parser {
                             }
                             awaiting_first_p = false;
                         }
-                        b"p" if in_body && section_depth == 1 && awaiting_first_p => {
+                        "p" if in_body && section_depth == 1 && awaiting_first_p => {
                             if let Ok(inner) = reader.read_text(e.name()) {
                                 let text = Self::strip_xml_tags(&decode_xml_text(&inner));
                                 if !text.is_empty() && text.len() <= 80 {
@@ -407,12 +407,12 @@ impl Fb2Parser {
                 Ok(Event::End(ref e)) => {
                     let name = e.local_name();
                     match name.as_ref() {
-                        b"body" if in_body => {
+                        "body" if in_body => {
                             in_body = false;
                             body_done = true;
                             body_end = reader.buffer_position();
                         }
-                        b"section" if in_body => {
+                        "section" if in_body => {
                             if section_depth == 1
                                 && let Some(text) = current_first_p.take()
                             {
@@ -482,20 +482,20 @@ impl Fb2Parser {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    if e.local_name().as_ref() == b"binary" {
+                    if e.local_name().as_ref() == "binary" {
                         let mut found_id = false;
                         let mut mime_type = None;
 
                         for attr in e.attributes().flatten() {
                             match attr.key.as_ref() {
-                                b"id" => {
+                                "id" => {
                                     if let Ok(id) = xml_attr_value(&attr)
                                         && id.as_ref() == cover_href
                                     {
                                         found_id = true;
                                     }
                                 }
-                                b"content-type" => {
+                                "content-type" => {
                                     if let Ok(ct) = xml_attr_value(&attr) {
                                         mime_type = Some(ct.into_owned());
                                     }

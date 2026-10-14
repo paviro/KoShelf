@@ -30,6 +30,7 @@ import { RecapSummarySection } from '../sections/RecapSummarySection';
 import { RecapTimelineSection } from '../sections/RecapTimelineSection';
 
 export function RecapRoute() {
+    const [currentYear] = useState(() => new Date().getFullYear());
     const [scope, setScope] = useState(() => readStoredRecapScope());
     const [selectedYear, setSelectedYear] = useState<number | null>(() =>
         readStoredRecapYear(),
@@ -248,9 +249,7 @@ export function RecapRoute() {
             <RecapShareModal
                 open={shareModalOpen}
                 onClose={() => setShareModalOpenKey(null)}
-                year={
-                    recapYear?.year ?? yearForQuery ?? new Date().getFullYear()
-                }
+                year={recapYear?.year ?? yearForQuery ?? currentYear}
                 shareAssets={shareAssets}
             />
         </>

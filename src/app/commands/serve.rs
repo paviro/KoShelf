@@ -122,7 +122,7 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
     };
 
     // ── Start server ─────────────────────────────────────────────────
-    let revision_epoch = format!("serve_{}", &state.generated_at);
+    let revision_epoch = format!("serve_{}", state.generated_at);
     let initial_generated_at = state.generated_at;
 
     let site_store = Arc::new(SiteStore::new());

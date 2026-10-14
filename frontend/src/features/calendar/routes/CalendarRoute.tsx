@@ -52,7 +52,7 @@ export function CalendarRoute() {
     const [monthPickerOpen, setMonthPickerOpen] = useState(false);
     const [yearPickerOpen, setYearPickerOpen] = useState(false);
     const [yearPickerStartYear, setYearPickerStartYear] = useState(
-        new Date().getFullYear() - 4,
+        () => new Date().getFullYear() - 4,
     );
     const [selectedEvent, setSelectedEvent] =
         useState<CalendarEventResponse | null>(null);
