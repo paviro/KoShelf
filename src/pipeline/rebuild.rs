@@ -12,8 +12,7 @@ use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
-use crate::source::FileFingerprint;
-use crate::source::scanner::{CollectedItem, MetadataLocation};
+use crate::source::scanner::CollectedItem;
 use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
@@ -68,40 +67,26 @@ pub async fn rebuild(
                 }
             } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
                 if LibraryItemFormat::is_metadata_path(path) {
-                    if let Some(book_path) =
-                        derive_book_path_from_metadata_path(path, &config.metadata_location, repo)
-                            .await
+                    if let Some(book_path) = derive_book_path_from_metadata_path(path, repo).await
                         && book_path.exists()
+                        && let Some(format) = LibraryItemFormat::from_path(&book_path)
                     {
-                        if metadata_fingerprint_matches_db(&book_path, repo).await {
-                            debug!(
-                                "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
-                                path
-                            );
-                        } else if let Some(format) = LibraryItemFormat::from_path(&book_path) {
-                            parse_items.push(CollectedItem {
-                                path: book_path,
-                                format,
-                                kobo_hints: None,
-                            });
-                        }
-                    }
-                } else if filename.ends_with(".sdr")
-                    && let Some(book_path) = derive_book_path_from_sdr_path(path)
-                    && book_path.exists()
-                {
-                    if metadata_fingerprint_matches_db(&book_path, repo).await {
-                        debug!(
-                            "Skipping re-ingest for {:?}: metadata fingerprint already matches DB",
-                            path
-                        );
-                    } else if let Some(format) = LibraryItemFormat::from_path(&book_path) {
                         parse_items.push(CollectedItem {
                             path: book_path,
                             format,
                             kobo_hints: None,
                         });
                     }
+                } else if filename.ends_with(".sdr")
+                    && let Some(book_path) = derive_book_path_from_sdr_path(path)
+                    && book_path.exists()
+                    && let Some(format) = LibraryItemFormat::from_path(&book_path)
+                {
+                    parse_items.push(CollectedItem {
+                        path: book_path,
+                        format,
+                        kobo_hints: None,
+                    });
                 }
             }
         }
@@ -244,34 +229,6 @@ pub async fn rebuild(
 
 // ── Fingerprint helpers ──────────────────────────────────────────────────
 
-/// Check whether the on-disk metadata fingerprint matches what's stored in the DB.
-///
-/// Returns `true` when the fingerprints match, indicating the change was already
-/// processed by a write handler and re-ingestion can be skipped.
-async fn metadata_fingerprint_matches_db(book_path: &Path, repo: &LibraryRepository) -> bool {
-    let book_str = book_path.to_string_lossy();
-    let stored = match repo.find_fingerprint_by_book_path(&book_str).await {
-        Ok(Some(fp)) => fp,
-        _ => return false,
-    };
-
-    let (meta_path, stored_size, stored_modified) = match (
-        &stored.metadata_path,
-        stored.metadata_size_bytes,
-        stored.metadata_modified_unix_ms,
-    ) {
-        (Some(p), Some(s), Some(m)) => (p.clone(), s, m),
-        _ => return false,
-    };
-
-    let disk = match FileFingerprint::capture(Path::new(&meta_path)) {
-        Ok(fp) => fp,
-        Err(_) => return false,
-    };
-
-    disk.size_bytes as i64 == stored_size && disk.modified_unix_ms as i64 == stored_modified
-}
-
 fn is_extensionless_path(path: &Path) -> bool {
     path.extension().is_none()
 }
@@ -287,46 +244,48 @@ fn requires_full_library_sync(accumulated_paths: &HashSet<PathBuf>, config: &Sit
             .iter()
             .any(|path| is_extensionless_path(path.as_path()));
 
-    kobo_db_changed || kobo_extensionless_changed
+    kobo_db_changed
+        || kobo_extensionless_changed
+        || accumulated_paths.iter().any(|path| {
+            config
+                .metadata_location
+                .central_paths()
+                .iter()
+                .any(|root| path.starts_with(root) || root.starts_with(path))
+        })
 }
 
 // ── Path derivation helpers ──────────────────────────────────────────────
 
 /// Derive the book file path from a KOReader metadata file path.
 ///
-/// For `InBookFolder`: `/library/Title.sdr/metadata.epub.lua` → `/library/Title.epub`
-/// For `DocSettings`/`HashDocSettings`: look up by metadata_path in DB fingerprints.
+/// First try the adjacent ebook regardless of configured central directories.
+/// Otherwise use the cached association; central events trigger full reconciliation.
 async fn derive_book_path_from_metadata_path(
     metadata_path: &Path,
-    metadata_location: &MetadataLocation,
     repo: &LibraryRepository,
 ) -> Option<PathBuf> {
-    match metadata_location {
-        MetadataLocation::InBookFolder => {
-            let filename = metadata_path.file_name()?.to_str()?;
-            let sdr_dir = metadata_path.parent()?;
-            let sdr_name = sdr_dir.file_name()?.to_str()?;
-            let book_stem = sdr_name.strip_suffix(".sdr")?;
-            let book_filename = LibraryItemFormat::book_filename_from_sidecar(book_stem, filename)?;
-            let grandparent = sdr_dir.parent()?;
-            Some(grandparent.join(book_filename))
-        }
-        MetadataLocation::DocSettings(_) | MetadataLocation::HashDocSettings(_) => {
-            let meta_str = metadata_path.to_string_lossy();
-            match repo.find_book_path_by_metadata_path(&meta_str).await {
-                Ok(Some(book_path)) => Some(PathBuf::from(book_path)),
-                Ok(None) => {
-                    debug!("No DB fingerprint for metadata path: {}", meta_str);
-                    None
-                }
-                Err(e) => {
-                    warn!(
-                        "Failed to look up book path for metadata {}: {}",
-                        meta_str, e
-                    );
-                    None
-                }
-            }
+    // Adjacent sources participate even when central directories are configured.
+    let adjacent = (|| {
+        let filename = metadata_path.file_name()?.to_str()?;
+        let filename = filename.strip_suffix(".old").unwrap_or(filename);
+        let sdr = metadata_path.parent()?;
+        let stem = sdr.file_name()?.to_str()?.strip_suffix(".sdr")?;
+        let filename = LibraryItemFormat::book_filename_from_sidecar(stem, filename)?;
+        let path = sdr.parent()?.join(filename);
+        path.is_file().then_some(path)
+    })();
+    if adjacent.is_some() {
+        return adjacent;
+    }
+    match repo
+        .find_book_path_by_metadata_path(&metadata_path.to_string_lossy())
+        .await
+    {
+        Ok(path) => path.map(PathBuf::from),
+        Err(e) => {
+            warn!("Failed to resolve metadata event: {}", e);
+            None
         }
     }
 }
@@ -365,7 +324,7 @@ fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{derive_book_path_from_sdr_path, requires_full_library_sync};
     use crate::app::config::SiteConfig;
     use crate::shelf::models::LibraryItemFormat;
@@ -375,7 +334,7 @@ mod tests {
     use std::collections::HashSet;
     use std::path::{Path, PathBuf};
 
-    fn test_config(output_dir: &Path, kobo_db_path: Option<PathBuf>) -> SiteConfig {
+    pub(crate) fn test_config(output_dir: &Path, kobo_db_path: Option<PathBuf>) -> SiteConfig {
         let mut runtime_data_policy =
             resolve_runtime_data_policy(&RuntimeDataPathOptions::default());
         runtime_data_policy.set_resolved_data_dir(output_dir.join("runtime"));
@@ -464,5 +423,40 @@ mod tests {
         std::fs::create_dir_all(&sdr_path).expect("sdr dir");
 
         assert_eq!(derive_book_path_from_sdr_path(&sdr_path), Some(book_path));
+    }
+    #[tokio::test]
+    async fn events_from_both_central_roots_and_new_adjacent_sources_are_resolved() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut config = test_config(dir.path(), None);
+        let doc = dir.path().join("doc");
+        let hash = dir.path().join("hash");
+        config.metadata_location = MetadataLocation::Central {
+            docsettings: doc.clone(),
+            hashdocsettings: hash.clone(),
+        };
+        for path in [
+            doc.join("new/Book.sdr/metadata.epub.lua"),
+            doc.join("new/Book.sdr/metadata.epub.lua.old"),
+            hash.join("aa/new.sdr/metadata.epub.lua"),
+            hash.join("aa/new.sdr/metadata.epub.lua.old"),
+            doc,
+            hash,
+        ] {
+            assert!(requires_full_library_sync(&HashSet::from([path]), &config));
+        }
+        let book = dir.path().join("Book.epub");
+        std::fs::write(&book, b"book").unwrap();
+        let repo = crate::store::sqlite::repo::tests::test_repo().await;
+        let adjacent = dir.path().join("Book.sdr/metadata.epub.lua");
+        assert_eq!(
+            super::derive_book_path_from_metadata_path(&adjacent, &repo).await,
+            Some(book.clone())
+        );
+        let backup = crate::source::koreader::lua_writer::backup_path(&adjacent);
+        assert!(LibraryItemFormat::is_metadata_path(&backup));
+        assert_eq!(
+            super::derive_book_path_from_metadata_path(&backup, &repo).await,
+            Some(book)
+        );
     }
 }

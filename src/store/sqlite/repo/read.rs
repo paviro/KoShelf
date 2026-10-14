@@ -38,7 +38,8 @@ impl LibraryRepository {
                 i.language, i.publisher, i.description, i.review_note,
                 COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages) as pages,
                 i.search_base_path, i.subjects_json, i.identifiers_json,
-                (f.metadata_path IS NOT NULL) AS has_metadata,
+                COALESCE(f.metadata_writable, 0) AS has_metadata,
+                f.metadata_revision, f.metadata_source,
                 i.partial_md5_checksum, i.reader_presentation
              FROM library_items i
              LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
@@ -50,7 +51,8 @@ impl LibraryRepository {
                 i.language, i.publisher, i.description, i.review_note,
                 COALESCE(i.doc_pages, i.parser_pages) as pages,
                 i.search_base_path, i.subjects_json, i.identifiers_json,
-                (f.metadata_path IS NOT NULL) AS has_metadata,
+                COALESCE(f.metadata_writable, 0) AS has_metadata,
+                f.metadata_revision, f.metadata_source,
                 i.partial_md5_checksum, i.reader_presentation
              FROM library_items i
              LEFT JOIN library_item_fingerprints f ON f.item_id = i.id
@@ -300,55 +302,6 @@ impl LibraryRepository {
         .await
         .context("Failed to find annotation write info")?;
         Ok(row)
-    }
-
-    /// Delete an annotation row and shift lua_index for remaining annotations.
-    pub async fn delete_annotation_and_shift(
-        &self,
-        item_id: &str,
-        annotation_id: &str,
-        lua_index: i32,
-    ) -> Result<()> {
-        let mut tx = self.pool.begin().await.context("begin tx")?;
-
-        sqlx::query("DELETE FROM library_annotations WHERE id = ?1 AND item_id = ?2")
-            .bind(annotation_id)
-            .bind(item_id)
-            .execute(&mut *tx)
-            .await
-            .context("delete annotation")?;
-
-        sqlx::query(
-            "UPDATE library_annotations SET lua_index = lua_index - 1 WHERE item_id = ?1 AND lua_index > ?2",
-        )
-        .bind(item_id)
-        .bind(lua_index)
-        .execute(&mut *tx)
-        .await
-        .context("shift lua_index after deletion")?;
-
-        tx.commit().await.context("commit annotation deletion")?;
-        Ok(())
-    }
-
-    /// Find the metadata sidecar path and fingerprint for an item.
-    ///
-    /// Returns `(metadata_path, metadata_size_bytes, metadata_modified_unix_ms)`.
-    /// Returns `None` if the item has no metadata sidecar or fingerprint data.
-    pub async fn find_metadata_fingerprint_by_item_id(
-        &self,
-        item_id: &str,
-    ) -> Result<Option<(String, i64, i64)>> {
-        let row: Option<(Option<String>, Option<i64>, Option<i64>)> = sqlx::query_as(
-            "SELECT metadata_path, metadata_size_bytes, metadata_modified_unix_ms
-             FROM library_item_fingerprints WHERE item_id = ?1",
-        )
-        .bind(item_id)
-        .fetch_optional(&self.pool)
-        .await
-        .context("Failed to find metadata fingerprint by item id")?;
-
-        Ok(row.and_then(|(path, size, modified)| Some((path?, size?, modified?))))
     }
 
     /// Find the file_path for an item by its canonical ID.

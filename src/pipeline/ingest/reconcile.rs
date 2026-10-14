@@ -2,7 +2,7 @@ use log::warn;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::pipeline::ingest::metadata::{MetadataIndices, locate_metadata_path};
+use crate::pipeline::ingest::metadata::MetadataIndices;
 use crate::pipeline::media;
 use crate::shelf::models::LibraryItemFormat;
 use crate::source::scanner::CollectedItem;
@@ -72,15 +72,29 @@ pub(super) fn build_library_sync_plan(
             }
         };
 
-        let current_metadata_path = if let Some(ref stored_meta) = fp.metadata_path {
-            Some(PathBuf::from(stored_meta))
-        } else {
-            fs_item_by_path
-                .get(&fp.book_path)
-                .map(|item| item.format)
-                .or_else(|| LibraryItemFormat::from_path(book_path))
-                .and_then(|fmt| locate_metadata_path(metadata_indices, book_path, fmt))
-        };
+        let resolution = fs_item_by_path.get(&fp.book_path).map(|item| {
+            metadata_indices.resolve(
+                book_path,
+                item.format,
+                &crate::source::koreader::calculate_partial_md5(book_path).unwrap_or_default(),
+                Some(&fp.item_id),
+            )
+        });
+        let current_metadata_path = resolution
+            .as_ref()
+            .and_then(|r| r.selected.as_ref())
+            .map(|s| s.path.clone());
+        // Re-evaluate every accepted capture, including content changes with equal stat data.
+        // The processor skips unchanged accepted captures before parsing the ebook.
+        if fp.metadata_path.is_some()
+            || resolution
+                .as_ref()
+                .is_some_and(|r| r.selected.is_some() || r.blocked)
+        {
+            push_existing_item(&mut plan.items_to_ingest, &fs_item_by_path, fp, book_path);
+            plan.changed += 1;
+            continue;
+        }
 
         let current_metadata_fp = match &current_metadata_path {
             Some(meta_path) => match FileFingerprint::capture_optional(meta_path) {
@@ -286,7 +300,7 @@ mod tests {
         let metadata_path = dir.path().join("Book.sdr").join("metadata.epub.lua");
         std::fs::create_dir_all(metadata_path.parent().expect("metadata parent"))
             .expect("metadata dir");
-        std::fs::write(&metadata_path, "return {}\n").expect("metadata write");
+        std::fs::write(&metadata_path, "return { annotations = {} }\n").expect("metadata write");
 
         let row = stored_row(
             "0123456789abcdef0123456789abcdef",

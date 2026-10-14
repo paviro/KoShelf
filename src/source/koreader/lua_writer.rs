@@ -57,6 +57,7 @@ impl LuaWriter {
     ///
     /// The mutation closure receives the root Lua table for targeted field
     /// changes. Field names and validation are the caller's responsibility.
+    #[cfg(test)]
     pub fn write(
         &self,
         metadata_path: &Path,
@@ -65,7 +66,32 @@ impl LuaWriter {
         // 1. Read
         let bytes = fs::read(metadata_path)
             .with_context(|| format!("Failed to read metadata file: {:?}", metadata_path))?;
-        let content = match String::from_utf8(bytes) {
+        self.write_bytes(metadata_path, &bytes, false, || Ok(()), mutate)
+    }
+
+    pub(crate) fn write_captured(
+        &self,
+        captured: &crate::source::metadata::CapturedMetadata,
+        mutate: impl FnOnce(&Lua, &Table) -> mlua::Result<()>,
+    ) -> Result<()> {
+        self.write_bytes(
+            &captured.primary_path,
+            &captured.bytes,
+            captured.is_backup,
+            || captured.verify(),
+            mutate,
+        )
+    }
+
+    fn write_bytes(
+        &self,
+        metadata_path: &Path,
+        bytes: &[u8],
+        restore_backup: bool,
+        verify: impl FnOnce() -> Result<()>,
+        mutate: impl FnOnce(&Lua, &Table) -> mlua::Result<()>,
+    ) -> Result<()> {
+        let content = match String::from_utf8(bytes.to_vec()) {
             Ok(content) => content,
             Err(error) => {
                 warn!(
@@ -100,7 +126,30 @@ impl LuaWriter {
         };
         let serialized = serialize_table(&table, &header)?;
 
+        if restore_backup {
+            // The selected backup remains untouched, including if staging or
+            // replacement fails. Never rotate a corrupt primary over it.
+            let parent = metadata_path.parent().context("metadata has no parent")?;
+            let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+            let permissions = match fs::metadata(metadata_path) {
+                Ok(metadata) => metadata.permissions(),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    fs::metadata(backup_path(metadata_path))?.permissions()
+                }
+                Err(error) => return Err(error.into()),
+            };
+            temporary.as_file().set_permissions(permissions)?;
+            temporary.write_all(serialized.as_bytes())?;
+            temporary.as_file().sync_all()?;
+            verify()?;
+            temporary.persist(metadata_path).map_err(|e| e.error)?;
+            #[cfg(unix)]
+            File::open(parent)?.sync_all()?;
+            return Ok(());
+        }
+
         // 4. Backup rotate
+        verify()?;
         let directory_updated = backup_rotate(metadata_path)?;
 
         // 5. Write + fsync (restore backup on failure to avoid data loss)
@@ -580,5 +629,161 @@ mod tests {
             backup_path(p),
             std::path::PathBuf::from("/tmp/metadata.epub.lua.old")
         );
+    }
+}
+
+#[cfg(test)]
+mod captured_write_tests {
+    use super::*;
+    use crate::source::metadata::{CapturedMetadata, MetadataChanged, SourceKind};
+
+    #[test]
+    fn external_change_during_mutation_is_not_overwritten_or_backed_up() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("metadata.epub.lua");
+        fs::write(&path, "return {rating=1}").unwrap();
+        let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+        let result = LuaWriter::new().write_captured(&captured, |_lua, table| {
+            fs::write(&path, "return {rating=3}").map_err(mlua::Error::external)?;
+            // Restoring the timestamp must not hide the concurrent content change.
+            File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_modified(
+                    std::time::UNIX_EPOCH
+                        + std::time::Duration::from_nanos(
+                            u64::try_from(captured.modified_ns).unwrap(),
+                        ),
+                ))
+                .unwrap();
+            table.set("rating", 5)
+        });
+        assert!(result.unwrap_err().is::<MetadataChanged>());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "return {rating=3}");
+        assert!(!backup_path(&path).exists());
+    }
+    #[test]
+    fn restoring_backup_preserves_it_and_replaces_missing_or_invalid_primary() {
+        for invalid in [None, Some("return {}"), Some("broken lua")] {
+            let dir = tempfile::tempdir().unwrap();
+            let primary = dir.path().join("metadata.epub.lua");
+            let backup = backup_path(&primary);
+            if let Some(contents) = invalid {
+                fs::write(&primary, contents).unwrap();
+            }
+            fs::write(&backup, "return {rating=2}").unwrap();
+            let captured = CapturedMetadata::capture(&backup, SourceKind::Adjacent).unwrap();
+            LuaWriter::new()
+                .write_captured(&captured, |_, table| table.set("rating", 5))
+                .unwrap();
+            assert_eq!(fs::read_to_string(&backup).unwrap(), "return {rating=2}");
+            let primary_content = fs::read_to_string(&primary).unwrap();
+            assert!(primary_content.contains("[\"rating\"] = 5"));
+        }
+    }
+
+    #[test]
+    fn restoration_aborts_without_touching_files_when_destination_or_backup_changes() {
+        for change_backup in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let primary = dir.path().join("metadata.epub.lua");
+            let backup = backup_path(&primary);
+            fs::write(&backup, "return {rating=2}").unwrap();
+            let captured = CapturedMetadata::capture(&backup, SourceKind::Adjacent).unwrap();
+            let result = LuaWriter::new().write_captured(&captured, |_, table| {
+                fs::write(
+                    if change_backup { &backup } else { &primary },
+                    "return {rating=3}",
+                )
+                .unwrap();
+                table.set("rating", 5)
+            });
+            assert!(result.unwrap_err().is::<MetadataChanged>());
+            assert_eq!(
+                fs::read_to_string(&backup).unwrap(),
+                if change_backup {
+                    "return {rating=3}"
+                } else {
+                    "return {rating=2}"
+                }
+            );
+            if change_backup {
+                assert!(!primary.exists());
+            } else {
+                assert_eq!(fs::read_to_string(&primary).unwrap(), "return {rating=3}");
+            }
+            assert_eq!(
+                fs::read_dir(dir.path()).unwrap().count(),
+                if change_backup { 1 } else { 2 }
+            );
+        }
+    }
+
+    #[test]
+    fn failed_backup_mutation_leaves_primary_and_backup_unchanged() {
+        let dir = tempfile::tempdir().unwrap();
+        let primary = dir.path().join("metadata.epub.lua");
+        let backup = backup_path(&primary);
+        fs::write(&primary, "invalid").unwrap();
+        fs::write(&backup, "return {rating=2}").unwrap();
+        let captured = CapturedMetadata::capture(&backup, SourceKind::Adjacent).unwrap();
+        assert!(
+            LuaWriter::new()
+                .write_captured(&captured, |_, _| Err(mlua::Error::runtime(
+                    "injected failure"
+                )))
+                .is_err()
+        );
+        assert_eq!(fs::read_to_string(&primary).unwrap(), "invalid");
+        assert_eq!(fs::read_to_string(&backup).unwrap(), "return {rating=2}");
+    }
+
+    #[test]
+    fn failed_atomic_replacement_keeps_backup_and_cleans_temporary_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let primary = dir.path().join("metadata.epub.lua");
+        let backup = backup_path(&primary);
+        fs::create_dir(&primary).unwrap(); // Force persist() to fail.
+        fs::write(&backup, "return {rating=2}").unwrap();
+        let result = LuaWriter::new().write_bytes(
+            &primary,
+            b"return {rating=2}",
+            true,
+            || Ok(()),
+            |_, table| table.set("rating", 5),
+        );
+        assert!(result.is_err());
+        assert!(primary.is_dir());
+        assert_eq!(fs::read_to_string(&backup).unwrap(), "return {rating=2}");
+        assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 2);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn restoration_preserves_primary_or_backup_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        for existing_primary in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let primary = dir.path().join("metadata.epub.lua");
+            let backup = backup_path(&primary);
+            fs::write(&backup, "return {rating=2}").unwrap();
+            fs::set_permissions(&backup, fs::Permissions::from_mode(0o640)).unwrap();
+            if existing_primary {
+                fs::write(&primary, "invalid").unwrap();
+                fs::set_permissions(&primary, fs::Permissions::from_mode(0o644)).unwrap();
+            }
+            let captured = CapturedMetadata::capture(&backup, SourceKind::Adjacent).unwrap();
+            LuaWriter::new()
+                .write_captured(&captured, |_, table| table.set("rating", 5))
+                .unwrap();
+            assert_eq!(
+                fs::metadata(&primary).unwrap().permissions().mode() & 0o777,
+                if existing_primary { 0o644 } else { 0o640 }
+            );
+            assert_eq!(
+                fs::metadata(&backup).unwrap().permissions().mode() & 0o777,
+                0o640
+            );
+        }
     }
 }

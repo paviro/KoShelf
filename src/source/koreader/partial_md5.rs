@@ -45,9 +45,7 @@ pub fn calculate_partial_md5(path: &Path) -> Result<String> {
         };
 
         // Seek to position
-        if file.seek(SeekFrom::Start(position)).is_err() {
-            break;
-        }
+        file.seek(SeekFrom::Start(position))?;
 
         // Read sample
         match file.read(&mut buffer) {
@@ -55,7 +53,7 @@ pub fn calculate_partial_md5(path: &Path) -> Result<String> {
             Ok(bytes_read) => {
                 hasher.consume(&buffer[..bytes_read]);
             }
-            Err(_) => break,
+            Err(error) => return Err(error.into()),
         }
     }
 

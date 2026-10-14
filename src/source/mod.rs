@@ -10,3 +10,5 @@ pub(crate) mod sqlite_snapshot;
 pub use fingerprints::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };
+
+pub(crate) mod metadata;

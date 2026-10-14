@@ -466,3 +466,6 @@ page-activity = Atividade de Páginas
     .legend-bookmark = Marcador
     .legend-chapter = Capítulo
     .info = Os números de página são afetados pelas opções de formatação atuais do documento. Ao contrário de outras partes do KoShelf, esta vista não suporta escalonamento sintético de páginas.
+
+metadata-edit-stale = Os metadados mudaram durante a edição. O rascunho foi preservado. Feche este editor e reveja os dados atuais antes de voltar a editar.
+metadata-backup-edit = Estes dados foram recuperados de uma cópia de segurança do KOReader. Guardar uma alteração irá restaurar o ficheiro principal de metadados.

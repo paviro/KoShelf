@@ -149,7 +149,6 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
         Some(reading_data_store.clone()),
         Some(update_notifier.clone()),
         Some(state.repo.clone()),
-        write_coordinator.as_ref().map(|wc| wc.recent_writes()),
     );
 
     let web_server = WebServer::new(WebServerOptions {

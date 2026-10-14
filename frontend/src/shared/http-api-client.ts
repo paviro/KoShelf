@@ -220,10 +220,17 @@ export class HttpApiClient implements ApiClient {
         return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
     }
 
-    async updateItem(id: string, payload: UpdateItemPayload): Promise<void> {
+    async updateItem(
+        id: string,
+        payload: UpdateItemPayload,
+        revision: string,
+    ): Promise<void> {
         await fetchJson(`/api/items/${encodeURIComponent(id)}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Metadata-Revision': revision,
+            },
             body: JSON.stringify(payload),
         });
     }
@@ -232,12 +239,16 @@ export class HttpApiClient implements ApiClient {
         itemId: string,
         annotationId: string,
         payload: UpdateAnnotationPayload,
+        revision: string,
     ): Promise<void> {
         await fetchJson(
             `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
             {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Metadata-Revision': revision,
+                },
                 body: JSON.stringify(payload),
             },
         );
@@ -246,10 +257,11 @@ export class HttpApiClient implements ApiClient {
     async deleteAnnotation(
         itemId: string,
         annotationId: string,
+        revision: string,
     ): Promise<void> {
         await fetchJson(
             `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
-            { method: 'DELETE' },
+            { method: 'DELETE', headers: { 'X-Metadata-Revision': revision } },
         );
     }
 

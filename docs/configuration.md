@@ -81,8 +81,8 @@ These flags are shared by both `serve` and `export`:
 **Library source:**
 
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
-- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, mutually exclusive with `--hashdocsettings-path`)
-- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, mutually exclusive with `--docsettings-path`)
+- `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, may be combined with `--hashdocsettings-path`)
+- `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, may be combined with `--docsettings-path`)
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided). Can be specified multiple times to merge stats from several devices that don't sync their statistics database — see [Reading Statistics from Multiple Devices](koreader-setup.md#reading-statistics-from-multiple-devices). The `KOSHELF_STATISTICS_DB` environment variable accepts a single path only; use repeated flags or the config file for multiple databases.
 - `--kobo-db`: Path to Kobo's `KoboReader.sqlite` database. Used to discover matched extensionless kepub files and parse them as EPUBs. Requires `--library-path`.
 - `--include-unread`: Include unread items (files without KoReader metadata)
@@ -200,3 +200,35 @@ koshelf set-password --data-path ~/koshelf-data --overwrite
 # Rotate to a generated random password
 koshelf set-password --data-path ~/koshelf-data --overwrite --random
 ```
+
+### Migrating KOReader metadata locations
+
+KOReader supports three metadata locations: adjacent `.sdr` folders, `docsettings`, and `hashdocsettings`. It changes locations gradually as books are saved. KoShelf always considers adjacent sidecars, plus whichever central directories you explicitly configure. To support migration among all three locations:
+
+```sh
+koshelf serve --library-path ~/Books \
+  --docsettings-path ~/KOReaderSettings/docsettings \
+  --hashdocsettings-path ~/KOReaderSettings/hashdocsettings \
+  --data-path ~/koshelf-data
+```
+
+The same settings can be supplied through `KOSHELF_DOCSETTINGS_PATH` and `KOSHELF_HASHDOCSETTINGS_PATH`, or together in TOML:
+
+```toml
+[library]
+paths = ["/home/me/Books"]
+docsettings_path = "/home/me/KOReaderSettings/docsettings"
+hashdocsettings_path = "/home/me/KOReaderSettings/hashdocsettings"
+```
+
+Each setting retains its normal CLI/environment/TOML precedence. KoShelf always searches adjacent `.sdr` folders and only searches central directories that you explicitly configure; it never infers an unconfigured central directory. Without either central setting, discovery remains adjacent-only. Restart with the changed configuration to switch configured directories.
+
+Modern sidecar selection is checked against [KOReader v2026.07.1](https://github.com/koreader/koreader/blob/v2026.07.1/frontend/docsettings.lua). KoShelf intentionally preserves invalid files and old metadata locations rather than deleting or migrating them as KOReader can on open/save. Legacy sidecars, history files, and `.kpdfview` files are outside this compatibility scope.
+
+For each ebook, KoShelf considers valid primary files and their `.old` backups using KOReader's ordering. Candidates sort newest first using whole-second timestamps, matching KOReader’s LuaFileSystem; ties prefer adjacent primary/backup, then docsettings primary/backup, then hashdocsettings primary/backup. If a backup is newer than its primary, the primary receives the backup's ranking timestamp so it is tried first. Invalid or empty candidates are skipped without deleting them. Hash lookup uses the ebook's calculated checksum and expected metadata filename. Ambiguous associations and conflicting identities block editing rather than choosing arbitrarily. Legacy history files and `.kpdfview` files are not imported.
+
+When the selected file disappears or becomes invalid, KoShelf accepts the next valid candidate, including an older primary or backup. Valid metadata without annotations clears previous annotations. Only when no valid source remains does the disposable cache retain its last reading data with editing disabled. Raw metadata files are not stored in SQLite; deleting or resetting the cache loses this last-known state.
+
+Reading a backup does not restore or modify files. The editor identifies backup-derived data; an explicit edit restores the primary in the same directory using the backup's contents plus the requested change. The backup remains untouched. A changed source, backup, or destination causes a conflict and requires reviewing refreshed data before another edit. Open editors preserve drafts and prevent saving against a revision that changed in the background. Backup file events trigger reevaluation just like primary file events.
+
+Unavailable central directories do not stop library watching. KoShelf watches the nearest available ancestor and retries central watch registration every five seconds; restored directories trigger reconciliation.

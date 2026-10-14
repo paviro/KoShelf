@@ -6,6 +6,8 @@ import { Button } from '../../../shared/ui/button/Button';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
 import { EditSectionButton } from '../components/EditSectionButton';
 import { StarRatingInput } from '../components/StarRatingInput';
+import { usePendingEdit } from '../hooks/usePendingEdit';
+import { useEditSnapshot } from '../hooks/useEditSnapshot';
 import { useEditToggle } from '../hooks/useEditToggle';
 import { normalizeRating } from '../lib/library-detail-formatters';
 
@@ -15,8 +17,9 @@ type LibraryReviewSectionProps = {
     visible: boolean;
     onToggle: () => void;
     canWrite?: boolean;
-    onSave?: (note: string, rating: number) => void;
-    onDelete?: () => void;
+    metadataRevision?: string | null;
+    onSave?: (note: string, rating: number) => void | Promise<void>;
+    onDelete?: () => void | Promise<void>;
     saving?: boolean;
     guardedAction?: (action: () => void) => void;
 };
@@ -27,6 +30,7 @@ export function LibraryReviewSection({
     visible,
     onToggle,
     canWrite = false,
+    metadataRevision = null,
     onSave,
     onDelete,
     saving = false,
@@ -39,26 +43,18 @@ export function LibraryReviewSection({
         toggle: toggleEditing,
         close: closeEditing,
     } = useEditToggle(guardedAction);
+    const session = useEditSnapshot(
+        { onSave, onDelete },
+        metadataRevision,
+        editing,
+    );
+    const stale = session.stale || !canWrite;
+    const { pending, run } = usePendingEdit();
     const [draftNote, setDraftNote] = useState(note);
     const [draftRating, setDraftRating] = useState(normalizedRating);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const hasNote = note.trim().length > 0;
-
-    useEffect(() => {
-        if (!editing) {
-            return;
-        }
-
-        const frameId = window.requestAnimationFrame(() => {
-            setDraftNote(note);
-            setDraftRating(normalizedRating);
-        });
-
-        return () => {
-            window.cancelAnimationFrame(frameId);
-        };
-    }, [editing, note, normalizedRating]);
 
     useEffect(() => {
         if (editing && textareaRef.current) {
@@ -71,16 +67,20 @@ export function LibraryReviewSection({
 
     const handleSave = () => {
         const trimmed = draftNote.trim();
-        onSave?.(trimmed, draftRating);
-        closeEditing();
+        if (stale) return;
+        void run(
+            () => session.value.onSave?.(trimmed, draftRating),
+            closeEditing,
+        );
     };
 
     const handleDelete = () => {
-        onDelete?.();
-        closeEditing();
+        if (stale) return;
+        void run(() => session.value.onDelete?.(), closeEditing);
     };
 
     const handleToggleEditing = () => {
+        if (pending || saving) return;
         if (!editing) {
             setDraftNote(note);
             setDraftRating(normalizedRating);
@@ -110,7 +110,7 @@ export function LibraryReviewSection({
                 </div>
             )}
 
-            {canWrite && visible && (
+            {(canWrite || editing) && visible && (
                 <EditSectionButton
                     editing={editing}
                     onToggle={handleToggleEditing}
@@ -118,6 +118,9 @@ export function LibraryReviewSection({
             )}
         </div>
     );
+
+    if (!editing && !hasNote && normalizedRating === 0 && !canWrite)
+        return null;
 
     return (
         <CollapsibleSection
@@ -130,11 +133,15 @@ export function LibraryReviewSection({
             contentClassName="mb-8"
             controls={controls}
         >
+            {editing && stale && (
+                <p role="status">{translation.get('metadata-edit-stale')}</p>
+            )}
             {editing ? (
                 <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg overflow-hidden">
                     <div className="p-6 space-y-4">
                         <StarRatingInput
                             value={draftRating}
+                            disabled={saving || pending}
                             onChange={setDraftRating}
                             size="md"
                         />
@@ -142,6 +149,7 @@ export function LibraryReviewSection({
                         <textarea
                             ref={textareaRef}
                             value={draftNote}
+                            disabled={saving || pending}
                             onChange={(e) => setDraftNote(e.target.value)}
                             rows={5}
                             className="w-full rounded-lg border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-800 text-gray-900 dark:text-white p-4 text-base leading-relaxed focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-y placeholder:text-gray-400 dark:placeholder:text-dark-500"
@@ -157,7 +165,7 @@ export function LibraryReviewSection({
                                     color="danger"
                                     icon={LuTrash2}
                                     onClick={handleDelete}
-                                    disabled={saving}
+                                    disabled={saving || pending || stale}
                                 >
                                     {translation.get('delete-review')}
                                 </Button>
@@ -167,11 +175,14 @@ export function LibraryReviewSection({
                             <Button
                                 color="secondary"
                                 onClick={closeEditing}
-                                disabled={saving}
+                                disabled={saving || pending}
                             >
                                 {translation.get('cancel')}
                             </Button>
-                            <Button onClick={handleSave} disabled={saving}>
+                            <Button
+                                onClick={handleSave}
+                                disabled={saving || pending || stale}
+                            >
                                 {translation.get('save')}
                             </Button>
                         </div>

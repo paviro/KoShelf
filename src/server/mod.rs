@@ -14,7 +14,6 @@ use log::info;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -30,15 +29,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 #[derive(Clone, Default)]
 pub struct WriteCoordinator {
     locks: Arc<DashMap<PathBuf, Arc<Mutex<()>>>>,
-    recent_writes: Arc<DashMap<PathBuf, Instant>>,
 }
-
-/// Shared map of recently-written metadata paths to the time they were written.
-///
-/// Write handlers insert paths after modifying a metadata file; the file
-/// watcher checks timestamps to suppress self-triggered events within a
-/// suppression window.
-pub type RecentWrites = Arc<DashMap<PathBuf, Instant>>;
 
 impl WriteCoordinator {
     pub fn new() -> Self {
@@ -51,23 +42,6 @@ impl WriteCoordinator {
             .entry(path.to_path_buf())
             .or_insert_with(|| Arc::new(Mutex::new(())))
             .clone()
-    }
-
-    /// Mark a metadata path as recently written by a write handler.
-    pub fn mark_written(&self, path: &Path) {
-        self.recent_writes
-            .insert(path.to_path_buf(), Instant::now());
-    }
-
-    /// Remove a path from the recent-writes map so the file watcher will
-    /// pick up the change and trigger re-ingestion.
-    pub fn unmark_written(&self, path: &Path) {
-        self.recent_writes.remove(path);
-    }
-
-    /// Get a shared handle to the recent-writes map for the file watcher.
-    pub fn recent_writes(&self) -> RecentWrites {
-        self.recent_writes.clone()
     }
 }
 

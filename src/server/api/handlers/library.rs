@@ -7,18 +7,17 @@ use crate::server::api::params::{
 use crate::server::api::responses::common::ApiResponse;
 use crate::server::api::responses::error::ApiErrorCode;
 use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
-use crate::source::FileFingerprint;
-use crate::source::koreader::{lua_writer, mutations};
+use crate::source::koreader::mutations;
+use crate::source::metadata::{CapturedMetadata, MetadataIndices};
 use axum::{
     Json,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
 use chrono::{Local, TimeZone, Utc};
 use log::warn;
 use serde::{Deserialize, Deserializer};
-use std::path::PathBuf;
 use tokio::sync::OwnedMutexGuard;
 
 const VALID_COLORS: &[&str] = &[
@@ -64,6 +63,7 @@ pub(crate) async fn item_detail(
     Path(id): Path<String>,
     Query(detail_query): Query<DetailQuery>,
 ) -> ApiResult<impl IntoResponse> {
+    let _guard = state.library_repo.metadata_guard().await;
     let includes = parse_include(detail_query.include.as_deref())?;
 
     let query = LibraryDetailQuery::new(id, includes);
@@ -163,131 +163,149 @@ pub(crate) struct UpdateAnnotationRequest {
 //
 // Encapsulates the lock → verify → … → refresh → publish contract shared by
 // all write handlers.  Each handler validates input, then calls
-// `WriteContext::prepare` to acquire the per-file lock and verify the
-// fingerprint, performs its mutation + DB sync, and finally calls `finish`.
+// `WriteContext::prepare` to acquire metadata/file locks and verify the
+// revision, performs its mutation, and finally calls `finish` to refresh the cache.
 
-/// Holds the per-file write lock and metadata path for the duration of a
-/// write operation.  The lock is released when this struct is dropped.
+/// Holds the metadata and per-file write locks alongside the captured source.
+/// Both locks are released when this context is dropped.
 struct WriteContext {
-    metadata_path: PathBuf,
+    captured: CapturedMetadata,
     item_id: String,
     _guard: OwnedMutexGuard<()>,
+    _file_guard: OwnedMutexGuard<()>,
 }
 
 impl WriteContext {
-    /// Resolve metadata, acquire per-file lock, verify fingerprint.
-    async fn prepare(state: &ServerState, item_id: &str) -> ApiResult<Self> {
-        let coordinator = state
-            .write_coordinator
-            .as_ref()
-            .ok_or_else(ApiResponseError::not_found)?;
-
-        let (metadata_path, db_size, db_modified) = {
-            let (path, size, modified) = state
-                .library_repo
-                .find_metadata_fingerprint_by_item_id(item_id)
-                .await
-                .map_err(|e| {
-                    warn!("Failed to resolve metadata for {}: {}", item_id, e);
-                    ApiResponseError::internal_server_error()
-                })?
-                .ok_or_else(ApiResponseError::not_found)?;
-            (PathBuf::from(path), size, modified)
-        };
-
-        let lock = coordinator.lock_for(&metadata_path);
-        let guard = lock.lock_owned().await;
-
-        // Safety net: if a prior write panicked between backup-rotate and the
-        // final write, the primary file may be missing while the .old exists.
-        if !metadata_path.exists() {
-            let old_path = lua_writer::backup_path(&metadata_path);
-            if old_path.exists() {
-                let _ = std::fs::rename(&old_path, &metadata_path);
-                warn!("Restored backup for {:?}", metadata_path);
-            }
+    async fn prepare(state: &ServerState, item_id: &str, headers: &HeaderMap) -> ApiResult<Self> {
+        if state.write_coordinator.is_none() {
+            return Err(ApiResponseError::not_found());
         }
-
-        let disk = FileFingerprint::capture(&metadata_path).map_err(|e| {
-            warn!("Failed to stat metadata file {:?}: {}", metadata_path, e);
-            ApiResponseError::internal_server_error()
-        })?;
-
-        // FileFingerprint uses u64; SQLite stores i64. Cast is lossless for realistic values.
-        if disk.size_bytes as i64 != db_size || disk.modified_unix_ms as i64 != db_modified {
+        let expected = headers
+            .get("X-Metadata-Revision")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| {
+                ApiResponseError::bad_request_with_message(
+                    ApiErrorCode::InvalidQuery,
+                    "X-Metadata-Revision is required",
+                )
+            })?;
+        let guard = state.library_repo.metadata_guard().await;
+        let repo = &state.library_repo;
+        let saved = repo
+            .metadata_provenance(item_id)
+            .await
+            .map_err(internal_metadata_error)?;
+        let path = repo
+            .find_book_path_by_id(item_id)
+            .await
+            .map_err(internal_metadata_error)?
+            .ok_or_else(ApiResponseError::not_found)?;
+        let detail = repo
+            .get_item(item_id)
+            .await
+            .map_err(internal_metadata_error)?
+            .ok_or_else(ApiResponseError::not_found)?;
+        let format = crate::shelf::models::LibraryItemFormat::from_path(std::path::Path::new(
+            &format!("book.{}", detail.format),
+        ))
+        .ok_or_else(ApiResponseError::not_found)?;
+        let checksum = crate::source::koreader::calculate_partial_md5(std::path::Path::new(&path))
+            .map_err(internal_metadata_error)?;
+        let indices =
+            MetadataIndices::new(&repo.metadata_location()).map_err(internal_metadata_error)?;
+        let resolved = indices.resolve(
+            std::path::Path::new(&path),
+            format,
+            &checksum,
+            Some(item_id),
+        );
+        for issue in &resolved.issues {
+            warn!("{}: {}", item_id, issue);
+        }
+        let current = resolved.selected;
+        let Some(captured) = current else {
+            repo.set_metadata_writable(item_id, false)
+                .await
+                .map_err(internal_metadata_error)?;
+            state.update_notifier.publish(Utc::now().to_rfc3339());
             return Err(ApiResponseError::conflict(
-                "metadata file was modified externally; re-fetch and retry",
+                "no current valid metadata source; editing is blocked",
+            ));
+        };
+        if saved
+            .as_ref()
+            .is_none_or(|s| s.revision != captured.revision)
+        {
+            crate::pipeline::ingest::refresh_capture(
+                repo,
+                item_id,
+                &captured,
+                &crate::shelf::time_config::TimeConfig::new(state.timezone, 0),
+            )
+            .await
+            .map_err(internal_metadata_error)?;
+            state.update_notifier.publish(Utc::now().to_rfc3339());
+            return Err(ApiResponseError::conflict(
+                "metadata source changed; re-fetch before editing",
             ));
         }
-
+        if expected != captured.revision {
+            return Err(ApiResponseError::conflict(
+                "metadata revision is stale; re-fetch before editing",
+            ));
+        }
+        let file_guard = state
+            .write_coordinator
+            .as_ref()
+            .expect("writeback enabled")
+            .lock_for(&captured.primary_path)
+            .lock_owned()
+            .await;
+        captured
+            .verify()
+            .map_err(|_| ApiResponseError::conflict("metadata changed; re-fetch before editing"))?;
         Ok(Self {
-            metadata_path,
+            captured,
             item_id: item_id.to_string(),
             _guard: guard,
+            _file_guard: file_guard,
         })
     }
 
-    /// Mark the path as recently written, refresh the DB fingerprint, and
-    /// publish an SSE notification.
-    ///
-    /// Must be called while the write lock is still held (i.e. before this
-    /// struct is dropped).
-    ///
-    /// When `db_ok` is false (the DB writeback failed), the file watcher is
-    /// left unsuppressed so it can detect the Lua change, re-ingest, and
-    /// publish its own SSE with correct data.
-    async fn finish(&self, state: &ServerState, db_ok: bool) {
-        if !db_ok {
-            // Let the file watcher detect the Lua change and re-ingest.
-            return;
+    async fn finish(&self, state: &ServerState) -> ApiResult<()> {
+        let result = async {
+            let captured =
+                CapturedMetadata::capture(&self.captured.primary_path, self.captured.kind)?;
+            crate::pipeline::ingest::refresh_capture(
+                &state.library_repo,
+                &self.item_id,
+                &captured,
+                &crate::shelf::time_config::TimeConfig::new(state.timezone, 0),
+            )
+            .await
         }
-
-        // Tell the file watcher to ignore the filesystem event we just caused.
-        if let Some(ref coordinator) = state.write_coordinator {
-            coordinator.mark_written(&self.metadata_path);
-        }
-
-        let fp_ok = match FileFingerprint::capture(&self.metadata_path) {
-            Ok(fp) => state
-                .library_repo
-                .update_metadata_fingerprint(
-                    &self.item_id,
-                    fp.size_bytes as i64,
-                    fp.modified_unix_ms as i64,
-                )
-                .await
-                .map_err(|e| {
-                    warn!(
-                        "Failed to update fingerprint after write for {}: {}",
-                        self.item_id, e
-                    );
-                })
-                .is_ok(),
-            Err(e) => {
-                warn!(
-                    "Failed to capture fingerprint after write for {}: {}",
-                    self.item_id, e
-                );
-                false
-            }
-        };
-
-        if fp_ok {
-            state.update_notifier.publish(Utc::now().to_rfc3339());
-        } else {
-            // Undo suppression so the file watcher can self-heal.
-            if let Some(ref coordinator) = state.write_coordinator {
-                coordinator.unmark_written(&self.metadata_path);
-            }
-        }
+        .await;
+        // No event suppression: failed cache updates must be recoverable by ingestion.
+        state.update_notifier.publish(Utc::now().to_rfc3339());
+        result.map_err(internal_metadata_error)
     }
 }
 
-// ── Write handlers ────────────────────────────────────────────────────────
+fn internal_metadata_error(error: anyhow::Error) -> ApiResponseError {
+    if error.is::<crate::source::metadata::MetadataChanged>() {
+        return ApiResponseError::conflict(
+            "metadata changed before write; re-fetch before editing",
+        );
+    }
+    warn!("Metadata operation failed: {}", error);
+    ApiResponseError::internal_server_error()
+}
 
 pub(crate) async fn update_item(
     State(state): State<ServerState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
     Json(body): Json<UpdateItemRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if let Patch::Value(rating) = body.rating
@@ -321,10 +339,10 @@ pub(crate) async fn update_item(
     };
 
     let modified_date = now_in_tz(state.timezone.as_ref(), "%Y-%m-%d");
-    let ctx = WriteContext::prepare(&state, &id).await?;
+    let ctx = WriteContext::prepare(&state, &id, &headers).await?;
 
     mutations::write_item_metadata(
-        &ctx.metadata_path,
+        &ctx.captured,
         review_note.as_ref().map(|o| o.as_deref()),
         rating,
         status.as_deref(),
@@ -332,28 +350,17 @@ pub(crate) async fn update_item(
     )
     .map_err(|e| {
         warn!("Failed to write metadata for item {}: {}", id, e);
-        ApiResponseError::internal_server_error()
+        internal_metadata_error(e)
     })?;
 
-    let db_ok = state
-        .library_repo
-        .update_item_writeback_fields(
-            &id,
-            review_note.as_ref().map(|o| o.as_deref()),
-            rating,
-            status.as_deref(),
-        )
-        .await
-        .map_err(|e| warn!("Failed to update DB after item write {}: {}", id, e))
-        .is_ok();
-
-    ctx.finish(&state, db_ok).await;
+    ctx.finish(&state).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub(crate) async fn update_annotation(
     State(state): State<ServerState>,
     Path((id, annotation_id)): Path<(String, String)>,
+    headers: HeaderMap,
     Json(body): Json<UpdateAnnotationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if let Some(ref color) = body.color
@@ -373,6 +380,8 @@ pub(crate) async fn update_annotation(
             format!("drawer must be one of: {}", VALID_DRAWERS.join(", ")),
         ));
     }
+
+    let ctx = WriteContext::prepare(&state, &id, &headers).await?;
 
     let (lua_index, had_note) = state
         .library_repo
@@ -400,10 +409,8 @@ pub(crate) async fn update_annotation(
         None
     };
 
-    let ctx = WriteContext::prepare(&state, &id).await?;
-
     mutations::write_annotation_metadata(
-        &ctx.metadata_path,
+        &ctx.captured,
         lua_index,
         note.as_ref().map(|o| o.as_deref()),
         body.color.as_deref(),
@@ -415,36 +422,21 @@ pub(crate) async fn update_annotation(
             "Failed to write annotation {} for item {}: {}",
             annotation_id, id, e
         );
-        ApiResponseError::internal_server_error()
+        internal_metadata_error(e)
     })?;
 
-    let db_ok = state
-        .library_repo
-        .update_annotation_writeback_fields(
-            &annotation_id,
-            note.as_ref().map(|o| o.as_deref()),
-            body.color.as_deref(),
-            body.drawer.as_deref(),
-            datetime_updated.as_deref(),
-        )
-        .await
-        .map_err(|e| {
-            warn!(
-                "Failed to update DB after annotation write {}: {}",
-                annotation_id, e
-            );
-        })
-        .is_ok();
-
-    ctx.finish(&state, db_ok).await;
+    ctx.finish(&state).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub(crate) async fn delete_annotation(
     State(state): State<ServerState>,
     Path((id, annotation_id)): Path<(String, String)>,
+    headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let (lua_index, had_note) = state
+    let ctx = WriteContext::prepare(&state, &id, &headers).await?;
+
+    let (lua_index, _had_note) = state
         .library_repo
         .find_annotation_write_info(&id, &annotation_id)
         .await
@@ -454,39 +446,386 @@ pub(crate) async fn delete_annotation(
         })?
         .ok_or_else(ApiResponseError::not_found)?;
 
-    let is_highlight = had_note.is_some(); // Some(_) = has drawer = highlight
-
-    let ctx = WriteContext::prepare(&state, &id).await?;
-
-    mutations::delete_annotation(&ctx.metadata_path, lua_index).map_err(|e| {
+    mutations::delete_annotation(&ctx.captured, lua_index).map_err(|e| {
         warn!(
             "Failed to delete annotation {} for item {}: {}",
             annotation_id, id, e
         );
-        ApiResponseError::internal_server_error()
+        internal_metadata_error(e)
     })?;
 
-    // Remove from DB and shift lua_index values for subsequent annotations.
-    // The write lock is held through this to keep the Lua file and DB in sync.
-    state
-        .library_repo
-        .delete_annotation_and_shift(&id, &annotation_id, lua_index)
-        .await
-        .map_err(|e| {
-            warn!(
-                "Failed to update DB after deleting annotation {}: {}",
-                annotation_id, e
-            );
-            ApiResponseError::internal_server_error()
-        })?;
-
-    let db_ok = state
-        .library_repo
-        .decrement_annotation_count(&id, is_highlight)
-        .await
-        .map_err(|e| warn!("Failed to decrement annotation count for {}: {}", id, e))
-        .is_ok();
-
-    ctx.finish(&state, db_ok).await;
+    ctx.finish(&state).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod metadata_tests {
+    use super::*;
+    use crate::source::metadata::SourceKind;
+    use crate::source::scanner::MetadataLocation;
+    use crate::store::sqlite::repo::tests::{sample_fingerprint, sample_item, test_repo};
+    use std::{path::PathBuf, sync::Arc};
+    const ID: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+    async fn fixture() -> (tempfile::TempDir, ServerState, PathBuf, HeaderMap) {
+        let dir = tempfile::tempdir().unwrap();
+        let book = dir.path().join("Book.fb2");
+        std::fs::write(&book, r#"<?xml version="1.0"?><FictionBook><description><title-info><book-title>Book</book-title><author><first-name>A</first-name><last-name>B</last-name></author></title-info></description><body><section><p>Text</p></section></body></FictionBook>"#).unwrap();
+        let path = dir.path().join("Book.sdr/metadata.fb2.lua");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &path,
+            format!("return {{partial_md5_checksum='{ID}', summary={{rating=2}}}}"),
+        )
+        .unwrap();
+        let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+        let repo = test_repo().await;
+        repo.configure_metadata(&MetadataLocation::InBookFolder);
+        let mut row = sample_item(ID);
+        row.file_path = book.to_string_lossy().into_owned();
+        row.format = "fb2".into();
+        let mut fp = sample_fingerprint(ID);
+        fp.book_path = row.file_path.clone();
+        fp.metadata_path = Some(path.to_string_lossy().into_owned());
+        repo.persist_captured_item(&row, &[], &fp, Some(&captured), "checksum", true)
+            .await
+            .unwrap();
+        let state = ServerState {
+            site_store: Arc::new(crate::store::memory::SiteStore::new()),
+            reading_data_store: Arc::new(crate::store::memory::ReadingDataStore::new()),
+            update_notifier: crate::store::memory::UpdateNotifier::new("test", "now"),
+            library_repo: repo,
+            auth_state: None,
+            write_coordinator: Some(crate::server::WriteCoordinator::new()),
+            timezone: None,
+        };
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Metadata-Revision", captured.revision.parse().unwrap());
+        (dir, state, path, headers)
+    }
+
+    #[tokio::test]
+    async fn annotation_edits_refresh_cache_and_stale_deletes_leave_files_untouched() {
+        let (_dir, state, path, _) = fixture().await;
+        std::fs::write(&path, format!("return {{partial_md5_checksum='{ID}',summary={{rating=2}},stats={{highlights=1,notes=0}},annotations={{{{text='quote',drawer='lighten',color='yellow',pageno=1}}}}}}" )).unwrap();
+        let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+        {
+            let _guard = state.library_repo.metadata_guard().await;
+            crate::pipeline::ingest::refresh_capture(
+                &state.library_repo,
+                ID,
+                &captured,
+                &crate::shelf::time_config::TimeConfig::new(None, 0),
+            )
+            .await
+            .unwrap();
+        }
+        let annotation = state
+            .library_repo
+            .get_annotations(ID, None)
+            .await
+            .unwrap()
+            .remove(0);
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Metadata-Revision", captured.revision.parse().unwrap());
+        let response = update_annotation(
+            State(state.clone()),
+            Path((ID.into(), annotation.id.clone())),
+            headers.clone(),
+            Json(UpdateAnnotationRequest {
+                note: Patch::Value("new note".into()),
+                color: None,
+                drawer: None,
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(response.into_response().status(), StatusCode::NO_CONTENT);
+        let parsed = crate::source::koreader::LuaParser::new()
+            .parse(&path)
+            .unwrap();
+        assert_eq!(parsed.annotations[0].note.as_deref(), Some("new note"));
+        let updated = state
+            .library_repo
+            .get_annotations(ID, None)
+            .await
+            .unwrap()
+            .remove(0);
+        assert_eq!(updated.note.as_deref(), Some("new note"));
+        assert_eq!(updated.color.as_deref(), Some("yellow"));
+        let before = std::fs::read(&path).unwrap();
+        let error = delete_annotation(
+            State(state.clone()),
+            Path((ID.into(), updated.id.clone())),
+            headers,
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(error.into_response().status(), StatusCode::CONFLICT);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "X-Metadata-Revision",
+            state
+                .library_repo
+                .get_item(ID)
+                .await
+                .unwrap()
+                .unwrap()
+                .metadata_revision
+                .unwrap()
+                .parse()
+                .unwrap(),
+        );
+        let response =
+            delete_annotation(State(state.clone()), Path((ID.into(), updated.id)), headers)
+                .await
+                .unwrap();
+        assert_eq!(response.into_response().status(), StatusCode::NO_CONTENT);
+        assert!(
+            state
+                .library_repo
+                .get_annotations(ID, None)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            crate::source::koreader::LuaParser::new()
+                .parse(&path)
+                .unwrap()
+                .annotations
+                .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn refresh_rejects_changed_bytes_or_a_newer_competing_source() {
+        for competing_source in [false, true] {
+            let (dir, state, path, _) = fixture().await;
+            let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+            let destination = if competing_source {
+                let doc = dir.path().join("doc");
+                state
+                    .library_repo
+                    .configure_metadata(&MetadataLocation::DocSettings(doc.clone()));
+                let destination = doc.join("Book.sdr/metadata.fb2.lua");
+                std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+                destination
+            } else {
+                path.clone()
+            };
+            std::fs::write(
+                &destination,
+                format!("return {{partial_md5_checksum='{ID}',summary={{rating=5}}}}"),
+            )
+            .unwrap();
+            std::fs::File::options()
+                .write(true)
+                .open(&destination)
+                .unwrap()
+                .set_times(
+                    std::fs::FileTimes::new().set_modified(
+                        std::time::SystemTime::now() + std::time::Duration::from_secs(5),
+                    ),
+                )
+                .unwrap();
+            let _guard = state.library_repo.metadata_guard().await;
+            let error = crate::pipeline::ingest::refresh_capture(
+                &state.library_repo,
+                ID,
+                &captured,
+                &crate::shelf::time_config::TimeConfig::new(None, 0),
+            )
+            .await
+            .unwrap_err();
+            assert!(error.is::<crate::source::metadata::MetadataChanged>());
+            assert_eq!(
+                state
+                    .library_repo
+                    .metadata_provenance(ID)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .revision,
+                captured.revision
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn write_requires_revision_and_rejects_stale_clients_after_cache_refresh() {
+        let (_dir, state, path, headers) = fixture().await;
+        assert!(
+            WriteContext::prepare(&state, ID, &HeaderMap::new())
+                .await
+                .is_err()
+        );
+        let ctx = WriteContext::prepare(&state, ID, &headers).await.unwrap();
+        mutations::write_item_metadata(&ctx.captured, None, Some(4), None, "2026-10-14").unwrap();
+        ctx.finish(&state).await.unwrap();
+        drop(ctx);
+        assert!(WriteContext::prepare(&state, ID, &headers).await.is_err());
+        assert_eq!(
+            crate::source::koreader::LuaParser::new()
+                .parse(&path)
+                .unwrap()
+                .summary
+                .unwrap()
+                .rating,
+            Some(4)
+        );
+        let current = state.library_repo.get_item(ID).await.unwrap().unwrap();
+        assert_eq!(current.rating, Some(4));
+        assert_ne!(
+            current.metadata_revision.as_deref().unwrap(),
+            headers["X-Metadata-Revision"].to_str().unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn backup_is_readable_but_restored_only_on_explicit_edit() {
+        let (_dir, state, path, headers) = fixture().await;
+        let backup = crate::source::koreader::lua_writer::backup_path(&path);
+        std::fs::rename(&path, &backup).unwrap();
+        assert!(WriteContext::prepare(&state, ID, &headers).await.is_err());
+        assert!(!path.exists());
+        assert!(backup.exists());
+        let current = state.library_repo.get_item(ID).await.unwrap().unwrap();
+        assert_eq!(current.metadata_source.as_deref(), Some("backup"));
+        let mut current_headers = HeaderMap::new();
+        current_headers.insert(
+            "X-Metadata-Revision",
+            current.metadata_revision.unwrap().parse().unwrap(),
+        );
+        let before = std::fs::read(&backup).unwrap();
+        let ctx = WriteContext::prepare(&state, ID, &current_headers)
+            .await
+            .unwrap();
+        assert!(!path.exists());
+        mutations::write_item_metadata(&ctx.captured, None, Some(5), None, "2026-10-14").unwrap();
+        ctx.finish(&state).await.unwrap();
+        drop(ctx);
+        assert_eq!(std::fs::read(&backup).unwrap(), before);
+        let restored = state.library_repo.get_item(ID).await.unwrap().unwrap();
+        assert_eq!(restored.rating, Some(5));
+        assert_eq!(restored.metadata_source.as_deref(), Some("primary"));
+        assert_eq!(
+            WriteContext::prepare(&state, ID, &current_headers)
+                .await
+                .err()
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::CONFLICT
+        );
+        assert!(
+            state
+                .library_repo
+                .get_item(ID)
+                .await
+                .unwrap()
+                .unwrap()
+                .has_metadata
+        );
+        assert!(
+            state
+                .library_repo
+                .metadata_provenance(ID)
+                .await
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[tokio::test]
+    async fn source_switch_refreshes_cache_and_conflicts_before_any_write() {
+        let (dir, state, path, headers) = fixture().await;
+        // Keep the leftover adjacent source in an older whole second so a
+        // subsequent write remains selected under KOReader's tie rules.
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_times(
+                std::fs::FileTimes::new()
+                    .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(100)),
+            )
+            .unwrap();
+        let doc = dir.path().join("doc");
+        let moved = doc.join("Book.sdr/metadata.fb2.lua");
+        std::fs::create_dir_all(moved.parent().unwrap()).unwrap();
+        std::fs::copy(&path, &moved).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&moved)
+            .unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(std::time::SystemTime::now()))
+            .unwrap();
+        state
+            .library_repo
+            .configure_metadata(&MetadataLocation::DocSettings(doc));
+        let before = std::fs::read(&moved).unwrap();
+        assert!(WriteContext::prepare(&state, ID, &headers).await.is_err());
+        assert_eq!(std::fs::read(&moved).unwrap(), before);
+        let selected_path: String = sqlx::query_scalar(
+            "SELECT metadata_path FROM library_item_fingerprints WHERE item_id = ?",
+        )
+        .bind(ID)
+        .fetch_one(state.library_repo.pool())
+        .await
+        .unwrap();
+        assert_eq!(std::path::Path::new(&selected_path), moved);
+        let mut current = HeaderMap::new();
+        current.insert(
+            "X-Metadata-Revision",
+            state
+                .library_repo
+                .get_item(ID)
+                .await
+                .unwrap()
+                .unwrap()
+                .metadata_revision
+                .unwrap()
+                .parse()
+                .unwrap(),
+        );
+        let ctx = WriteContext::prepare(&state, ID, &current).await.unwrap();
+        mutations::write_item_metadata(&ctx.captured, None, Some(5), None, "2026-10-14").unwrap();
+        ctx.finish(&state).await.unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+    #[tokio::test]
+    async fn older_original_refreshes_cache_then_allows_an_explicit_edit() {
+        let (_dir, state, path, headers) = fixture().await;
+        std::fs::write(
+            &path,
+            format!("return {{partial_md5_checksum='{ID}', summary={{rating=1}}}}"),
+        )
+        .unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_times(
+                std::fs::FileTimes::new()
+                    .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1)),
+            )
+            .unwrap();
+        let error = WriteContext::prepare(&state, ID, &headers)
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(error.into_response().status(), StatusCode::CONFLICT);
+        let current = state.library_repo.get_item(ID).await.unwrap().unwrap();
+        assert_eq!(current.rating, Some(1));
+        assert!(current.has_metadata);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "X-Metadata-Revision",
+            current.metadata_revision.unwrap().parse().unwrap(),
+        );
+        assert!(WriteContext::prepare(&state, ID, &headers).await.is_ok());
+    }
 }

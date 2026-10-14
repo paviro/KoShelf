@@ -102,6 +102,7 @@ impl LibraryItemFormat {
 
     /// Check if a filename is a KOReader metadata file for any supported format
     pub fn is_metadata_file(filename: &str) -> bool {
+        let filename = filename.strip_suffix(".old").unwrap_or(filename);
         matches!(
             filename,
             "metadata.epub.lua"
@@ -121,6 +122,7 @@ impl LibraryItemFormat {
         let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
             return false;
         };
+        let filename = filename.strip_suffix(".old").unwrap_or(filename);
         if filename == "metadata.zip.lua" {
             return path
                 .parent()

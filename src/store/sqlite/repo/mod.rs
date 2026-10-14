@@ -4,6 +4,7 @@
 //! Read queries return contract types directly via `FromRow`.
 //! Write operations use dedicated row types from `rows`.
 
+mod metadata;
 mod read;
 mod write;
 
@@ -16,6 +17,8 @@ use sqlx::SqlitePool;
 pub struct LibraryRepository {
     pool: SqlitePool,
     use_stable_page_metadata: bool,
+    metadata_gate: std::sync::Arc<tokio::sync::Mutex<()>>,
+    metadata_location: std::sync::Arc<std::sync::RwLock<crate::source::scanner::MetadataLocation>>,
 }
 
 impl LibraryRepository {
@@ -23,6 +26,8 @@ impl LibraryRepository {
         Self {
             pool,
             use_stable_page_metadata,
+            metadata_gate: Default::default(),
+            metadata_location: Default::default(),
         }
     }
 

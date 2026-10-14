@@ -45,6 +45,7 @@ pub(crate) async fn ingest_items(
         return Ok(IngestStats::default());
     }
 
+    repo.configure_metadata(&config.metadata_location);
     let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
     ingest_items_with_metadata_indices(items, config, repo, media_dirs, metadata_indices).await
 }
@@ -141,7 +142,7 @@ pub(super) async fn ingest_items_with_metadata_indices(
 
 #[cfg(test)]
 mod tests {
-    use super::ingest_items;
+    use super::{ItemProcessor, MetadataIndices, ingest_items, process_single_item};
     use crate::app::config::SiteConfig;
     use crate::pipeline::media::resolve_media_dirs;
     use crate::shelf::library::queries::LibraryListQuery;
@@ -154,6 +155,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
+    use std::sync::Arc;
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
 
@@ -248,7 +250,7 @@ mod tests {
     fn write_metadata(path: &Path) {
         std::fs::create_dir_all(path.parent().expect("metadata parent"))
             .expect("metadata parent dir");
-        std::fs::write(path, "return {}\n").expect("metadata file");
+        std::fs::write(path, "return { annotations = {} }\n").expect("metadata file");
     }
 
     fn kobo_hints(is_encrypted: bool, has_content_keys: bool) -> KoboFileHints {
@@ -406,5 +408,187 @@ mod tests {
             .expect("list items");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].title, "Compressed FB2");
+    }
+    #[tokio::test]
+    async fn migration_preserves_identity_with_older_fallback_and_annotation_removal() {
+        use std::time::{Duration, UNIX_EPOCH};
+        let library = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let book = library.path().join("Book.epub");
+        write_minimal_epub(&book);
+        let checksum = crate::source::koreader::calculate_partial_md5(&book).unwrap();
+        let id = "11111111111111111111111111111111";
+        let doc = library.path().join("doc");
+        let hash = library.path().join("hash");
+        std::fs::create_dir_all(&hash).unwrap();
+        let old_path = doc.join("Book.sdr/metadata.epub.lua");
+        let new_path = hash.join(format!(
+            "{}/{checksum}.sdr/metadata.epub.lua",
+            &checksum[..2]
+        ));
+        let put = |path: &Path, contents: &str, seconds| {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, contents).unwrap();
+            File::options()
+                .write(true)
+                .open(path)
+                .unwrap()
+                .set_times(
+                    std::fs::FileTimes::new()
+                        .set_modified(UNIX_EPOCH + Duration::from_secs(seconds)),
+                )
+                .unwrap();
+        };
+        let with_note = format!(
+            "return {{partial_md5_checksum='{id}', percent_finished=0.7, summary={{rating=4}}, annotations={{{{text='hello', drawer='lighten', pageno=1}}}}}}"
+        );
+        put(&old_path, &with_note, 100);
+        let repo = test_repo().await;
+        let output_path = std::fs::canonicalize(output.path()).unwrap();
+        let mut config = test_config(library.path(), &output_path);
+        config.include_unread = false;
+        config.is_internal_server = true;
+        config.metadata_location = MetadataLocation::Central {
+            docsettings: doc,
+            hashdocsettings: hash,
+        };
+        let media = resolve_media_dirs(&output_path, true);
+        std::fs::create_dir_all(&media.covers_dir).unwrap();
+        std::fs::create_dir_all(&media.files_dir).unwrap();
+        let items = [CollectedItem {
+            path: book,
+            format: LibraryItemFormat::Epub,
+            kobo_hints: None,
+        }];
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        let initial = repo.get_item(id).await.unwrap().unwrap();
+        let initial_annotations = repo.get_annotations(id, None).await.unwrap();
+        assert_eq!(initial_annotations.len(), 1);
+        // A no-op refresh repairs missing media links without changing annotation IDs.
+        let link = media.files_dir.join(format!("{id}.epub"));
+        assert!(link.exists());
+        std::fs::remove_file(&link).unwrap();
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        assert!(link.exists());
+        assert_eq!(
+            repo.get_annotations(id, None).await.unwrap()[0].id,
+            initial_annotations[0].id
+        );
+        put(&new_path, &with_note, 200);
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        let migrated = repo.get_item(id).await.unwrap().unwrap();
+        assert_ne!(initial.metadata_revision, migrated.metadata_revision);
+        std::fs::remove_file(&new_path).unwrap();
+        // A changed ebook fingerprint still permits fallback to an older valid source.
+        File::options()
+            .write(true)
+            .open(&items[0].path)
+            .unwrap()
+            .set_times(
+                std::fs::FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(500)),
+            )
+            .unwrap();
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        let retained = repo.get_item(id).await.unwrap().unwrap();
+        assert!(retained.has_metadata);
+        assert_eq!(retained.metadata_revision, initial.metadata_revision);
+        assert_eq!(retained.progress_percentage, migrated.progress_percentage);
+        assert_eq!(retained.rating, migrated.rating);
+        assert_eq!(repo.get_annotations(id, None).await.unwrap().len(), 1);
+        // Invalid and empty newer sources cannot erase accepted reading data.
+        for invalid in ["return {}", "not lua"] {
+            put(&old_path, invalid, 300);
+            ingest_items(&items, &config, &repo, &media).await.unwrap();
+            assert_eq!(repo.get_annotations(id, None).await.unwrap().len(), 1);
+            assert!(!repo.get_item(id).await.unwrap().unwrap().has_metadata);
+        }
+        put(
+            &old_path,
+            &format!("return {{partial_md5_checksum='{id}', annotations={{}}}}"),
+            400,
+        );
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        assert!(repo.get_annotations(id, None).await.unwrap().is_empty());
+        assert!(repo.get_item(id).await.unwrap().unwrap().has_metadata);
+        std::fs::remove_file(&old_path).unwrap();
+        ingest_items(&items, &config, &repo, &media).await.unwrap();
+        let rows = repo.list_items(&LibraryListQuery::default()).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].id, id);
+    }
+    #[tokio::test]
+    async fn parsing_overlaps_without_blocking_metadata_and_revalidates_before_commit() {
+        let library = tempfile::tempdir().unwrap();
+        let output = tempfile::tempdir().unwrap();
+        let repo = test_repo().await;
+        let config = test_config(library.path(), output.path());
+        let media = resolve_media_dirs(output.path(), false);
+        std::fs::create_dir_all(&media.covers_dir).unwrap();
+        let ids = [
+            "11111111111111111111111111111111",
+            "22222222222222222222222222222222",
+        ];
+        let items: Vec<_> = ids
+            .iter()
+            .enumerate()
+            .map(|(n, id)| {
+                let book = library.path().join(format!("Book{n}.epub"));
+                write_minimal_epub(&book);
+                let metadata = library
+                    .path()
+                    .join(format!("Book{n}.sdr/metadata.epub.lua"));
+                std::fs::create_dir_all(metadata.parent().unwrap()).unwrap();
+                std::fs::write(
+                    metadata,
+                    format!("return {{partial_md5_checksum='{id}',percent_finished=0.2}}"),
+                )
+                .unwrap();
+                CollectedItem {
+                    path: book,
+                    format: LibraryItemFormat::Epub,
+                    kobo_hints: None,
+                }
+            })
+            .collect();
+        let arrived = Arc::new(tokio::sync::Barrier::new(3));
+        let release = Arc::new(tokio::sync::Barrier::new(3));
+        let processor = ItemProcessor::new(Arc::new(
+            MetadataIndices::new(&config.metadata_location).unwrap(),
+        ))
+        .with_parse_gate(arrived.clone(), release.clone());
+        let controller = async {
+            arrived.wait().await;
+            // Both workers are parsing, and item detail/writeback can still acquire the gate.
+            let guard = repo.metadata_guard().await;
+            std::fs::write(
+                library.path().join("Book0.sdr/metadata.epub.lua"),
+                format!(
+                    "return {{partial_md5_checksum='{}',percent_finished=0.8}}",
+                    ids[0]
+                ),
+            )
+            .unwrap();
+            drop(guard);
+            release.wait().await;
+        };
+        let (a, b, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            tokio::join!(
+                process_single_item(&items[0], &processor, &config, &repo, &media),
+                process_single_item(&items[1], &processor, &config, &repo, &media),
+                controller,
+            )
+        })
+        .await
+        .expect("ebook parsing must not serialize under the metadata gate");
+        assert_eq!(a.errors + b.errors, 0);
+        assert_eq!(a.upserted + b.upserted, 2);
+        assert_eq!(
+            repo.get_item(ids[0])
+                .await
+                .unwrap()
+                .unwrap()
+                .progress_percentage,
+            Some(0.8)
+        );
     }
 }

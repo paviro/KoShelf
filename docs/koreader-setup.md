@@ -2,7 +2,7 @@
 
 ## Metadata Storage Options
 
-KOReader offers three ways to store book metadata (reading progress, highlights, annotations). KoShelf supports all three.
+KOReader offers three ways to store book metadata (reading progress, highlights, annotations). KoShelf supports all three, including mixed layouts during migration. Adjacent sidecars are always considered alongside any explicitly configured central directories. Primary files and `.old` backups follow KOReader’s candidate ordering, including fallback to older valid files. Backup data is restored to the primary only on an explicit edit. See [metadata migration configuration](configuration.md#migrating-koreader-metadata-locations) for combined examples.
 
 ### 1. Default: Metadata Next to Books (Recommended)
 

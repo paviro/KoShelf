@@ -73,13 +73,22 @@ export interface ApiClient {
     ): Promise<PageActivityData>;
     getItemDownloadHref(id: string): string;
     getItemFileHref(id: string, format?: string | null): string | null;
-    updateItem(id: string, payload: UpdateItemPayload): Promise<void>;
+    updateItem(
+        id: string,
+        payload: UpdateItemPayload,
+        revision: string,
+    ): Promise<void>;
     updateAnnotation(
         itemId: string,
         annotationId: string,
         payload: UpdateAnnotationPayload,
+        revision: string,
     ): Promise<void>;
-    deleteAnnotation(itemId: string, annotationId: string): Promise<void>;
+    deleteAnnotation(
+        itemId: string,
+        annotationId: string,
+        revision: string,
+    ): Promise<void>;
     clearCache(): void;
 }
 

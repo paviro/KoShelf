@@ -16,14 +16,23 @@ use log::info;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-fn metadata_location(common: &CommonArgs) -> MetadataLocation {
-    if let Some(ref docsettings_path) = common.docsettings_path {
-        MetadataLocation::DocSettings(docsettings_path.clone())
-    } else if let Some(ref hashdocsettings_path) = common.hashdocsettings_path {
-        MetadataLocation::HashDocSettings(hashdocsettings_path.clone())
-    } else {
-        MetadataLocation::InBookFolder
-    }
+fn metadata_location(common: &CommonArgs) -> Result<MetadataLocation> {
+    Ok(
+        if let (Some(docsettings), Some(hashdocsettings)) =
+            (&common.docsettings_path, &common.hashdocsettings_path)
+        {
+            MetadataLocation::Central {
+                docsettings: std::path::absolute(docsettings)?,
+                hashdocsettings: std::path::absolute(hashdocsettings)?,
+            }
+        } else if let Some(ref docsettings_path) = common.docsettings_path {
+            MetadataLocation::DocSettings(std::path::absolute(docsettings_path)?)
+        } else if let Some(ref hashdocsettings_path) = common.hashdocsettings_path {
+            MetadataLocation::HashDocSettings(std::path::absolute(hashdocsettings_path)?)
+        } else {
+            MetadataLocation::InBookFolder
+        },
+    )
 }
 
 fn resolve_data_policy(common: &CommonArgs) -> RuntimeDataPolicy {
@@ -61,7 +70,7 @@ fn build_site_config(
         site_title: common.title.clone(),
         include_unread: common.include_unread,
         library_paths: common.library_path.clone(),
-        metadata_location: metadata_location(common),
+        metadata_location: metadata_location(common)?,
         statistics_db_paths: common.statistics_db.clone(),
         kobo_db_path: common.kobo_db.clone(),
         heatmap_scale_max,

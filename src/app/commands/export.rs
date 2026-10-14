@@ -63,7 +63,6 @@ pub(crate) async fn export(args: ExportArgs) -> Result<()> {
             Some(reading_data_store),
             None,
             Some(state.repo),
-            None,
         );
         if let Err(e) = file_watcher.run().await {
             log::error!("File watcher error: {}", e);

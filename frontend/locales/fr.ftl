@@ -467,3 +467,6 @@ page-activity = Activité des pages
     .legend-bookmark = Signet
     .legend-chapter = Chapitre
     .info = Les numéros de page sont influencés par les options de formatage actuelles du document. Contrairement aux autres parties de KoShelf, cette vue ne prend pas en charge la mise à l'échelle synthétique des pages.
+
+metadata-edit-stale = Les métadonnées ont changé pendant la modification. Votre brouillon est conservé. Fermez cet éditeur et vérifiez les données actuelles avant de modifier à nouveau.
+metadata-backup-edit = Ces données proviennent d’une sauvegarde KOReader. Enregistrer une modification restaurera le fichier principal de métadonnées.

@@ -466,3 +466,6 @@ page-activity = Seitenaktivität
     .legend-bookmark = Lesezeichen
     .legend-chapter = Kapitel
     .info = Die Seitenzahlen werden durch die aktuellen Formatierungsoptionen des Dokuments beeinflusst. Im Gegensatz zu anderen Bereichen von KoShelf unterstützt diese Ansicht keine synthetische Seitenskalierung.
+
+metadata-edit-stale = Die Metadaten wurden während der Bearbeitung geändert. Dein Entwurf bleibt erhalten. Schließe diesen Editor und prüfe die aktuellen Daten, bevor du weiterbearbeitest.
+metadata-backup-edit = Diese Daten wurden aus einer KOReader-Sicherung wiederhergestellt. Beim Speichern einer Änderung wird die primäre Metadatendatei wiederhergestellt.

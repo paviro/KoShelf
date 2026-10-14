@@ -91,9 +91,11 @@ pub struct LibraryDetailItem {
     pub subjects: Json<Vec<String>>,
     #[sqlx(rename = "identifiers_json")]
     pub identifiers: Json<Vec<ExternalIdentifier>>,
-    /// Whether this item has a KOReader metadata sidecar file that can be
-    /// written back to.  `false` for unread books included via `--include-unread`.
+    /// Whether this item has a valid primary or recoverable backup for editing.
     pub has_metadata: bool,
+    /// Revision required on writeback; absent when no source was captured.
+    pub metadata_revision: Option<String>,
+    pub metadata_source: Option<String>,
     /// Populated from DB but not serialized directly; moved to `LibraryDetailData`
     /// when the `reader_presentation` include token is present.
     #[serde(skip)]

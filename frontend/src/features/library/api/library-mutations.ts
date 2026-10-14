@@ -26,10 +26,16 @@ export function useUpdateItem(itemId: string, collection: LibraryCollection) {
     const queryClient = useQueryClient();
     const detailKey = libraryDetailQueryKey(collection, itemId);
 
-    return useMutation<void, Error, UpdateItemPayload, RollbackContext>({
-        mutationFn: (payload) => api.updateItem(itemId, payload),
+    return useMutation<
+        void,
+        Error,
+        { payload: UpdateItemPayload; revision: string },
+        RollbackContext
+    >({
+        mutationFn: ({ payload, revision }) =>
+            api.updateItem(itemId, payload, revision),
 
-        onMutate: async (payload) => {
+        onMutate: async ({ payload }) => {
             await queryClient.cancelQueries({ queryKey: detailKey });
             const previous = patchDetailCache(queryClient, detailKey, (data) =>
                 applyItemUpdate(data, payload),
@@ -57,6 +63,7 @@ export function useUpdateItem(itemId: string, collection: LibraryCollection) {
 }
 
 type AnnotationVars = {
+    revision: string;
     annotationId: string;
     payload: UpdateAnnotationPayload;
 };
@@ -70,7 +77,12 @@ export function useUpdateAnnotation(
 
     return useMutation<void, Error, AnnotationVars, RollbackContext>({
         mutationFn: (vars) =>
-            api.updateAnnotation(itemId, vars.annotationId, vars.payload),
+            api.updateAnnotation(
+                itemId,
+                vars.annotationId,
+                vars.payload,
+                vars.revision,
+            ),
 
         onMutate: async (vars) => {
             await queryClient.cancelQueries({ queryKey: detailKey });
@@ -112,11 +124,16 @@ export function useDeleteAnnotation(
     const queryClient = useQueryClient();
     const detailKey = libraryDetailQueryKey(collection, itemId);
 
-    return useMutation<void, Error, string, RollbackContext>({
-        mutationFn: (annotationId) =>
-            api.deleteAnnotation(itemId, annotationId),
+    return useMutation<
+        void,
+        Error,
+        { annotationId: string; revision: string },
+        RollbackContext
+    >({
+        mutationFn: ({ annotationId, revision }) =>
+            api.deleteAnnotation(itemId, annotationId, revision),
 
-        onMutate: async (annotationId) => {
+        onMutate: async ({ annotationId }) => {
             await queryClient.cancelQueries({ queryKey: detailKey });
             const previous = patchDetailCache(queryClient, detailKey, (data) =>
                 applyAnnotationDeletion(data, annotationId),

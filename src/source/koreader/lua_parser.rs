@@ -2,10 +2,15 @@ use crate::shelf::models::{
     Annotation, BookStatus, DocProps, FlowPoint, KoReaderMetadata, ReaderPresentation, Stats,
     Summary,
 };
-use anyhow::{Context, Result, anyhow};
-use log::{debug, warn};
+#[cfg(test)]
+use anyhow::Context;
+use anyhow::{Result, anyhow};
+#[cfg(test)]
+use log::debug;
+use log::warn;
 use mlua::chunk::ChunkMode;
 use mlua::{Lua, LuaOptions, StdLib, Table, Value};
+#[cfg(test)]
 use std::fs;
 use std::path::Path;
 
@@ -29,12 +34,18 @@ impl LuaParser {
     }
 
     /// Evaluate a KOReader Lua metadata file and extract its fields.
+    #[cfg(test)]
     pub fn parse(&self, lua_path: &Path) -> Result<KoReaderMetadata> {
         debug!("Parsing Lua metadata: {:?}", lua_path);
 
         let bytes = fs::read(lua_path)
             .with_context(|| format!("Failed to read Lua file: {:?}", lua_path))?;
-        let content = match String::from_utf8(bytes) {
+        self.parse_bytes(lua_path, &bytes)
+    }
+
+    /// Parse the exact bytes captured by source resolution or writeback.
+    pub fn parse_bytes(&self, lua_path: &Path, bytes: &[u8]) -> Result<KoReaderMetadata> {
+        let content = match String::from_utf8(bytes.to_vec()) {
             Ok(content) => content,
             Err(error) => {
                 warn!(
@@ -53,7 +64,8 @@ impl LuaParser {
             .map_err(|e| anyhow!("Failed to parse Lua file {:?}: {}", lua_path, e))?;
 
         match value {
-            Value::Table(table) => self.parse_metadata_table(table),
+            Value::Table(table) if !table.is_empty() => self.parse_metadata_table(table),
+            Value::Table(_) => Err(anyhow!("metadata table is empty")),
             _ => Err(anyhow!("Expected Lua file to return a table")),
         }
     }

@@ -247,6 +247,8 @@ export interface LibraryDetailItem {
     subjects: string[];
     identifiers: ExternalIdentifier[];
     has_metadata?: boolean;
+    metadata_revision?: string | null;
+    metadata_source?: 'primary' | 'backup' | null;
 }
 
 export interface LibraryReaderPresentation {

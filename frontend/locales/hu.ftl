@@ -442,3 +442,6 @@ page-activity = Oldalaktivitás
     .legend-bookmark = Könyvjelző
     .legend-chapter = Fejezet
     .info = Az oldalszámokat a dokumentum aktuális formázási beállításai befolyásolják. A KoShelf többi részétől eltérően ez a nézet nem támogatja a szintetikus oldalszámozást.
+
+metadata-edit-stale = A metaadatok szerkesztés közben megváltoztak. A piszkozat megmaradt. Zárd be a szerkesztőt, és ellenőrizd az aktuális adatokat az újabb szerkesztés előtt.
+metadata-backup-edit = Ezek az adatok egy KOReader biztonsági mentésből származnak. Egy módosítás mentése visszaállítja az elsődleges metaadatfájlt.

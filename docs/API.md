@@ -297,6 +297,16 @@ Each identifier:
 
 ---
 
+### Metadata revisions and write conflicts
+
+Item details include `metadata_revision` (an opaque string, or null without a captured source) and `metadata_source` (`"primary"`, `"backup"`, or null). `has_metadata` indicates whether the accepted reading state has a valid source available for editing, including a recoverable backup. Cached reading data can remain visible while this is false.
+
+All three writeback endpoints require the `X-Metadata-Revision` header with the revision from the item details used to prepare the edit. Missing headers return 400. Stale revisions, source changes, and unavailable current sources return 409. Refetch the item and let the user review it before another edit; do not automatically retry the mutation. This also applies to annotation deletion. Older clients must be updated to send the header.
+
+When `metadata_source` is `"backup"`, a successful explicit edit writes the edited backup contents to the corresponding primary path. It never modifies the selected `.old` file. The revision includes the primary's observed state: a newly appearing or changed primary requires a new review. Clients must pin the revision when an edit or confirmation opens, preserve drafts across background refreshes, and prevent stale submissions. They must not substitute a newer revision onto an existing draft.
+
+KoShelf resolves current configured sources under its metadata lock before editing and rechecks source selection and the captured file before writing. Its lock coordinates KoShelf operations; it cannot exclude concurrent writes by KOReader or external synchronization tools.
+
 ### `PATCH /api/items/{id}`
 
 Update item metadata. Only available when writeback is enabled (`--enable-writeback`).

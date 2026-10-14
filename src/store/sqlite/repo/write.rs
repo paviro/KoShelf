@@ -7,7 +7,16 @@ use crate::store::sqlite::repo::LibraryRepository;
 use crate::store::sqlite::repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
 
 impl LibraryRepository {
+    #[cfg(test)]
     pub async fn upsert_item(&self, item: &LibraryItemRow) -> Result<()> {
+        let mut connection = self.pool.acquire().await?;
+        Self::upsert_item_on(&mut connection, item).await
+    }
+
+    pub(super) async fn upsert_item_on(
+        connection: &mut sqlx::SqliteConnection,
+        item: &LibraryItemRow,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO library_items (
                 id, file_path, format, content_type, title,
@@ -96,23 +105,32 @@ impl LibraryRepository {
         .bind(item.total_reading_time_sec)
         .bind(&item.created_at)
         .bind(&item.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *connection)
         .await
         .context("Failed to upsert library item")?;
         Ok(())
     }
 
     /// Delete existing annotations for `item_id` and insert replacements.
+    #[cfg(test)]
     pub async fn replace_annotations(
         &self,
         item_id: &str,
         annotations: &[AnnotationRow],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await.context("begin tx")?;
-
+        let mut tx = self.pool.begin().await?;
+        Self::replace_annotations_on(&mut tx, item_id, annotations).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+    pub(super) async fn replace_annotations_on(
+        connection: &mut sqlx::SqliteConnection,
+        item_id: &str,
+        annotations: &[AnnotationRow],
+    ) -> Result<()> {
         sqlx::query("DELETE FROM library_annotations WHERE item_id = ?1")
             .bind(item_id)
-            .execute(&mut *tx)
+            .execute(&mut *connection)
             .await
             .context("delete old annotations")?;
 
@@ -136,16 +154,24 @@ impl LibraryRepository {
             .bind(&a.pos1)
             .bind(&a.color)
             .bind(&a.drawer)
-            .execute(&mut *tx)
+            .execute(&mut *connection)
             .await
             .context("insert annotation")?;
         }
 
-        tx.commit().await.context("commit annotations")?;
         Ok(())
     }
 
+    #[cfg(test)]
     pub async fn upsert_fingerprint(&self, fp: &FingerprintRow) -> Result<()> {
+        let mut connection = self.pool.acquire().await?;
+        Self::upsert_fingerprint_on(&mut connection, fp).await
+    }
+
+    pub(super) async fn upsert_fingerprint_on(
+        connection: &mut sqlx::SqliteConnection,
+        fp: &FingerprintRow,
+    ) -> Result<()> {
         sqlx::query(
             "INSERT INTO library_item_fingerprints (
                 item_id, book_path, book_size_bytes, book_modified_unix_ms,
@@ -168,7 +194,7 @@ impl LibraryRepository {
         .bind(fp.metadata_size_bytes)
         .bind(fp.metadata_modified_unix_ms)
         .bind(&fp.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *connection)
         .await
         .context("Failed to upsert fingerprint")?;
         Ok(())
@@ -225,117 +251,6 @@ impl LibraryRepository {
                 .await
                 .context("Failed to cleanup stale share image fingerprints")?;
         }
-        Ok(())
-    }
-
-    // ── Writeback helpers ────────────────────────────────────────────────
-
-    /// Update the metadata fingerprint after a writeback operation.
-    ///
-    /// Only touches `metadata_size_bytes` and `metadata_modified_unix_ms`,
-    /// leaving book fingerprint data untouched.
-    pub async fn update_metadata_fingerprint(
-        &self,
-        item_id: &str,
-        metadata_size_bytes: i64,
-        metadata_modified_unix_ms: i64,
-    ) -> Result<()> {
-        sqlx::query(
-            "UPDATE library_item_fingerprints
-             SET metadata_size_bytes = ?1, metadata_modified_unix_ms = ?2
-             WHERE item_id = ?3",
-        )
-        .bind(metadata_size_bytes)
-        .bind(metadata_modified_unix_ms)
-        .bind(item_id)
-        .execute(&self.pool)
-        .await
-        .context("Failed to update metadata fingerprint")?;
-        Ok(())
-    }
-
-    /// Update writable item-level fields after a writeback operation.
-    ///
-    /// `review_note`: `None` = don't touch, `Some(None)` = clear, `Some(Some(v))` = set.
-    pub async fn update_item_writeback_fields(
-        &self,
-        item_id: &str,
-        review_note: Option<Option<&str>>,
-        rating: Option<u32>,
-        status: Option<&str>,
-    ) -> Result<()> {
-        sqlx::query(
-            "UPDATE library_items SET
-                review_note = CASE WHEN ?1 THEN ?2 ELSE review_note END,
-                rating = CASE WHEN ?3 THEN ?4 ELSE rating END,
-                status = COALESCE(?5, status)
-             WHERE id = ?6",
-        )
-        .bind(review_note.is_some())
-        .bind(review_note.flatten())
-        .bind(rating.is_some())
-        .bind(rating.filter(|&r| r > 0).map(|r| r as i32))
-        .bind(status)
-        .bind(item_id)
-        .execute(&self.pool)
-        .await
-        .context("Failed to update item writeback fields")?;
-        Ok(())
-    }
-
-    /// Update writable annotation-level fields after a writeback operation.
-    ///
-    /// `note`: `None` = don't touch, `Some(None)` = clear, `Some(Some(v))` = set.
-    pub async fn update_annotation_writeback_fields(
-        &self,
-        annotation_id: &str,
-        note: Option<Option<&str>>,
-        color: Option<&str>,
-        drawer: Option<&str>,
-        datetime_updated: Option<&str>,
-    ) -> Result<()> {
-        sqlx::query(
-            "UPDATE library_annotations SET
-                note = CASE WHEN ?1 THEN ?2 ELSE note END,
-                color = COALESCE(?3, color),
-                drawer = COALESCE(?4, drawer),
-                datetime_updated = COALESCE(?5, datetime_updated)
-             WHERE id = ?6",
-        )
-        .bind(note.is_some())
-        .bind(note.flatten())
-        .bind(color)
-        .bind(drawer)
-        .bind(datetime_updated)
-        .bind(annotation_id)
-        .execute(&self.pool)
-        .await
-        .context("Failed to update annotation writeback fields")?;
-        Ok(())
-    }
-
-    /// Decrement annotation counts after deleting an annotation.
-    pub async fn decrement_annotation_count(
-        &self,
-        item_id: &str,
-        is_highlight: bool,
-    ) -> Result<()> {
-        let sql = if is_highlight {
-            "UPDATE library_items SET
-                annotation_count = MAX(annotation_count - 1, 0),
-                highlight_count = MAX(highlight_count - 1, 0)
-             WHERE id = ?1"
-        } else {
-            "UPDATE library_items SET
-                annotation_count = MAX(annotation_count - 1, 0),
-                bookmark_count = MAX(bookmark_count - 1, 0)
-             WHERE id = ?1"
-        };
-        sqlx::query(sql)
-            .bind(item_id)
-            .execute(&self.pool)
-            .await
-            .context("Failed to decrement annotation count")?;
         Ok(())
     }
 }
@@ -468,114 +383,5 @@ mod tests {
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].item_id, "fff");
         assert_eq!(all[0].book_size_bytes, 1024);
-    }
-
-    #[tokio::test]
-    async fn update_metadata_fingerprint_only_touches_metadata_columns() {
-        let repo = test_repo().await;
-        repo.upsert_item(&sample_item("fp1")).await.unwrap();
-        repo.upsert_fingerprint(&sample_fingerprint("fp1"))
-            .await
-            .unwrap();
-
-        repo.update_metadata_fingerprint("fp1", 999, 1700000099000)
-            .await
-            .unwrap();
-
-        let all = repo.load_all_fingerprints().await.unwrap();
-        assert_eq!(all.len(), 1);
-        assert_eq!(all[0].metadata_size_bytes, Some(999));
-        assert_eq!(all[0].metadata_modified_unix_ms, Some(1700000099000));
-        // Book fingerprint unchanged
-        assert_eq!(all[0].book_size_bytes, 1024);
-        assert_eq!(all[0].book_modified_unix_ms, 1700000000000);
-    }
-
-    #[tokio::test]
-    async fn update_item_writeback_fields_updates_only_provided() {
-        let repo = test_repo().await;
-        let mut item = sample_item("wb1");
-        item.review_note = Some("old note".to_string());
-        item.rating = Some(3);
-        item.status = "reading".to_string();
-        repo.upsert_item(&item).await.unwrap();
-
-        // Update only review_note, leave rating and status unchanged
-        repo.update_item_writeback_fields("wb1", Some(Some("new note")), None, None)
-            .await
-            .unwrap();
-
-        let fetched = repo.get_item("wb1").await.unwrap().unwrap();
-        assert_eq!(fetched.review_note.as_deref(), Some("new note"));
-        assert_eq!(fetched.rating, Some(3));
-        assert_eq!(fetched.status, LibraryStatus::Reading);
-    }
-
-    #[tokio::test]
-    async fn update_item_writeback_fields_clears_rating_with_zero() {
-        let repo = test_repo().await;
-        let mut item = sample_item("wb2");
-        item.rating = Some(5);
-        repo.upsert_item(&item).await.unwrap();
-
-        repo.update_item_writeback_fields("wb2", None, Some(0), None)
-            .await
-            .unwrap();
-
-        let fetched = repo.get_item("wb2").await.unwrap().unwrap();
-        assert_eq!(fetched.rating, None);
-    }
-
-    #[tokio::test]
-    async fn update_annotation_writeback_fields_updates_only_provided() {
-        let repo = test_repo().await;
-        repo.upsert_item(&sample_item("aw1")).await.unwrap();
-        let mut ann = sample_annotation("aw1", "highlight", 0);
-        let ann_id = ann.id.clone();
-        ann.color = Some("yellow".to_string());
-        ann.drawer = Some("lighten".to_string());
-        repo.replace_annotations("aw1", &[ann]).await.unwrap();
-
-        repo.update_annotation_writeback_fields(&ann_id, Some(Some("my note")), None, None, None)
-            .await
-            .unwrap();
-
-        let all = repo.get_annotations("aw1", None).await.unwrap();
-        assert_eq!(all.len(), 1);
-        assert_eq!(all[0].note.as_deref(), Some("my note"));
-        assert_eq!(all[0].color.as_deref(), Some("yellow"));
-        assert_eq!(all[0].drawer.as_deref(), Some("lighten"));
-    }
-
-    #[tokio::test]
-    async fn decrement_annotation_count_decrements_and_clamps() {
-        let repo = test_repo().await;
-        let mut item = sample_item("dc1");
-        item.annotation_count = 2;
-        item.highlight_count = 1;
-        item.bookmark_count = 1;
-        repo.upsert_item(&item).await.unwrap();
-
-        repo.decrement_annotation_count("dc1", true).await.unwrap();
-
-        let counts: (i32, i32, i32) = sqlx::query_as(
-            "SELECT annotation_count, highlight_count, bookmark_count FROM library_items WHERE id = ?1",
-        )
-        .bind("dc1")
-        .fetch_one(repo.pool())
-        .await
-        .unwrap();
-        assert_eq!(counts, (1, 0, 1));
-
-        // Decrementing at zero should clamp
-        repo.decrement_annotation_count("dc1", true).await.unwrap();
-        let counts: (i32, i32, i32) = sqlx::query_as(
-            "SELECT annotation_count, highlight_count, bookmark_count FROM library_items WHERE id = ?1",
-        )
-        .bind("dc1")
-        .fetch_one(repo.pool())
-        .await
-        .unwrap();
-        assert_eq!(counts, (0, 0, 1));
     }
 }

@@ -20,6 +20,24 @@ pub enum MetadataLocation {
     DocSettings(PathBuf),
     /// Metadata stored in hashdocsettings folder organized by partial MD5 hash
     HashDocSettings(PathBuf),
+    /// Both explicitly configured central locations.
+    Central {
+        docsettings: PathBuf,
+        hashdocsettings: PathBuf,
+    },
+}
+
+impl MetadataLocation {
+    pub fn central_paths(&self) -> Vec<&Path> {
+        match self {
+            Self::InBookFolder => vec![],
+            Self::DocSettings(p) | Self::HashDocSettings(p) => vec![p],
+            Self::Central {
+                docsettings,
+                hashdocsettings,
+            } => vec![docsettings, hashdocsettings],
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

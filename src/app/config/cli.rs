@@ -73,11 +73,11 @@ pub struct CommonArgs {
     #[arg(short = 'i', visible_short_alias = 'b', long, env = "KOSHELF_LIBRARY_PATH", alias = "books-path", action = clap::ArgAction::Append)]
     pub library_path: Vec<PathBuf>,
 
-    /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --library-path. Mutually exclusive with --hashdocsettings-path.
+    /// Path to KOReader's docsettings folder (for users who store metadata separately). Requires --library-path. May be combined with --hashdocsettings-path; adjacent sidecars are also considered and newest valid metadata wins.
     #[arg(long, env = "KOSHELF_DOCSETTINGS_PATH")]
     pub docsettings_path: Option<PathBuf>,
 
-    /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --library-path. Mutually exclusive with --docsettings-path.
+    /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --library-path. May be combined with --docsettings-path; adjacent sidecars are also considered and newest valid metadata wins.
     #[arg(long, env = "KOSHELF_HASHDOCSETTINGS_PATH")]
     pub hashdocsettings_path: Option<PathBuf>,
 
@@ -260,12 +260,6 @@ impl CommonArgs {
             anyhow::bail!("--include-unread can only be used when --library-path is provided");
         }
 
-        if self.docsettings_path.is_some() && self.hashdocsettings_path.is_some() {
-            anyhow::bail!(
-                "--docsettings-path and --hashdocsettings-path are mutually exclusive. Please use only one."
-            );
-        }
-
         if self.docsettings_path.is_some() && self.library_path.is_empty() {
             anyhow::bail!("--docsettings-path requires --library-path to be provided");
         }
@@ -278,30 +272,14 @@ impl CommonArgs {
             anyhow::bail!("--kobo-db requires --library-path to be provided");
         }
 
-        if let Some(ref docsettings_path) = self.docsettings_path {
-            if !docsettings_path.exists() {
-                anyhow::bail!("Docsettings path does not exist: {:?}", docsettings_path);
-            }
-            if !docsettings_path.is_dir() {
-                anyhow::bail!(
-                    "Docsettings path is not a directory: {:?}",
-                    docsettings_path
-                );
-            }
-        }
-
-        if let Some(ref hashdocsettings_path) = self.hashdocsettings_path {
-            if !hashdocsettings_path.exists() {
-                anyhow::bail!(
-                    "Hashdocsettings path does not exist: {:?}",
-                    hashdocsettings_path
-                );
-            }
-            if !hashdocsettings_path.is_dir() {
-                anyhow::bail!(
-                    "Hashdocsettings path is not a directory: {:?}",
-                    hashdocsettings_path
-                );
+        // Central metadata may be on a temporarily unavailable sync mount.
+        // Discovery diagnoses missing roots; the watcher retries them in serve mode.
+        for path in [&self.docsettings_path, &self.hashdocsettings_path]
+            .into_iter()
+            .flatten()
+        {
+            if path.exists() && !path.is_dir() {
+                anyhow::bail!("Metadata path is not a directory: {:?}", path);
             }
         }
 
@@ -388,6 +366,29 @@ mod tests {
     #[test]
     fn parse_time_off_alias_maps_to_none() {
         assert_eq!(parse_time_to_seconds("off").unwrap(), None);
+    }
+
+    #[test]
+    fn unavailable_metadata_roots_are_allowed_but_regular_files_are_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("missing/docsettings");
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "--library-path",
+                dir.path().to_str().unwrap(),
+                "--docsettings-path",
+                root.to_str().unwrap(),
+            ])
+            .unwrap();
+        let CliCommand::Serve(args) = Cli::from_arg_matches(&matches).unwrap().command else {
+            panic!("serve");
+        };
+        args.common.validate().unwrap();
+        std::fs::create_dir_all(root.parent().unwrap()).unwrap();
+        std::fs::write(&root, "not a directory").unwrap();
+        assert!(args.common.validate().is_err());
     }
 
     #[test]

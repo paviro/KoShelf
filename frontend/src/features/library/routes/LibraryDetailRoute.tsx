@@ -69,7 +69,8 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
 
     const canWrite =
         siteQuery.data?.capabilities.has_writeback === true &&
-        item?.has_metadata === true;
+        item?.has_metadata === true &&
+        Boolean(item.metadata_revision);
     const itemStats = detail?.statistics?.item_stats ?? null;
     const sessionStats = detail?.statistics?.session_stats ?? null;
     const completions = detail?.completions ?? null;
@@ -80,10 +81,6 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const noteCount = itemStats?.notes ?? 0;
     const highlightCount = itemStats?.highlights ?? 0;
     const reviewNote = item?.review_note ?? '';
-    const hasReviewNote =
-        item?.review_note !== null && item?.review_note !== undefined;
-    const hasRating = typeof item?.rating === 'number' && item.rating > 0;
-    const hasReview = hasReviewNote || hasRating;
     const hasPublisher =
         item?.publisher !== null && item?.publisher !== undefined;
 
@@ -97,65 +94,74 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     // ── Review editing ──────────────────────────────────────────────────
     const handleReviewSave = useCallback(
         (note: string, rating: number) => {
-            updateItemMutation.mutate({
-                review_note: note || null,
-                rating: rating || null,
+            return updateItemMutation.mutateAsync({
+                payload: { review_note: note || null, rating: rating || null },
+                revision: item?.metadata_revision ?? '',
             });
         },
-        [updateItemMutation],
+        [updateItemMutation, item?.metadata_revision],
     );
 
     const handleReviewDelete = useCallback(() => {
-        updateItemMutation.mutate({
-            review_note: null,
-            rating: null,
+        return updateItemMutation.mutateAsync({
+            payload: { review_note: null, rating: null },
+            revision: item?.metadata_revision ?? '',
         });
-    }, [updateItemMutation]);
+    }, [updateItemMutation, item?.metadata_revision]);
 
     // ── Status change ───────────────────────────────────────────────────
     const handleStatusChange = useCallback(
         (status: string) => {
-            updateItemMutation.mutate({ status });
+            updateItemMutation.mutate({
+                payload: { status },
+                revision: item?.metadata_revision ?? '',
+            });
         },
-        [updateItemMutation],
+        [updateItemMutation, item?.metadata_revision],
     );
 
     // ── Annotation mutations ────────────────────────────────────────────
     const handleAnnotationNoteUpdate = useCallback(
         (annotationId: string, note: string | null) => {
-            updateAnnotationMutation.mutate({
+            return updateAnnotationMutation.mutateAsync({
+                revision: item?.metadata_revision ?? '',
                 annotationId,
                 payload: { note },
             });
         },
-        [updateAnnotationMutation],
+        [updateAnnotationMutation, item?.metadata_revision],
     );
 
     const handleAnnotationColorChange = useCallback(
         (annotationId: string, color: string) => {
-            updateAnnotationMutation.mutate({
+            return updateAnnotationMutation.mutateAsync({
+                revision: item?.metadata_revision ?? '',
                 annotationId,
                 payload: { color },
             });
         },
-        [updateAnnotationMutation],
+        [updateAnnotationMutation, item?.metadata_revision],
     );
 
     const handleAnnotationDrawerChange = useCallback(
         (annotationId: string, drawer: string) => {
-            updateAnnotationMutation.mutate({
+            return updateAnnotationMutation.mutateAsync({
+                revision: item?.metadata_revision ?? '',
                 annotationId,
                 payload: { drawer },
             });
         },
-        [updateAnnotationMutation],
+        [updateAnnotationMutation, item?.metadata_revision],
     );
 
     const handleAnnotationDelete = useCallback(
         (annotationId: string) => {
-            deleteAnnotationMutation.mutate(annotationId);
+            return deleteAnnotationMutation.mutateAsync({
+                annotationId,
+                revision: item?.metadata_revision ?? '',
+            });
         },
-        [deleteAnnotationMutation],
+        [deleteAnnotationMutation, item?.metadata_revision],
     );
 
     // ── Section visibility ──────────────────────────────────────────────
@@ -277,57 +283,73 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                                 />
                             )}
 
-                            {(hasReview || canWrite) && (
-                                <LibraryReviewSection
-                                    note={reviewNote}
-                                    rating={item!.rating ?? null}
-                                    visible={sectionState.review}
-                                    onToggle={() => toggle('review')}
+                            {canWrite && item?.metadata_source === 'backup' && (
+                                <p role="status">
+                                    {translation.get('metadata-backup-edit')}
+                                </p>
+                            )}
+                            <LibraryReviewSection
+                                note={reviewNote}
+                                rating={item!.rating ?? null}
+                                visible={sectionState.review}
+                                onToggle={() => toggle('review')}
+                                canWrite={canWrite}
+                                metadataRevision={
+                                    item?.metadata_revision ?? null
+                                }
+                                onSave={handleReviewSave}
+                                onDelete={handleReviewDelete}
+                                saving={updateItemMutation.isPending}
+                                guardedAction={guardedAction}
+                            />
+
+                            {item!.content_type === 'book' && (
+                                <LibraryHighlightsSection
+                                    annotations={highlightAnnotations}
+                                    saving={
+                                        updateAnnotationMutation.isPending ||
+                                        deleteAnnotationMutation.isPending
+                                    }
+                                    visible={sectionState.highlights}
+                                    onToggle={() => toggle('highlights')}
+                                    sortOrder={highlightsSortOrder}
+                                    onToggleSort={toggleHighlightsSort}
+                                    readerBaseHref={readerBaseHref}
                                     canWrite={canWrite}
-                                    onSave={handleReviewSave}
-                                    onDelete={handleReviewDelete}
-                                    saving={updateItemMutation.isPending}
+                                    metadataRevision={
+                                        item?.metadata_revision ?? null
+                                    }
+                                    onSaveNote={handleAnnotationNoteUpdate}
+                                    onColorChange={handleAnnotationColorChange}
+                                    onDrawerChange={
+                                        handleAnnotationDrawerChange
+                                    }
+                                    onDelete={handleAnnotationDelete}
                                     guardedAction={guardedAction}
                                 />
                             )}
 
-                            {item!.content_type === 'book' &&
-                                highlightAnnotations.length > 0 && (
-                                    <LibraryHighlightsSection
-                                        annotations={highlightAnnotations}
-                                        visible={sectionState.highlights}
-                                        onToggle={() => toggle('highlights')}
-                                        sortOrder={highlightsSortOrder}
-                                        onToggleSort={toggleHighlightsSort}
-                                        readerBaseHref={readerBaseHref}
-                                        canWrite={canWrite}
-                                        onSaveNote={handleAnnotationNoteUpdate}
-                                        onColorChange={
-                                            handleAnnotationColorChange
-                                        }
-                                        onDrawerChange={
-                                            handleAnnotationDrawerChange
-                                        }
-                                        onDelete={handleAnnotationDelete}
-                                        guardedAction={guardedAction}
-                                    />
-                                )}
-
-                            {item!.content_type === 'book' &&
-                                bookmarkAnnotations.length > 0 && (
-                                    <LibraryBookmarksSection
-                                        annotations={bookmarkAnnotations}
-                                        visible={sectionState.bookmarks}
-                                        onToggle={() => toggle('bookmarks')}
-                                        sortOrder={bookmarksSortOrder}
-                                        onToggleSort={toggleBookmarksSort}
-                                        readerBaseHref={readerBaseHref}
-                                        canWrite={canWrite}
-                                        onSaveNote={handleAnnotationNoteUpdate}
-                                        onDelete={handleAnnotationDelete}
-                                        guardedAction={guardedAction}
-                                    />
-                                )}
+                            {item!.content_type === 'book' && (
+                                <LibraryBookmarksSection
+                                    annotations={bookmarkAnnotations}
+                                    saving={
+                                        updateAnnotationMutation.isPending ||
+                                        deleteAnnotationMutation.isPending
+                                    }
+                                    visible={sectionState.bookmarks}
+                                    onToggle={() => toggle('bookmarks')}
+                                    sortOrder={bookmarksSortOrder}
+                                    onToggleSort={toggleBookmarksSort}
+                                    readerBaseHref={readerBaseHref}
+                                    canWrite={canWrite}
+                                    metadataRevision={
+                                        item?.metadata_revision ?? null
+                                    }
+                                    onSaveNote={handleAnnotationNoteUpdate}
+                                    onDelete={handleAnnotationDelete}
+                                    guardedAction={guardedAction}
+                                />
+                            )}
 
                             {(hasPublisher || item!.identifiers.length > 0) && (
                                 <LibraryAdditionalInfoSection

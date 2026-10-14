@@ -5,9 +5,9 @@
 //! HTTP handlers call into this module rather than using `LuaWriter` directly.
 
 use crate::source::koreader::LuaWriter;
+use crate::source::metadata::CapturedMetadata;
 use anyhow::Result;
 use mlua::{Lua, Table, Value};
-use std::path::Path;
 
 // NOTE: All timestamps (`summary.modified`, `datetime_updated`) are computed
 // by the caller using the configured timezone, so the Lua file and DB always
@@ -20,14 +20,14 @@ use std::path::Path;
 /// `modified_date` is the caller-formatted date string (YYYY-MM-DD) stamped
 /// on `summary.modified`, matching KoReader's `filemanagerutil.saveSummary()`.
 pub(crate) fn write_item_metadata(
-    metadata_path: &Path,
+    captured: &CapturedMetadata,
     review_note: Option<Option<&str>>,
     rating: Option<u32>,
     status: Option<&str>,
     modified_date: &str,
 ) -> Result<()> {
     let writer = LuaWriter::new();
-    writer.write(metadata_path, |lua, table| {
+    writer.write_captured(captured, |lua, table| {
         apply_item_mutations(lua, table, review_note, rating, status, modified_date)
     })
 }
@@ -40,7 +40,7 @@ pub(crate) fn write_item_metadata(
 /// `datetime_updated` is pre-computed by the caller so the Lua file and DB
 /// receive the same timestamp.
 pub(crate) fn write_annotation_metadata(
-    metadata_path: &Path,
+    captured: &CapturedMetadata,
     lua_index: i32,
     note: Option<Option<&str>>,
     color: Option<&str>,
@@ -49,7 +49,7 @@ pub(crate) fn write_annotation_metadata(
 ) -> Result<()> {
     let lua_array_index = (lua_index + 1) as i64;
     let writer = LuaWriter::new();
-    writer.write(metadata_path, |_lua, table| {
+    writer.write_captured(captured, |_lua, table| {
         apply_annotation_mutations(
             table,
             lua_array_index,
@@ -66,10 +66,10 @@ pub(crate) fn write_annotation_metadata(
 /// `lua_index` is the 0-based position from the database.
 /// The correct stats counter is determined by reading the annotation's `drawer`
 /// and `note` fields, matching KOReader's `getBookmarkType` classification.
-pub(crate) fn delete_annotation(metadata_path: &Path, lua_index: i32) -> Result<()> {
+pub(crate) fn delete_annotation(captured: &CapturedMetadata, lua_index: i32) -> Result<()> {
     let lua_array_index = (lua_index + 1) as i64;
     let writer = LuaWriter::new();
-    writer.write(metadata_path, |lua, table| {
+    writer.write_captured(captured, |lua, table| {
         apply_annotation_deletion(lua, table, lua_array_index)
     })
 }

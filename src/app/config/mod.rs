@@ -370,4 +370,37 @@ mod tests {
             Some(PathBuf::from("/runtime/from-cli.sqlite"))
         );
     }
+    #[test]
+    fn both_metadata_paths_merge_independently_and_validate() {
+        let dir = tempfile::tempdir().unwrap();
+        let library = dir.path().join("books");
+        let doc = dir.path().join("doc");
+        let hash = dir.path().join("hash");
+        for path in [&library, &doc, &hash] {
+            std::fs::create_dir(path).unwrap();
+        }
+        let matches = Cli::command()
+            .try_get_matches_from([
+                "koshelf",
+                "serve",
+                "--library-path",
+                library.to_str().unwrap(),
+                "--docsettings-path",
+                doc.to_str().unwrap(),
+            ])
+            .unwrap();
+        let mut cli = Cli::from_arg_matches(&matches).unwrap();
+        let config: FileConfig = toml::from_str(&format!(
+            "[library]\ndocsettings_path = '/ignored'\nhashdocsettings_path = '{}'",
+            hash.display()
+        ))
+        .unwrap();
+        let CliCommand::Serve(ref mut args) = cli.command else {
+            panic!("serve")
+        };
+        merge_serve_with_file_config(args, &config, matches.subcommand().unwrap().1);
+        assert_eq!(args.common.docsettings_path.as_ref(), Some(&doc));
+        assert_eq!(args.common.hashdocsettings_path.as_ref(), Some(&hash));
+        args.common.validate().unwrap();
+    }
 }

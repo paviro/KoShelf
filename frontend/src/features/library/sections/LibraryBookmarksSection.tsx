@@ -11,6 +11,7 @@ import {
     type AnnotationSortOrder,
 } from '../lib/annotation-sort';
 import { annotationReaderHref } from '../lib/library-reader-links';
+import { useEditSnapshot } from '../hooks/useEditSnapshot';
 import { useEditToggle } from '../hooks/useEditToggle';
 
 type LibraryBookmarksSectionProps = {
@@ -21,8 +22,13 @@ type LibraryBookmarksSectionProps = {
     onToggleSort: () => void;
     readerBaseHref?: string | null;
     canWrite?: boolean;
-    onSaveNote?: (annotationId: string, note: string | null) => void;
-    onDelete?: (annotationId: string) => void;
+    saving?: boolean;
+    metadataRevision?: string | null;
+    onSaveNote?: (
+        annotationId: string,
+        note: string | null,
+    ) => void | Promise<void>;
+    onDelete?: (annotationId: string) => void | Promise<void>;
     guardedAction?: (action: () => void) => void;
 };
 
@@ -34,15 +40,23 @@ export function LibraryBookmarksSection({
     onToggleSort,
     readerBaseHref,
     canWrite = false,
+    saving = false,
+    metadataRevision = null,
     onSaveNote,
     onDelete,
     guardedAction,
 }: LibraryBookmarksSectionProps) {
     const { editing, toggle } = useEditToggle(guardedAction);
+    const session = useEditSnapshot(
+        { annotations, onSaveNote, onDelete },
+        metadataRevision,
+        editing,
+    );
+    const stale = session.stale || !canWrite;
 
     const displayedEntries = useMemo(
-        () => sortedAnnotationEntries(annotations, sortOrder),
-        [annotations, sortOrder],
+        () => sortedAnnotationEntries(session.value.annotations, sortOrder),
+        [session.value.annotations, sortOrder],
     );
 
     const sortButton =
@@ -51,8 +65,13 @@ export function LibraryBookmarksSection({
         ) : null;
 
     const editButton =
-        canWrite && visible ? (
-            <EditSectionButton editing={editing} onToggle={toggle} />
+        (canWrite || editing) && visible ? (
+            <EditSectionButton
+                editing={editing}
+                onToggle={() => {
+                    if (!saving) toggle();
+                }}
+            />
         ) : null;
 
     const controls =
@@ -62,6 +81,8 @@ export function LibraryBookmarksSection({
                 {editButton}
             </>
         ) : undefined;
+
+    if (!editing && annotations.length === 0) return null;
 
     return (
         <CollapsibleSection
@@ -79,7 +100,13 @@ export function LibraryBookmarksSection({
             contentClassName="mb-8"
             controls={controls}
         >
-            <div className="space-y-3">
+            {editing && stale && (
+                <p role="status">{translation.get('metadata-edit-stale')}</p>
+            )}
+            <fieldset
+                disabled={saving || (editing && stale)}
+                className="space-y-3"
+            >
                 {displayedEntries.map(({ annotation }) => (
                     <LibraryAnnotationCard
                         key={annotation.id}
@@ -90,18 +117,37 @@ export function LibraryBookmarksSection({
                             'bookmark',
                             annotation.id,
                         )}
-                        showEditingControls={canWrite && editing}
+                        showEditingControls={editing}
                         onSaveNote={
-                            onSaveNote
-                                ? (note) => onSaveNote(annotation.id, note)
+                            session.value.onSaveNote
+                                ? async (note) => {
+                                      if (stale)
+                                          throw new Error(
+                                              'metadata revision is stale',
+                                          );
+                                      await session.value.onSaveNote?.(
+                                          annotation.id,
+                                          note,
+                                      );
+                                  }
                                 : undefined
                         }
                         onDelete={
-                            onDelete ? () => onDelete(annotation.id) : undefined
+                            session.value.onDelete
+                                ? async () => {
+                                      if (stale)
+                                          throw new Error(
+                                              'metadata revision is stale',
+                                          );
+                                      await session.value.onDelete?.(
+                                          annotation.id,
+                                      );
+                                  }
+                                : undefined
                         }
                     />
                 ))}
-            </div>
+            </fieldset>
         </CollapsibleSection>
     );
 }

@@ -466,3 +466,6 @@ page-activity = Page Activity
     .legend-bookmark = Bookmark
     .legend-chapter = Chapter
     .info = Page numbers are affected by the current formatting options of the document. Unlike other parts of KoShelf, this view does not support synthetic page scaling.
+
+metadata-edit-stale = Metadata changed while editing. Your draft is preserved. Close this editor and review the latest data before editing again.
+metadata-backup-edit = This data was recovered from a KOReader backup. Saving an edit will restore the primary metadata file.

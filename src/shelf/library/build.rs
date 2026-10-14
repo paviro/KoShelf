@@ -1,11 +1,10 @@
 //! Library item persistence helpers.
 //!
-//! `upsert_single_item` handles writing a single library item (row +
-//! annotations + fingerprint) to the database.  Used by the ingest pipeline
+//! `upsert_captured_item` handles writing a single library item (row +
+//! annotations + capture provenance + fingerprint) to the database.  Used by the ingest pipeline
 //! and by the watcher's targeted rebuild.
 
 use anyhow::{Context, Result};
-use std::path::Path;
 
 use crate::shelf::library::item_mapping::{
     capture_fingerprint_row, map_annotations_to_rows, map_item_to_row,
@@ -14,32 +13,24 @@ use crate::shelf::models::LibraryItem;
 use crate::shelf::time_config::TimeConfig;
 use crate::store::sqlite::repo::LibraryRepository;
 
-/// Upsert a single library item (row + annotations + fingerprint).
-///
-/// `metadata_path` is the resolved KOReader metadata file path, or `None`
-/// for items without metadata.
-pub async fn upsert_single_item(
+/// Persist the reading state and its source provenance atomically.
+pub(crate) async fn upsert_captured_item(
     repo: &LibraryRepository,
     item: &LibraryItem,
-    metadata_path: Option<&Path>,
+    captured: Option<&crate::source::metadata::CapturedMetadata>,
+    checksum: &str,
+    writable: bool,
     time_config: &TimeConfig,
 ) -> Result<()> {
     let row = map_item_to_row(item, time_config);
-
-    repo.upsert_item(&row)
-        .await
-        .context("Failed to upsert library item")?;
-
-    let annotation_rows = map_annotations_to_rows(&item.id, item, time_config);
-    repo.replace_annotations(&item.id, &annotation_rows)
-        .await
-        .context("Failed to replace annotations")?;
-
-    if let Some(fp_row) = capture_fingerprint_row(item, metadata_path, time_config) {
-        repo.upsert_fingerprint(&fp_row)
-            .await
-            .context("Failed to upsert fingerprint")?;
+    let annotations = map_annotations_to_rows(&item.id, item, time_config);
+    let mut fp =
+        capture_fingerprint_row(item, None, time_config).context("capture book fingerprint")?;
+    if let Some(captured) = captured {
+        fp.metadata_path = Some(captured.path.to_string_lossy().into_owned());
+        fp.metadata_size_bytes = Some(i64::try_from(captured.bytes.len())?);
+        fp.metadata_modified_unix_ms = Some(i64::try_from(captured.modified_ns / 1_000_000)?);
     }
-
-    Ok(())
+    repo.persist_captured_item(&row, &annotations, &fp, captured, checksum, writable)
+        .await
 }

@@ -18,6 +18,7 @@ import {
 import type { IconType } from 'react-icons';
 import { Link } from 'react-router';
 
+import { usePendingEdit } from '../hooks/usePendingEdit';
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
 import { formatAnnotationDatetime } from '../lib/library-detail-formatters';
@@ -37,10 +38,10 @@ type LibraryAnnotationCardProps = {
     variant: LibraryAnnotationCardVariant;
     readerHref?: string | null;
     showEditingControls?: boolean;
-    onSaveNote?: (note: string | null) => void;
-    onColorChange?: (color: string) => void;
-    onDrawerChange?: (drawer: string) => void;
-    onDelete?: () => void;
+    onSaveNote?: (note: string | null) => void | Promise<void>;
+    onColorChange?: (color: string) => void | Promise<void>;
+    onDrawerChange?: (drawer: string) => void | Promise<void>;
+    onDelete?: () => void | Promise<void>;
 };
 
 /* ------------------------------------------------------------------ */
@@ -160,6 +161,7 @@ function NoteEditor({
     onDraftChange,
     textareaRef,
     hasText,
+    pending = false,
 }: {
     variant: LibraryAnnotationCardVariant;
     note?: string | null;
@@ -167,6 +169,7 @@ function NoteEditor({
     draftNote: string;
     onDraftChange: (value: string) => void;
     textareaRef: RefObject<HTMLTextAreaElement | null>;
+    pending?: boolean;
     hasText: boolean;
 }) {
     const isHighlight = variant === 'highlight';
@@ -194,6 +197,7 @@ function NoteEditor({
                 <textarea
                     ref={textareaRef}
                     value={draftNote}
+                    disabled={pending}
                     onChange={(e) => onDraftChange(e.target.value)}
                     rows={3}
                     className="w-full rounded-lg border border-gray-200 dark:border-dark-700 bg-gray-50 dark:bg-dark-800 text-gray-900 dark:text-white p-3 text-sm leading-relaxed focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-y placeholder:text-gray-400 dark:placeholder:text-dark-500"
@@ -349,6 +353,7 @@ export function LibraryAnnotationCard({
     const colorButtonRef = useRef<HTMLButtonElement>(null);
     const drawerButtonRef = useRef<HTMLButtonElement>(null);
 
+    const { pending, run } = usePendingEdit();
     const [editingNote, setEditingNote] = useState(false);
     const [draftNote, setDraftNote] = useState(annotation.note ?? '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -422,8 +427,7 @@ export function LibraryAnnotationCard({
 
     const handleNoteSave = () => {
         const trimmed = draftNote.trim();
-        onSaveNote?.(trimmed || null);
-        stopEditingNote();
+        void run(() => onSaveNote?.(trimmed || null), stopEditingNote);
     };
 
     const deleteLabel = isBookmark
@@ -477,6 +481,7 @@ export function LibraryAnnotationCard({
                             draftNote={draftNote}
                             onDraftChange={setDraftNote}
                             textareaRef={textareaRef}
+                            pending={pending}
                             hasText={hasText}
                         />
                     )}
@@ -493,151 +498,166 @@ export function LibraryAnnotationCard({
                         draftNote={draftNote}
                         onDraftChange={setDraftNote}
                         textareaRef={textareaRef}
+                        pending={pending}
                         hasText={false}
                     />
                 </div>
             )}
 
-            {isEditingNote && (
-                <NoteEditingFooter
-                    px={px}
-                    hasNote={hasNote}
-                    onDeleteNote={() => {
-                        onSaveNote?.(null);
-                        stopEditingNote();
-                    }}
-                    onCancel={stopEditingNote}
-                    onSave={handleNoteSave}
-                />
-            )}
-
-            <AnimatedToolbar
-                visible={!!showToolbar}
-                editingNote={isEditingNote}
-                suppressTransition={suppressToolbarTransition}
-            >
-                {onDelete ? (
-                    <div className="flex items-center">
-                        <DeleteConfirmation
-                            label={deleteLabel}
-                            confirming={confirmingDelete}
-                            onConfirm={() => {
-                                onDelete();
-                                setConfirmingDelete(false);
-                            }}
-                            onStartConfirm={() => setConfirmingDelete(true)}
-                            onCancelConfirm={() => setConfirmingDelete(false)}
-                        />
-                    </div>
-                ) : (
-                    <div />
+            <fieldset disabled={pending} className="min-w-0">
+                {isEditingNote && (
+                    <NoteEditingFooter
+                        px={px}
+                        hasNote={hasNote}
+                        onDeleteNote={() => {
+                            void run(() => onSaveNote?.(null), stopEditingNote);
+                        }}
+                        onCancel={stopEditingNote}
+                        onSave={handleNoteSave}
+                    />
                 )}
 
-                <div className="flex items-center gap-0.5">
-                    {isHighlight && onColorChange && (
-                        <>
-                            <Button
-                                ref={colorButtonRef}
-                                variant="ghost"
-                                size="xs"
-                                active={
-                                    activePicker === 'color' && !isInvertDrawer
+                <AnimatedToolbar
+                    visible={!!showToolbar}
+                    editingNote={isEditingNote}
+                    suppressTransition={suppressToolbarTransition}
+                >
+                    {onDelete ? (
+                        <div className="flex items-center">
+                            <DeleteConfirmation
+                                label={deleteLabel}
+                                confirming={confirmingDelete}
+                                onConfirm={() => {
+                                    void run(onDelete, () =>
+                                        setConfirmingDelete(false),
+                                    );
+                                }}
+                                onStartConfirm={() => setConfirmingDelete(true)}
+                                onCancelConfirm={() =>
+                                    setConfirmingDelete(false)
                                 }
-                                disabled={isInvertDrawer}
-                                aria-label={highlightColorLabel}
-                                title={highlightColorLabel}
-                                onClick={() =>
-                                    setActivePicker(
-                                        activePicker === 'color'
-                                            ? null
-                                            : 'color',
-                                    )
-                                }
-                                className={toolbarButtonClass}
-                            >
-                                <span
-                                    className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
-                                />
-                                <span className="hidden sm:inline">
-                                    {highlightColorLabel}
-                                </span>
-                            </Button>
-                            {activePicker === 'color' && !isInvertDrawer && (
-                                <HighlightColorPicker
-                                    anchorRef={colorButtonRef}
-                                    currentColor={annotation.color ?? 'yellow'}
-                                    onSelect={(color) => {
-                                        onColorChange(color);
-                                        setActivePicker(null);
-                                    }}
-                                    onClose={() => setActivePicker(null)}
-                                />
-                            )}
-                        </>
+                            />
+                        </div>
+                    ) : (
+                        <div />
                     )}
 
-                    {isHighlight && onDrawerChange && DrawerIcon && (
-                        <>
-                            <Button
-                                ref={drawerButtonRef}
-                                variant="ghost"
-                                size="xs"
-                                active={activePicker === 'drawer'}
-                                icon={DrawerIcon}
-                                aria-label={highlightDrawerLabel}
-                                title={highlightDrawerLabel}
-                                onClick={() =>
-                                    setActivePicker(
-                                        activePicker === 'drawer'
-                                            ? null
-                                            : 'drawer',
-                                    )
-                                }
-                                className={toolbarButtonClass}
-                            >
-                                <span className="hidden sm:inline">
-                                    {highlightDrawerLabel}
-                                </span>
-                            </Button>
-                            {activePicker === 'drawer' && (
-                                <HighlightDrawerPicker
-                                    anchorRef={drawerButtonRef}
-                                    currentDrawer={
-                                        annotation.drawer ?? 'lighten'
+                    <div className="flex items-center gap-0.5">
+                        {isHighlight && onColorChange && (
+                            <>
+                                <Button
+                                    ref={colorButtonRef}
+                                    variant="ghost"
+                                    size="xs"
+                                    active={
+                                        activePicker === 'color' &&
+                                        !isInvertDrawer
                                     }
-                                    onSelect={(drawer) => {
-                                        onDrawerChange(drawer);
-                                        setActivePicker(null);
-                                    }}
-                                    onClose={() => setActivePicker(null)}
-                                />
-                            )}
-                        </>
-                    )}
+                                    disabled={isInvertDrawer}
+                                    aria-label={highlightColorLabel}
+                                    title={highlightColorLabel}
+                                    onClick={() =>
+                                        setActivePicker(
+                                            activePicker === 'color'
+                                                ? null
+                                                : 'color',
+                                        )
+                                    }
+                                    className={toolbarButtonClass}
+                                >
+                                    <span
+                                        className={`w-3.5 h-3.5 rounded-full ${dotClass} border border-black/10 dark:border-white/20`}
+                                    />
+                                    <span className="hidden sm:inline">
+                                        {highlightColorLabel}
+                                    </span>
+                                </Button>
+                                {activePicker === 'color' &&
+                                    !isInvertDrawer && (
+                                        <HighlightColorPicker
+                                            anchorRef={colorButtonRef}
+                                            currentColor={
+                                                annotation.color ?? 'yellow'
+                                            }
+                                            onSelect={(color) => {
+                                                void run(
+                                                    () => onColorChange(color),
+                                                    () => setActivePicker(null),
+                                                );
+                                            }}
+                                            onClose={() =>
+                                                setActivePicker(null)
+                                            }
+                                        />
+                                    )}
+                            </>
+                        )}
 
-                    {onSaveNote && (
-                        <Button
-                            variant="ghost"
-                            size="xs"
-                            icon={LuPencil}
-                            aria-label={noteButtonLabel}
-                            title={noteButtonLabel}
-                            onClick={() => {
-                                if (!editingNote) {
-                                    setDraftNote(annotation.note ?? '');
-                                }
+                        {isHighlight && onDrawerChange && DrawerIcon && (
+                            <>
+                                <Button
+                                    ref={drawerButtonRef}
+                                    variant="ghost"
+                                    size="xs"
+                                    active={activePicker === 'drawer'}
+                                    icon={DrawerIcon}
+                                    aria-label={highlightDrawerLabel}
+                                    title={highlightDrawerLabel}
+                                    onClick={() =>
+                                        setActivePicker(
+                                            activePicker === 'drawer'
+                                                ? null
+                                                : 'drawer',
+                                        )
+                                    }
+                                    className={toolbarButtonClass}
+                                >
+                                    <span className="hidden sm:inline">
+                                        {highlightDrawerLabel}
+                                    </span>
+                                </Button>
+                                {activePicker === 'drawer' && (
+                                    <HighlightDrawerPicker
+                                        anchorRef={drawerButtonRef}
+                                        currentDrawer={
+                                            annotation.drawer ?? 'lighten'
+                                        }
+                                        onSelect={(drawer) => {
+                                            void run(
+                                                () => onDrawerChange(drawer),
+                                                () => setActivePicker(null),
+                                            );
+                                        }}
+                                        onClose={() => setActivePicker(null)}
+                                    />
+                                )}
+                            </>
+                        )}
 
-                                setEditingNote(!editingNote);
-                            }}
-                            className={toolbarButtonClass}
-                        >
-                            <span className="hidden sm:inline">
-                                {noteButtonLabel}
-                            </span>
-                        </Button>
-                    )}
-                </div>
-            </AnimatedToolbar>
+                        {onSaveNote && (
+                            <Button
+                                variant="ghost"
+                                size="xs"
+                                icon={LuPencil}
+                                aria-label={noteButtonLabel}
+                                title={noteButtonLabel}
+                                onClick={() => {
+                                    if (!editingNote) {
+                                        setDraftNote(annotation.note ?? '');
+                                    }
+
+                                    setEditingNote(!editingNote);
+                                }}
+                                className={toolbarButtonClass}
+                            >
+                                <span className="hidden sm:inline">
+                                    {noteButtonLabel}
+                                </span>
+                            </Button>
+                        )}
+                    </div>
+                </AnimatedToolbar>
+            </fieldset>
         </article>
     );
 }

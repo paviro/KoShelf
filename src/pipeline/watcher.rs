@@ -1,8 +1,6 @@
 use crate::app::config::SiteConfig;
 use crate::pipeline::rebuild::rebuild;
-use crate::server::RecentWrites;
 use crate::shelf::models::LibraryItemFormat;
-use crate::source::scanner::MetadataLocation;
 use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
@@ -10,17 +8,12 @@ use anyhow::Result;
 use log::{debug, info, warn};
 use notify::event::ModifyKind;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-
-/// Events for paths written by the app within this window are suppressed.
-/// Must exceed the poll interval (1 s) to cover the gap between `mark_written()`
-/// and the arrival of the corresponding filesystem event.
-const SELF_WRITE_SUPPRESSION_WINDOW: Duration = Duration::from_secs(3);
 
 /// Watches library paths and statistics DB for changes, triggering debounced rebuilds.
 pub struct FileWatcher {
@@ -29,7 +22,6 @@ pub struct FileWatcher {
     reading_data_store: Option<SharedReadingDataStore>,
     update_notifier: Option<UpdateNotifier>,
     library_repo: Option<LibraryRepository>,
-    recent_writes: Option<RecentWrites>,
 }
 
 impl Deref for FileWatcher {
@@ -46,7 +38,6 @@ impl FileWatcher {
         reading_data_store: Option<SharedReadingDataStore>,
         update_notifier: Option<UpdateNotifier>,
         library_repo: Option<LibraryRepository>,
-        recent_writes: Option<RecentWrites>,
     ) -> Self {
         Self {
             config,
@@ -54,7 +45,6 @@ impl FileWatcher {
             reading_data_store,
             update_notifier,
             library_repo,
-            recent_writes,
         }
     }
 
@@ -82,19 +72,19 @@ impl FileWatcher {
             watched.push(format!("{}", library_path.display()));
         }
 
-        match &self.metadata_location {
-            MetadataLocation::DocSettings(path) => {
-                watcher.watch(path, RecursiveMode::Recursive)?;
-                watched.push(format!("{}", path.display()));
-            }
-            MetadataLocation::HashDocSettings(path) => {
-                watcher.watch(path, RecursiveMode::Recursive)?;
-                watched.push(format!("{}", path.display()));
-            }
-            MetadataLocation::InBookFolder => {
-                // Already watching books_path recursively
-            }
-        }
+        let mut metadata_watches = HashMap::new();
+        refresh_metadata_watches(
+            &mut watcher,
+            &self.metadata_location.central_paths(),
+            &self.library_paths,
+            &mut metadata_watches,
+        );
+        watched.extend(
+            self.metadata_location
+                .central_paths()
+                .iter()
+                .map(|p| p.display().to_string()),
+        );
 
         let mut watched_db_parents: HashSet<PathBuf> = HashSet::new();
         for stats_path in &self.statistics_db_paths {
@@ -189,11 +179,48 @@ impl FileWatcher {
             })
         });
 
-        // Main file event processing loop
-        while let Some(event) = file_rx.recv().await {
+        // Retry unavailable roots even when permissions/mount changes produce no event.
+        let mut retry_watches = tokio::time::interval(Duration::from_secs(5));
+        loop {
+            let event = tokio::select! {
+                event = file_rx.recv() => match event {
+                    Some(event) => event,
+                    None => break,
+                },
+                _ = retry_watches.tick() => {
+                    let restored = refresh_metadata_watches(
+                        &mut watcher, &self.metadata_location.central_paths(),
+                        &self.library_paths, &mut metadata_watches,
+                    );
+                    if !restored.is_empty() {
+                        let _ = rebuild_tx.send(restored);
+                    }
+                    continue;
+                }
+            };
+            if matches!(
+                event.kind,
+                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_))
+            ) {
+                let invalidated: Vec<_> = metadata_watches
+                    .keys()
+                    .filter(|watched| event.paths.iter().any(|path| watched.starts_with(path)))
+                    .cloned()
+                    .collect();
+                for path in invalidated {
+                    let _ = watcher.unwatch(&path);
+                    metadata_watches.remove(&path);
+                }
+            }
+            refresh_metadata_watches(
+                &mut watcher,
+                &self.metadata_location.central_paths(),
+                &self.library_paths,
+                &mut metadata_watches,
+            );
             if self.is_relevant_event(&event) {
-                // Filter out paths recently written by our own write handlers.
-                let paths = self.filter_recent_writes(event.paths);
+                // Our own writes also require reevaluation of competing originals.
+                let paths = event.paths;
                 if paths.is_empty() {
                     continue;
                 }
@@ -213,9 +240,10 @@ impl FileWatcher {
                 self.paths_contain_relevant_files(&event.paths)
             }
             EventKind::Modify(modify_kind) => match modify_kind {
-                ModifyKind::Data(_) | ModifyKind::Name(_) | ModifyKind::Any => {
-                    self.paths_contain_relevant_files(&event.paths)
-                }
+                ModifyKind::Data(_)
+                | ModifyKind::Name(_)
+                | ModifyKind::Metadata(_)
+                | ModifyKind::Any => self.paths_contain_relevant_files(&event.paths),
                 _ => {
                     debug!("Ignoring modify event: {:?}", modify_kind);
                     false
@@ -230,6 +258,14 @@ impl FileWatcher {
 
     fn paths_contain_relevant_files(&self, paths: &[PathBuf]) -> bool {
         paths.iter().any(|path| {
+            if self
+                .metadata_location
+                .central_paths()
+                .iter()
+                .any(|root| path.starts_with(root) || root.starts_with(path))
+            {
+                return true;
+            }
             let filename = path.file_name().and_then(|s| s.to_str());
 
             if LibraryItemFormat::from_path(path).is_some() {
@@ -261,39 +297,66 @@ impl FileWatcher {
             false
         })
     }
+}
 
-    /// Remove paths that were recently written by a write handler.
-    fn filter_recent_writes(&self, paths: Vec<PathBuf>) -> Vec<PathBuf> {
-        let Some(ref recent) = self.recent_writes else {
-            return paths;
-        };
-
-        let now = Instant::now();
-
-        paths
-            .into_iter()
-            .filter(|p| {
-                if let Some(entry) = recent.get(p) {
-                    let elapsed = now.duration_since(*entry.value());
-                    if elapsed < SELF_WRITE_SUPPRESSION_WINDOW {
-                        debug!(
-                            "Suppressing self-triggered event for {:?} (written {:.1}s ago)",
-                            p,
-                            elapsed.as_secs_f64()
-                        );
-                        return false;
-                    }
-                    // Expired — clean up, but only if the timestamp hasn't
-                    // been refreshed by a concurrent `mark_written()`.
-                    drop(entry);
-                    recent.remove_if(p, |_, ts| {
-                        now.duration_since(*ts) >= SELF_WRITE_SUPPRESSION_WINDOW
-                    });
-                }
-                true
-            })
-            .collect()
+/// Keep a nonrecursive watch on the nearest available ancestor so missing
+/// directory chains can be discovered without recursively watching unrelated files.
+fn refresh_metadata_watches(
+    watcher: &mut impl Watcher,
+    roots: &[&Path],
+    library_paths: &[PathBuf],
+    registered: &mut HashMap<PathBuf, RecursiveMode>,
+) -> Vec<PathBuf> {
+    let mut restored = Vec::new();
+    let missing: Vec<_> = registered
+        .keys()
+        .filter(|path| !path.is_dir())
+        .cloned()
+        .collect();
+    for path in missing {
+        let _ = watcher.unwatch(&path);
+        registered.remove(&path);
     }
+    for root in roots {
+        let absolute = match std::path::absolute(root) {
+            Ok(path) => path,
+            Err(error) => {
+                warn!("Cannot resolve metadata watch {:?}: {}", root, error);
+                continue;
+            }
+        };
+        let ancestor = absolute
+            .parent()
+            .and_then(|parent| parent.ancestors().find(|p| p.is_dir()));
+        let targets = ancestor
+            .into_iter()
+            .map(|p| (p, RecursiveMode::NonRecursive))
+            .chain(
+                absolute
+                    .is_dir()
+                    .then_some((absolute.as_path(), RecursiveMode::Recursive)),
+            );
+        for (path, mode) in targets {
+            if library_paths.iter().any(|library| {
+                std::path::absolute(library).is_ok_and(|library| path.starts_with(library))
+            }) || registered
+                .get(path)
+                .is_some_and(|existing| *existing == RecursiveMode::Recursive || *existing == mode)
+            {
+                continue;
+            }
+            match watcher.watch(path, mode) {
+                Ok(()) => {
+                    registered.insert(path.to_path_buf(), mode);
+                    if mode == RecursiveMode::Recursive {
+                        restored.push(root.to_path_buf());
+                    }
+                }
+                Err(error) => warn!("Metadata watch unavailable for {:?}: {}", path, error),
+            }
+        }
+    }
+    restored
 }
 
 /// Format a list of paths by factoring out the longest common directory prefix.
@@ -354,6 +417,76 @@ fn log_accumulated_paths(
             info!("Kobo database changed: {:?}", path);
         } else if kobo_db_path.is_some() && path.extension().is_none() {
             info!("Extensionless Kobo candidate changed: {:?}", path);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use notify::event::{CreateKind, RemoveKind, RenameMode};
+
+    #[test]
+    fn missing_central_directory_is_watched_when_it_returns() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("mount/settings/docsettings");
+        let mut watcher =
+            notify::PollWatcher::new(|_: notify::Result<Event>| {}, Config::default()).unwrap();
+        let mut registered = HashMap::new();
+        assert!(refresh_metadata_watches(&mut watcher, &[&root], &[], &mut registered).is_empty());
+        assert_eq!(
+            registered.get(dir.path()),
+            Some(&RecursiveMode::NonRecursive)
+        );
+        std::fs::create_dir_all(root.parent().unwrap()).unwrap();
+        refresh_metadata_watches(&mut watcher, &[&root], &[], &mut registered);
+        assert_eq!(
+            registered.get(root.parent().unwrap()),
+            Some(&RecursiveMode::NonRecursive)
+        );
+        std::fs::create_dir(&root).unwrap();
+        assert_eq!(
+            refresh_metadata_watches(&mut watcher, &[&root], &[], &mut registered),
+            vec![root.clone()]
+        );
+        assert_eq!(registered.get(&root), Some(&RecursiveMode::Recursive));
+        std::fs::remove_dir(&root).unwrap();
+        refresh_metadata_watches(&mut watcher, &[&root], &[], &mut registered);
+        assert!(!registered.contains_key(&root));
+        std::fs::create_dir(&root).unwrap();
+        assert_eq!(
+            refresh_metadata_watches(&mut watcher, &[&root], &[], &mut registered),
+            vec![root]
+        );
+    }
+
+    #[test]
+    fn backup_and_replaced_root_events_trigger_reconciliation() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut config = crate::pipeline::rebuild::tests::test_config(dir.path(), None);
+        let root = dir.path().join("docsettings");
+        config.metadata_location =
+            crate::source::scanner::MetadataLocation::DocSettings(root.clone());
+        let watcher = FileWatcher::new(config, None, None, None, None);
+        for kind in [
+            EventKind::Create(CreateKind::File),
+            EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Any)),
+            EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
+            EventKind::Remove(RemoveKind::File),
+        ] {
+            for path in [
+                dir.path().join("Book.sdr/metadata.epub.lua.old"),
+                dir.path().join("Book.fb2.sdr/metadata.zip.lua.old"),
+            ] {
+                assert!(watcher.is_relevant_event(&Event::new(kind).add_path(path)));
+            }
+        }
+        for kind in [
+            EventKind::Create(CreateKind::Folder),
+            EventKind::Remove(RemoveKind::Folder),
+            EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
+        ] {
+            assert!(watcher.is_relevant_event(&Event::new(kind).add_path(root.clone())));
         }
     }
 }
