@@ -17,6 +17,7 @@ pub(crate) async fn site(
     State(state): State<ServerState>,
     client_context: ClientContext,
     headers: HeaderMap,
+    axum::Extension(context): axum::Extension<crate::server::proxy::RequestContext>,
 ) -> Response {
     let mut data = state
         .site_store
@@ -38,7 +39,15 @@ pub(crate) async fn site(
             None => false,
         };
         if let Some(auth) = data.auth.as_mut() {
-            auth.authenticated = is_authenticated;
+            auth.authenticated = context.proxy_user.is_some() || is_authenticated;
+            auth.method = Some(
+                if context.proxy_user.is_some() {
+                    "proxy"
+                } else {
+                    "password"
+                }
+                .into(),
+            );
         }
     }
 

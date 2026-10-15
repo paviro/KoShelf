@@ -3,6 +3,7 @@
 pub mod api;
 pub mod auth;
 mod frontend;
+pub mod proxy;
 
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
@@ -52,6 +53,7 @@ pub struct ServerState {
     pub update_notifier: UpdateNotifier,
     pub library_repo: LibraryRepository,
     pub auth_state: Option<auth::AuthState>,
+    pub auth_proxy_peers: Vec<ipnet::IpNet>,
     pub write_coordinator: Option<WriteCoordinator>,
     pub library_management: bool,
     pub timezone: Option<chrono_tz::Tz>,
@@ -61,11 +63,13 @@ pub struct ServerState {
 pub struct WebServer {
     media_cache_dir: PathBuf,
     port: u16,
+    bind_address: std::net::IpAddr,
     site_store: SharedSiteStore,
     reading_data_store: SharedReadingDataStore,
     update_notifier: UpdateNotifier,
     library_repo: LibraryRepository,
     auth_state: Option<auth::AuthState>,
+    auth_proxy_peers: Vec<ipnet::IpNet>,
     write_coordinator: Option<WriteCoordinator>,
     library_management: bool,
     timezone: Option<chrono_tz::Tz>,
@@ -74,11 +78,13 @@ pub struct WebServer {
 pub struct WebServerOptions {
     pub media_cache_dir: PathBuf,
     pub port: u16,
+    pub bind_address: std::net::IpAddr,
     pub site_store: SharedSiteStore,
     pub reading_data_store: SharedReadingDataStore,
     pub update_notifier: UpdateNotifier,
     pub library_repo: LibraryRepository,
     pub auth_state: Option<auth::AuthState>,
+    pub auth_proxy_peers: Vec<ipnet::IpNet>,
     pub write_coordinator: Option<WriteCoordinator>,
     pub library_management: bool,
     pub timezone: Option<chrono_tz::Tz>,
@@ -89,11 +95,13 @@ impl WebServer {
         let WebServerOptions {
             media_cache_dir,
             port,
+            bind_address,
             site_store,
             reading_data_store,
             update_notifier,
             library_repo,
             auth_state,
+            auth_proxy_peers,
             write_coordinator,
             library_management,
             timezone,
@@ -102,11 +110,13 @@ impl WebServer {
         Self {
             media_cache_dir,
             port,
+            bind_address,
             site_store,
             reading_data_store,
             update_notifier,
             library_repo,
             auth_state,
+            auth_proxy_peers,
             write_coordinator,
             library_management,
             timezone,
@@ -121,6 +131,7 @@ impl WebServer {
             update_notifier: self.update_notifier.clone(),
             library_repo: self.library_repo,
             auth_state: self.auth_state,
+            auth_proxy_peers: self.auth_proxy_peers,
             write_coordinator: self.write_coordinator,
             library_management: self.library_management,
             timezone: self.timezone,
@@ -205,10 +216,16 @@ impl WebServer {
                 )),
         );
 
-        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
+        app = app.layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            proxy::request_context,
+        ));
+        let listener =
+            tokio::net::TcpListener::bind(SocketAddr::new(self.bind_address, self.port)).await?;
 
         info!(
-            "Listening on http://0.0.0.0:{} (auth: {}, writeback: {}, library management: {})",
+            "Listening on http://{}:{} (auth: {}, writeback: {}, library management: {})",
+            self.bind_address,
             self.port,
             if state.auth_state.is_some() {
                 "on"

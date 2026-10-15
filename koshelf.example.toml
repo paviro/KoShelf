@@ -27,10 +27,12 @@ language = "en_US"
 
 [server]
 port = 3000
+# bind_address = "0.0.0.0"
 # enable_auth = true
 # enable_writeback = false
 # enable_library_management = false
 # trusted_proxies = ["127.0.0.1/32", "::1/128"]
+# auth_proxy_peers = ["172.30.32.2/32"]  # requires enable_auth; see docs/authentication.md
 
 # [output]
 # path = "/path/to/output"

@@ -12,7 +12,6 @@ use crate::server::ServerState;
 #[derive(Debug, Clone, Copy)]
 pub struct ClientContext {
     pub client_ip: IpAddr,
-    pub peer_ip: IpAddr,
     pub is_https: bool,
 }
 
@@ -35,7 +34,6 @@ impl axum::extract::FromRequestParts<ServerState> for ClientContext {
                 .resolve(&parts.headers, peer_ip),
             None => ClientContext {
                 client_ip: peer_ip,
-                peer_ip,
                 is_https: false,
             },
         };
@@ -58,7 +56,6 @@ impl ClientAddrResolver {
         if !self.is_trusted_proxy(connect_info_ip) {
             return ClientContext {
                 client_ip: connect_info_ip,
-                peer_ip: connect_info_ip,
                 is_https: false,
             };
         }
@@ -69,7 +66,6 @@ impl ClientAddrResolver {
                 warn!("Ignoring forwarded headers due to parse error: {}", error);
                 return ClientContext {
                     client_ip: connect_info_ip,
-                    peer_ip: connect_info_ip,
                     is_https: false,
                 };
             }
@@ -96,7 +92,6 @@ impl ClientAddrResolver {
 
         ClientContext {
             client_ip,
-            peer_ip: connect_info_ip,
             is_https,
         }
     }

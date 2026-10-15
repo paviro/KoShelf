@@ -180,6 +180,16 @@ pub fn merge_serve_with_file_config(
         {
             args.enable_library_management = v;
         }
+        if let Some(value) = srv.bind_address
+            && not_explicit(matches, "bind_address")
+        {
+            args.bind_address = value;
+        }
+        if let Some(ref values) = srv.auth_proxy_peers
+            && not_explicit(matches, "auth_proxy_peers")
+        {
+            args.auth_proxy_peers = values.clone();
+        }
         if let Some(ref values) = srv.trusted_proxies
             && not_explicit(matches, "trusted_proxies")
             && !values.is_empty()

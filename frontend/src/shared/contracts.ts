@@ -14,6 +14,7 @@ export interface PasswordPolicy {
 }
 
 export interface SiteAuth {
+    method?: 'password' | 'proxy';
     authenticated: boolean;
     password_policy: PasswordPolicy;
 }

@@ -1,3 +1,4 @@
+import { appUrl } from './app-url';
 import { translation } from './i18n';
 import { addToast } from './ui/toast';
 import type {
@@ -215,12 +216,14 @@ export class HttpApiClient implements ApiClient {
     }
 
     getItemDownloadHref(id: string): string {
-        return `/api/items/${id}`;
+        return appUrl(`/api/items/${id}`);
     }
 
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
-        return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+        return appUrl(
+            `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`,
+        );
     }
 
     async updateMetadata(

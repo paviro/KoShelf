@@ -71,7 +71,8 @@ export function SettingsRoute() {
         getPrefetchOnIntentPreference(),
     );
 
-    const authEnabled = siteQuery.data?.auth != null;
+    const authEnabled =
+        siteQuery.data?.auth != null && siteQuery.data.auth.method !== 'proxy';
 
     const currentUiLocale = translation.getLanguage();
     const currentLocaleParts = splitLocale(currentUiLocale);

@@ -43,6 +43,8 @@ pub struct KoshelfSection {
 #[serde(deny_unknown_fields)]
 pub struct ServerSection {
     pub port: Option<u16>,
+    pub bind_address: Option<std::net::IpAddr>,
+    pub auth_proxy_peers: Option<Vec<String>>,
     pub enable_auth: Option<bool>,
     pub enable_writeback: Option<bool>,
     pub enable_library_management: Option<bool>,

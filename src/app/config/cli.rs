@@ -172,6 +172,16 @@ pub struct ServeArgs {
     #[arg(short, long, env = "KOSHELF_PORT", default_value = "3000")]
     pub port: u16,
 
+    /// Address to bind. Use loopback when deployed behind a local reverse proxy.
+    #[arg(long, env = "KOSHELF_BIND_ADDRESS", default_value = "0.0.0.0")]
+    pub bind_address: std::net::IpAddr,
+
+    /// Peers allowed to assert X-KoShelf-User and X-Forwarded-Prefix.
+    /// Requires password auth for requests without an assertion. The proxy MUST
+    /// strip these headers from unauthenticated requests. Empty disables proxy auth.
+    #[arg(long, env = "KOSHELF_AUTH_PROXY_PEERS", value_delimiter = ',', action = clap::ArgAction::Append)]
+    pub auth_proxy_peers: Vec<String>,
+
     /// Enable password authentication.
     /// On first run, generates a random password and prints it to stderr.
     #[arg(long, env = "KOSHELF_ENABLE_AUTH", default_value = "false")]
@@ -376,6 +386,10 @@ impl ServeArgs {
         }
 
         parse_trusted_proxy_nets(&self.trusted_proxies)?;
+        parse_trusted_proxy_nets(&self.auth_proxy_peers)?;
+        if !self.auth_proxy_peers.is_empty() && !self.enable_auth {
+            anyhow::bail!("--auth-proxy-peers requires --enable-auth to protect direct requests");
+        }
 
         Ok(())
     }

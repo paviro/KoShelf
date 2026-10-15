@@ -22,8 +22,39 @@ pub(crate) fn routes() -> Router {
         .route("/{path}", get(react_shell_root_asset_handler))
 }
 
-async fn react_shell_index_handler(headers: HeaderMap) -> Response {
-    serve_embedded_frontend_file("index.html", &headers)
+async fn react_shell_index_handler(
+    axum::Extension(context): axum::Extension<crate::server::proxy::RequestContext>,
+) -> Response {
+    let Some(file) = FRONTEND_DIST.get_file("index.html") else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let mut bytes = Vec::new();
+    if is_precompressed("index.html") {
+        if GzDecoder::new(file.contents())
+            .read_to_end(&mut bytes)
+            .is_err()
+        {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    } else {
+        bytes.extend_from_slice(file.contents());
+    }
+    let Ok(html) = String::from_utf8(bytes) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let html = html.replacen(
+        "<head>",
+        &format!("<head><base href=\"{}/\">", context.prefix),
+        1,
+    );
+    (
+        [
+            (CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "private, no-store"),
+        ],
+        html,
+    )
+        .into_response()
 }
 
 async fn react_shell_root_asset_handler(headers: HeaderMap, Path(path): Path<String>) -> Response {

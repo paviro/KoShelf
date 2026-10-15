@@ -60,7 +60,7 @@ pub async fn login_submit(
 
     let secure_cookie = should_use_secure_cookie(
         client_context.is_https,
-        client_context.peer_ip,
+        client_context.client_ip,
         headers.get(HOST).and_then(|value| value.to_str().ok()),
     );
 
@@ -127,7 +127,7 @@ pub async fn logout(
 
     let secure_cookie = should_use_secure_cookie(
         client_context.is_https,
-        client_context.peer_ip,
+        client_context.client_ip,
         headers.get(HOST).and_then(|value| value.to_str().ok()),
     );
 
@@ -331,19 +331,19 @@ fn to_session_response(session: SessionInfo, current_session_id: &str) -> Sessio
 
 fn should_use_secure_cookie(
     request_is_https: bool,
-    peer_ip: IpAddr,
+    client_ip: IpAddr,
     host_header: Option<&str>,
 ) -> bool {
     if request_is_https {
         return true;
     }
 
-    if peer_ip.is_loopback() && host_header.is_some_and(is_localhost_host_header) {
+    if client_ip.is_loopback() && host_header.is_some_and(is_localhost_host_header) {
         return false;
     }
 
     // Allow non-secure cookies over plain HTTP for private/LAN network access
-    if is_private_network_ip(peer_ip) {
+    if is_private_network_ip(client_ip) {
         return false;
     }
 

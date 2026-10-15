@@ -20,6 +20,8 @@ pub struct PasswordPolicy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SiteAuth {
     pub authenticated: bool,
+    #[serde(default)]
+    pub method: Option<String>,
     pub password_policy: PasswordPolicy,
 }
 

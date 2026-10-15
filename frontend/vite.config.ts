@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
         env.KOSHELF_DEV_BACKEND_URL || 'http://localhost:3000';
 
     return {
+        base: './',
         plugins: [react()],
         server: {
             proxy: {

@@ -1,3 +1,4 @@
+import { appUrl } from './app-url';
 import type {
     ApiClient,
     MetadataPatch,
@@ -293,7 +294,9 @@ export class StaticApiClient implements ApiClient {
 
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
-        return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+        return appUrl(
+            `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`,
+        );
     }
 
     async updateMetadata(

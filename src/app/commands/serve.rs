@@ -157,6 +157,8 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
     let web_server = WebServer::new(WebServerOptions {
         media_cache_dir: resolve_media_dirs(&output_dir).assets_dir,
         port: args.port,
+        bind_address: args.bind_address,
+        auth_proxy_peers: parse_trusted_proxy_nets(&args.auth_proxy_peers)?,
         site_store,
         reading_data_store,
         update_notifier,

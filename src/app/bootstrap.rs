@@ -270,6 +270,7 @@ pub(crate) async fn initialize_pipeline(
     let auth = if config.auth_enabled {
         Some(SiteAuth {
             authenticated: false,
+            method: Some("password".into()),
             password_policy: PasswordPolicy {
                 min_chars: crate::server::auth::password::MIN_PASSWORD_CHARS,
             },

@@ -3,6 +3,7 @@ import { QueryClient, useQueryClient } from '@tanstack/react-query';
 
 import { api, isApiHttpError, isServeMode } from './api';
 import { fetchJson, isLoginHashRoute, redirectToLogin } from './api-fetch';
+import { appUrl } from './app-url';
 import {
     emitUnauthorizedSessionEvent,
     installUnauthorizedSessionCacheSync,
@@ -164,7 +165,7 @@ export function RuntimeUpdatesBridge() {
                 return;
             }
 
-            source = new EventSource('/api/events/stream');
+            source = new EventSource(appUrl('/api/events/stream'));
             source.addEventListener('data_changed', handleDataChanged);
             source.onerror = () => {
                 void verifyAuthOnStreamError();

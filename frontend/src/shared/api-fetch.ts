@@ -1,3 +1,4 @@
+import { appUrl, resolveMediaUrls } from './app-url';
 import { emitUnauthorizedSessionEvent } from './auth-session';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -68,7 +69,7 @@ export function redirectToLogin(): void {
     }
 
     if (!isLoginHashRoute()) {
-        window.location.replace('/#/login');
+        window.location.replace(appUrl('/#/login'));
     }
 }
 
@@ -143,10 +144,13 @@ export async function fetchJson(
     url: string,
     options: FetchJsonOptions = {},
 ): Promise<unknown> {
-    const response = await fetch(url, {
+    const response = await fetch(appUrl(url), {
         method: options.method ?? 'GET',
         headers: {
             Accept: 'application/json',
+            ...(options.method && options.method !== 'GET'
+                ? { 'X-KoShelf-Request': '1' }
+                : {}),
             ...(options.headers ?? {}),
         },
         body: options.body,
@@ -165,5 +169,5 @@ export async function fetchJson(
         return null;
     }
 
-    return response.json();
+    return resolveMediaUrls(await response.json());
 }

@@ -21,10 +21,12 @@ Start the web server. Serves the embedded React app at `/` with API endpoints un
 **Serve-specific options:**
 
 - `-p, --port`: Port for web server (default: 3000)
+- `--bind-address`: Address to listen on (default: `0.0.0.0`). Use `127.0.0.1` when KoShelf is only reached through a reverse proxy on the same host
 - `--enable-auth`: Enable password authentication
 - `--enable-writeback`: Enable metadata writeback — allows editing annotations, review notes, ratings, and reading status from the UI, with changes written back to KOReader sidecar files
 - `--enable-library-management`: Enable library management — allows removing archived books from the library via the UI. Ebooks and KOReader sidecars are never modified
 - `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries for forwarded client IP/proto resolution
+- `--auth-proxy-peers`: Comma-separated or repeated IP/CIDR entries of reverse proxies allowed to authenticate users via `X-KoShelf-User` and serve KoShelf under a sub-path via `X-Forwarded-Prefix`. Requires `--enable-auth`. See [Reverse-Proxy Authentication](authentication.md#reverse-proxy-authentication)
 
 Requires `--data-path` for persistent data storage.
 
@@ -136,6 +138,8 @@ Common environment variables:
 - `KOSHELF_ENABLE_WRITEBACK`
 - `KOSHELF_ENABLE_LIBRARY_MANAGEMENT`
 - `KOSHELF_TRUSTED_PROXIES`
+- `KOSHELF_BIND_ADDRESS`
+- `KOSHELF_AUTH_PROXY_PEERS`
 - `KOSHELF_TITLE`
 - `KOSHELF_LANGUAGE`
 

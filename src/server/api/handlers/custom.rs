@@ -348,6 +348,7 @@ mod tests {
             reading_data_store: Arc::new(ReadingDataStore::new()),
             update_notifier: UpdateNotifier::new("test", "now"),
             auth_state: None,
+            auth_proxy_peers: Vec::new(),
             write_coordinator: Some(WriteCoordinator::new()),
             library_management: false,
             timezone: None,

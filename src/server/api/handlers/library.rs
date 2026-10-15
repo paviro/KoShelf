@@ -524,6 +524,7 @@ mod metadata_tests {
             update_notifier: crate::store::memory::UpdateNotifier::new("test", "now"),
             library_repo: repo,
             auth_state: None,
+            auth_proxy_peers: Vec::new(),
             write_coordinator: Some(crate::server::WriteCoordinator::new()),
             library_management: true,
             timezone: None,

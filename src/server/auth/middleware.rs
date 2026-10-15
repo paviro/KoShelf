@@ -17,6 +17,13 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
+    if request
+        .extensions()
+        .get::<crate::server::proxy::RequestContext>()
+        .is_some_and(|context| context.proxy_user.is_some())
+    {
+        return next.run(request).await;
+    }
     let Some(auth_state) = state.auth_state.as_ref() else {
         return next.run(request).await;
     };

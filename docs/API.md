@@ -2,6 +2,8 @@
 
 All endpoints are served under `/api/` when running in web server mode.
 
+Requests other than `GET`, `HEAD` and `OPTIONS` must include the header `X-KoShelf-Request: 1`; otherwise they are rejected with `403 Forbidden`. Browser requests whose `Sec-Fetch-Site` is not `same-origin` are rejected as well. See [Write Request Protection](authentication.md#write-request-protection).
+
 ## Response Envelope
 
 Every successful response is wrapped in an `ApiResponse<T>` envelope:
@@ -94,9 +96,16 @@ Returns site metadata and capabilities.
     "has_writeback": false,
     "has_archive": true,
     "has_library_management": false
+  },
+  "auth": {
+    "authenticated": true,
+    "method": "password",
+    "password_policy": { "min_chars": 8 }
   }
 }
 ```
+
+`auth` is present only when authentication is enabled. `method` is `"proxy"` when the request was authenticated by a trusted reverse proxy (see [Reverse-Proxy Authentication](authentication.md#reverse-proxy-authentication)) and `"password"` otherwise.
 
 Capability flags:
 
