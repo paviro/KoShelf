@@ -55,3 +55,9 @@ site/
 In `serve` mode, the equivalent `/assets/files/**` path is a runtime asset route. If authentication is enabled, it is protected by the auth middleware like other `/assets/**` routes.
 
 Static exports do not provide built-in authentication. If you export files, use host-level protection (for example: reverse-proxy auth, private bucket/CDN rules, or password-gated hosting) when those downloads should not be publicly accessible.
+
+## Archived books
+
+With a persistent `--data-path`, exports include [archived books](configuration.md#library-preservation) with their badge and availability filter, but without reader or download actions. Their covers are copied into the output, so the export never depends on the data directory. Ebook files (`--include-files`) are only exported for available items.
+
+Archive preservation can be disabled with `--archive-enabled false` (or `[library] archive_enabled = false`). Exports then contain current library items only and hide archive controls. Existing saved bundles remain untouched, and startup logs their location when present. Re-enabling resumes restoration and retention cleanup.

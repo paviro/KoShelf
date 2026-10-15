@@ -8,7 +8,7 @@ use crate::server::api::responses::common::ApiResponse;
 use crate::server::api::responses::error::ApiErrorCode;
 use crate::shelf::library::{self, LibraryDetailQuery, LibraryListQuery};
 use crate::source::koreader::mutations;
-use crate::source::metadata::{CapturedMetadata, MetadataIndices};
+use crate::source::metadata::CapturedMetadata;
 use axum::{
     Json,
     extract::{Path, Query, State},
@@ -192,6 +192,18 @@ impl WriteContext {
             })?;
         let guard = state.library_repo.metadata_guard().await;
         let repo = &state.library_repo;
+        // Archive transitions happen under the metadata gate, so this check holds
+        // for the whole write.
+        if repo
+            .get_item(item_id)
+            .await
+            .map_err(internal_metadata_error)?
+            .is_some_and(|i| i.is_archived)
+        {
+            return Err(ApiResponseError::conflict(
+                "archived items cannot be edited",
+            ));
+        }
         let saved = repo
             .metadata_provenance(item_id)
             .await
@@ -212,8 +224,7 @@ impl WriteContext {
         .ok_or_else(ApiResponseError::not_found)?;
         let checksum = crate::source::koreader::calculate_partial_md5(std::path::Path::new(&path))
             .map_err(internal_metadata_error)?;
-        let indices =
-            MetadataIndices::new(&repo.metadata_location()).map_err(internal_metadata_error)?;
+        let indices = repo.metadata_indices().map_err(internal_metadata_error)?;
         let resolved = indices.resolve(
             std::path::Path::new(&path),
             format,
@@ -273,7 +284,7 @@ impl WriteContext {
         })
     }
 
-    async fn finish(&self, state: &ServerState) -> ApiResult<()> {
+    async fn finish(&self, state: &ServerState) -> ApiResult<axum::response::Response> {
         let result = async {
             let captured =
                 CapturedMetadata::capture(&self.captured.primary_path, self.captured.kind)?;
@@ -288,7 +299,16 @@ impl WriteContext {
         .await;
         // No event suppression: failed cache updates must be recoverable by ingestion.
         state.update_notifier.publish(Utc::now().to_rfc3339());
-        result.map_err(internal_metadata_error)
+        match result {
+            Ok(()) => Ok(StatusCode::NO_CONTENT.into_response()),
+            Err(e) => {
+                warn!(
+                    "Source saved; capture refresh pending for {}: {e:#}",
+                    self.item_id
+                );
+                Ok(Json(serde_json::json!({"backup_pending": true})).into_response())
+            }
+        }
     }
 }
 
@@ -353,8 +373,7 @@ pub(crate) async fn update_item(
         internal_metadata_error(e)
     })?;
 
-    ctx.finish(&state).await?;
-    Ok(StatusCode::NO_CONTENT)
+    ctx.finish(&state).await
 }
 
 pub(crate) async fn update_annotation(
@@ -425,8 +444,7 @@ pub(crate) async fn update_annotation(
         internal_metadata_error(e)
     })?;
 
-    ctx.finish(&state).await?;
-    Ok(StatusCode::NO_CONTENT)
+    ctx.finish(&state).await
 }
 
 pub(crate) async fn delete_annotation(
@@ -454,8 +472,7 @@ pub(crate) async fn delete_annotation(
         internal_metadata_error(e)
     })?;
 
-    ctx.finish(&state).await?;
-    Ok(StatusCode::NO_CONTENT)
+    ctx.finish(&state).await
 }
 
 #[cfg(test)]
@@ -497,6 +514,7 @@ mod metadata_tests {
             library_repo: repo,
             auth_state: None,
             write_coordinator: Some(crate::server::WriteCoordinator::new()),
+            library_management: true,
             timezone: None,
         };
         let mut headers = HeaderMap::new();
@@ -827,5 +845,175 @@ mod metadata_tests {
             current.metadata_revision.unwrap().parse().unwrap(),
         );
         assert!(WriteContext::prepare(&state, ID, &headers).await.is_ok());
+    }
+    #[tokio::test]
+    async fn successful_source_write_reports_pending_backup_and_retries_without_reverting() {
+        let (dir, mut state, path, headers) = fixture().await;
+        let store = Arc::new(
+            crate::store::bundles::BundleStore::open(
+                &dir.path().join("data"),
+                crate::store::bundles::Retention::Forever,
+            )
+            .unwrap(),
+        );
+        state.library_repo.bundles = Some(store.clone());
+        let initial = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+        refresh_capture_for_test(&state, &initial).await;
+        // A deterministic I/O failure before publication, without changing permissions.
+        store
+            .fail_publication
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        let response = update_item(
+            State(state.clone()),
+            Path(ID.into()),
+            headers,
+            Json(UpdateItemRequest {
+                rating: Patch::Value(5),
+                status: Patch::Absent,
+                review_note: Patch::Absent,
+            }),
+        )
+        .await
+        .unwrap()
+        .into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 1024)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&body).unwrap()["backup_pending"],
+            true
+        );
+        assert_eq!(
+            CapturedMetadata::capture(&path, SourceKind::Adjacent)
+                .unwrap()
+                .parse()
+                .unwrap()
+                .summary
+                .unwrap()
+                .rating,
+            Some(5)
+        );
+        assert_eq!(
+            state
+                .library_repo
+                .get_item(ID)
+                .await
+                .unwrap()
+                .unwrap()
+                .rating,
+            Some(5)
+        );
+        assert_eq!(
+            store.get(ID).unwrap().unwrap().item().unwrap().rating(),
+            Some(2)
+        );
+        store
+            .fail_publication
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+        refresh_capture_for_test(
+            &state,
+            &CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap(),
+        )
+        .await;
+        assert_eq!(
+            store.get(ID).unwrap().unwrap().item().unwrap().rating(),
+            Some(5)
+        );
+    }
+    async fn refresh_capture_for_test(state: &ServerState, capture: &CapturedMetadata) {
+        let _guard = state.library_repo.metadata_guard().await;
+        crate::pipeline::ingest::refresh_capture(
+            &state.library_repo,
+            ID,
+            capture,
+            &crate::shelf::time_config::TimeConfig::new(None, 0),
+        )
+        .await
+        .unwrap();
+    }
+    #[tokio::test]
+    async fn archive_removal_enforces_permissions_absence_and_blocks_edits() {
+        use crate::server::api::handlers::preservation::remove_item;
+        use crate::store::bundles::{BundleStore, Retention, State as Lifecycle};
+        let (dir, mut state, path, headers) = fixture().await;
+        let output = std::fs::canonicalize(dir.path()).unwrap().join("output");
+        let mut config = crate::pipeline::rebuild::tests::test_config(&output, None);
+        config.library_paths = vec![dir.path().to_path_buf()];
+        config.is_internal_server = true;
+        let media = crate::pipeline::media::resolve_media_dirs(&output, true);
+        crate::pipeline::media::create_media_directories(&media).unwrap();
+        let store =
+            Arc::new(BundleStore::open(&dir.path().join("data"), Retention::Immediate).unwrap());
+        state.library_repo.bundles = Some(store.clone());
+        state.library_repo.preservation_config = Some(Arc::new(config.clone()));
+        refresh_capture_for_test(
+            &state,
+            &CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap(),
+        )
+        .await;
+        let error = remove_item(State(state.clone()), Path(ID.into()))
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(error.into_response().status(), StatusCode::CONFLICT);
+        let book = dir.path().join("Book.fb2");
+        let ebook_bytes = std::fs::read(&book).unwrap();
+        std::fs::remove_file(&book).unwrap();
+        let archived = store.transition(ID, Lifecycle::Archived).unwrap();
+        state
+            .library_repo
+            .project_bundle(&archived, &config.time_config)
+            .await
+            .unwrap();
+        assert_eq!(
+            WriteContext::prepare(&state, ID, &headers)
+                .await
+                .err()
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::CONFLICT
+        );
+        let mut disabled = state.clone();
+        disabled.library_management = false;
+        assert_eq!(
+            remove_item(State(disabled), Path(ID.into()))
+                .await
+                .err()
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::NOT_FOUND
+        );
+        // A returned ebook must block removal even before reconciliation marks it available.
+        std::fs::write(&book, ebook_bytes).unwrap();
+        assert_eq!(
+            remove_item(State(state.clone()), Path(ID.into()))
+                .await
+                .err()
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::CONFLICT
+        );
+        std::fs::remove_file(&book).unwrap();
+        assert_eq!(
+            remove_item(State(state.clone()), Path(ID.into()))
+                .await
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::NO_CONTENT
+        );
+        assert!(state.library_repo.get_item(ID).await.unwrap().is_none());
+        assert!(store.get(ID).unwrap().is_none());
+        assert_eq!(
+            std::fs::read_dir(store.root.join("retired"))
+                .unwrap()
+                .count(),
+            0
+        );
+        assert!(path.exists());
     }
 }

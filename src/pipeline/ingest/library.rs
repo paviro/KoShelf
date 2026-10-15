@@ -31,6 +31,9 @@ pub(crate) async fn sync_library(
     repo: &LibraryRepository,
     media_dirs: &MediaDirs,
 ) -> Result<LibrarySyncResult> {
+    if repo.bundles.is_some() {
+        return super::preservation::sync(config, repo, media_dirs).await;
+    }
     let start = Instant::now();
     let fs_items = collect_paths(
         &config.library_paths,

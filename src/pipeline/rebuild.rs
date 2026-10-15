@@ -5,6 +5,7 @@
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
+use crate::pipeline::ingest::preservation::{recapture_archived, reconcile_sources};
 use crate::pipeline::ingest::{
     delete_item_for_book_path, ingest_items, load_reading_data, sync_library,
 };
@@ -50,6 +51,8 @@ pub async fn rebuild(
     // ── 1. Classify paths ────────────────────────────────────────────
     let mut parse_items: Vec<CollectedItem> = Vec::new();
     let mut delete_book_paths: Vec<String> = Vec::new();
+    // Sidecars without an ebook may belong to archived books.
+    let mut unmatched_metadata = false;
 
     let library_update = if full_library_sync_required {
         Some(sync_library(config, repo, &media_dirs).await?)
@@ -76,6 +79,8 @@ pub async fn rebuild(
                             format,
                             kobo_hints: None,
                         });
+                    } else {
+                        unmatched_metadata = true;
                     }
                 } else if filename.ends_with(".sdr")
                     && let Some(book_path) = derive_book_path_from_sdr_path(path)
@@ -101,16 +106,33 @@ pub async fn rebuild(
 
     // ── 2. Delete removed items ──────────────────────────────────────
     let mut deleted_count = 0u64;
-    for book_path_str in &delete_book_paths {
-        if delete_item_for_book_path(repo, book_path_str, &media_dirs, config.is_internal_server)
+    if repo.bundles.is_none() {
+        for book_path_str in &delete_book_paths {
+            if delete_item_for_book_path(
+                repo,
+                book_path_str,
+                &media_dirs,
+                config.is_internal_server,
+            )
             .await
-        {
-            deleted_count += 1;
+            {
+                deleted_count += 1;
+            }
+        }
+    }
+    if unmatched_metadata && repo.bundles.is_some() {
+        match recapture_archived(config, repo).await {
+            Ok(saved) => deleted_count += saved,
+            Err(e) => warn!("Failed to refresh archived metadata: {e:#}"),
         }
     }
 
     // ── 3. Ingest changed/new paths ──────────────────────────────────
-    let ingest_stats = ingest_items(&parse_items, config, repo, &media_dirs).await?;
+    let ingest_stats = if repo.bundles.is_some() && !full_library_sync_required {
+        reconcile_sources(config, repo, &media_dirs, &parse_items, &delete_book_paths).await?
+    } else {
+        ingest_items(&parse_items, config, repo, &media_dirs).await?
+    };
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
@@ -173,6 +195,8 @@ pub async fn rebuild(
                     has_files: config.is_internal_server || config.include_files,
 
                     has_writeback: config.writeback_enabled,
+                    has_archive: config.archive_enabled,
+                    has_library_management: config.library_management_enabled,
                 },
                 auth: None,
             };
@@ -244,8 +268,14 @@ fn requires_full_library_sync(accumulated_paths: &HashSet<PathBuf>, config: &Sit
             .iter()
             .any(|path| is_extensionless_path(path.as_path()));
 
+    // A reconnected or lost library root requires a full rescan.
+    let library_root_changed = accumulated_paths
+        .iter()
+        .any(|path| config.library_paths.contains(path));
+
     kobo_db_changed
         || kobo_extensionless_changed
+        || library_root_changed
         || accumulated_paths.iter().any(|path| {
             config
                 .metadata_location
@@ -357,6 +387,8 @@ pub(crate) mod tests {
             use_stable_page_metadata: true,
             auth_enabled: false,
             writeback_enabled: false,
+            library_management_enabled: false,
+            archive_enabled: true,
             include_files: false,
             runtime_data_policy,
         }

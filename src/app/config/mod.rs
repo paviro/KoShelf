@@ -44,6 +44,16 @@ fn merge_common_with_file_config(
 ) {
     // ── library section ──────────────────────────────────────────
     if let Some(ref lib) = config.library {
+        if let Some(enabled) = lib.archive_enabled
+            && not_explicit(matches, "archive_enabled")
+        {
+            common.archive_enabled = enabled;
+        }
+        if let Some(policy) = lib.archive_retention_days
+            && not_explicit(matches, "archive_retention_days")
+        {
+            common.archive_retention_days = policy;
+        }
         if let Some(ref paths) = lib.paths
             && not_explicit(matches, "library_path")
             && !paths.is_empty()
@@ -159,6 +169,11 @@ pub fn merge_serve_with_file_config(
             && not_explicit(matches, "enable_writeback")
         {
             args.enable_writeback = v;
+        }
+        if let Some(v) = srv.enable_library_management
+            && not_explicit(matches, "enable_library_management")
+        {
+            args.enable_library_management = v;
         }
         if let Some(ref values) = srv.trusted_proxies
             && not_explicit(matches, "trusted_proxies")
@@ -402,5 +417,99 @@ mod tests {
         assert_eq!(args.common.docsettings_path.as_ref(), Some(&doc));
         assert_eq!(args.common.hashdocsettings_path.as_ref(), Some(&hash));
         args.common.validate().unwrap();
+    }
+    #[test]
+    fn archive_enabled_defaults_and_precedence() {
+        for (file_value, flag, expected) in [
+            (None, None, true),
+            (Some(false), None, false),
+            (Some(true), Some("false"), false),
+            (Some(false), Some("true"), true),
+        ] {
+            let mut argv = vec!["koshelf", "serve"];
+            if let Some(flag) = flag {
+                argv.extend(["--archive-enabled", flag]);
+            }
+            let matches = Cli::command().try_get_matches_from(argv).unwrap();
+            let mut cli = Cli::from_arg_matches(&matches).unwrap();
+            let (_, sub) = matches.subcommand().unwrap();
+            let CliCommand::Serve(ref mut args) = cli.command else {
+                panic!("serve")
+            };
+            let config = file_value
+                .map(|v| format!("[library]\narchive_enabled = {v}"))
+                .unwrap_or_default();
+            merge_serve_with_file_config(args, &toml::from_str(&config).unwrap(), sub);
+            assert_eq!(args.common.archive_enabled, expected);
+        }
+        let command = Cli::command();
+        for name in ["serve", "export"] {
+            let sub = command
+                .get_subcommands()
+                .find(|c| c.get_name() == name)
+                .unwrap();
+            assert_eq!(
+                sub.get_arguments()
+                    .find(|a| a.get_id() == "archive_enabled")
+                    .unwrap()
+                    .get_env()
+                    .unwrap(),
+                "KOSHELF_ARCHIVE_ENABLED"
+            );
+        }
+    }
+
+    #[test]
+    fn archive_retention_cli_and_toml_preserve_precedence_and_validate_modes() {
+        use crate::store::bundles::Retention;
+        for (flag, expected) in [
+            (None, Retention::Forever),
+            (Some("0"), Retention::Immediate),
+            (Some("14"), Retention::Days(14)),
+            (Some("forever"), Retention::Forever),
+        ] {
+            let mut args = vec![
+                "koshelf",
+                "serve",
+                "--data-path",
+                "/data",
+                "--library-path",
+                "/books",
+            ];
+            if let Some(flag) = flag {
+                args.extend(["--archive-retention-days", flag]);
+            }
+            let matches = Cli::command().try_get_matches_from(args).unwrap();
+            let mut cli = Cli::from_arg_matches(&matches).unwrap();
+            let (_, sub) = matches.subcommand().unwrap();
+            let CliCommand::Serve(ref mut args) = cli.command else {
+                panic!("serve");
+            };
+            let file: FileConfig =
+                toml::from_str("[library]\narchive_retention_days = 'forever'").unwrap();
+            merge_serve_with_file_config(args, &file, sub);
+            assert_eq!(args.common.archive_retention_days, expected);
+        }
+        for invalid in ["-1", "invalid", "4294967296"] {
+            assert!(
+                Cli::command()
+                    .try_get_matches_from(["koshelf", "serve", "--archive-retention-days", invalid])
+                    .is_err()
+            );
+        }
+        let command = Cli::command();
+        let serve = command
+            .get_subcommands()
+            .find(|c| c.get_name() == "serve")
+            .unwrap();
+        assert_eq!(
+            serve
+                .get_arguments()
+                .find(|a| a.get_id() == "archive_retention_days")
+                .unwrap()
+                .get_env()
+                .unwrap(),
+            "KOSHELF_ARCHIVE_RETENTION_DAYS"
+        );
     }
 }

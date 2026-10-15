@@ -11,6 +11,11 @@ paths = ["/path/to/books", "/path/to/comics"]
 # statistics_db = ["/kobo/statistics.sqlite3", "/boox/statistics.sqlite3"]
 # kobo_db = "/path/to/KoboReader.sqlite"
 # include_unread = false
+# Days to keep files of removed archived books (requires data_path).
+# 0 deletes immediately, "forever" keeps them. Default: 30
+# archive_retention_days = 30
+# Preserve missing books as archives (requires data_path).
+# archive_enabled = true
 
 [koshelf]
 title = "KoShelf"
@@ -22,6 +27,7 @@ language = "en_US"
 port = 3000
 # enable_auth = true
 # enable_writeback = false
+# enable_library_management = false
 # trusted_proxies = ["127.0.0.1/32", "::1/128"]
 
 # [output]

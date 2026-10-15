@@ -14,7 +14,9 @@ use std::{
     time::UNIX_EPOCH,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 pub(crate) enum SourceKind {
     Adjacent,
     Docsettings,
@@ -32,6 +34,7 @@ impl std::error::Error for MetadataChanged {}
 
 #[derive(Debug, Clone)]
 struct SelectionContext {
+    excluded: Vec<PathBuf>,
     location: MetadataLocation,
     book_path: PathBuf,
     format: LibraryItemFormat,
@@ -129,12 +132,13 @@ impl CapturedMetadata {
             return Err(MetadataChanged.into());
         }
         if let Some(context) = &self.selection {
-            let resolution = MetadataIndices::new(&context.location)?.resolve(
-                &context.book_path,
-                context.format,
-                &context.checksum,
-                context.existing_id.as_deref(),
-            );
+            let resolution = MetadataIndices::new_excluding(&context.location, &context.excluded)?
+                .resolve(
+                    &context.book_path,
+                    context.format,
+                    &context.checksum,
+                    context.existing_id.as_deref(),
+                );
             if resolution
                 .selected
                 .is_none_or(|s| s.revision != self.revision)
@@ -174,6 +178,8 @@ pub(crate) struct Resolution {
     pub selected: Option<CapturedMetadata>,
     pub issues: Vec<DiscoveryIssue>,
     pub blocked: bool,
+    /// Normalized identities named by any parseable candidate, including blocked ones.
+    pub identities: HashSet<String>,
 }
 #[derive(Hash, PartialEq, Eq)]
 struct DocsettingsKey {
@@ -181,6 +187,7 @@ struct DocsettingsKey {
     format: LibraryItemFormat,
 }
 pub(crate) struct MetadataIndices {
+    excluded: Vec<PathBuf>,
     location: MetadataLocation,
     doc: HashMap<DocsettingsKey, Vec<PathBuf>>,
     hash: HashMap<(String, String), Vec<PathBuf>>,
@@ -188,7 +195,15 @@ pub(crate) struct MetadataIndices {
 }
 impl MetadataIndices {
     pub fn new(location: &MetadataLocation) -> Result<Self> {
+        Self::new_excluding(location, &[])
+    }
+    pub fn new_excluding(location: &MetadataLocation, excluded: &[PathBuf]) -> Result<Self> {
+        let excluded: Vec<_> = excluded
+            .iter()
+            .map(|p| fs::canonicalize(p).or_else(|_| std::path::absolute(p)))
+            .collect::<std::io::Result<_>>()?;
         let mut this = Self {
+            excluded: excluded.clone(),
             location: location.clone(),
             doc: HashMap::new(),
             hash: HashMap::new(),
@@ -202,7 +217,20 @@ impl MetadataIndices {
                 } => root == hashdocsettings,
                 _ => false,
             };
-            for entry in walkdir::WalkDir::new(root).follow_links(true) {
+            for entry in walkdir::WalkDir::new(root)
+                .follow_links(true)
+                .into_iter()
+                .filter_entry(|entry| {
+                    // Only directories can lead into excluded storage; skip the
+                    // realpath call for plain files and when nothing is excluded.
+                    if excluded.is_empty() || !entry.file_type().is_dir() {
+                        return true;
+                    }
+                    let path = fs::canonicalize(entry.path())
+                        .unwrap_or_else(|_| entry.path().to_path_buf());
+                    !excluded.iter().any(|root| path.starts_with(root))
+                })
+            {
                 let entry = match entry {
                     Ok(e) => e,
                     Err(e) => {
@@ -321,11 +349,20 @@ impl MetadataIndices {
                 .map(|(p, e)| DiscoveryIssue::Inaccessible(p.clone(), e.clone()))
                 .collect(),
             blocked: false,
+            identities: HashSet::new(),
         };
         let mut valid = vec![];
         let mut identities = HashSet::new();
         for (kind, paths) in self.candidates(path, format, checksum) {
             if paths.len() > 1 {
+                result.identities.extend(paths.iter().filter_map(|p| {
+                    CapturedMetadata::capture(p, kind)
+                        .and_then(|c| c.parse())
+                        .ok()?
+                        .partial_md5_checksum
+                        .as_deref()
+                        .and_then(normalize_partial_md5)
+                }));
                 result.issues.push(DiscoveryIssue::Ambiguous(paths));
                 result.blocked = true;
                 continue;
@@ -390,6 +427,7 @@ impl MetadataIndices {
             result.issues.push(DiscoveryIssue::ConflictingIdentities);
             result.blocked = true;
         }
+        result.identities.extend(identities);
         valid.sort_by(|a, b| {
             b.ranking_modified_secs
                 .cmp(&a.ranking_modified_secs)
@@ -399,6 +437,7 @@ impl MetadataIndices {
         if !result.blocked {
             result.selected = valid.into_iter().next().map(|mut selected| {
                 selected.selection = Some(SelectionContext {
+                    excluded: self.excluded.clone(),
                     location: self.location.clone(),
                     book_path: path.to_path_buf(),
                     format,
@@ -741,5 +780,29 @@ mod tests {
         let backup = crate::source::koreader::lua_writer::backup_path(&doc);
         put(&backup, "return {percent_finished=0.8}", 200);
         assert_eq!(resolve(&location).selected.unwrap().path, backup);
+    }
+    #[test]
+    fn managed_storage_is_excluded_from_configured_metadata_discovery() {
+        let (_dir, location, doc, hash) = setup();
+        put(
+            &doc,
+            "return {partial_md5_checksum='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',summary={rating=5}}",
+            200,
+        );
+        put(
+            &hash,
+            "return {partial_md5_checksum='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',summary={rating=1}}",
+            100,
+        );
+        let excluded = doc.parent().unwrap().parent().unwrap().to_path_buf();
+        let result = MetadataIndices::new_excluding(&location, &[excluded])
+            .unwrap()
+            .resolve(
+                Path::new("Book.epub"),
+                LibraryItemFormat::Epub,
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                None,
+            );
+        assert_eq!(result.selected.unwrap().path, hash);
     }
 }

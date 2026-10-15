@@ -31,6 +31,7 @@ pub async fn detail(
         return Ok(None);
     };
 
+    item.archive_retention = repo.bundles.as_ref().map(|s| s.retention);
     let includes = &query.includes;
 
     let reader_presentation = if includes.has(IncludeToken::ReaderPresentation) {

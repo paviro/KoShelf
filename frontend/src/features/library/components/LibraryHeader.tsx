@@ -4,7 +4,10 @@ import { LuSearch, LuX } from 'react-icons/lu';
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
-import type { LibraryFilterValue } from '../model/library-model';
+import type {
+    LibraryAvailability,
+    LibraryFilterValue,
+} from '../model/library-model';
 import { LibraryStatusFilter } from './LibraryStatusFilter';
 
 type LibraryHeaderProps = {
@@ -14,6 +17,9 @@ type LibraryHeaderProps = {
     filterValue: LibraryFilterValue;
     filterOptions: readonly LibraryFilterValue[];
     onFilterChange: (value: LibraryFilterValue) => void;
+    archiveEnabled: boolean;
+    availability: LibraryAvailability;
+    onAvailabilityChange: (value: LibraryAvailability) => void;
     mobileSearchOpen: boolean;
     onOpenMobileSearch: () => void;
     onCloseMobileSearch: () => void;
@@ -28,6 +34,9 @@ export function LibraryHeader({
     filterValue,
     filterOptions,
     onFilterChange,
+    archiveEnabled,
+    availability,
+    onAvailabilityChange,
     mobileSearchOpen,
     onOpenMobileSearch,
     onCloseMobileSearch,
@@ -114,6 +123,9 @@ export function LibraryHeader({
                             value={filterValue}
                             options={filterOptions}
                             onChange={onFilterChange}
+                            archiveEnabled={archiveEnabled}
+                            availability={availability}
+                            onAvailabilityChange={onAvailabilityChange}
                         />
                     </div>
                 </div>
@@ -121,6 +133,9 @@ export function LibraryHeader({
         }),
         [
             desktopSearchInputRef,
+            archiveEnabled,
+            availability,
+            onAvailabilityChange,
             filterOptions,
             filterValue,
             mobileSearchInputRef,

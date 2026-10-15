@@ -24,6 +24,8 @@ pub struct LibrarySection {
     pub statistics_db: Option<Vec<PathBuf>>,
     pub kobo_db: Option<PathBuf>,
     pub include_unread: Option<bool>,
+    pub archive_enabled: Option<bool>,
+    pub archive_retention_days: Option<crate::store::bundles::Retention>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -41,6 +43,7 @@ pub struct ServerSection {
     pub port: Option<u16>,
     pub enable_auth: Option<bool>,
     pub enable_writeback: Option<bool>,
+    pub enable_library_management: Option<bool>,
     pub trusted_proxies: Option<Vec<String>>,
 }
 

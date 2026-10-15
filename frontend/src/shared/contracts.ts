@@ -5,6 +5,8 @@ export interface SiteCapabilities {
     has_files?: boolean;
 
     has_writeback?: boolean;
+    has_archive?: boolean;
+    has_library_management?: boolean;
 }
 
 export interface PasswordPolicy {
@@ -208,6 +210,7 @@ export interface LibrarySeries {
 }
 
 export interface LibraryListItem {
+    is_archived?: boolean;
     id: string;
     title: string;
     authors: string[];
@@ -228,6 +231,9 @@ export interface ExternalIdentifier {
 }
 
 export interface LibraryDetailItem {
+    /** Retired-record retention in days (0 = immediate) or `'forever'`. */
+    archive_retention?: number | 'forever';
+    is_archived?: boolean;
     id: string;
     title: string;
     authors: string[];

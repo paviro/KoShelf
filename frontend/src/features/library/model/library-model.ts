@@ -133,3 +133,17 @@ export function sectionMatchesFilter(
 ): boolean {
     return filterValue === 'all' || filterValue === sectionKey;
 }
+
+export type LibraryAvailability = 'all' | 'available' | 'archived';
+
+export function itemMatchesAvailability(
+    item: LibraryListItem,
+    availability: LibraryAvailability,
+): boolean {
+    return (
+        availability === 'all' ||
+        (availability === 'archived'
+            ? item.is_archived === true
+            : item.is_archived !== true)
+    );
+}

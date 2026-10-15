@@ -41,12 +41,14 @@ fn resolve_data_policy(common: &CommonArgs) -> RuntimeDataPolicy {
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_site_config(
     common: &CommonArgs,
     output_dir: PathBuf,
     is_internal_server: bool,
     auth_enabled: bool,
     writeback_enabled: bool,
+    library_management_enabled: bool,
     include_files: bool,
     runtime_data_policy: RuntimeDataPolicy,
 ) -> Result<SiteConfig> {
@@ -83,6 +85,10 @@ fn build_site_config(
         use_stable_page_metadata: !common.ignore_stable_page_metadata,
         auth_enabled,
         writeback_enabled,
+        library_management_enabled: library_management_enabled
+            && common.archive_enabled
+            && runtime_data_policy.is_persistent(),
+        archive_enabled: common.archive_enabled && runtime_data_policy.is_persistent(),
         include_files,
         runtime_data_policy,
     })
@@ -106,6 +112,7 @@ pub(crate) async fn initialize_pipeline(
     is_internal_server: bool,
     auth_enabled: bool,
     writeback_enabled: bool,
+    library_management_enabled: bool,
     include_files: bool,
 ) -> Result<PipelineState> {
     let mut runtime_data_policy = resolve_data_policy(common);
@@ -137,6 +144,7 @@ pub(crate) async fn initialize_pipeline(
         is_internal_server,
         auth_enabled,
         writeback_enabled,
+        library_management_enabled,
         include_files,
         runtime_data_policy,
     )?;
@@ -155,6 +163,43 @@ pub(crate) async fn initialize_pipeline(
         info!("Runtime library DB path: {:?}", db_path);
     }
 
+    // Acquire exclusive storage ownership before opening/resetting the disposable cache.
+    let storage_lock = config
+        .runtime_data_policy
+        .persistent_data_dir()
+        .map(crate::store::bundles::acquire_storage_lock)
+        .transpose()?;
+    let bundles = if config.archive_enabled {
+        config
+            .runtime_data_policy
+            .persistent_data_dir()
+            .zip(storage_lock.clone())
+            .map(|(data, lock)| {
+                crate::store::bundles::BundleStore::open_locked(
+                    data,
+                    common.archive_retention_days,
+                    lock,
+                )
+                .map(std::sync::Arc::new)
+            })
+            .transpose()?
+    } else {
+        if let Some(data) = config.runtime_data_policy.persistent_data_dir() {
+            match crate::store::bundles::has_saved_files(data) {
+                Ok(true) => info!(
+                    "Archive mode is disabled; existing saved library files at {:?} are preserved and will not be loaded or updated",
+                    data.join("library")
+                ),
+                Ok(false) => {}
+                Err(e) => log::warn!(
+                    "Could not inspect disabled archive storage at {:?}: {e:#}",
+                    data.join("library")
+                ),
+            }
+        }
+        None
+    };
+
     // ── 1. Create DB ─────────────────────────────────────────────────
     let db_path = config
         .runtime_data_policy
@@ -166,14 +211,22 @@ pub(crate) async fn initialize_pipeline(
     run_library_migrations(&pool)
         .await
         .context("Failed to run library DB migrations")?;
-    let repo = LibraryRepository::new(pool, config.use_stable_page_metadata);
+    let mut repo = LibraryRepository::new(pool, config.use_stable_page_metadata);
+    repo.bundles = bundles;
+    repo.storage_lock = storage_lock;
+    if !config.archive_enabled {
+        repo.remove_archived_projections().await?;
+    }
+    if repo.bundles.is_some() {
+        repo.preservation_config = Some(std::sync::Arc::new(config.clone()));
+    }
 
     // ── 2. Create media directories ──────────────────────────────────
     let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
     media::create_media_directories(&media_dirs)?;
 
     // ── 3. Update library ────────────────────────────────────────────
-    if !config.library_paths.is_empty() {
+    if !config.library_paths.is_empty() || repo.bundles.is_some() {
         sync_library(&config, &repo, &media_dirs).await?;
 
         match repo.load_all_item_ids().await {
@@ -230,6 +283,8 @@ pub(crate) async fn initialize_pipeline(
             has_reading_data,
             has_files: is_internal_server || config.include_files,
             has_writeback: config.writeback_enabled,
+            has_archive: config.archive_enabled,
+            has_library_management: config.library_management_enabled,
         },
         auth,
     };
@@ -243,4 +298,135 @@ pub(crate) async fn initialize_pipeline(
         generated_at,
         _runtime_temp_dir: runtime_temp_dir,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::config::{Cli, CliCommand};
+    use clap::Parser;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn inaccessible_library_parent_loads_saved_archives() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(dir.path()).unwrap();
+        let parent = root.join("drive");
+        let books = parent.join("books");
+        std::fs::create_dir_all(&books).unwrap();
+        std::fs::write(books.join("Book.fb2"), r#"<?xml version="1.0"?><FictionBook><description><title-info><book-title>Saved book</book-title></title-info></description><body><section><p>Text</p></section></body></FictionBook>"#).unwrap();
+        let data = root.join("data");
+        let CliCommand::Serve(args) = Cli::parse_from([
+            "koshelf",
+            "serve",
+            "--library-path",
+            books.to_str().unwrap(),
+            "--data-path",
+            data.to_str().unwrap(),
+            "--include-unread",
+        ])
+        .command
+        else {
+            panic!("serve")
+        };
+        let state =
+            initialize_pipeline(&args.common, data.clone(), true, false, false, false, false)
+                .await
+                .unwrap();
+        let ids = state.repo.load_all_item_ids().await.unwrap();
+        assert_eq!(ids.len(), 1);
+        drop(state);
+
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o0)).unwrap();
+        // Privileged test runners can bypass Unix mode bits.
+        if std::fs::metadata(&books).is_ok() {
+            std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o700)).unwrap();
+            eprintln!("Skipping permission fixture: runner bypasses mode bits");
+            return;
+        }
+        let validation = args.validate();
+        let restored =
+            initialize_pipeline(&args.common, data, true, false, false, false, false).await;
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o700)).unwrap();
+        validation.unwrap();
+        let restored = restored.unwrap();
+        assert!(
+            restored
+                .repo
+                .get_item(&ids[0])
+                .await
+                .unwrap()
+                .unwrap()
+                .is_archived
+        );
+    }
+
+    #[tokio::test]
+    async fn disabled_archive_startup_keeps_saved_files_and_disables_management() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(dir.path()).unwrap();
+        let books = root.join("books");
+        std::fs::create_dir(&books).unwrap();
+        let data = root.join("data");
+        let saved = data.join("library/retired/saved-entry");
+        std::fs::create_dir_all(&saved).unwrap();
+        std::fs::write(saved.join("manifest.json"), b"untouched even if invalid").unwrap();
+        let CliCommand::Serve(args) = Cli::parse_from([
+            "koshelf",
+            "serve",
+            "--library-path",
+            books.to_str().unwrap(),
+            "--data-path",
+            data.to_str().unwrap(),
+            "--archive-enabled",
+            "false",
+            "--archive-retention-days",
+            "0",
+            "--enable-library-management",
+        ])
+        .command
+        else {
+            panic!("serve")
+        };
+        let state = initialize_pipeline(
+            &args.common,
+            root.join("output"),
+            true,
+            false,
+            false,
+            true,
+            false,
+        )
+        .await
+        .unwrap();
+        assert!(!state.site_data.capabilities.has_archive);
+        assert!(!state.site_data.capabilities.has_library_management);
+        assert!(!state.config.library_management_enabled);
+        assert!(state.repo.bundles.is_none());
+        assert!(crate::store::bundles::acquire_storage_lock(&data).is_err());
+        assert_eq!(
+            std::fs::read(saved.join("manifest.json")).unwrap(),
+            b"untouched even if invalid"
+        );
+        let export_dir = root.join("export-data");
+        crate::pipeline::export::export_data_files(
+            &export_dir,
+            &state.config.output_dir,
+            &state.repo,
+            None,
+            &crate::pipeline::export::ExportConfig {
+                site_title: "Test".into(),
+                language: "en_US".into(),
+                include_files: false,
+            },
+        )
+        .await
+        .unwrap();
+        let site: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(export_dir.join("site.json")).unwrap()).unwrap();
+        assert_eq!(site["capabilities"]["has_archive"], false);
+        drop(state);
+        assert!(crate::store::bundles::acquire_storage_lock(&data).is_ok());
+    }
 }

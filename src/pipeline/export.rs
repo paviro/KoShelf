@@ -123,6 +123,8 @@ pub async fn export_data_files(
                 has_files: config.include_files,
 
                 has_writeback: false,
+                has_archive: library_repo.bundles.is_some(),
+                has_library_management: false,
             },
         },
     )?;

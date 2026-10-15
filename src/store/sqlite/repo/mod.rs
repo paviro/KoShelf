@@ -5,6 +5,7 @@
 //! Write operations use dedicated row types from `rows`.
 
 mod metadata;
+mod preservation;
 mod read;
 mod write;
 
@@ -16,6 +17,12 @@ use sqlx::SqlitePool;
 #[derive(Clone)]
 pub struct LibraryRepository {
     pool: SqlitePool,
+    pub(crate) storage_lock: Option<std::sync::Arc<std::fs::File>>,
+    pub(crate) bundles: Option<std::sync::Arc<crate::store::bundles::BundleStore>>,
+    pub(crate) preservation_config: Option<std::sync::Arc<crate::app::config::SiteConfig>>,
+    pub(crate) lifecycle_gate: std::sync::Arc<tokio::sync::Mutex<()>>,
+    pub(crate) source_index:
+        std::sync::Arc<std::sync::Mutex<crate::pipeline::ingest::sources::SourceIndex>>,
     use_stable_page_metadata: bool,
     metadata_gate: std::sync::Arc<tokio::sync::Mutex<()>>,
     metadata_location: std::sync::Arc<std::sync::RwLock<crate::source::scanner::MetadataLocation>>,
@@ -25,6 +32,11 @@ impl LibraryRepository {
     pub fn new(pool: SqlitePool, use_stable_page_metadata: bool) -> Self {
         Self {
             pool,
+            bundles: None,
+            storage_lock: None,
+            preservation_config: None,
+            lifecycle_gate: Default::default(),
+            source_index: Default::default(),
             use_stable_page_metadata,
             metadata_gate: Default::default(),
             metadata_location: Default::default(),

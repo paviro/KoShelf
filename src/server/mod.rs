@@ -53,6 +53,7 @@ pub struct ServerState {
     pub library_repo: LibraryRepository,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
+    pub library_management: bool,
     pub timezone: Option<chrono_tz::Tz>,
 }
 
@@ -66,6 +67,7 @@ pub struct WebServer {
     library_repo: LibraryRepository,
     auth_state: Option<auth::AuthState>,
     write_coordinator: Option<WriteCoordinator>,
+    library_management: bool,
     timezone: Option<chrono_tz::Tz>,
 }
 
@@ -78,6 +80,7 @@ pub struct WebServerOptions {
     pub library_repo: LibraryRepository,
     pub auth_state: Option<auth::AuthState>,
     pub write_coordinator: Option<WriteCoordinator>,
+    pub library_management: bool,
     pub timezone: Option<chrono_tz::Tz>,
 }
 
@@ -92,6 +95,7 @@ impl WebServer {
             library_repo,
             auth_state,
             write_coordinator,
+            library_management,
             timezone,
         } = options;
 
@@ -104,6 +108,7 @@ impl WebServer {
             library_repo,
             auth_state,
             write_coordinator,
+            library_management,
             timezone,
         }
     }
@@ -117,6 +122,7 @@ impl WebServer {
             library_repo: self.library_repo,
             auth_state: self.auth_state,
             write_coordinator: self.write_coordinator,
+            library_management: self.library_management,
             timezone: self.timezone,
         };
         let covers_cache_dir = self.media_cache_dir.join("covers");
@@ -160,6 +166,13 @@ impl WebServer {
             app = app.merge(write_routes);
         }
 
+        if state.library_management {
+            let management_routes = Router::new()
+                .route("/api/items/{id}", delete(api::handlers::remove_item))
+                .with_state(state.clone());
+            app = app.merge(management_routes);
+        }
+
         app = app.layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::middleware::auth_middleware,
@@ -185,7 +198,7 @@ impl WebServer {
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port)).await?;
 
         info!(
-            "Listening on http://0.0.0.0:{} (auth: {}, writeback: {})",
+            "Listening on http://0.0.0.0:{} (auth: {}, writeback: {}, library management: {})",
             self.port,
             if state.auth_state.is_some() {
                 "on"
@@ -193,6 +206,11 @@ impl WebServer {
                 "off"
             },
             if state.write_coordinator.is_some() {
+                "on"
+            } else {
+                "off"
+            },
+            if state.library_management {
                 "on"
             } else {
                 "off"

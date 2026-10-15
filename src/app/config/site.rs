@@ -42,6 +42,10 @@ pub struct SiteConfig {
     pub auth_enabled: bool,
     /// Whether metadata writeback is enabled in serve mode
     pub writeback_enabled: bool,
+    /// Whether library management (archived-item removal) is enabled in serve mode
+    pub library_management_enabled: bool,
+    /// Whether archive preservation is active (requires persistent storage).
+    pub archive_enabled: bool,
     /// Whether to include item files in static export output
     pub include_files: bool,
     /// Resolved runtime lifecycle policy for shared runtime data storage

@@ -142,9 +142,10 @@ export function useReaderView(
     const normalizedFormat = supportsReader
         ? normalizeLibraryFormat(item?.format)
         : null;
-    const fileHref = supportsReader
-        ? api.getItemFileHref(id ?? '', item?.format)
-        : null;
+    const fileHref =
+        supportsReader && !item?.is_archived
+            ? api.getItemFileHref(id ?? '', item?.format)
+            : null;
     const backHref = id
         ? buildRoutePath(detailRouteIdForCollection(collection), { id })
         : `/${collection}`;

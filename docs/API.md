@@ -91,7 +91,9 @@ Returns site metadata and capabilities.
     "has_reading_data": true,
     "has_files": false,
     "auth_enabled": true,
-    "has_writeback": false
+    "has_writeback": false,
+    "has_archive": true,
+    "has_library_management": false
   }
 }
 ```
@@ -106,6 +108,8 @@ Capability flags:
 | `has_files` | boolean | Original item files are available at `/assets/files/{id}.{format}` |
 | `auth_enabled` | boolean | Serve-mode authentication is enabled |
 | `has_writeback` | boolean | Metadata writeback is enabled (`--enable-writeback`) |
+| `has_archive` | boolean | Archive preservation is active (enabled and backed by persistent storage); controls availability filters |
+| `has_library_management` | boolean | Archived items can be removed (`--enable-library-management`) |
 
 ---
 
@@ -166,6 +170,7 @@ Returns all library items with optional filtering and sorting.
 | `annotation_count` | number | Number of annotations |
 | `cover_url` | string | Path to cover image |
 | `content_type` | string | `book` or `comic` |
+| `is_archived` | boolean | The ebook is no longer available. Reading data and cover are preserved; reader, downloads, and editing are disabled (see [Library preservation](configuration.md#library-preservation)) |
 
 ---
 
@@ -215,6 +220,7 @@ The `item` object extends the list item with additional fields:
 | `subjects` | string[] | Genres / subjects |
 | `identifiers` | object[] | External identifiers (see below) |
 | `has_metadata` | boolean | Whether a KOReader sidecar file exists for this item |
+| `archive_retention` | number \| `"forever"` ? | Retention applied if this item is removed (`0` = immediate). Server mode with a persistent data path only |
 
 Each identifier:
 
@@ -307,6 +313,8 @@ When `metadata_source` is `"backup"`, a successful explicit edit writes the edit
 
 KoShelf resolves current configured sources under its metadata lock before editing and rechecks source selection and the captured file before writing. Its lock coordinates KoShelf operations; it cannot exclude concurrent writes by KOReader or external synchronization tools.
 
+If an edit was written but KoShelf couldn't update its saved copy, these endpoints return `200 OK` with `{"backup_pending": true}` instead of `204`. Treat this as a successful edit with a warning; don't roll back or resend. KoShelf retries the backup automatically.
+
 ### `PATCH /api/items/{id}`
 
 Update item metadata. Only available when writeback is enabled (`--enable-writeback`).
@@ -337,7 +345,7 @@ All fields use three-state patch semantics: omit the field to leave it unchanged
 
 **Response:** 204 No Content
 
-**Status Codes:** 204, 400 (invalid rating or status), 404 (item not found or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+**Status Codes:** 204, 400 (invalid rating or status), 404 (item not found), 405 (writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
 
 ---
 
@@ -372,7 +380,7 @@ The `note` field uses three-state patch semantics (omit / value / `null` to clea
 
 **Response:** 204 No Content
 
-**Status Codes:** 204, 400 (invalid color or drawer), 404 (annotation or item not found, or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+**Status Codes:** 204, 400 (invalid color or drawer), 404 (annotation or item not found, or writeback not enabled — empty body), 409 (metadata file modified externally — re-fetch and retry)
 
 ---
 
@@ -389,7 +397,23 @@ Delete an annotation. Only available when writeback is enabled (`--enable-writeb
 
 **Response:** 204 No Content
 
-**Status Codes:** 204, 404 (annotation or item not found, or writeback not enabled), 409 (metadata file modified externally — re-fetch and retry)
+**Status Codes:** 204, 404 (annotation or item not found, or writeback not enabled — empty body), 409 (metadata file modified externally — re-fetch and retry)
+
+---
+
+### `DELETE /api/items/{id}`
+
+Remove an archived item from the library. Only available when archive mode and library management are enabled (`--archive-enabled true --enable-library-management`). Original ebooks and sidecars are never modified; saved files are deleted according to the [retention setting](configuration.md#removal-retention).
+
+**Path Parameters:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | string | Yes | Library item ID |
+
+**Response:** 204 No Content
+
+**Status Codes:** 204, 404 (item not found), 405 (library management not enabled), 409 (item is not archived — its ebook is available — or has a conflicting identity)
 
 ---
 

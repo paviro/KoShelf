@@ -94,6 +94,14 @@ pub struct CommonArgs {
     #[arg(long, env = "KOSHELF_INCLUDE_UNREAD", default_value = "false")]
     pub include_unread: bool,
 
+    /// Preserve missing books as archives (requires persistent storage).
+    #[arg(long, env = "KOSHELF_ARCHIVE_ENABLED", default_value = "true", action = clap::ArgAction::Set)]
+    pub archive_enabled: bool,
+
+    /// Retired bundle retention: days, 0 for immediate deletion, or forever.
+    #[arg(long, env = "KOSHELF_ARCHIVE_RETENTION_DAYS", default_value = "30")]
+    pub archive_retention_days: crate::store::bundles::Retention,
+
     // ── Data ────────────────────────────────────────────────────
     /// Persistent runtime data directory for cache files (for example library.sqlite).
     #[arg(long, env = "KOSHELF_DATA_PATH", alias = "data-dir")]
@@ -166,6 +174,15 @@ pub struct ServeArgs {
     /// Enable metadata writeback (allows editing KoReader metadata via API).
     #[arg(long, env = "KOSHELF_ENABLE_WRITEBACK", default_value = "false")]
     pub enable_writeback: bool,
+
+    /// Enable library management (removing archived items from the library).
+    /// Does not touch ebooks or KOReader sidecars.
+    #[arg(
+        long,
+        env = "KOSHELF_ENABLE_LIBRARY_MANAGEMENT",
+        default_value = "false"
+    )]
+    pub enable_library_management: bool,
 
     /// Trusted reverse proxy IPs/CIDRs allowed to provide Forwarded/X-Forwarded-* headers.
     /// Repeat the flag or pass comma-separated values.
@@ -241,6 +258,23 @@ pub fn parse_trusted_proxy_nets(entries: &[String]) -> Result<Vec<IpNet>> {
         .collect()
 }
 
+fn validate_library_access(
+    path: &std::path::Path,
+    access: std::io::Result<()>,
+    archive_enabled: bool,
+) -> Result<()> {
+    if let Err(error) = access {
+        let message = crate::source::scanner::library_access_warning(path, &error);
+        if !archive_enabled || error.kind() == std::io::ErrorKind::NotADirectory {
+            anyhow::bail!("{message}");
+        }
+        log::warn!(
+            "{message} Continuing with saved records; books without readable sources will appear as archives."
+        );
+    }
+    Ok(())
+}
+
 impl CommonArgs {
     pub fn validate(&self) -> Result<()> {
         if self.library_path.is_empty() && self.statistics_db.is_empty() {
@@ -248,12 +282,11 @@ impl CommonArgs {
         }
 
         for library_path in &self.library_path {
-            if !library_path.exists() {
-                anyhow::bail!("Library path does not exist: {:?}", library_path);
-            }
-            if !library_path.is_dir() {
-                anyhow::bail!("Library path is not a directory: {:?}", library_path);
-            }
+            validate_library_access(
+                library_path,
+                crate::source::scanner::library_root_metadata(library_path).map(|_| ()),
+                self.data_path.is_some() && self.archive_enabled,
+            )?;
         }
 
         if self.include_unread && self.library_path.is_empty() {
@@ -389,6 +422,67 @@ mod tests {
         std::fs::create_dir_all(root.parent().unwrap()).unwrap();
         std::fs::write(&root, "not a directory").unwrap();
         assert!(args.common.validate().is_err());
+    }
+
+    #[test]
+    fn missing_library_roots_require_persistent_storage() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("offline-books");
+        let CliCommand::Serve(mut args) = Cli::from_arg_matches(
+            &Cli::command()
+                .try_get_matches_from([
+                    "koshelf",
+                    "serve",
+                    "--library-path",
+                    root.to_str().unwrap(),
+                ])
+                .unwrap(),
+        )
+        .unwrap()
+        .command
+        else {
+            panic!("serve");
+        };
+        args.common.data_path = None;
+        assert!(args.common.validate().is_err());
+        args.common.data_path = Some(dir.path().join("data"));
+        args.validate().unwrap();
+        args.common.archive_enabled = false;
+        assert!(args.common.validate().is_err());
+        args.common.archive_enabled = true;
+        std::fs::write(&root, "not a directory").unwrap();
+        assert!(args.common.validate().is_err());
+        args.common.data_path = None;
+        assert!(args.common.validate().is_err());
+    }
+
+    #[test]
+    fn inaccessible_library_errors_fall_back_only_with_archives() {
+        use std::io::{Error, ErrorKind};
+        let path = std::path::Path::new("/offline/books");
+        for kind in [
+            ErrorKind::NotFound,
+            ErrorKind::PermissionDenied,
+            ErrorKind::Other,
+        ] {
+            assert!(super::validate_library_access(path, Err(Error::from(kind)), true).is_ok());
+            let error = super::validate_library_access(path, Err(Error::from(kind)), false)
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("/offline/books"));
+            assert!(error.contains(&Error::from(kind).to_string()));
+            assert!(error.contains("Check"));
+        }
+        for enabled in [true, false] {
+            assert!(
+                super::validate_library_access(
+                    path,
+                    Err(Error::from(ErrorKind::NotADirectory)),
+                    enabled
+                )
+                .is_err()
+            );
+        }
     }
 
     #[test]

@@ -470,3 +470,21 @@ page-activity = Activité des pages
 
 metadata-edit-stale = Les métadonnées ont changé pendant la modification. Votre brouillon est conservé. Fermez cet éditeur et vérifiez les données actuelles avant de modifier à nouveau.
 metadata-backup-edit = Ces données proviennent d’une sauvegarde KOReader. Enregistrer une modification restaurera le fichier principal de métadonnées.
+
+library-archived = Archivé
+library-available = Disponible
+library-all = Tous
+library-availability = Disponibilité
+library-remove = Supprimer l’archive
+library-remove-book-body = Ce livre n’apparaîtra plus dans votre bibliothèque.
+library-remove-comic-body = Cette bande dessinée n’apparaîtra plus dans votre bibliothèque.
+library-remove-immediate = KoShelf supprimera immédiatement l’archive.
+library-remove-forever = KoShelf conservera indéfiniment l’archive dans son dossier de données.
+library-remove-days = { $days ->
+    [one] KoShelf conservera l’archive dans son dossier de données pendant { $days } jour avant de la supprimer.
+   *[other] KoShelf conservera l’archive dans son dossier de données pendant { $days } jours avant de la supprimer.
+}
+library-remove-error = Impossible de le retirer de la bibliothèque. Actualisez la page et réessayez.
+library-backup-pending = Les modifications ont été enregistrées dans l’original. La sauvegarde est en attente et sera réessayée.
+
+library-reading-status = Statut de lecture

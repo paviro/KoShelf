@@ -9,12 +9,15 @@ import {
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
+import type { LibraryDetailItem } from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
 import { buttonVariants } from '../../../shared/ui/button/button-variants';
 import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
+import { ArchiveRemoval } from './ArchiveRemoval';
+import { ArchivedBadge } from './ArchivedBadge';
 
 type LibraryDetailHeaderProps = {
     title: string;
@@ -23,6 +26,8 @@ type LibraryDetailHeaderProps = {
     itemId: string;
     backHref: string;
     format?: string | null;
+    removableItem?: LibraryDetailItem;
+    isArchived?: boolean;
 };
 
 export function LibraryDetailHeader({
@@ -32,6 +37,8 @@ export function LibraryDetailHeader({
     itemId,
     backHref,
     format,
+    removableItem,
+    isArchived = false,
 }: LibraryDetailHeaderProps) {
     const [shareOpen, setShareOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -69,9 +76,16 @@ export function LibraryDetailHeader({
                     <div className="h-8 w-px bg-gray-200 dark:bg-dark-700 mx-3 md:mx-6"></div>
 
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                            {title}
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="min-w-0 text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                                {title}
+                            </h1>
+                            {isArchived && (
+                                <span className="shrink-0">
+                                    <ArchivedBadge variant="heading" />
+                                </span>
+                            )}
+                        </div>
 
                         {primaryAuthor && (
                             <p className="text-xs text-gray-500 dark:text-dark-300 truncate">
@@ -83,9 +97,16 @@ export function LibraryDetailHeader({
             ),
             desktopContent: (
                 <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
-                        {title}
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="min-w-0 text-2xl font-bold text-gray-900 dark:text-white truncate">
+                            {title}
+                        </h2>
+                        {isArchived && (
+                            <span className="shrink-0">
+                                <ArchivedBadge variant="heading" />
+                            </span>
+                        )}
+                    </div>
 
                     {primaryAuthor && (
                         <p className="text-sm font-medium text-gray-500 dark:text-dark-300 truncate">
@@ -125,6 +146,13 @@ export function LibraryDetailHeader({
                         aria-label={translation.get('share')}
                         onClick={() => setShareOpen((current) => !current)}
                     />
+                    {removableItem && (
+                        <ArchiveRemoval
+                            key={removableItem.id}
+                            item={removableItem}
+                            backHref={backHref}
+                        />
+                    )}
                     <DropdownPortal
                         triggerRef={triggerRef}
                         open={shareOpen}
@@ -160,8 +188,10 @@ export function LibraryDetailHeader({
             fileLabel,
             jsonDownloadName,
             jsonHref,
+            isArchived,
             primaryAuthor,
             readerHref,
+            removableItem,
             shareOpen,
             title,
         ],

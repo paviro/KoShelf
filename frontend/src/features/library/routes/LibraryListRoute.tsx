@@ -25,11 +25,13 @@ import {
     bucketLibraryItems,
     defaultLibrarySectionState,
     itemMatchesSearch,
+    itemMatchesAvailability,
     libraryTitleTranslationKey,
     normalizeLibraryFilterValue,
     normalizeSearchTerm,
     sectionMatchesFilter,
     type LibraryCollection,
+    type LibraryAvailability,
     type LibraryFilterValue,
     type LibrarySectionKey,
 } from '../model/library-model';
@@ -60,6 +62,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 export function LibraryListRoute({ collection }: LibraryListRouteProps) {
+    const [selectedAvailability, setAvailability] =
+        useState<LibraryAvailability>('all');
     const location = useLocation();
     const navigate = useNavigate();
     const routeId = useMemo(
@@ -104,6 +108,8 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
     });
 
     const { siteQuery } = useSiteQuery();
+    const archiveEnabled = siteQuery.data?.capabilities.has_archive === true;
+    const availability = archiveEnabled ? selectedAvailability : 'all';
     const listQuery = useLibraryListQuery(collection);
     const listTransition = useQueryTransitionState({
         data: listQuery.data,
@@ -299,12 +305,14 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                     return { sectionKey, items: [] };
                 }
 
-                const items = baseItems.filter((item) =>
-                    itemMatchesSearch(item, normalizedSearch),
+                const items = baseItems.filter(
+                    (item) =>
+                        itemMatchesSearch(item, normalizedSearch) &&
+                        itemMatchesAvailability(item, availability),
                 );
                 return { sectionKey, items };
             }),
-        [effectiveFilterValue, normalizedSearch, sectionBuckets],
+        [effectiveFilterValue, normalizedSearch, sectionBuckets, availability],
     );
 
     const visibleCardKey = useMemo(
@@ -341,6 +349,9 @@ export function LibraryListRoute({ collection }: LibraryListRouteProps) {
                 filterValue={effectiveFilterValue}
                 filterOptions={filterOptions}
                 onFilterChange={handleFilterChange}
+                archiveEnabled={archiveEnabled}
+                availability={availability}
+                onAvailabilityChange={setAvailability}
                 mobileSearchOpen={mobileSearchOpen}
                 onOpenMobileSearch={() => setMobileSearchOpen(true)}
                 onCloseMobileSearch={() => {

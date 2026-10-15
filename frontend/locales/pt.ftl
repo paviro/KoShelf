@@ -469,3 +469,21 @@ page-activity = Atividade de Páginas
 
 metadata-edit-stale = Os metadados mudaram durante a edição. O rascunho foi preservado. Feche este editor e reveja os dados atuais antes de voltar a editar.
 metadata-backup-edit = Estes dados foram recuperados de uma cópia de segurança do KOReader. Guardar uma alteração irá restaurar o ficheiro principal de metadados.
+
+library-archived = Arquivado
+library-available = Disponível
+library-all = Todos
+library-availability = Disponibilidade
+library-remove = Remover arquivo guardado
+library-remove-book-body = Este livro não aparecerá mais na sua biblioteca.
+library-remove-comic-body = Este quadrinho não aparecerá mais na sua biblioteca.
+library-remove-immediate = O KoShelf excluirá imediatamente o arquivo guardado.
+library-remove-forever = O KoShelf manterá o arquivo guardado na sua pasta de dados por tempo indeterminado.
+library-remove-days = { $days ->
+    [one] O KoShelf manterá o arquivo guardado na sua pasta de dados por { $days } dia antes de excluí-lo.
+   *[other] O KoShelf manterá o arquivo guardado na sua pasta de dados por { $days } dias antes de excluí-lo.
+}
+library-remove-error = Não foi possível remover da biblioteca. Atualize a página e tente novamente.
+library-backup-pending = As alterações foram salvas no original. O backup está pendente e será tentado novamente.
+
+library-reading-status = Status de leitura

@@ -128,10 +128,15 @@ async fn process_single_item_attempt(
     let format = item.format;
 
     let guard = repo.metadata_guard().await;
-    let existing = match repo
-        .find_fingerprint_by_book_path(&path.to_string_lossy())
-        .await
-    {
+    let checksum = match calculate_partial_md5(path) {
+        Ok(value) => value,
+        Err(e) => {
+            warn!("Failed to calculate checksum: {}", e);
+            stats.errors = 1;
+            return stats;
+        }
+    };
+    let existing = match repo.find_import_record(path, &checksum).await {
         Ok(value) => value,
         Err(e) => {
             warn!("Failed to resolve existing book {:?}: {}", path, e);
@@ -149,14 +154,6 @@ async fn process_single_item_attempt(
             }
         },
         None => None,
-    };
-    let checksum = match calculate_partial_md5(path) {
-        Ok(value) => value,
-        Err(e) => {
-            warn!("Failed to calculate checksum: {}", e);
-            stats.errors = 1;
-            return stats;
-        }
     };
     let resolution = processor.metadata_indices.resolve(
         path,
@@ -179,10 +176,29 @@ async fn process_single_item_attempt(
     let writable = resolution.selected.is_some();
     let saved_revision = saved.as_ref().map(|s| s.revision.clone());
     let captured = resolution.selected;
-    if let Some(fp) = &existing {
+    let durable_current = repo
+        .bundles
+        .as_ref()
+        .and_then(|store| {
+            existing
+                .as_ref()
+                .and_then(|fp| store.get(&fp.item_id).ok().flatten())
+        })
+        .is_some_and(|b| {
+            b.record.state == crate::store::bundles::State::Available
+                && b.record.book_path == path
+                && b.record.checksum == checksum
+                && (captured.as_ref().map(|c| &c.revision)
+                    == b.record.source.as_ref().map(|s| &s.revision)
+                    || captured.is_none())
+        });
+    if let Some(fp) = &existing
+        && (repo.bundles.is_none() || durable_current)
+    {
         let current_book = crate::source::FileFingerprint::capture(path).ok();
-        // Without an accepted current original, leave the parsed reading data and
-        // annotations intact. Never reconstitute a sidecar from the cache.
+        // Missing metadata can skip parsing only after the durable path and
+        // lifecycle are current. Moves still need to publish their new path,
+        // using the saved capture without recreating an original sidecar.
         if (!writable && saved.is_some())
             || (captured.as_ref().map(|s| &s.revision) == saved_revision.as_ref()
                 && current_book.is_some_and(|b| {
@@ -207,11 +223,38 @@ async fn process_single_item_attempt(
             } else {
                 None
             };
+            let cover_changed = cover_data.is_some();
             sync_item_media(&fp.item_id, path, format, cover_data, config, media_dirs).await;
+            // Keep the archived cover copy current; the served cover stays in the media cache.
+            if let Some(store) = &repo.bundles
+                && cover_path.is_file()
+            {
+                let _guard = repo.metadata_guard().await;
+                let result = async {
+                    if let Some(bundle) = store.get(&fp.item_id)?
+                        && (cover_changed || bundle.cover().is_none())
+                    {
+                        let saved = store.capture(
+                            &bundle.item()?,
+                            &bundle.record.checksum,
+                            None,
+                            Some(&cover_path),
+                            bundle.record.state,
+                        )?;
+                        repo.note_bundle(&saved).await?;
+                    }
+                    Ok::<_, anyhow::Error>(())
+                }
+                .await;
+                if let Err(e) = result {
+                    warn!("Cover capture pending for {}: {e:#}", fp.item_id);
+                    stats.errors += 1;
+                }
+            }
             return stats;
         }
     }
-    let koreader_metadata = match captured.as_ref().map(|s| s.parse()).transpose() {
+    let mut koreader_metadata = match captured.as_ref().map(|s| s.parse()).transpose() {
         Ok(value) => value,
         Err(e) => {
             warn!("Failed to parse captured metadata: {}", e);
@@ -219,6 +262,22 @@ async fn process_single_item_attempt(
             return stats;
         }
     };
+    if koreader_metadata.is_none()
+        && let (Some(store), Some(fp)) = (&repo.bundles, &existing)
+    {
+        match store
+            .get(&fp.item_id)
+            .and_then(|b| b.map(|b| b.item()).transpose())
+        {
+            Ok(Some(item)) => koreader_metadata = item.koreader_metadata,
+            Ok(None) => {}
+            Err(e) => {
+                warn!("Cannot recover saved metadata: {e:#}");
+                stats.errors = 1;
+                return stats;
+            }
+        }
+    }
     if existing.is_none() && koreader_metadata.is_none() && !config.include_unread {
         stats.skipped_unread = 1;
         return stats;
@@ -249,14 +308,15 @@ async fn process_single_item_attempt(
     // Directory traversal is also preparation work: do not hold the metadata
     // gate or block an async worker while walking the configured source roots.
     let location = config.metadata_location.clone();
-    let fresh_indices = tokio::task::spawn_blocking(move || MetadataIndices::new(&location)).await;
+    let excluded: Vec<_> = repo.bundles.iter().map(|s| s.root.clone()).collect();
+    let fresh_indices =
+        tokio::task::spawn_blocking(move || MetadataIndices::new_excluding(&location, &excluded))
+            .await;
     let guard = repo.metadata_guard().await;
     // Parsing can overlap other workers and writeback. Re-resolve all mutable
     // inputs under the commit gate before publishing this prepared item.
     let unchanged = async {
-        let current_existing = repo
-            .find_fingerprint_by_book_path(&path.to_string_lossy())
-            .await?;
+        let current_existing = repo.find_import_record(path, &checksum).await?;
         if current_existing.as_ref().map(|fp| &fp.item_id)
             != existing.as_ref().map(|fp| &fp.item_id)
         {
@@ -286,7 +346,7 @@ async fn process_single_item_attempt(
         drop(guard);
         if retry {
             // Refresh the batch index as migration may have created a new path.
-            if let Ok(indices) = MetadataIndices::new(&config.metadata_location) {
+            if let Ok(indices) = repo.metadata_indices() {
                 let processor = ItemProcessor::new(Arc::new(indices));
                 return Box::pin(process_single_item_attempt(
                     item, &processor, config, repo, media_dirs, false,
@@ -301,7 +361,38 @@ async fn process_single_item_attempt(
 
     let path_str = path.to_string_lossy();
     match repo.find_book_path_by_id(&item_id).await {
-        Ok(Some(ref existing_path)) if existing_path != path_str.as_ref() => {
+        Ok(Some(ref existing_path))
+            if existing_path != path_str.as_ref()
+                && config
+                    .library_paths
+                    .iter()
+                    .filter_map(|p| std::path::absolute(p).ok())
+                    .any(|root| std::path::Path::new(existing_path).starts_with(root))
+                && std::fs::File::open(existing_path).is_ok()
+                && repo.bundles.as_ref().is_none_or(|store| {
+                    store.get(&item_id).ok().flatten().is_some_and(|bundle| {
+                        calculate_partial_md5(Path::new(existing_path))
+                            .ok()
+                            .as_deref()
+                            == Some(bundle.record.checksum.as_str())
+                            && !processor
+                                .metadata_indices
+                                .resolve(
+                                    Path::new(existing_path),
+                                    bundle.record.format,
+                                    &bundle.record.checksum,
+                                    Some(&item_id),
+                                )
+                                .blocked
+                    })
+                })
+                && !repo
+                    .get_item(&item_id)
+                    .await
+                    .ok()
+                    .flatten()
+                    .is_some_and(|i| i.is_archived) =>
+        {
             warn!(
                 "Duplicate canonical ID '{}': already indexed at {}, skipping {:?}",
                 item_id, existing_path, path
@@ -343,14 +434,45 @@ async fn process_single_item_attempt(
         return stats;
     }
 
-    drop(guard);
     stats.upserted = 1;
     if stats_fields_changed {
         stats.stats_invalidated = 1;
     }
 
+    // Media generation stays outside the metadata gate.
+    drop(guard);
     sync_item_media(&item_id, path, format, cover_data, config, media_dirs).await;
-
+    let _guard = repo.metadata_guard().await;
+    if let Some(store) = &repo.bundles {
+        let cover = media_dirs.covers_dir.join(format!("{item_id}.webp"));
+        // A writeback between the cache upsert and here captures newer bytes itself.
+        let result = match captured.as_ref().map(|c| c.verify()).transpose() {
+            Ok(_) => store.capture(
+                &item,
+                &checksum,
+                captured.as_ref(),
+                cover.is_file().then_some(cover.as_path()),
+                crate::store::bundles::State::Available,
+            ),
+            Err(e) => Err(e),
+        };
+        match result {
+            Ok(bundle) => {
+                if let Err(e) = repo.note_bundle(&bundle).await {
+                    warn!("Bundle projection pending for {item_id}: {e:#}");
+                    stats.errors += 1;
+                }
+            }
+            Err(e) => {
+                warn!("Capture pending for {item_id}: {e:#}");
+                stats.errors += 1;
+            }
+        }
+    }
+    if let Err(e) = repo.set_archived(&item_id, false).await {
+        warn!("Cannot restore availability: {e:#}");
+        stats.errors += 1;
+    }
     stats
 }
 
@@ -457,7 +579,7 @@ pub(crate) async fn refresh_capture(
     let format = LibraryItemFormat::from_path(Path::new(&format!("book.{}", detail.format)))
         .context("unsupported book format")?;
     let book_before = crate::source::FileFingerprint::capture(&path)?;
-    let processor = ItemProcessor::new(Arc::new(MetadataIndices::new(&repo.metadata_location())?));
+    let processor = ItemProcessor::new(Arc::new(repo.metadata_indices()?));
     let book_info = processor.parse_book_info(format, &path).await?;
     let checksum = calculate_partial_md5(&path)?;
     let item = LibraryItem {
@@ -470,12 +592,9 @@ pub(crate) async fn refresh_capture(
     // Ebook parsing awaits I/O. External writers are not covered by our gate,
     // so recheck both the bytes and source selection before publishing the cache.
     captured.verify()?;
-    let current = MetadataIndices::new(&repo.metadata_location())?.resolve(
-        &item.file_path,
-        format,
-        &checksum,
-        Some(id),
-    );
+    let current = repo
+        .metadata_indices()?
+        .resolve(&item.file_path, format, &checksum, Some(id));
     if current
         .selected
         .is_none_or(|source| source.revision != captured.revision)
@@ -483,7 +602,18 @@ pub(crate) async fn refresh_capture(
     {
         return Err(crate::source::metadata::MetadataChanged.into());
     }
-    upsert_captured_item(repo, &item, Some(captured), &checksum, true, time).await
+    upsert_captured_item(repo, &item, Some(captured), &checksum, true, time).await?;
+    if let Some(store) = &repo.bundles {
+        let bundle = store.capture(
+            &item,
+            &checksum,
+            Some(captured),
+            None,
+            crate::store::bundles::State::Available,
+        )?;
+        repo.note_bundle(&bundle).await?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

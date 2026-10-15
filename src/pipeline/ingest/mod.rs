@@ -4,8 +4,10 @@ mod batch;
 mod cleanup;
 mod library;
 mod metadata;
+pub(crate) mod preservation;
 mod processor;
 mod reconcile;
+pub(crate) mod sources;
 mod statistics;
 
 pub(crate) use batch::ingest_items;

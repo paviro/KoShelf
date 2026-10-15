@@ -33,6 +33,7 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
         true,
         args.enable_auth,
         args.enable_writeback,
+        args.enable_library_management,
         false,
     )
     .await?;
@@ -142,6 +143,7 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
     };
 
     let timezone = state.config.time_config.timezone;
+    let library_management = state.config.library_management_enabled;
 
     let file_watcher = FileWatcher::new(
         state.config,
@@ -160,6 +162,7 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
         library_repo: state.repo,
         auth_state,
         write_coordinator,
+        library_management,
         timezone,
     });
 

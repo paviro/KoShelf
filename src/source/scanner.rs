@@ -10,6 +10,34 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 
+/// Check both the root's type and whether its contents can be enumerated.
+pub(crate) fn library_root_metadata(path: &Path) -> std::io::Result<std::fs::Metadata> {
+    let metadata = std::fs::metadata(path)?;
+    if !metadata.is_dir() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotADirectory,
+            "library path is not a directory",
+        ));
+    }
+    std::fs::read_dir(path)?;
+    Ok(metadata)
+}
+
+pub(crate) fn library_access_warning(path: &Path, error: &std::io::Error) -> String {
+    let guidance = match error.kind() {
+        std::io::ErrorKind::NotFound => "Check the configured path or reconnect the drive.",
+        std::io::ErrorKind::PermissionDenied => {
+            "Check read and directory access permissions for the user running KoShelf."
+        }
+        std::io::ErrorKind::NotADirectory => "Configure a directory as the library path.",
+        _ => "Check that the drive is connected and the filesystem is accessible.",
+    };
+    format!(
+        "Cannot access library path '{}': {error}. {guidance}",
+        path.display()
+    )
+}
+
 /// Configuration for where to find KOReader metadata
 #[derive(Clone, Debug, Default)]
 pub enum MetadataLocation {
@@ -62,10 +90,25 @@ pub async fn collect_paths(
     library_paths: &[PathBuf],
     options: &CollectionOptions,
 ) -> Vec<CollectedItem> {
+    scan_paths(library_paths, options, &[]).await.items
+}
+
+pub struct ScanResult {
+    pub items: Vec<CollectedItem>,
+    pub complete: bool,
+}
+
+pub async fn scan_paths(
+    library_paths: &[PathBuf],
+    options: &CollectionOptions,
+    excluded: &[PathBuf],
+) -> ScanResult {
+    let mut complete = true;
     let kobo_index = match &options.kobo_db_path {
         Some(path) => match KoboMatchIndex::from_db(path).await {
             Ok(index) => Some(index),
             Err(e) => {
+                complete = false;
                 warn!("Failed to read Kobo database {:?}: {}", path, e);
                 None
             }
@@ -76,15 +119,55 @@ pub async fn collect_paths(
     let mut items = Vec::new();
 
     for library_path in library_paths {
-        for entry in walkdir::WalkDir::new(library_path) {
+        let library_path = match std::path::absolute(library_path) {
+            Ok(p) => p,
+            Err(e) => {
+                warn!("{}", library_access_warning(library_path, &e));
+                complete = false;
+                continue;
+            }
+        };
+        for entry in walkdir::WalkDir::new(library_path)
+            .into_iter()
+            .filter_entry(|e| !excluded.iter().any(|p| e.path().starts_with(p)))
+        {
             let entry = match entry {
                 Ok(e) => e,
                 Err(e) => {
-                    warn!("Failed to read directory entry: {}", e);
+                    complete = false;
+                    if let Some(error) = e.io_error() {
+                        warn!(
+                            "{} Skipping unreadable files during this scan.",
+                            library_access_warning(
+                                e.path().unwrap_or(Path::new("<unknown>")),
+                                error
+                            )
+                        );
+                    } else {
+                        warn!("Cannot scan library entry: {e}. Skipping this entry.");
+                    }
                     continue;
                 }
             };
 
+            if !entry.file_type().is_file() {
+                if !entry.file_type().is_symlink() {
+                    continue;
+                }
+                match std::fs::metadata(entry.path()) {
+                    Ok(metadata) if metadata.is_file() => {}
+                    Ok(_) => continue,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(e) => {
+                        complete = false;
+                        warn!(
+                            "{} Skipping this library link.",
+                            library_access_warning(entry.path(), &e)
+                        );
+                        continue;
+                    }
+                }
+            }
             let path = entry.path();
             if let Some(format) = LibraryItemFormat::from_path(path) {
                 items.push(CollectedItem {
@@ -113,7 +196,8 @@ pub async fn collect_paths(
         items.len(),
         library_paths.len()
     );
-    items
+    items.sort_by(|a, b| a.path.cmp(&b.path));
+    ScanResult { items, complete }
 }
 
 fn is_extensionless_file(path: &Path) -> bool {
@@ -375,5 +459,24 @@ mod tests {
 
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].path, book_path);
+    }
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn scans_readable_ebook_symlinks_and_confirms_broken_targets() {
+        let dir = tempfile::tempdir().unwrap();
+        let library = dir.path().join("books");
+        std::fs::create_dir(&library).unwrap();
+        let original = dir.path().join("original.epub");
+        std::fs::write(&original, b"ebook").unwrap();
+        let link = library.join("Book.epub");
+        std::os::unix::fs::symlink(&original, &link).unwrap();
+        let options = super::CollectionOptions { kobo_db_path: None };
+        let scan = super::scan_paths(std::slice::from_ref(&library), &options, &[]).await;
+        assert!(scan.complete);
+        assert_eq!(scan.items.len(), 1);
+        std::fs::remove_file(original).unwrap();
+        let scan = super::scan_paths(&[library], &options, &[]).await;
+        assert!(scan.complete);
+        assert!(scan.items.is_empty());
     }
 }

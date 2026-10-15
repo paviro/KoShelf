@@ -1,6 +1,9 @@
 CREATE TABLE IF NOT EXISTS library_items (
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    calculated_checksum TEXT,
+    managed_revision TEXT,
     id TEXT PRIMARY KEY,
-    file_path TEXT NOT NULL UNIQUE,
+    file_path TEXT NOT NULL,
     format TEXT NOT NULL CHECK (format IN ('epub', 'fb2', 'mobi', 'cbz', 'cbr')),
     content_type TEXT NOT NULL CHECK (content_type IN ('book', 'comic')),
     title TEXT NOT NULL,
@@ -63,6 +66,7 @@ CREATE TABLE IF NOT EXISTS library_item_fingerprints (
     metadata_source TEXT CHECK (metadata_source IN ('primary', 'backup')),
     metadata_writable INTEGER NOT NULL DEFAULT 0,
     calculated_checksum TEXT,
+    managed_revision TEXT,
     metadata_size_bytes INTEGER CHECK (metadata_size_bytes IS NULL OR metadata_size_bytes >= 0),
     metadata_modified_unix_ms INTEGER CHECK (metadata_modified_unix_ms IS NULL OR metadata_modified_unix_ms >= 0),
     updated_at TEXT NOT NULL,

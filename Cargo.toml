@@ -89,6 +89,10 @@ mimalloc = "0.1.52"
 # CBR/RAR archive extraction (not supported on Windows)
 unrar = "0.5.8"
 
+# Atomic directory exchange for library captures (renameat2 / renamex_np)
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+libc = "0.2.190"
+
 # Lua parsing (use LuaJIT to match KoReader's runtime). Mainline LuaJIT has no
 # riscv64 backend, so that arch uses vendored PUC Lua 5.1 instead — KOReader
 # sidecars are plain Lua 5.1 data chunks, so the semantics are identical.
@@ -105,6 +109,7 @@ toml = "1.1.8"
 flate2 = "1.1.10"
 
 [dev-dependencies]
+tokio = { version = "1.53.3", features = ["test-util"] }
 ureq = { version = "3.4.2", features = ["json"] }
 
 [profile.release]

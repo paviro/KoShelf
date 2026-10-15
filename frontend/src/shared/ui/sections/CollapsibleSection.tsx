@@ -64,16 +64,20 @@ export function CollapsibleSection({
             data-default-visible={defaultVisible ? 'true' : 'false'}
         >
             <div className="flex items-center justify-between gap-3 mb-4 md:mb-6 pb-4 border-b border-gray-200/50 dark:border-dark-700/50">
-                <div className="flex items-center space-x-3">
+                <div className="flex min-w-0 items-center gap-3">
                     <div
-                        className={`w-2 h-6 md:h-8 rounded-full ${accentClass}`}
+                        className={`w-2 h-6 md:h-8 shrink-0 rounded-full ${accentClass}`}
                     ></div>
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                        {title}
-                    </h2>
-                    {titleBadge}
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                            {title}
+                        </h2>
+                        {titleBadge}
+                    </div>
                 </div>
-                <div className={`flex items-center ${controlsClassName}`}>
+                <div
+                    className={`flex shrink-0 items-center ${controlsClassName}`}
+                >
                     {controls}
                     <ToggleButton visible={visible} onClick={onToggle} />
                 </div>

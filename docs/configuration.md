@@ -23,6 +23,7 @@ Start the web server. Serves the embedded React app at `/` with API endpoints un
 - `-p, --port`: Port for web server (default: 3000)
 - `--enable-auth`: Enable password authentication
 - `--enable-writeback`: Enable metadata writeback — allows editing annotations, review notes, ratings, and reading status from the UI, with changes written back to KOReader sidecar files
+- `--enable-library-management`: Enable library management — allows removing archived books from the library via the UI. Ebooks and KOReader sidecars are never modified
 - `--trusted-proxies`: Comma-separated or repeated trusted reverse proxy IP/CIDR entries for forwarded client IP/proto resolution
 
 Requires `--data-path` for persistent data storage.
@@ -90,6 +91,8 @@ These flags are shared by both `serve` and `export`:
 **Data:**
 
 - `--data-path`: Persistent runtime data directory. Required for `serve`, optional for `export` (uses a temp dir when omitted).
+- `--archive-enabled <true|false>`: Enable archive preservation with persistent storage (default: `true`). Also set via `KOSHELF_ARCHIVE_ENABLED` or `[library] archive_enabled`. Restart after changing this setting.
+- `--archive-retention-days`: How long to keep files of removed archived books: a number of days, `0` for immediate deletion, or `forever` (default: `30`). See [Library preservation](#library-preservation).
 
 **Site display:**
 
@@ -126,8 +129,10 @@ Common environment variables:
 - `KOSHELF_OUTPUT`
 - `KOSHELF_INCLUDE_FILES`
 - `KOSHELF_DATA_PATH`
+- `KOSHELF_ARCHIVE_RETENTION_DAYS`
 - `KOSHELF_ENABLE_AUTH`
 - `KOSHELF_ENABLE_WRITEBACK`
+- `KOSHELF_ENABLE_LIBRARY_MANAGEMENT`
 - `KOSHELF_TRUSTED_PROXIES`
 - `KOSHELF_TITLE`
 - `KOSHELF_LANGUAGE`
@@ -227,8 +232,42 @@ Modern sidecar selection is checked against [KOReader v2026.07.1](https://github
 
 For each ebook, KoShelf considers valid primary files and their `.old` backups using KOReader's ordering. Candidates sort newest first using whole-second timestamps, matching KOReader’s LuaFileSystem; ties prefer adjacent primary/backup, then docsettings primary/backup, then hashdocsettings primary/backup. If a backup is newer than its primary, the primary receives the backup's ranking timestamp so it is tried first. Invalid or empty candidates are skipped without deleting them. Hash lookup uses the ebook's calculated checksum and expected metadata filename. Ambiguous associations and conflicting identities block editing rather than choosing arbitrarily. Legacy history files and `.kpdfview` files are not imported.
 
-When the selected file disappears or becomes invalid, KoShelf accepts the next valid candidate, including an older primary or backup. Valid metadata without annotations clears previous annotations. Only when no valid source remains does the disposable cache retain its last reading data with editing disabled. Raw metadata files are not stored in SQLite; deleting or resetting the cache loses this last-known state.
+When the selected file disappears or becomes invalid, KoShelf accepts the next valid candidate, including an older primary or backup. Valid metadata without annotations clears previous annotations. When no valid source remains, KoShelf keeps showing the last saved reading data with editing disabled (see [Library preservation](#library-preservation)).
 
 Reading a backup does not restore or modify files. The editor identifies backup-derived data; an explicit edit restores the primary in the same directory using the backup's contents plus the requested change. The backup remains untouched. A changed source, backup, or destination causes a conflict and requires reviewing refreshed data before another edit. Open editors preserve drafts and prevent saving against a revision that changed in the background. Backup file events trigger reevaluation just like primary file events.
 
 Unavailable central directories do not stop library watching. KoShelf watches the nearest available ancestor and retries central watch registration every five seconds; restored directories trigger reconciliation.
+
+
+## Library preservation
+
+Archive mode is enabled by default when a persistent data path is configured. To disable it, set `archive_enabled = false` under `[library]`, use `KOSHELF_ARCHIVE_ENABLED=false`, or pass `--archive-enabled false`. CLI values override environment variables, which override TOML values.
+
+While disabled, missing books are removed from the visible library, archive filters and removal controls are hidden, and no saved bundles are loaded, updated, recovered, or expired. Existing saved files remain untouched; startup logs an informational message with their location when any exist. Library management is unavailable even when explicitly enabled. Configured library roots must exist at startup.
+
+Restart to apply the setting. Re-enabling restores saved archives and resumes normal reconciliation and retention cleanup, including cleanup of retired files that became due while disabled. Persistent storage still uses an exclusive writer lock in either mode. Exports accept the same setting; without persistent storage, archiving is always inactive.
+
+With a persistent `--data-path` (always the case for `serve`), KoShelf saves a copy of each book's KOReader metadata and cover under `<data-path>/library/`. If an ebook later disappears (deleted, moved, or on an unplugged drive), it stays in your library as **Archived** with its status, annotations, and statistics intact. Reading, downloading, and editing are unavailable until the ebook returns, at which point it becomes available again automatically.
+
+Missing or inaccessible library roots do not prevent startup when persistent archives are enabled. Warnings identify the affected path and filesystem error, with guidance to reconnect the drive or check permissions. In watch mode, KoShelf retries automatically, suppresses repeated identical watch warnings, and logs when access is restored. A path that is confirmed to be a file instead of a directory remains a configuration error.
+
+- The saved copy mirrors the current KOReader metadata; it is not a version history.
+- Archived books never expire on their own. You can remove them from the book's page (requires `--enable-library-management`). Original ebooks and sidecars are never touched.
+- A removed book reappears if its ebook shows up again.
+- Exports without `--data-path` are ephemeral and preserve nothing.
+
+### Removal retention
+
+`--archive-retention-days` (`KOSHELF_ARCHIVE_RETENTION_DAYS`, `[library] archive_retention_days`) controls how long saved files are kept after you remove an archived book:
+
+| Value | After removal |
+|---|---|
+| Positive number (default `30`) | Files are kept for that many days, then deleted |
+| `0` | Files are deleted immediately |
+| `forever` | Files are kept indefinitely |
+
+Removed books disappear from the library immediately regardless of this setting.
+
+### Recovering metadata manually
+
+Each book is stored in its own directory, `<data-path>/library/{snapshots,archived,retired}/<id>/`, containing the original KOReader metadata file (e.g. `metadata.epub.lua`) and `cover.webp`. To restore, copy the metadata file back into the book's `.sdr` folder (or its docsettings/hashdocsettings location). Don't modify these directories otherwise, and only run one KoShelf process per data path.

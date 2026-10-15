@@ -445,3 +445,18 @@ page-activity = Oldalaktivitás
 
 metadata-edit-stale = A metaadatok szerkesztés közben megváltoztak. A piszkozat megmaradt. Zárd be a szerkesztőt, és ellenőrizd az aktuális adatokat az újabb szerkesztés előtt.
 metadata-backup-edit = Ezek az adatok egy KOReader biztonsági mentésből származnak. Egy módosítás mentése visszaállítja az elsődleges metaadatfájlt.
+
+library-archived = Archivált
+library-available = Elérhető
+library-all = Összes
+library-availability = Elérhetőség
+library-remove = Archívum eltávolítása
+library-remove-book-body = Ez a könyv többé nem jelenik meg a könyvtáradban.
+library-remove-comic-body = Ez a képregény többé nem jelenik meg a könyvtáradban.
+library-remove-immediate = A KoShelf azonnal törli az archívumot.
+library-remove-forever = A KoShelf korlátlan ideig megőrzi az archívumot az adatmappájában.
+library-remove-days = A KoShelf { $days } napig megőrzi az archívumot az adatmappájában, majd törli azt.
+library-remove-error = Nem sikerült eltávolítani a könyvtárból. Frissítsd az oldalt, és próbáld újra.
+library-backup-pending = A módosítások az eredeti fájlba mentve. A biztonsági mentés még függőben van, és újra meg lesz próbálva.
+
+library-reading-status = Olvasási állapot

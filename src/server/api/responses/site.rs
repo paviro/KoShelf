@@ -8,6 +8,8 @@ pub struct SiteCapabilities {
     pub has_files: bool,
 
     pub has_writeback: bool,
+    pub has_archive: bool,
+    pub has_library_management: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

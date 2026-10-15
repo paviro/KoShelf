@@ -13,6 +13,14 @@ pub(crate) struct MetadataProvenance {
 }
 
 impl LibraryRepository {
+    pub(crate) fn metadata_indices(&self) -> Result<crate::source::metadata::MetadataIndices> {
+        let excluded: Vec<_> = self.bundles.iter().map(|s| s.root.clone()).collect();
+        crate::source::metadata::MetadataIndices::new_excluding(
+            &self.metadata_location(),
+            &excluded,
+        )
+    }
+
     /// Serializes accepted metadata and writeback across all cloned repositories.
     /// A shared gate also protects competing book IDs during duplicate checks.
     /// Media generation remains outside the critical section.
@@ -74,6 +82,11 @@ impl LibraryRepository {
         .bind(&row.id)
         .execute(&mut *tx)
         .await?;
+        sqlx::query("UPDATE library_items SET calculated_checksum = ? WHERE id = ?")
+            .bind(checksum)
+            .bind(&row.id)
+            .execute(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(())
     }

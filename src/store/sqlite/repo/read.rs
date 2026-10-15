@@ -33,7 +33,7 @@ impl LibraryRepository {
     pub async fn get_item(&self, id: &str) -> Result<Option<LibraryDetailItem>> {
         let sql = if self.use_stable_page_metadata {
             "SELECT
-                i.id, i.title, i.authors_json, i.series_json, i.status,
+                i.is_archived, i.id, i.title, i.authors_json, i.series_json, i.status,
                 i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
                 i.language, i.publisher, i.description, i.review_note,
                 COALESCE(i.pagemap_doc_pages, i.doc_pages, i.parser_pages) as pages,
@@ -46,7 +46,7 @@ impl LibraryRepository {
              WHERE i.id = ?1"
         } else {
             "SELECT
-                i.id, i.title, i.authors_json, i.series_json, i.status,
+                i.is_archived, i.id, i.title, i.authors_json, i.series_json, i.status,
                 i.progress_percentage, i.rating, i.cover_url, i.content_type, i.format,
                 i.language, i.publisher, i.description, i.review_note,
                 COALESCE(i.doc_pages, i.parser_pages) as pages,
@@ -268,7 +268,7 @@ impl LibraryRepository {
     /// Used by the static export pipeline to copy item files into the output.
     pub async fn load_all_item_file_info(&self) -> Result<Vec<(String, String, String)>> {
         let rows: Vec<(String, String, String)> =
-            sqlx::query_as("SELECT id, file_path, format FROM library_items")
+            sqlx::query_as("SELECT id, file_path, format FROM library_items WHERE is_archived = 0")
                 .fetch_all(&self.pool)
                 .await
                 .context("Failed to load item file info")?;
@@ -367,7 +367,7 @@ macro_rules! list_items_query {
     ($order_by:literal) => {
         concat!(
             "SELECT
-                id, title, authors_json, series_json, status,
+                is_archived, id, title, authors_json, series_json, status,
                 progress_percentage, rating, annotation_count,
                 cover_url, content_type
              FROM library_items

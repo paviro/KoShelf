@@ -1839,6 +1839,7 @@ dependencies = [
  "include_dir",
  "indicatif",
  "ipnet",
+ "libc",
  "log",
  "md5",
  "mimalloc",

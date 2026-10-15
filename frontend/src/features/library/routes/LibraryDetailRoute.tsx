@@ -69,6 +69,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
 
     const canWrite =
         siteQuery.data?.capabilities.has_writeback === true &&
+        !item?.is_archived &&
         item?.has_metadata === true &&
         Boolean(item.metadata_revision);
     const itemStats = detail?.statistics?.item_stats ?? null;
@@ -210,9 +211,10 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
     const backHref =
         returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
 
-    const resolvedFormat = siteQuery.data?.capabilities.has_files
-        ? item?.format
-        : undefined;
+    const resolvedFormat =
+        !item?.is_archived && siteQuery.data?.capabilities.has_files
+            ? item?.format
+            : undefined;
     const readerBaseHref =
         resolvedFormat && id && isReaderFormatSupported(resolvedFormat)
             ? buildRoutePath(readerRouteIdForCollection(collection), { id })
@@ -227,6 +229,13 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                 itemId={id}
                 backHref={backHref}
                 format={resolvedFormat}
+                isArchived={item?.is_archived}
+                removableItem={
+                    item?.is_archived &&
+                    siteQuery.data?.capabilities.has_library_management
+                        ? item
+                        : undefined
+                }
             />
 
             <PageContent className="space-y-6 md:space-y-8">

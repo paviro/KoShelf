@@ -1,3 +1,5 @@
+import { translation } from './i18n';
+import { addToast } from './ui/toast';
 import type {
     ApiClient,
     CompletionsParams,
@@ -225,7 +227,7 @@ export class HttpApiClient implements ApiClient {
         payload: UpdateItemPayload,
         revision: string,
     ): Promise<void> {
-        await fetchJson(`/api/items/${encodeURIComponent(id)}`, {
+        await captureAwareMutation(`/api/items/${encodeURIComponent(id)}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -241,7 +243,7 @@ export class HttpApiClient implements ApiClient {
         payload: UpdateAnnotationPayload,
         revision: string,
     ): Promise<void> {
-        await fetchJson(
+        await captureAwareMutation(
             `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
             {
                 method: 'PATCH',
@@ -259,7 +261,7 @@ export class HttpApiClient implements ApiClient {
         annotationId: string,
         revision: string,
     ): Promise<void> {
-        await fetchJson(
+        await captureAwareMutation(
             `/api/items/${encodeURIComponent(itemId)}/annotations/${encodeURIComponent(annotationId)}`,
             { method: 'DELETE', headers: { 'X-Metadata-Revision': revision } },
         );
@@ -267,5 +269,19 @@ export class HttpApiClient implements ApiClient {
 
     clearCache(): void {
         // No client-side cache in HTTP mode.
+    }
+}
+
+async function captureAwareMutation(
+    ...args: Parameters<typeof fetchJson>
+): Promise<void> {
+    const result = await fetchJson(...args);
+    if (
+        result &&
+        typeof result === 'object' &&
+        'backup_pending' in result &&
+        result.backup_pending === true
+    ) {
+        addToast('warning', translation.get('library-backup-pending'));
     }
 }

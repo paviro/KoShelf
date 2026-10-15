@@ -15,6 +15,51 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 
+/// Maintenance is independent of ebook event processing. Cancelling `poll`
+/// leaves the running worker owned here and does not permit overlapping jobs.
+struct RetiredCleanup {
+    store: Option<std::sync::Arc<crate::store::bundles::BundleStore>>,
+    timer: tokio::time::Interval,
+    task: Option<tokio::task::JoinHandle<Result<()>>>,
+}
+
+impl RetiredCleanup {
+    fn new(store: Option<std::sync::Arc<crate::store::bundles::BundleStore>>) -> Self {
+        let cadence = Duration::from_secs(3600);
+        let mut timer = tokio::time::interval_at(tokio::time::Instant::now() + cadence, cadence);
+        timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        Self {
+            store: store.filter(|s| s.retention != crate::store::bundles::Retention::Forever),
+            timer,
+            task: None,
+        }
+    }
+
+    async fn poll(&mut self) {
+        tokio::select! {
+            _ = self.timer.tick(), if self.store.is_some() => {
+                if self.task.is_none() {
+                    let store = self.store.as_ref().expect("enabled cleanup").clone();
+                    self.task = Some(tokio::task::spawn_blocking(move || store.expire()));
+                }
+            }
+            result = async { self.task.as_mut().expect("running cleanup").await }, if self.task.is_some() => {
+                report_cleanup(result);
+                self.task = None;
+            }
+            else => std::future::pending::<()>().await,
+        }
+    }
+}
+
+fn report_cleanup(result: Result<Result<()>, tokio::task::JoinError>) {
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => warn!("Retired file cleanup pending: {e:#}"),
+        Err(e) => warn!("Retired file cleanup worker failed: {e}"),
+    }
+}
+
 /// Watches library paths and statistics DB for changes, triggering debounced rebuilds.
 pub struct FileWatcher {
     config: SiteConfig,
@@ -67,10 +112,10 @@ impl FileWatcher {
 
         let mut watched: Vec<String> = Vec::new();
 
-        for library_path in &self.library_paths {
-            watcher.watch(library_path, RecursiveMode::Recursive)?;
-            watched.push(format!("{}", library_path.display()));
-        }
+        // Unavailable roots are not fatal: the retry loop watches them once they return.
+        let mut library_watches = LibraryWatches::default();
+        refresh_library_watches(&mut watcher, &self.library_paths, &mut library_watches);
+        watched.extend(self.library_paths.iter().map(|p| p.display().to_string()));
 
         let mut metadata_watches = HashMap::new();
         refresh_metadata_watches(
@@ -181,17 +226,26 @@ impl FileWatcher {
 
         // Retry unavailable roots even when permissions/mount changes produce no event.
         let mut retry_watches = tokio::time::interval(Duration::from_secs(5));
+        let mut cleanup = RetiredCleanup::new(
+            self.library_repo
+                .as_ref()
+                .and_then(|repo| repo.bundles.clone()),
+        );
         loop {
             let event = tokio::select! {
+                _ = cleanup.poll() => continue,
                 event = file_rx.recv() => match event {
                     Some(event) => event,
                     None => break,
                 },
                 _ = retry_watches.tick() => {
-                    let restored = refresh_metadata_watches(
+                    let mut restored = refresh_library_watches(
+                        &mut watcher, &self.library_paths, &mut library_watches,
+                    );
+                    restored.extend(refresh_metadata_watches(
                         &mut watcher, &self.metadata_location.central_paths(),
                         &self.library_paths, &mut metadata_watches,
-                    );
+                    ));
                     if !restored.is_empty() {
                         let _ = rebuild_tx.send(restored);
                     }
@@ -230,6 +284,9 @@ impl FileWatcher {
         }
 
         rebuild_task.abort();
+        if let Some(task) = cleanup.task.take() {
+            report_cleanup(task.await);
+        }
         Ok(())
     }
 
@@ -258,6 +315,21 @@ impl FileWatcher {
 
     fn paths_contain_relevant_files(&self, paths: &[PathBuf]) -> bool {
         paths.iter().any(|path| {
+            if let Some(data) = self.runtime_data_policy.persistent_data_dir() {
+                let managed = data.join("library");
+                let absolute = std::path::absolute(path).unwrap_or_else(|_| path.clone());
+                let resolved = std::fs::canonicalize(path).unwrap_or_else(|_| absolute.clone());
+                if [
+                    std::path::absolute(&managed).ok(),
+                    std::fs::canonicalize(&managed).ok(),
+                ]
+                .into_iter()
+                .flatten()
+                .any(|root| absolute.starts_with(&root) || resolved.starts_with(&root))
+                {
+                    return false;
+                }
+            }
             if self
                 .metadata_location
                 .central_paths()
@@ -297,6 +369,97 @@ impl FileWatcher {
             false
         })
     }
+}
+
+/// Identity of an available library root. It changes when the root is removed,
+/// replaced, or a filesystem is mounted or unmounted over it.
+fn root_identity(path: &Path) -> std::io::Result<(u64, u64)> {
+    let metadata = crate::source::scanner::library_root_metadata(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        Ok((metadata.dev(), metadata.ino()))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = metadata;
+        Ok((0, 0))
+    }
+}
+
+/// Registration and last failure are separate so failed watches are retried
+/// without repeating the same warning every five seconds.
+#[derive(Default)]
+struct LibraryWatches {
+    registered: HashMap<PathBuf, (u64, u64)>,
+    failures: HashMap<PathBuf, String>,
+}
+
+impl LibraryWatches {
+    fn note_failure(&mut self, root: &Path, message: String) -> bool {
+        if self.failures.get(root) == Some(&message) {
+            return false;
+        }
+        warn!("{message} Watching will be retried automatically.");
+        self.failures.insert(root.to_path_buf(), message);
+        true
+    }
+}
+
+/// Returns roots that were lost, replaced or recovered so reconciliation runs.
+fn refresh_library_watches(
+    watcher: &mut impl Watcher,
+    library_paths: &[PathBuf],
+    state: &mut LibraryWatches,
+) -> Vec<PathBuf> {
+    let mut changed = Vec::new();
+    for root in library_paths {
+        let current = match root_identity(root) {
+            Ok(identity) => identity,
+            Err(error) => {
+                if state.registered.remove(root).is_some() {
+                    let _ = watcher.unwatch(root);
+                    changed.push(root.clone());
+                }
+                state.note_failure(
+                    root,
+                    crate::source::scanner::library_access_warning(root, &error),
+                );
+                continue;
+            }
+        };
+        let previous = state.registered.get(root).copied();
+        if previous == Some(current) {
+            continue;
+        }
+        if previous.is_some() {
+            let _ = watcher.unwatch(root);
+            state.registered.remove(root);
+            info!("Library root was replaced: '{}'", root.display());
+            changed.push(root.clone());
+        }
+        match watcher.watch(root, RecursiveMode::Recursive) {
+            Ok(()) => {
+                state.registered.insert(root.clone(), current);
+                if state.failures.remove(root).is_some() {
+                    info!(
+                        "Library access and watching restored for '{}'; reconciling books",
+                        root.display()
+                    );
+                }
+                if previous.is_none() {
+                    changed.push(root.clone());
+                }
+            }
+            Err(error) => {
+                state.note_failure(root, format!(
+                    "Cannot watch library path '{}': {error}. Check filesystem access permissions and watcher resource limits.",
+                    root.display()
+                ));
+            }
+        }
+    }
+    changed
 }
 
 /// Keep a nonrecursive watch on the nearest available ancestor so missing
@@ -425,6 +588,138 @@ fn log_accumulated_paths(
 mod tests {
     use super::*;
     use notify::event::{CreateKind, RemoveKind, RenameMode};
+
+    #[tokio::test(start_paused = true)]
+    async fn hourly_cleanup_expires_without_events_and_retries_failures() {
+        use crate::store::bundles::{BundleStore, Retention};
+        let dir = tempfile::tempdir().unwrap();
+        let store = std::sync::Arc::new(BundleStore::open(dir.path(), Retention::Days(1)).unwrap());
+        let retired = store.root.join("retired").join(format!(
+            "100-0123456789abcdef0123456789abcdef-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::write(&retired, b"cannot remove as directory").unwrap();
+        let mut cleanup = RetiredCleanup::new(Some(store));
+        assert!(futures::poll!(Box::pin(cleanup.poll())).is_pending());
+        tokio::time::advance(Duration::from_secs(3599)).await;
+        assert!(futures::poll!(Box::pin(cleanup.poll())).is_pending());
+        tokio::time::advance(Duration::from_secs(1)).await;
+        cleanup.poll().await;
+        cleanup.task.take().unwrap().await.unwrap().unwrap();
+        assert!(retired.exists());
+        std::fs::remove_file(&retired).unwrap();
+        std::fs::create_dir(&retired).unwrap();
+        tokio::time::advance(Duration::from_secs(3600)).await;
+        cleanup.poll().await;
+        cleanup.task.take().unwrap().await.unwrap().unwrap();
+        assert!(!retired.exists());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn hourly_cleanup_never_overlaps_and_disables_forever() {
+        use crate::store::bundles::{BundleStore, Retention};
+        let dir = tempfile::tempdir().unwrap();
+        let store =
+            std::sync::Arc::new(BundleStore::open(dir.path(), Retention::Immediate).unwrap());
+        let mut cleanup = RetiredCleanup::new(Some(store));
+        let (release, blocked) = std::sync::mpsc::channel();
+        cleanup.task = Some(tokio::task::spawn_blocking(move || {
+            blocked.recv().unwrap();
+            Ok(())
+        }));
+        let id = cleanup.task.as_ref().unwrap().id();
+        tokio::time::advance(Duration::from_secs(3600)).await;
+        cleanup.poll().await;
+        assert_eq!(cleanup.task.as_ref().unwrap().id(), id);
+        release.send(()).unwrap();
+        cleanup.task.take().unwrap().await.unwrap().unwrap();
+        let forever_dir = tempfile::tempdir().unwrap();
+        let forever =
+            std::sync::Arc::new(BundleStore::open(forever_dir.path(), Retention::Forever).unwrap());
+        for mut disabled in [
+            RetiredCleanup::new(None),
+            RetiredCleanup::new(Some(forever)),
+        ] {
+            tokio::time::advance(Duration::from_secs(7200)).await;
+            assert!(futures::poll!(Box::pin(disabled.poll())).is_pending());
+            assert!(disabled.task.is_none());
+        }
+    }
+
+    #[test]
+    fn library_roots_are_rewatched_and_reported_when_they_return_or_are_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("books");
+        let roots = vec![root.clone()];
+        let mut watcher =
+            notify::PollWatcher::new(|_: notify::Result<Event>| {}, Config::default()).unwrap();
+        let mut registered = LibraryWatches::default();
+        assert!(refresh_library_watches(&mut watcher, &roots, &mut registered).is_empty());
+        assert_eq!(registered.failures.len(), 1);
+        let missing = registered.failures[&root].clone();
+        assert!(!registered.note_failure(&root, missing));
+        assert!(registered.note_failure(&root, "changed failure".into()));
+        std::fs::create_dir(&root).unwrap();
+        assert_eq!(
+            refresh_library_watches(&mut watcher, &roots, &mut registered),
+            roots
+        );
+        assert!(refresh_library_watches(&mut watcher, &roots, &mut registered).is_empty());
+        assert!(registered.failures.is_empty());
+        std::fs::remove_dir(&root).unwrap();
+        assert_eq!(
+            refresh_library_watches(&mut watcher, &roots, &mut registered),
+            roots
+        );
+        assert!(registered.registered.is_empty());
+        // A replaced directory (like a remount over the mount point) is rewatched.
+        std::fs::create_dir(&root).unwrap();
+        refresh_library_watches(&mut watcher, &roots, &mut registered);
+        let moved = dir.path().join("old");
+        std::fs::rename(&root, &moved).unwrap();
+        std::fs::create_dir(&root).unwrap();
+        #[cfg(unix)]
+        assert_eq!(
+            refresh_library_watches(&mut watcher, &roots, &mut registered),
+            roots
+        );
+        assert!(registered.registered.contains_key(&root));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn library_permission_recovery_reconciles_without_identity_change() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("books");
+        std::fs::create_dir(&root).unwrap();
+        let roots = vec![root.clone()];
+        let mut watcher =
+            notify::PollWatcher::new(|_: notify::Result<Event>| {}, Config::default()).unwrap();
+        let mut state = LibraryWatches::default();
+        refresh_library_watches(&mut watcher, &roots, &mut state);
+        let before = state.registered[&root];
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o0)).unwrap();
+        if std::fs::read_dir(&root).is_ok() {
+            std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+            eprintln!("Skipping permission fixture: runner bypasses mode bits");
+            return;
+        }
+        let lost = refresh_library_watches(&mut watcher, &roots, &mut state);
+        let repeated = refresh_library_watches(&mut watcher, &roots, &mut state);
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        assert_eq!(lost, roots);
+        assert!(repeated.is_empty());
+        assert!(state.registered.is_empty());
+        assert!(state.failures[&root].contains("permissions"));
+        assert_eq!(
+            refresh_library_watches(&mut watcher, &roots, &mut state),
+            roots
+        );
+        assert_eq!(state.registered[&root], before);
+        assert!(state.failures.is_empty());
+        assert!(refresh_library_watches(&mut watcher, &roots, &mut state).is_empty());
+    }
 
     #[test]
     fn missing_central_directory_is_watched_when_it_returns() {

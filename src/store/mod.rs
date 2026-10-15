@@ -3,3 +3,5 @@
 pub mod lifecycle;
 pub mod memory;
 pub mod sqlite;
+
+pub(crate) mod bundles;

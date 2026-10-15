@@ -2,11 +2,46 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from '@fluent/syntax';
+import { FluentBundle, FluentResource } from '@fluent/bundle';
 
 // Test runs from project root via Vitest
 const repoRoot = path.resolve(process.cwd());
 const localesDir = path.resolve(repoRoot, 'locales');
 const enPath = path.join(localesDir, 'en.ftl');
+
+it('formats archive retention with each locale’s day forms', () => {
+    const cases = [
+        ['en', ['one day', '2 days', '5 days', '30 days']],
+        ['de', ['einen Tag', '2 Tage', '5 Tage', '30 Tage']],
+        ['es', ['un día', '2 días', '5 días', '30 días']],
+        ['fr', ['1 jour ', '2 jours', '5 jours', '30 jours']],
+        ['hu', ['1 nap', '2 nap', '5 nap', '30 nap']],
+        ['pt', ['1 dia ', '2 dias', '5 dias', '30 dias']],
+        ['ru', ['1 день', '2 дня', '5 дней', '30 дней']],
+        ['uk', ['1 день', '2 дні', '5 днів', '30 днів']],
+    ] as const;
+    for (const [locale, expected] of cases) {
+        const bundle = new FluentBundle(locale, { useIsolating: false });
+        expect(
+            bundle.addResource(
+                new FluentResource(
+                    fs.readFileSync(
+                        path.join(localesDir, `${locale}.ftl`),
+                        'utf8',
+                    ),
+                ),
+            ),
+        ).toEqual([]);
+        const pattern = bundle.getMessage('library-remove-days')?.value;
+        expect(pattern).toBeTruthy();
+        for (const [index, days] of [1, 2, 5, 30].entries()) {
+            const errors: Error[] = [];
+            const text = bundle.formatPattern(pattern!, { days }, errors);
+            expect(errors).toEqual([]);
+            expect(text).toContain(expected[index]);
+        }
+    }
+});
 
 const REQUIRED_METADATA = ['-lang-code', '-lang-name', '-lang-dialect'];
 const tokenRegex = /["']([-a-zA-Z0-9_.]+)["']/g;

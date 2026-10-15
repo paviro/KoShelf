@@ -11,6 +11,7 @@ import {
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
+import { ArchivedBadge } from './ArchivedBadge';
 import type { LibraryListItem } from '../api/library-data';
 import {
     formatSeriesDisplay,
@@ -152,14 +153,20 @@ export function LibraryCard({
                         </div>
                     )}
 
-                    {sectionKey === 'abandoned' && (
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-linear-to-br from-gray-500 to-gray-600 text-white text-xs px-3 py-1 rounded-full shadow-lg backdrop-blur-xs border border-gray-400/30 flex items-center space-x-1 whitespace-nowrap z-10">
-                            <FaPause className="w-3 h-3" aria-hidden="true" />
-                            <span className="font-medium">
-                                {translation.get('status.on-hold')}
-                            </span>
-                        </div>
-                    )}
+                    <div className="absolute bottom-2 inset-x-2 flex flex-col items-center gap-1.5">
+                        {sectionKey === 'abandoned' && (
+                            <div className="bg-linear-to-br from-gray-500 to-gray-600 text-white text-xs px-3 py-1 rounded-full shadow-lg backdrop-blur-xs border border-gray-400/30 flex items-center space-x-1 whitespace-nowrap">
+                                <FaPause
+                                    className="w-3 h-3"
+                                    aria-hidden="true"
+                                />
+                                <span className="font-medium">
+                                    {translation.get('status.on-hold')}
+                                </span>
+                            </div>
+                        )}
+                        {item.is_archived && <ArchivedBadge />}
+                    </div>
 
                     {sectionKey === 'unread' && (
                         <div className="absolute top-2 left-2 bg-linear-to-br from-orange-500 to-orange-600 text-white text-xs px-2.5 py-1 rounded-lg shadow-lg backdrop-blur-xs border border-orange-400/30 flex items-center space-x-1">

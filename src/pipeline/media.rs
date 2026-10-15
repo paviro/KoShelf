@@ -87,8 +87,15 @@ pub fn encode_cover_to_disk(cover_data: &[u8], cover_path: &Path) -> Result<()> 
         .encode_advanced(&config)
         .map_err(|e| anyhow::anyhow!("Failed to encode WebP: {:?}", e))?;
 
-    fs::write(cover_path, &*webp_data)
-        .with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
+    // Replace rather than overwrite: saved library records hard-link this file.
+    let save = || -> Result<()> {
+        let dir = cover_path.parent().context("cover directory")?;
+        let mut file = tempfile::NamedTempFile::new_in(dir)?;
+        std::io::Write::write_all(&mut file, &webp_data)?;
+        file.persist(cover_path).map_err(|e| e.error)?;
+        Ok(())
+    };
+    save().with_context(|| format!("Failed to save cover: {:?}", cover_path))?;
 
     Ok(())
 }

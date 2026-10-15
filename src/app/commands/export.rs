@@ -24,6 +24,7 @@ pub(crate) async fn export(args: ExportArgs) -> Result<()> {
         false,
         false,
         false,
+        false,
         args.include_files,
     )
     .await?;

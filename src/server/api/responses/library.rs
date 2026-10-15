@@ -41,6 +41,7 @@ pub struct ExternalIdentifier {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryListItem {
+    pub is_archived: bool,
     pub id: String,
     pub title: String,
     #[sqlx(rename = "authors_json")]
@@ -61,6 +62,10 @@ pub struct LibraryListItem {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryDetailItem {
+    #[sqlx(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub archive_retention: Option<crate::store::bundles::Retention>,
+    pub is_archived: bool,
     pub id: String,
     pub title: String,
     #[sqlx(rename = "authors_json")]
