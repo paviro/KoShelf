@@ -289,7 +289,7 @@ export class StaticApiClient implements ApiClient {
     }
 
     getItemDownloadHref(id: string): string {
-        return `/data/items/${id}.json`;
+        return appUrl(`/data/items/${id}.json`);
     }
 
     getItemFileHref(id: string, format?: string | null): string | null {

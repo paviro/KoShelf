@@ -206,7 +206,7 @@ export function RuntimeUpdatesBridge() {
 
             pollingInFlight = true;
             try {
-                const response = await fetch('/data/site.json', {
+                const response = await fetch(appUrl('/data/site.json'), {
                     method: 'GET',
                     headers: { Accept: 'application/json' },
                     cache: 'no-store',

@@ -12,7 +12,7 @@ export function resolveMediaUrls(value: unknown): unknown {
         return Object.fromEntries(
             Object.entries(value).map(([key, item]) => [
                 key,
-                key.endsWith('_url') &&
+                (key.endsWith('_url') || key === 'item_cover') &&
                 typeof item === 'string' &&
                 item.startsWith('/assets/')
                     ? appUrl(item)
