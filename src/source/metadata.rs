@@ -152,7 +152,6 @@ impl CapturedMetadata {
 
 #[derive(Debug)]
 pub(crate) enum DiscoveryIssue {
-    Missing(PathBuf),
     Inaccessible(PathBuf, String),
     Invalid(PathBuf, String),
     Unstable(PathBuf),
@@ -162,7 +161,6 @@ pub(crate) enum DiscoveryIssue {
 impl std::fmt::Display for DiscoveryIssue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Missing(p) => write!(f, "missing metadata: {}", p.display()),
             Self::Inaccessible(p, e) => write!(f, "inaccessible metadata {}: {e}", p.display()),
             Self::Unstable(p) => write!(f, "metadata changed during capture: {}", p.display()),
             Self::Invalid(p, e) => write!(f, "invalid or unstable metadata {}: {e}", p.display()),
@@ -367,10 +365,8 @@ impl MetadataIndices {
                 result.blocked = true;
                 continue;
             }
+            // No sidecar is the normal state for books never opened in KOReader.
             let Some(path) = paths.first() else {
-                result
-                    .issues
-                    .push(DiscoveryIssue::Missing(path.to_path_buf()));
                 continue;
             };
             let backup_path = crate::source::koreader::lua_writer::backup_path(path);
@@ -409,9 +405,7 @@ impl MetadataIndices {
                             .downcast_ref::<std::io::Error>()
                             .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound)
                         {
-                            result
-                                .issues
-                                .push(DiscoveryIssue::Missing(candidate_path.clone()));
+                            // A missing sidecar or `.old` backup is expected.
                         } else {
                             result.issues.push(DiscoveryIssue::Inaccessible(
                                 candidate_path.clone(),
