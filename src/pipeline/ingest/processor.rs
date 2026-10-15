@@ -8,7 +8,9 @@ use crate::pipeline::ingest::batch::IngestStats;
 use crate::pipeline::ingest::metadata::MetadataIndices;
 use crate::pipeline::media::{self, MediaDirs};
 use crate::shelf::library::upsert_captured_item;
-use crate::shelf::models::{BookInfo, KoReaderMetadata, LibraryItem, LibraryItemFormat};
+use crate::shelf::models::{
+    Availability, BookInfo, DocumentState, KoReaderMetadata, LibraryItem, LibraryItemFormat,
+};
 use crate::source::custom;
 use crate::source::kobo::KoboFileHints;
 use crate::source::koreader::merge::{normalize_partial_md5, resolve_canonical_partial_md5};
@@ -16,9 +18,10 @@ use crate::source::koreader::{calculate_partial_md5, custom_metadata};
 use crate::source::metadata::CapturedMetadata;
 use crate::source::parsers::{ComicParser, EpubParser, Fb2Parser, MobiParser};
 use crate::source::scanner::CollectedItem;
+use crate::source::sidecars;
 use crate::store::sqlite::repo::LibraryRepository;
 
-/// Each worker owns its ebook parsers and shares the batch's metadata index.
+/// Each worker owns its document parsers and shares the batch's metadata index.
 /// Metadata is parsed from stable captures in separate sandboxed Lua runtimes.
 pub(super) struct ItemProcessor {
     metadata_indices: Arc<MetadataIndices>,
@@ -64,6 +67,7 @@ impl ItemProcessor {
             LibraryItemFormat::Fb2 => self.fb2_parser.parse(path).await,
             LibraryItemFormat::Cbz | LibraryItemFormat::Cbr => self.comic_parser.parse(path).await,
             LibraryItemFormat::Mobi => self.mobi_parser.parse(path).await,
+            LibraryItemFormat::Other => bail!("no parser for {}", path.display()),
         }
     }
 
@@ -129,8 +133,16 @@ async fn process_single_item_attempt(
     let path = item.path.as_path();
     let format = item.format;
 
+    let sidecar_only = item.sidecar_checksum.is_some();
+    // Without the document, cover and metadata come from KOReader's files only.
+    let parsed = !sidecar_only && format.is_parsed();
+
     let guard = repo.metadata_guard().await;
-    let checksum = match calculate_partial_md5(path) {
+    let checksum = match item
+        .sidecar_checksum
+        .clone()
+        .map_or_else(|| calculate_partial_md5(path), Ok)
+    {
         Ok(value) => value,
         Err(e) => {
             warn!("Failed to calculate checksum: {}", e);
@@ -146,6 +158,35 @@ async fn process_single_item_attempt(
             return stats;
         }
     };
+    // A sidecar never competes with a present document of the same identity.
+    if sidecar_only {
+        let id = existing
+            .as_ref()
+            .map_or(checksum.as_str(), |fp| fp.item_id.as_str());
+        let duplicate = async {
+            let current = repo.get_item(id).await?;
+            let current_path = repo.find_book_path_by_id(id).await?;
+            Ok::<_, anyhow::Error>(
+                current.is_some_and(|i| i.availability == Availability::Available)
+                    && current_path
+                        .as_deref()
+                        .is_some_and(|p| Some(p) != path.to_str() && Path::new(p).is_file()),
+            )
+        }
+        .await;
+        match duplicate {
+            Ok(true) => {
+                stats.skipped_duplicates = 1;
+                return stats;
+            }
+            Ok(false) => {}
+            Err(e) => {
+                warn!("Failed to check for duplicate ID '{id}': {e:#}");
+                stats.errors = 1;
+                return stats;
+            }
+        }
+    }
     let saved = match existing.as_ref() {
         Some(fp) => match repo.metadata_provenance(&fp.item_id).await {
             Ok(value) => value,
@@ -202,6 +243,10 @@ async fn process_single_item_attempt(
     let writable = resolution.selected.is_some();
     let saved_revision = saved.as_ref().map(|s| s.revision.clone());
     let captured = resolution.selected;
+    if sidecar_only && captured.is_none() {
+        stats.skipped_unread = 1;
+        return stats;
+    }
     let durable_current = repo
         .bundles
         .as_ref()
@@ -212,6 +257,7 @@ async fn process_single_item_attempt(
         })
         .is_some_and(|b| {
             b.record.state == crate::store::bundles::State::Available
+                && (b.record.document_state == DocumentState::Present) != sidecar_only
                 && b.record.book_path == path
                 && b.record.checksum == checksum
                 && b.record
@@ -224,19 +270,26 @@ async fn process_single_item_attempt(
                     || captured.is_none())
         });
     if let Some(fp) = &existing
+        && repo
+            .get_item(&fp.item_id)
+            .await
+            .ok()
+            .flatten()
+            .is_some_and(|i| {
+                !i.is_archived() && (i.availability == Availability::Available) != sidecar_only
+            })
         && previous_custom.as_ref().is_some_and(custom_unchanged)
         && (repo.bundles.is_none() || durable_current)
     {
-        let current_book = crate::source::FileFingerprint::capture(path).ok();
+        let current_book = crate::source::FileFingerprint::capture(path)
+            .ok()
+            .map(|b| (b.size_bytes as i64, b.modified_unix_ms as i64));
         // Missing metadata can skip parsing only after the durable path and
         // lifecycle are current. Moves still need to publish their new path,
         // using the saved capture without recreating an original sidecar.
         if (!writable && saved.is_some())
             || (captured.as_ref().map(|s| &s.revision) == saved_revision.as_ref()
-                && current_book.is_some_and(|b| {
-                    b.size_bytes as i64 == fp.book_size_bytes
-                        && b.modified_unix_ms as i64 == fp.book_modified_unix_ms
-                }))
+                && current_book == fp.book_size_bytes.zip(fp.book_modified_unix_ms))
         {
             if let Err(e) = repo.set_metadata_writable(&fp.item_id, writable).await {
                 warn!("Failed to update metadata availability: {}", e);
@@ -244,10 +297,11 @@ async fn process_single_item_attempt(
             }
             drop(guard);
             let cover_path = media_dirs.covers_dir.join(format!("{}.webp", fp.item_id));
-            let cover_changed = media::cover_needs_generation(path, &cover_path);
+            let cover_changed = cover_outdated(parsed, custom.cover.is_some(), path, &cover_path);
             if cover_changed {
                 let ebook_cover = match &custom.cover {
                     Some(_) => None,
+                    None if !parsed => None,
                     None => match processor.parse_book_info(format, path).await {
                         Ok(info) => info.cover_data,
                         Err(e) => {
@@ -259,7 +313,9 @@ async fn process_single_item_attempt(
                 let custom_cover = custom.cover.as_ref().map(|c| c.bytes.clone());
                 publish_cover(custom_cover, ebook_cover, cover_path.clone()).await;
             }
-            sync_item_media(&fp.item_id, path, format, config, media_dirs).await;
+            if !sidecar_only {
+                sync_item_media(&fp.item_id, path, format, config, media_dirs).await;
+            }
             // Keep the archived cover copy current; the served cover stays in the media cache.
             if let Some(store) = &repo.bundles
                 && cover_path.is_file()
@@ -330,14 +386,49 @@ async fn process_single_item_attempt(
     };
 
     let book_before = crate::source::FileFingerprint::capture(path).ok();
-    drop(guard);
-    let mut book_info = match processor.parse_book_info(format, path).await {
-        Ok(info) => info,
-        Err(e) => {
-            warn_parse_failure(format, path, &e, item.kobo_hints.as_ref());
-            stats.errors = 1;
-            return stats;
+    // Sidecar-only entries keep the metadata of an document seen before.
+    let saved_base = if sidecar_only {
+        match &existing {
+            Some(fp) => match saved_document_base(repo, &fp.item_id).await {
+                Ok(base) => base,
+                Err(e) => {
+                    warn!("Cannot recover document metadata: {e:#}");
+                    stats.errors = 1;
+                    return stats;
+                }
+            },
+            None => None,
         }
+    } else {
+        None
+    };
+    let document_state = if !sidecar_only {
+        DocumentState::Present
+    } else {
+        saved_base
+            .as_ref()
+            .map_or(DocumentState::Never, |(state, _)| state.without_file())
+    };
+    drop(guard);
+    let mut book_info = match saved_base {
+        Some((_, mut info))
+            if (document_state == DocumentState::Missing && format.is_parsed())
+                || koreader_metadata
+                    .as_ref()
+                    .is_none_or(|m| m.doc_props.is_none()) =>
+        {
+            custom_metadata::restore_base(&mut info);
+            info
+        }
+        _ if !parsed => sidecars::book_info(koreader_metadata.as_ref(), path),
+        _ => match processor.parse_book_info(format, path).await {
+            Ok(info) => info,
+            Err(e) => {
+                warn_parse_failure(format, path, &e, item.kobo_hints.as_ref());
+                stats.errors = 1;
+                return stats;
+            }
+        },
     };
 
     // Directory traversal is also preparation work: do not hold the metadata
@@ -361,7 +452,10 @@ async fn process_single_item_attempt(
             Some(fp) => repo.metadata_provenance(&fp.item_id).await?,
             None => None,
         };
-        let current_checksum = calculate_partial_md5(path)?;
+        let current_checksum = match &item.sidecar_checksum {
+            Some(checksum) => checksum.clone(),
+            None => calculate_partial_md5(path)?,
+        };
         let indices = fresh_indices??;
         let current = indices.resolve(
             path,
@@ -383,7 +477,7 @@ async fn process_single_item_attempt(
             && current_saved.as_ref().map(|s| &s.revision) == saved_revision.as_ref()
             && current_custom.metadata_digest() == custom.metadata_digest()
             && current_custom.cover_digest() == custom.cover_digest()
-            && book_before.is_some()
+            && (sidecar_only || book_before.is_some())
             && crate::source::FileFingerprint::capture(path).ok() == book_before)
     }
     .await;
@@ -436,7 +530,7 @@ async fn process_single_item_attempt(
                     .await
                     .ok()
                     .flatten()
-                    .is_some_and(|i| i.is_archived) =>
+                    .is_some_and(|i| i.is_archived()) =>
         {
             warn!(
                 "Duplicate canonical ID '{}': already indexed at {}, skipping {:?}",
@@ -460,13 +554,14 @@ async fn process_single_item_attempt(
         .as_ref()
         .and_then(|m| m.cover_digest.as_deref())
         != custom.cover_digest()
-        || media::cover_needs_generation(path, &cover_path);
+        || cover_outdated(parsed, custom.cover.is_some(), path, &cover_path);
     let item = LibraryItem {
         id: item_id.clone(),
         book_info,
         koreader_metadata,
         file_path: path.to_path_buf(),
         format,
+        document_state,
     };
 
     let stats_fields_changed = needs_stats_reload(&item, repo).await;
@@ -497,7 +592,13 @@ async fn process_single_item_attempt(
         let custom_cover = custom.cover.as_ref().map(|c| c.bytes.clone());
         publish_cover(custom_cover, ebook_cover, cover_path.clone()).await;
     }
-    sync_item_media(&item_id, path, format, config, media_dirs).await;
+    if sidecar_only {
+        if let Err(e) = media::remove_item_files_by_id(&item_id, &media_dirs.files_dir) {
+            warn!("Failed to remove file link for {item_id}: {e:#}");
+        }
+    } else {
+        sync_item_media(&item_id, path, format, config, media_dirs).await;
+    }
     let _guard = repo.metadata_guard().await;
     if let Some(store) = &repo.bundles {
         // A writeback between the cache upsert and here captures newer bytes itself.
@@ -531,10 +632,25 @@ async fn process_single_item_attempt(
     stats
 }
 
-/// Write the served cover from the custom cover, falling back to the ebook's
+/// Whether the served cover is older than its source. Documents without a
+/// parsed cover only have the custom one.
+fn cover_outdated(parsed: bool, has_custom: bool, path: &Path, cover_path: &Path) -> bool {
+    if parsed {
+        media::cover_needs_generation(path, cover_path)
+    } else {
+        has_custom && !cover_path.exists()
+    }
+}
+
+/// Write the served cover from the custom cover, falling back to the document's
 /// own. Without either, a stale cover is removed.
-async fn publish_cover(custom: Option<Vec<u8>>, ebook: Option<Vec<u8>>, cover_path: PathBuf) {
-    let result = tokio::task::spawn_blocking(move || write_cover(custom, ebook, &cover_path)).await;
+async fn publish_cover(
+    custom: Option<Vec<u8>>,
+    document_cover: Option<Vec<u8>>,
+    cover_path: PathBuf,
+) {
+    let result =
+        tokio::task::spawn_blocking(move || write_cover(custom, document_cover, &cover_path)).await;
     match result {
         Ok(Ok(())) => {}
         Ok(Err(e)) => warn!("Cover encode failed: {e:#}"),
@@ -542,14 +658,18 @@ async fn publish_cover(custom: Option<Vec<u8>>, ebook: Option<Vec<u8>>, cover_pa
     }
 }
 
-fn write_cover(custom: Option<Vec<u8>>, ebook: Option<Vec<u8>>, cover_path: &Path) -> Result<()> {
+fn write_cover(
+    custom: Option<Vec<u8>>,
+    document_cover: Option<Vec<u8>>,
+    cover_path: &Path,
+) -> Result<()> {
     if let Some(data) = &custom {
         match media::encode_cover_to_disk(data, cover_path) {
             Ok(()) => return Ok(()),
-            Err(e) => warn!("Invalid custom cover, using the ebook cover: {e:#}"),
+            Err(e) => warn!("Invalid custom cover, using the document cover: {e:#}"),
         }
     }
-    match ebook {
+    match document_cover {
         Some(data) => media::encode_cover_to_disk(&data, cover_path),
         None => match std::fs::remove_file(cover_path) {
             Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
@@ -566,8 +686,12 @@ async fn sync_item_media(
     media_dirs: &MediaDirs,
 ) {
     if config.is_internal_server
-        && let Err(e) =
-            media::sync_item_file_symlink(item_id, format.extension(), path, &media_dirs.files_dir)
+        && let Err(e) = media::sync_item_file_symlink(
+            item_id,
+            &format.extension_for_path(path),
+            path,
+            &media_dirs.files_dir,
+        )
     {
         warn!("Failed to create file symlink for {:?}: {}", path, e);
     }
@@ -628,6 +752,48 @@ async fn needs_stats_reload(item: &LibraryItem, repo: &LibraryRepository) -> boo
     old_fields != new_fields
 }
 
+/// Recover the document-derived base from durable storage or the current cache.
+/// Archive-disabled libraries still retain that base while a sidecar survives.
+async fn saved_document_base(
+    repo: &LibraryRepository,
+    id: &str,
+) -> Result<Option<(DocumentState, BookInfo)>> {
+    if let Some(store) = &repo.bundles
+        && let Some(bundle) = store.get(id)?
+    {
+        return Ok(Some((
+            bundle.record.document_state,
+            bundle.record.book_info,
+        )));
+    }
+    let Some(source) = repo.item_source_row(id).await? else {
+        return Ok(None);
+    };
+    let state = source.document_state;
+    let detail = repo.get_item(id).await?.context("saved item missing")?;
+    let info = BookInfo {
+        title: detail.title,
+        authors: detail.authors.0,
+        description: detail.description,
+        language: detail.language,
+        publisher: detail.publisher,
+        identifiers: detail
+            .identifiers
+            .iter()
+            .map(|i| crate::shelf::models::Identifier::new(i.scheme.clone(), i.value.clone()))
+            .collect(),
+        subjects: detail.subjects.0,
+        series: detail.series.as_ref().map(|s| s.name.clone()),
+        series_number: detail.series.and_then(|s| s.0.index),
+        pages: detail.pages.and_then(|p| p.try_into().ok()),
+        chapters: vec![],
+        cover_data: None,
+        cover_mime_type: None,
+        custom: detail.custom_metadata,
+    };
+    Ok(Some((state, info)))
+}
+
 /// Caller holds the repository metadata guard through capture and persistence.
 /// Refresh one book after a writeback while the caller holds metadata_guard.
 /// `captured` is the reading sidecar just written, if the book has one.
@@ -643,19 +809,44 @@ pub(crate) async fn refresh_capture(
         .expect("runtime configuration lock")
         .clone()
         .context("runtime configuration unavailable")?;
-    let path = repo
-        .find_book_path_by_id(id)
-        .await?
-        .context("book not found")?;
-    let path = std::path::PathBuf::from(path);
+    let source = repo.item_source(id).await?;
+    let path = PathBuf::from(&source.file_path);
+    let format = source.format();
+    let document_state = source.document_state;
+    let checksum = source.checksum()?.to_string();
     let detail = repo.get_item(id).await?.context("book not found")?;
-    let format = LibraryItemFormat::from_path(Path::new(&format!("book.{}", detail.format)))
-        .context("unsupported book format")?;
-    let book_before = crate::source::FileFingerprint::capture(&path)?;
+    let book_before = crate::source::FileFingerprint::capture_optional(&path)?;
     let indices = Arc::new(repo.metadata_indices()?);
     let processor = ItemProcessor::new(indices.clone());
-    let mut book_info = processor.parse_book_info(format, &path).await?;
-    let checksum = calculate_partial_md5(&path)?;
+    let saved = repo
+        .bundles
+        .as_ref()
+        .map(|store| store.get(id))
+        .transpose()?
+        .flatten();
+    let koreader_metadata = match captured {
+        Some(captured) => Some(captured.parse()?),
+        None => saved
+            .as_ref()
+            .map(|b| b.item())
+            .transpose()?
+            .and_then(|i| i.koreader_metadata),
+    };
+    let mut book_info = if document_state == DocumentState::Present && format.is_parsed() {
+        processor.parse_book_info(format, &path).await?
+    } else if (document_state == DocumentState::Missing && format.is_parsed())
+        || koreader_metadata
+            .as_ref()
+            .is_none_or(|m| m.doc_props.is_none())
+    {
+        let (_, mut info) = saved_document_base(repo, id)
+            .await?
+            .context("saved document metadata missing")?;
+        custom_metadata::restore_base(&mut info);
+        info
+    } else {
+        sidecars::book_info(koreader_metadata.as_ref(), &path)
+    };
     let custom = custom::resolve(
         &path,
         &checksum,
@@ -666,27 +857,15 @@ pub(crate) async fn refresh_capture(
     let previous = detail.custom_metadata.as_ref();
     custom_metadata::refresh(&mut book_info, &custom, previous);
     let ebook_cover = book_info.cover_data.take();
-    let koreader_metadata = match captured {
-        Some(captured) => Some(captured.parse()?),
-        // Books without a sidecar keep the reading data of their saved record.
-        None => repo
-            .bundles
-            .as_ref()
-            .map(|store| store.get(id))
-            .transpose()?
-            .flatten()
-            .map(|b| b.item())
-            .transpose()?
-            .and_then(|i| i.koreader_metadata),
-    };
     let item = LibraryItem {
         id: id.to_string(),
         book_info,
         koreader_metadata,
         file_path: path,
         format,
+        document_state,
     };
-    // Ebook parsing awaits I/O. External writers are not covered by our gate,
+    // Document parsing awaits I/O. External writers are not covered by our gate,
     // so recheck both the bytes and source selection before publishing the cache.
     if let Some(captured) = captured {
         captured.verify()?;
@@ -695,7 +874,7 @@ pub(crate) async fn refresh_capture(
         .metadata_indices()?
         .resolve(&item.file_path, format, &checksum, Some(id));
     if current.selected.as_ref().map(|s| &s.revision) != captured.map(|c| &c.revision)
-        || crate::source::FileFingerprint::capture(&item.file_path)? != book_before
+        || crate::source::FileFingerprint::capture_optional(&item.file_path)? != book_before
     {
         return Err(crate::source::metadata::MetadataChanged.into());
     }

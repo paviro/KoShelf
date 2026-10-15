@@ -498,3 +498,5 @@ custom-reason-archived = Archivált elem
 custom-reason-inaccessible_custom_files = Az egyéni fájlok nem olvashatók
 custom-saving = Mentés…
 
+
+library-metadata = Metaadatok

@@ -1,6 +1,6 @@
 //! Current-source discovery and stable captures shared by ingestion and writeback.
 use crate::{
-    shelf::models::{KoReaderMetadata, LibraryItemFormat},
+    shelf::models::{KoReaderMetadata, LibraryItemFormat, library_item::is_ignored_path},
     source::{
         koreader::{LuaParser, merge::normalize_partial_md5},
         scanner::MetadataLocation,
@@ -182,7 +182,7 @@ pub(crate) struct Resolution {
 #[derive(Hash, PartialEq, Eq)]
 struct DocsettingsKey {
     sidecar_stem: String,
-    format: LibraryItemFormat,
+    metadata_filename: String,
 }
 pub(crate) struct MetadataIndices {
     excluded: Vec<PathBuf>,
@@ -194,6 +194,7 @@ pub(crate) struct MetadataIndices {
     inaccessible: Vec<(PathBuf, String)>,
 }
 impl MetadataIndices {
+    #[cfg(test)]
     pub fn new(location: &MetadataLocation) -> Result<Self> {
         Self::new_excluding(location, &[])
     }
@@ -222,6 +223,9 @@ impl MetadataIndices {
                 .follow_links(true)
                 .into_iter()
                 .filter_entry(|entry| {
+                    if is_ignored_path(entry.path()) {
+                        return false;
+                    }
                     // Only directories can lead into excluded storage; skip the
                     // realpath call for plain files and when nothing is excluded.
                     if excluded.is_empty() || !entry.file_type().is_dir() {
@@ -240,7 +244,7 @@ impl MetadataIndices {
                         continue;
                     }
                 };
-                if !entry.file_type().is_file() {
+                if !entry.file_type().is_file() || is_ignored_path(entry.path()) {
                     continue;
                 }
                 let path = entry.path();
@@ -259,8 +263,7 @@ impl MetadataIndices {
                 let primary_path = path.with_file_name(name);
                 if is_hash {
                     if let Some(hash) = normalize_partial_md5(stem)
-                        && name.starts_with("metadata.")
-                        && name.ends_with(".lua")
+                        && LibraryItemFormat::is_metadata_file(name)
                     {
                         this.hash
                             .entry((hash, name.to_string()))
@@ -274,13 +277,11 @@ impl MetadataIndices {
                             .or_default()
                             .push(parent.to_path_buf());
                     }
-                    if let Some(format) =
-                        LibraryItemFormat::from_sidecar_metadata_filename(stem, name)
-                    {
+                    if LibraryItemFormat::is_metadata_file(name) {
                         this.doc
                             .entry(DocsettingsKey {
                                 sidecar_stem: stem.to_string(),
-                                format,
+                                metadata_filename: name.to_string(),
                             })
                             .or_default()
                             .push(primary_path.clone());
@@ -299,6 +300,18 @@ impl MetadataIndices {
         }
         Ok(this)
     }
+    /// Primary paths of every indexed central reading sidecar.
+    pub fn sidecars(&self) -> impl Iterator<Item = &Path> {
+        self.doc
+            .values()
+            .chain(self.hash.values())
+            .flatten()
+            .map(PathBuf::as_path)
+    }
+    /// Whether every central root could be walked.
+    pub fn complete(&self) -> bool {
+        self.inaccessible.is_empty()
+    }
     /// Docsettings `.sdr` folders matching the book's sidecar stem.
     pub fn sdr_folders(&self, book: &Path) -> &[PathBuf] {
         let stem = book
@@ -307,7 +320,7 @@ impl MetadataIndices {
             .unwrap_or_default();
         self.sdr.get(stem).map_or(&[], Vec::as_slice)
     }
-    fn candidates(
+    pub(crate) fn candidates(
         &self,
         path: &Path,
         format: LibraryItemFormat,
@@ -317,23 +330,31 @@ impl MetadataIndices {
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or_default();
-        let mut candidates = vec![(
-            SourceKind::Adjacent,
-            vec![
-                path.with_file_name(format!("{stem}.sdr"))
-                    .join(format.metadata_filename_for_path(path)),
-            ],
-        )];
-        if matches!(
-            self.location,
-            MetadataLocation::DocSettings(_) | MetadataLocation::Central { .. }
-        ) {
+        let metadata_filename = format.metadata_filename_for_path(path);
+        let adjacent = path
+            .with_file_name(format!("{stem}.sdr"))
+            .join(&metadata_filename);
+        // A sidecar-only document inside a central root already names its
+        // exact folder, so same-named docsettings books must not compete.
+        let central = self
+            .location
+            .central_paths()
+            .iter()
+            .any(|root| path.starts_with(root));
+        let mut candidates = vec![(SourceKind::Adjacent, vec![adjacent.clone()])];
+        let exact_sidecar = central && self.sidecars().any(|p| p == adjacent);
+        if !(central && exact_sidecar)
+            && matches!(
+                self.location,
+                MetadataLocation::DocSettings(_) | MetadataLocation::Central { .. }
+            )
+        {
             candidates.push((
                 SourceKind::Docsettings,
                 self.doc
                     .get(&DocsettingsKey {
                         sidecar_stem: stem.to_string(),
-                        format,
+                        metadata_filename: metadata_filename.clone(),
                     })
                     .cloned()
                     .unwrap_or_default(),
@@ -343,16 +364,13 @@ impl MetadataIndices {
             self.location,
             MetadataLocation::HashDocSettings(_) | MetadataLocation::Central { .. }
         ) {
-            candidates.push((
-                SourceKind::Hashdocsettings,
-                self.hash
-                    .get(&(
-                        checksum.to_string(),
-                        format.metadata_filename_for_path(path).to_string(),
-                    ))
-                    .cloned()
-                    .unwrap_or_default(),
-            ));
+            let mut paths = self
+                .hash
+                .get(&(checksum.to_string(), metadata_filename))
+                .cloned()
+                .unwrap_or_default();
+            paths.retain(|p| *p != adjacent);
+            candidates.push((SourceKind::Hashdocsettings, paths));
         }
         candidates
     }

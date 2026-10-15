@@ -1,3 +1,4 @@
+import { documentAvailable } from '../../../shared/library-availability';
 import { useCallback, useMemo } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 
@@ -69,7 +70,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
 
     const canWrite =
         siteQuery.data?.capabilities.has_writeback === true &&
-        !item?.is_archived &&
+        item?.availability !== 'archived' &&
         item?.has_metadata === true &&
         Boolean(item.metadata_revision);
     const itemStats = detail?.statistics?.item_stats ?? null;
@@ -212,7 +213,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
         returnTo ?? buildRoutePath(listRouteIdForCollection(collection));
 
     const resolvedFormat =
-        !item?.is_archived && siteQuery.data?.capabilities.has_files
+        documentAvailable(item) && siteQuery.data?.capabilities.has_files
             ? item?.format
             : undefined;
     const readerBaseHref =
@@ -229,9 +230,9 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                 itemId={id}
                 backHref={backHref}
                 format={resolvedFormat}
-                isArchived={item?.is_archived}
+                availability={item?.availability}
                 removableItem={
-                    item?.is_archived &&
+                    item?.availability === 'archived' &&
                     siteQuery.data?.capabilities.has_library_management
                         ? item
                         : undefined

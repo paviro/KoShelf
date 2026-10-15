@@ -172,6 +172,18 @@ pub fn locate(
         match location {
             Location::Doc => folders.push((location, adjacent(book))),
             Location::Dir => {
+                // A sidecar-only path inside a central root already identifies
+                // its exact folder; other books with the same stem are unrelated.
+                if indices
+                    .location
+                    .central_paths()
+                    .iter()
+                    .any(|root| book.starts_with(root))
+                    && let Some(folder) = sidecar.and_then(Path::parent)
+                {
+                    folders.push((location, folder.to_path_buf()));
+                    continue;
+                }
                 let matches = indices.sdr_folders(book);
                 // Same-named books elsewhere share the stem; never apply their files.
                 if matches.len() > 1 {

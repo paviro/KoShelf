@@ -313,7 +313,7 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
-    async fn inaccessible_library_parent_loads_saved_archives() {
+    async fn inaccessible_library_parent_preserves_saved_availability() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().unwrap();
         let root = std::fs::canonicalize(dir.path()).unwrap();
@@ -357,13 +357,13 @@ mod tests {
         validation.unwrap();
         let restored = restored.unwrap();
         assert!(
-            restored
+            !restored
                 .repo
                 .get_item(&ids[0])
                 .await
                 .unwrap()
                 .unwrap()
-                .is_archived
+                .is_archived()
         );
     }
 

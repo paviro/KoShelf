@@ -20,10 +20,10 @@ pub type Properties = BTreeMap<String, String>;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Metadata {
-    /// Ebook values before overrides.
+    /// Document values before overrides.
     pub base: Properties,
     pub overrides: Properties,
-    /// Ebook page count, recorded in KOReader's `doc_props`.
+    /// Document page count, recorded in KOReader's `doc_props`.
     pub base_pages: Option<u32>,
     /// Digests of the applied custom files, to detect changes without reparsing.
     pub metadata_digest: Option<String>,
@@ -188,6 +188,26 @@ pub fn write(
             },
         )
         .context("cannot write custom metadata")
+}
+
+/// Undo [`refresh`]: put the base values back, as if freshly extracted.
+pub fn restore_base(info: &mut BookInfo) {
+    let Some(metadata) = info.custom.take() else {
+        return;
+    };
+    let text = |key: &str| metadata.base.get(key).filter(|v| !v.is_empty()).cloned();
+    info.title = metadata.base.get("title").cloned().unwrap_or_default();
+    info.authors = list(&text("authors").unwrap_or_default())
+        .map(str::to_owned)
+        .collect();
+    info.subjects = list(&text("keywords").unwrap_or_default())
+        .map(str::to_owned)
+        .collect();
+    info.series = text("series");
+    info.series_number = text("series_index");
+    info.language = text("language");
+    info.description = text("description");
+    info.pages = metadata.base_pages;
 }
 
 /// Apply the resolved custom metadata to freshly extracted ebook metadata.

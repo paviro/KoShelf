@@ -3,7 +3,7 @@
 //! Stripped to pure path discovery — all parsing, metadata resolution, and
 //! cover generation now live in `runtime::ingest::library`.
 
-use crate::shelf::models::LibraryItemFormat;
+use crate::shelf::models::{LibraryItemFormat, is_ignored_path};
 use crate::source::kobo::{KoboDbParser, KoboFileHints};
 use log::{info, warn};
 use std::collections::HashMap;
@@ -73,6 +73,9 @@ pub struct CollectedItem {
     pub path: PathBuf,
     pub format: LibraryItemFormat,
     pub kobo_hints: Option<KoboFileHints>,
+    /// Set when the document is absent: its identity comes from the KOReader
+    /// sidecar, and `path` is where the document would be.
+    pub sidecar_checksum: Option<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -86,6 +89,7 @@ pub struct CollectionOptions {
 /// (epub, fb2, mobi, cbz, cbr), plus extensionless Kobo kepub
 /// entries matched by KoboReader.sqlite when configured. No parsing, no
 /// metadata, no covers.
+#[cfg(test)]
 pub async fn collect_paths(
     library_paths: &[PathBuf],
     options: &CollectionOptions,
@@ -95,6 +99,8 @@ pub async fn collect_paths(
 
 pub struct ScanResult {
     pub items: Vec<CollectedItem>,
+    /// Primary paths of the `*.sdr/metadata.*.lua` files found in the walk.
+    pub sidecars: Vec<PathBuf>,
     pub complete: bool,
 }
 
@@ -117,6 +123,7 @@ pub async fn scan_paths(
     };
 
     let mut items = Vec::new();
+    let mut sidecars = Vec::new();
 
     for library_path in library_paths {
         let library_path = match std::path::absolute(library_path) {
@@ -129,7 +136,10 @@ pub async fn scan_paths(
         };
         for entry in walkdir::WalkDir::new(library_path)
             .into_iter()
-            .filter_entry(|e| !excluded.iter().any(|p| e.path().starts_with(p)))
+            .filter_entry(|e| {
+                !excluded.iter().any(|p| e.path().starts_with(p))
+                    && !is_ignored_path(Path::new(e.file_name()))
+            })
         {
             let entry = match entry {
                 Ok(e) => e,
@@ -169,11 +179,20 @@ pub async fn scan_paths(
                 }
             }
             let path = entry.path();
+            if LibraryItemFormat::is_metadata_path(path) {
+                let name = path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default();
+                sidecars.push(path.with_file_name(name.strip_suffix(".old").unwrap_or(name)));
+                continue;
+            }
             if let Some(format) = LibraryItemFormat::from_path(path) {
                 items.push(CollectedItem {
                     path: entry.into_path(),
                     format,
                     kobo_hints: None,
+                    sidecar_checksum: None,
                 });
                 continue;
             }
@@ -186,6 +205,7 @@ pub async fn scan_paths(
                     path: entry.into_path(),
                     format: LibraryItemFormat::Epub,
                     kobo_hints: Some(hints),
+                    sidecar_checksum: None,
                 });
             }
         }
@@ -197,7 +217,13 @@ pub async fn scan_paths(
         library_paths.len()
     );
     items.sort_by(|a, b| a.path.cmp(&b.path));
-    ScanResult { items, complete }
+    sidecars.sort();
+    sidecars.dedup();
+    ScanResult {
+        items,
+        sidecars,
+        complete,
+    }
 }
 
 fn is_extensionless_file(path: &Path) -> bool {

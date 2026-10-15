@@ -205,7 +205,7 @@ impl WriteContext {
             .get_item(item_id)
             .await
             .map_err(internal_metadata_error)?
-            .is_some_and(|i| i.is_archived)
+            .is_some_and(|i| i.is_archived())
         {
             return Err(ApiResponseError::conflict(
                 "archived items cannot be edited",
@@ -215,27 +215,15 @@ impl WriteContext {
             .metadata_provenance(item_id)
             .await
             .map_err(internal_metadata_error)?;
-        let path = repo
-            .find_book_path_by_id(item_id)
+        let source = repo
+            .item_source(item_id)
             .await
-            .map_err(internal_metadata_error)?
-            .ok_or_else(ApiResponseError::not_found)?;
-        let detail = repo
-            .get_item(item_id)
-            .await
-            .map_err(internal_metadata_error)?
-            .ok_or_else(ApiResponseError::not_found)?;
-        let format = crate::shelf::models::LibraryItemFormat::from_path(std::path::Path::new(
-            &format!("book.{}", detail.format),
-        ))
-        .ok_or_else(ApiResponseError::not_found)?;
-        let checksum = crate::source::koreader::calculate_partial_md5(std::path::Path::new(&path))
             .map_err(internal_metadata_error)?;
         let indices = repo.metadata_indices().map_err(internal_metadata_error)?;
         let resolved = indices.resolve(
-            std::path::Path::new(&path),
-            format,
-            &checksum,
+            std::path::Path::new(&source.file_path),
+            source.format(),
+            source.checksum().map_err(internal_metadata_error)?,
             Some(item_id),
         );
         for issue in &resolved.issues {
@@ -586,6 +574,90 @@ mod metadata_tests {
                 previous_cover = cover;
             }
         }
+    }
+
+    #[tokio::test]
+    async fn metadata_only_annotation_edits_preserve_paged_geometry() {
+        let (dir, state, path, _) = fixture().await;
+        std::fs::remove_file(dir.path().join("Book.fb2")).unwrap();
+        sqlx::query("UPDATE library_items SET document_state = 'never' WHERE id = ?")
+            .bind(ID)
+            .execute(state.library_repo.pool())
+            .await
+            .unwrap();
+        std::fs::write(&path, format!("return {{partial_md5_checksum='{ID}',doc_props={{title='Paged'}},unknown={{keep=true}},annotations={{{{text='quote',drawer='lighten',page=4,pos0={{page=4,x=0.25}},pos1={{page=5,x=0.75}},pboxes={{{{1,2,3,4}}}}}}}}}}" )).unwrap();
+        let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+        refresh_capture_for_test(&state, &captured).await;
+        let annotation = state
+            .library_repo
+            .get_annotations(ID, None)
+            .await
+            .unwrap()
+            .remove(0);
+        assert_eq!(annotation.pageno, Some(4));
+        assert!(annotation.pos0.is_none());
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Metadata-Revision", captured.revision.parse().unwrap());
+        update_annotation(
+            State(state.clone()),
+            Path((ID.into(), annotation.id)),
+            headers,
+            Json(UpdateAnnotationRequest {
+                note: Patch::Value("edited".into()),
+                color: None,
+                drawer: None,
+            }),
+        )
+        .await
+        .unwrap();
+        let lua = mlua::Lua::new();
+        let root: mlua::Table = lua.load(std::fs::read(&path).unwrap()).eval().unwrap();
+        let annotations: mlua::Table = root.get("annotations").unwrap();
+        assert_eq!(annotations.raw_len(), 1);
+        let annotation: mlua::Table = annotations.get(1).unwrap();
+        assert_eq!(annotation.get::<String>("note").unwrap(), "edited");
+        assert_eq!(
+            annotation
+                .get::<mlua::Table>("pos0")
+                .unwrap()
+                .get::<f64>("x")
+                .unwrap(),
+            0.25
+        );
+        assert_eq!(
+            annotation
+                .get::<mlua::Table>("pos1")
+                .unwrap()
+                .get::<u32>("page")
+                .unwrap(),
+            5
+        );
+        assert_eq!(
+            annotation
+                .get::<mlua::Table>("pboxes")
+                .unwrap()
+                .get::<mlua::Table>(1)
+                .unwrap()
+                .get::<u32>(4)
+                .unwrap(),
+            4
+        );
+        assert!(
+            root.get::<mlua::Table>("unknown")
+                .unwrap()
+                .get::<bool>("keep")
+                .unwrap()
+        );
+        assert_eq!(
+            state
+                .library_repo
+                .get_item(ID)
+                .await
+                .unwrap()
+                .unwrap()
+                .availability,
+            crate::shelf::models::Availability::Metadata
+        );
     }
 
     #[tokio::test]
@@ -1064,6 +1136,18 @@ mod metadata_tests {
             StatusCode::CONFLICT
         );
         std::fs::remove_file(&book).unwrap();
+        // A surviving sidecar also blocks archive deletion.
+        assert_eq!(
+            remove_item(State(state.clone()), Path(ID.into()))
+                .await
+                .err()
+                .unwrap()
+                .into_response()
+                .status(),
+            StatusCode::CONFLICT
+        );
+        std::fs::remove_file(&path).unwrap();
+
         assert_eq!(
             remove_item(State(state.clone()), Path(ID.into()))
                 .await
@@ -1080,6 +1164,6 @@ mod metadata_tests {
                 .count(),
             0
         );
-        assert!(path.exists());
+        assert!(!path.exists());
     }
 }

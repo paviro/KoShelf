@@ -35,6 +35,7 @@ function makeDetailData(
     return {
         item: {
             id: 'item-1',
+            availability: 'available',
             title: 'Test Book',
             authors: ['Author'],
             status: 'reading',

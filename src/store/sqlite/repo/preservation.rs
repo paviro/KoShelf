@@ -79,6 +79,31 @@ impl LibraryRepository {
         tx.commit().await?;
         Ok(())
     }
+    pub(crate) async fn item_source_row(&self, id: &str) -> Result<Option<ItemSource>> {
+        Ok(sqlx::query_as("SELECT id, file_path, format, document_state, calculated_checksum, is_archived AS archived FROM library_items WHERE id = ?")
+            .bind(id).fetch_optional(&self.pool).await?)
+    }
+
+    pub(crate) async fn item_sources(&self) -> Result<Vec<ItemSource>> {
+        Ok(sqlx::query_as(
+            "SELECT id, file_path, format, document_state, calculated_checksum, is_archived AS archived FROM library_items",
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    /// Read identity from the source when present, or from its saved capture.
+    pub(crate) async fn item_source(&self, id: &str) -> Result<ItemSource> {
+        use anyhow::Context;
+        let mut source = self.item_source_row(id).await?.context("item not found")?;
+        if source.document_state == crate::shelf::models::DocumentState::Present {
+            source.calculated_checksum = Some(crate::source::koreader::calculate_partial_md5(
+                Path::new(&source.file_path),
+            )?);
+        }
+        source.checksum()?;
+        Ok(source)
+    }
     pub(crate) async fn find_import_record(
         &self,
         path: &Path,
@@ -93,7 +118,7 @@ impl LibraryRepository {
             .await?;
             ensure!(
                 matches.len() <= 1,
-                "multiple managed identities match ebook checksum {checksum}"
+                "multiple managed identities match document checksum {checksum}"
             );
             if let Some((id, _)) = matches.first() {
                 if let Some(fp) = self
@@ -107,8 +132,8 @@ impl LibraryRepository {
                     custom_state: None,
                     item_id: id.clone(),
                     book_path: path.to_string_lossy().into_owned(),
-                    book_size_bytes: -1,
-                    book_modified_unix_ms: -1,
+                    book_size_bytes: Some(-1),
+                    book_modified_unix_ms: Some(-1),
                     metadata_path: None,
                     metadata_size_bytes: None,
                     metadata_modified_unix_ms: None,
@@ -132,7 +157,50 @@ impl LibraryRepository {
             }
             return Ok(None);
         }
-        self.find_fingerprint_by_book_path(&path.to_string_lossy())
-            .await
+        if let Some(existing) = self
+            .find_fingerprint_by_book_path(&path.to_string_lossy())
+            .await?
+        {
+            return Ok(Some(existing));
+        }
+        // Alternate sidecars carry the canonical identity. Do not merge ordinary
+        // documents merely because their bytes match: their sidecars may name
+        // deliberately different identities.
+        let path: Option<String> =
+            sqlx::query_scalar("SELECT file_path FROM library_items WHERE id = ?")
+                .bind(checksum)
+                .fetch_optional(&self.pool)
+                .await?;
+        match path {
+            Some(path) => self.find_fingerprint_by_book_path(&path).await,
+            None => Ok(None),
+        }
+    }
+}
+
+/// Source identity stored independently of document availability.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub(crate) struct ItemSource {
+    pub id: String,
+    pub file_path: String,
+    pub format: String,
+    pub document_state: crate::shelf::models::DocumentState,
+    pub calculated_checksum: Option<String>,
+    pub archived: bool,
+}
+
+impl ItemSource {
+    pub fn format(&self) -> crate::shelf::models::LibraryItemFormat {
+        crate::shelf::models::LibraryItemFormat::from_document_path(Path::new(&format!(
+            "book.{}",
+            self.format
+        )))
+    }
+
+    pub fn checksum(&self) -> Result<&str> {
+        use anyhow::Context;
+        self.calculated_checksum
+            .as_deref()
+            .context("missing saved checksum")
     }
 }

@@ -179,7 +179,7 @@ Returns all library items with optional filtering and sorting.
 | `annotation_count` | number | Number of annotations |
 | `cover_url` | string | Path to cover image |
 | `content_type` | string | `book` or `comic` |
-| `is_archived` | boolean | The ebook is no longer available. Reading data and cover are preserved; reader, downloads, and editing are disabled (see [Library preservation](configuration.md#library-preservation)) |
+| `availability` | string | `available` (document present), `metadata` (KOReader sidecar only), or `archived` (saved capture only) |
 
 ---
 
@@ -930,3 +930,23 @@ Annotation mutation-only routes are also unregistered (404).
 KOReader's CoverBrowser may continue displaying cached metadata in mosaic/list
 views after external edits. Use **Refresh cached book information** for the book.
 Book information, reader, and history views read the updated custom files.
+
+### Document availability
+
+List and detail responses include `availability`. A `metadata` entry retains
+reading data, custom metadata, and covers from a KOReader sidecar even when the
+document is absent. Metadata, cover, and annotation editing remain available
+when writeback is enabled and the source is writable. Document download and
+reader actions are disabled; archive deletion is not allowed while a sidecar
+remains. A returning document enriches the same identity.
+
+Unparsed formats such as PDF, DjVu, XPS, and comic archives can be tracked and
+downloaded when present. The in-app reader still supports only EPUB, FB2, MOBI,
+and CBZ. Paged annotations expose text, note, page number, and styling;
+PDF geometry is preserved during edits but is not exposed or rendered.
+An incomplete scan or unreachable root preserves the last known availability.
+
+Storage remains bundle version 1 with an additive `document_state` field
+(`present`, `missing`, `never`). Older bundles default to `present`. Older
+KoShelf binaries do not understand Metadata entries and may archive them;
+use a current binary when rebuilding a cache containing these entries.

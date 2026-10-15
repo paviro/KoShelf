@@ -5,7 +5,7 @@
 //! SQLite upsert.  No I/O happens here.
 
 use crate::server::api::responses::library::{ExternalIdentifier, LibrarySeries};
-use crate::shelf::models::{ContentType, LibraryItem, LibraryItemFormat};
+use crate::shelf::models::{ContentType, LibraryItem};
 use crate::shelf::time_config::TimeConfig;
 use crate::source::fingerprints::FileFingerprint;
 use crate::store::sqlite::repo::rows::{AnnotationRow, FingerprintRow, LibraryItemRow};
@@ -50,9 +50,10 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
             .custom
             .as_ref()
             .and_then(|c| serde_json::to_string(c).ok()),
+        document_state: item.document_state,
         id: item.id.clone(),
         file_path: item.file_path.to_string_lossy().to_string(),
-        format: format_str(item.format).to_string(),
+        format: item.format.extension_for_path(&item.file_path),
         content_type: content_type.to_string(),
         title: item.book_info.title.clone(),
         authors_json: serde_json::to_string(&item.book_info.authors).unwrap_or_default(),
@@ -163,7 +164,12 @@ pub fn capture_fingerprint_row(
     metadata_path: Option<&Path>,
     time_config: &TimeConfig,
 ) -> Option<FingerprintRow> {
-    let book_fp = FileFingerprint::capture(&item.file_path).ok()?;
+    let book_fp = match item.document_state {
+        crate::shelf::models::DocumentState::Present => {
+            Some(FileFingerprint::capture(&item.file_path).ok()?)
+        }
+        _ => None,
+    };
 
     let metadata_fp =
         metadata_path.and_then(|p| FileFingerprint::capture_optional(p).ok().flatten());
@@ -173,9 +179,9 @@ pub fn capture_fingerprint_row(
     Some(FingerprintRow {
         custom_state: None,
         item_id: item.id.clone(),
-        book_path: book_fp.path.to_string_lossy().to_string(),
-        book_size_bytes: book_fp.size_bytes as i64,
-        book_modified_unix_ms: book_fp.modified_unix_ms as i64,
+        book_path: item.file_path.to_string_lossy().to_string(),
+        book_size_bytes: book_fp.as_ref().map(|fp| fp.size_bytes as i64),
+        book_modified_unix_ms: book_fp.as_ref().map(|fp| fp.modified_unix_ms as i64),
         metadata_path: metadata_fp
             .as_ref()
             .map(|fp| fp.path.to_string_lossy().to_string()),
@@ -183,14 +189,4 @@ pub fn capture_fingerprint_row(
         metadata_modified_unix_ms: metadata_fp.as_ref().map(|fp| fp.modified_unix_ms as i64),
         updated_at: now,
     })
-}
-
-fn format_str(format: LibraryItemFormat) -> &'static str {
-    match format {
-        LibraryItemFormat::Epub => "epub",
-        LibraryItemFormat::Fb2 => "fb2",
-        LibraryItemFormat::Mobi => "mobi",
-        LibraryItemFormat::Cbz => "cbz",
-        LibraryItemFormat::Cbr => "cbr",
-    }
 }

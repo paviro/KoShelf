@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
 use crate::server::api::handlers::custom::CustomEdit;
-use crate::shelf::models::{ChapterEntry, ReaderPresentation as LibraryReaderPresentation};
+use crate::shelf::models::{
+    Availability, ChapterEntry, ReaderPresentation as LibraryReaderPresentation,
+};
 use crate::source::koreader::custom_metadata::Metadata as CustomMetadata;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -43,7 +45,7 @@ pub struct ExternalIdentifier {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryListItem {
-    pub is_archived: bool,
+    pub availability: Availability,
     pub id: String,
     pub title: String,
     #[sqlx(rename = "authors_json")]
@@ -74,7 +76,7 @@ pub struct LibraryDetailItem {
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archive_retention: Option<crate::store::bundles::Retention>,
-    pub is_archived: bool,
+    pub availability: Availability,
     pub id: String,
     pub title: String,
     #[sqlx(rename = "authors_json")]
@@ -266,4 +268,10 @@ pub struct PageActivityEvent {
     pub page: i64,
     pub start_time: i64,
     pub duration: i64,
+}
+
+impl LibraryDetailItem {
+    pub fn is_archived(&self) -> bool {
+        self.availability == Availability::Archived
+    }
 }

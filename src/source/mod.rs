@@ -13,3 +13,4 @@ pub use fingerprints::{
 
 pub(crate) mod custom;
 pub(crate) mod metadata;
+pub(crate) mod sidecars;

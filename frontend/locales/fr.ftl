@@ -526,3 +526,5 @@ custom-reason-archived = Élément archivé
 custom-reason-inaccessible_custom_files = Fichiers personnalisés illisibles
 custom-saving = Enregistrement…
 
+
+library-metadata = Métadonnées

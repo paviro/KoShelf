@@ -7,6 +7,7 @@
 #[derive(Debug, Clone)]
 pub struct LibraryItemRow {
     pub custom_metadata_json: Option<String>,
+    pub document_state: crate::shelf::models::DocumentState,
     pub id: String,
     pub file_path: String,
     pub format: String,
@@ -66,8 +67,9 @@ pub struct FingerprintRow {
     pub custom_state: Option<String>,
     pub item_id: String,
     pub book_path: String,
-    pub book_size_bytes: i64,
-    pub book_modified_unix_ms: i64,
+    /// Absent for sidecar-only items.
+    pub book_size_bytes: Option<i64>,
+    pub book_modified_unix_ms: Option<i64>,
     pub metadata_path: Option<String>,
     pub metadata_size_bytes: Option<i64>,
     pub metadata_modified_unix_ms: Option<i64>,

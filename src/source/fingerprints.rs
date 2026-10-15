@@ -53,7 +53,8 @@ impl FileFingerprint {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ItemFingerprints {
-    pub book_file: FileFingerprint,
+    /// Absent for sidecar-only items.
+    pub book_file: Option<FileFingerprint>,
     pub metadata_file: Option<FileFingerprint>,
 }
 
@@ -145,7 +146,11 @@ mod tests {
         metadata: Option<(&str, u64, u64)>,
     ) -> ItemFingerprints {
         ItemFingerprints {
-            book_file: fingerprint(book_path, book_size_bytes, book_modified_unix_ms),
+            book_file: Some(fingerprint(
+                book_path,
+                book_size_bytes,
+                book_modified_unix_ms,
+            )),
             metadata_file: metadata.map(|(path, size_bytes, modified_unix_ms)| {
                 fingerprint(path, size_bytes, modified_unix_ms)
             }),

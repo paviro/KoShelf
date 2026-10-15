@@ -13,13 +13,10 @@ use crate::{
             responses::{error::ApiErrorCode, library::LibraryDetailItem},
         },
     },
-    shelf::{models::LibraryItemFormat, time_config::TimeConfig},
+    shelf::time_config::TimeConfig,
     source::{
         custom::{self, Resolution},
-        koreader::{
-            calculate_partial_md5,
-            custom_metadata::{self, Properties},
-        },
+        koreader::custom_metadata::{self, Properties},
         metadata::CapturedMetadata,
     },
 };
@@ -32,7 +29,7 @@ use axum::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{collections::BTreeMap, fs};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Capability {
@@ -59,7 +56,7 @@ impl CustomEdit {
         if !writeback {
             reasons.push("writeback_disabled".to_string());
         }
-        if item.is_archived {
+        if item.is_archived() {
             reasons.push("archived".to_string());
         }
         if saved.error.is_some() {
@@ -108,7 +105,7 @@ async fn locate(state: &ServerState, id: &str) -> ApiResult<Target> {
         .await
         .map_err(internal)?
         .ok_or_else(ApiResponseError::not_found)?;
-    if item.is_archived {
+    if item.is_archived() {
         return Err(ApiResponseError::conflict(
             "archived items cannot be edited",
         ));
@@ -116,16 +113,10 @@ async fn locate(state: &ServerState, id: &str) -> ApiResult<Target> {
     let saved = item
         .custom_metadata
         .ok_or_else(|| ApiResponseError::conflict("book is not ingested yet"))?;
-    let book = PathBuf::from(
-        repo.find_book_path_by_id(id)
-            .await
-            .map_err(internal)?
-            .ok_or_else(ApiResponseError::not_found)?,
-    );
-    let format =
-        LibraryItemFormat::from_path(std::path::Path::new(&format!("book.{}", item.format)))
-            .ok_or_else(ApiResponseError::not_found)?;
-    let checksum = calculate_partial_md5(&book).map_err(internal)?;
+    let source = repo.item_source(id).await.map_err(internal)?;
+    let book = std::path::PathBuf::from(&source.file_path);
+    let format = source.format();
+    let checksum = source.checksum().map_err(internal)?.to_string();
     let indices = repo.metadata_indices().map_err(internal)?;
     let reading = indices.resolve(&book, format, &checksum, Some(id));
     if reading.blocked {
@@ -299,6 +290,7 @@ async fn write_cover(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shelf::models::LibraryItemFormat;
     use crate::{
         pipeline::{ingest::ingest_items, media, rebuild::tests::test_config},
         server::WriteCoordinator,
@@ -329,6 +321,7 @@ mod tests {
                 path: book.clone(),
                 format: LibraryItemFormat::Fb2,
                 kobo_hints: None,
+                sidecar_checksum: None,
             }],
             &config,
             &repo,
@@ -554,7 +547,7 @@ mod tests {
             .await
             .unwrap();
         let item = rebuilt.get_item(&id).await.unwrap().unwrap();
-        assert!(item.is_archived);
+        assert!(item.is_archived());
         assert_eq!(item.title, "Captured");
         let edit = CustomEdit::new(&item, true).unwrap();
         assert_eq!(edit.base["title"], "Original");

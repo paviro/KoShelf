@@ -11,7 +11,7 @@ import {
 import { translation } from '../../../shared/i18n';
 import { useLazyImageSource } from '../../../shared/lib/dom/useLazyImageSource';
 import { createDetailReturnState } from '../../../shared/lib/navigation/detail-return-state';
-import { ArchivedBadge } from './ArchivedBadge';
+import { AvailabilityBadge } from './AvailabilityBadge';
 import type { LibraryListItem } from '../api/library-data';
 import {
     formatSeriesDisplay,
@@ -165,7 +165,12 @@ export function LibraryCard({
                                 </span>
                             </div>
                         )}
-                        {item.is_archived && <ArchivedBadge />}
+                        {(item.availability === 'archived' ||
+                            item.availability === 'metadata') && (
+                            <AvailabilityBadge
+                                availability={item.availability}
+                            />
+                        )}
                     </div>
 
                     {sectionKey === 'unread' && (

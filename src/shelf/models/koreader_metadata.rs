@@ -107,6 +107,10 @@ pub struct DocProps {
     pub identifiers: Option<String>,
     pub keywords: Option<String>,
     pub language: Option<String>,
+    #[serde(default)]
+    pub series: Option<String>,
+    #[serde(default)]
+    pub series_index: Option<String>,
     pub title: Option<String>,
 }
 

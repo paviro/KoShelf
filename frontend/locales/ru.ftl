@@ -563,3 +563,5 @@ custom-reason-archived = Архивный элемент
 custom-reason-inaccessible_custom_files = Не удалось прочитать пользовательские файлы
 custom-saving = Сохранение…
 
+
+library-metadata = Метаданные

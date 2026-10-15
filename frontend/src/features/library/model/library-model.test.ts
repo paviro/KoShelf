@@ -10,6 +10,7 @@ import {
 describe('archive availability filtering', () => {
     const base: LibraryListItem = {
         id: 'a',
+        availability: 'available',
         title: 'A book',
         authors: ['Author'],
         status: 'reading',
@@ -18,11 +19,16 @@ describe('archive availability filtering', () => {
     };
     const items = [
         base,
-        { ...base, id: 'b', is_archived: true },
-        { ...base, id: 'c', title: 'Other', is_archived: true },
-        { ...base, id: 'd', status: 'complete' as const, is_archived: true },
+        { ...base, id: 'b', availability: 'archived' as const },
+        { ...base, id: 'c', title: 'Other', availability: 'archived' as const },
+        {
+            ...base,
+            id: 'd',
+            status: 'complete' as const,
+            availability: 'archived' as const,
+        },
     ];
-    it('defaults to all and treats older export records as available', () => {
+    it('defaults to all and filters by explicit availability', () => {
         expect(
             items.filter((item) => itemMatchesAvailability(item, 'all')),
         ).toHaveLength(4);
@@ -31,6 +37,11 @@ describe('archive availability filtering', () => {
                 .filter((item) => itemMatchesAvailability(item, 'available'))
                 .map((item) => item.id),
         ).toEqual(['a']);
+    });
+    it('keeps metadata entries in the active library', () => {
+        const item: LibraryListItem = { ...base, availability: 'metadata' };
+        expect(itemMatchesAvailability(item, 'available')).toBe(true);
+        expect(itemMatchesAvailability(item, 'archived')).toBe(false);
     });
     it('combines archive selection with search and reading status', () => {
         const buckets = bucketLibraryItems(items);

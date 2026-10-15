@@ -171,9 +171,19 @@ impl LuaParser {
             chapter: self.get_optional_string(&table, "chapter")?,
             datetime: self.get_optional_string(&table, "datetime")?,
             datetime_updated: self.get_optional_string(&table, "datetime_updated")?,
-            pageno: self.get_optional_u32(&table, "pageno")?,
-            pos0: self.get_optional_string(&table, "pos0")?,
-            pos1: self.get_optional_string(&table, "pos1")?,
+            // Paged documents store `page` as a number (rolling ones as an
+            // xpointer string) and positions as tables of page geometry.
+            pageno: match self.get_optional_u32(&table, "pageno")? {
+                Some(page) => Some(page),
+                None => match table.get("page") {
+                    Ok(Value::Integer(_) | Value::Number(_)) => {
+                        self.get_optional_u32(&table, "page")?
+                    }
+                    _ => None,
+                },
+            },
+            pos0: self.get_optional_position(&table, "pos0")?,
+            pos1: self.get_optional_position(&table, "pos1")?,
             text: self.get_optional_string(&table, "text")?,
             note: self.get_optional_string(&table, "note")?,
             color: self.get_optional_string(&table, "color")?,
@@ -189,6 +199,12 @@ impl LuaParser {
                 identifiers: self.get_optional_string(&props_table, "identifiers")?,
                 keywords: self.get_optional_string(&props_table, "keywords")?,
                 language: self.get_optional_string(&props_table, "language")?,
+                series: self.get_optional_string(&props_table, "series")?,
+                series_index: match props_table.get("series_index") {
+                    Ok(Value::Integer(n)) => Some(n.to_string()),
+                    Ok(Value::Number(n)) if n.is_finite() => Some(n.to_string()),
+                    _ => self.get_optional_string(&props_table, "series_index")?,
+                },
                 title: self.get_optional_string(&props_table, "title")?,
             }))
         } else {
@@ -253,6 +269,15 @@ impl LuaParser {
                 Ok(None)
             }
             Err(_) => Ok(None),
+        }
+    }
+
+    /// Rolling documents store positions as xpointer strings. Paged ones use
+    /// tables, which KoShelf leaves untouched and does not expose.
+    fn get_optional_position(&self, table: &Table, key: &str) -> Result<Option<String>> {
+        match table.get(key) {
+            Ok(Value::Table(_)) => Ok(None),
+            _ => self.get_optional_string(table, key),
         }
     }
 

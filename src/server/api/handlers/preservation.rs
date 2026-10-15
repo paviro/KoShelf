@@ -45,7 +45,7 @@ pub(crate) async fn remove_item(
         .map_err(internal)?
     {
         return Err(ApiResponseError::conflict(
-            "ebook is available or its metadata identity is conflicting",
+            "document or sidecar is present, or source absence cannot be confirmed",
         ));
     }
     let metadata = repo.metadata_guard().await;

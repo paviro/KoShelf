@@ -1,6 +1,6 @@
 //! Durable library records. SQLite is only a projection of these captures.
 use crate::{
-    shelf::models::{BookInfo, LibraryItem, LibraryItemFormat},
+    shelf::models::{BookInfo, DocumentState, LibraryItem, LibraryItemFormat},
     source::metadata::{CapturedMetadata, SourceKind},
 };
 use anyhow::{Context, Result, bail, ensure};
@@ -115,6 +115,8 @@ pub struct Record {
     pub format: LibraryItemFormat,
     pub book_info: BookInfo,
     pub source: Option<Source>,
+    #[serde(default)]
+    pub document_state: DocumentState,
     #[serde(skip, default = "available_state")]
     pub state: State,
     pub created_at: i64,
@@ -174,6 +176,7 @@ impl Bundle {
             format: self.record.format,
             book_info: self.record.book_info.clone(),
             koreader_metadata: metadata,
+            document_state: self.record.document_state,
         })
     }
 }
@@ -486,7 +489,7 @@ impl BundleStore {
                 Some(Source {
                     path: c.path.clone(),
                     // Saved under the primary name (also for `.old` backups), so
-                    // restoring is a plain copy next to the ebook.
+                    // restoring is a plain copy next to the document.
                     filename: {
                         let name = c
                             .path
@@ -516,6 +519,7 @@ impl BundleStore {
             format: item.format,
             book_info,
             source,
+            document_state: item.document_state,
             state,
             created_at: old.as_ref().map_or(now, |b| b.record.created_at),
             updated_at: now,

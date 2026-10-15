@@ -2,11 +2,12 @@ DROP TABLE IF EXISTS library_collision_diagnostics;
 
 CREATE TABLE IF NOT EXISTS library_items (
     is_archived INTEGER NOT NULL DEFAULT 0,
+    document_state TEXT NOT NULL DEFAULT 'present' CHECK (document_state IN ('present', 'missing', 'never')),
     calculated_checksum TEXT,
     managed_revision TEXT,
     id TEXT PRIMARY KEY,
     file_path TEXT NOT NULL,
-    format TEXT NOT NULL CHECK (format IN ('epub', 'fb2', 'mobi', 'cbz', 'cbr')),
+    format TEXT NOT NULL,
     content_type TEXT NOT NULL CHECK (content_type IN ('book', 'comic')),
     title TEXT NOT NULL,
     authors_json TEXT NOT NULL DEFAULT '[]',
@@ -61,8 +62,8 @@ CREATE TABLE IF NOT EXISTS library_annotations (
 CREATE TABLE IF NOT EXISTS library_item_fingerprints (
     item_id TEXT PRIMARY KEY,
     book_path TEXT NOT NULL,
-    book_size_bytes INTEGER NOT NULL CHECK (book_size_bytes >= 0),
-    book_modified_unix_ms INTEGER NOT NULL CHECK (book_modified_unix_ms >= 0),
+    book_size_bytes INTEGER CHECK (book_size_bytes IS NULL OR book_size_bytes >= 0),
+    book_modified_unix_ms INTEGER CHECK (book_modified_unix_ms IS NULL OR book_modified_unix_ms >= 0),
     metadata_path TEXT,
     metadata_modified_ns TEXT,
     metadata_revision TEXT,

@@ -108,11 +108,14 @@ impl LibraryRepository {
         .execute(&mut *connection)
         .await
         .context("Failed to upsert library item")?;
-        sqlx::query("UPDATE library_items SET custom_metadata_json = ? WHERE id = ?")
-            .bind(&item.custom_metadata_json)
-            .bind(&item.id)
-            .execute(&mut *connection)
-            .await?;
+        sqlx::query(
+            "UPDATE library_items SET custom_metadata_json = ?, document_state = ? WHERE id = ?",
+        )
+        .bind(&item.custom_metadata_json)
+        .bind(item.document_state)
+        .bind(&item.id)
+        .execute(&mut *connection)
+        .await?;
         Ok(())
     }
 
@@ -387,6 +390,6 @@ mod tests {
         let all = repo.load_all_fingerprints().await.unwrap();
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].item_id, "fff");
-        assert_eq!(all[0].book_size_bytes, 1024);
+        assert_eq!(all[0].book_size_bytes, Some(1024));
     }
 }

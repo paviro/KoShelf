@@ -1,36 +1,8 @@
-use log::{debug, info, warn};
+use log::{info, warn};
 use std::fs;
 
 use crate::pipeline::media::{self, MediaDirs};
 use crate::store::sqlite::repo::LibraryRepository;
-
-pub(crate) async fn delete_item_for_book_path(
-    repo: &LibraryRepository,
-    book_path: &str,
-    media_dirs: &MediaDirs,
-    is_internal_server: bool,
-) -> bool {
-    match repo.find_fingerprint_by_book_path(book_path).await {
-        Ok(Some(fp)) => {
-            delete_item_and_media(
-                repo,
-                &fp.item_id,
-                media_dirs,
-                is_internal_server,
-                &format!("book removed: {book_path}"),
-            )
-            .await
-        }
-        Ok(None) => {
-            debug!("No DB fingerprint for removed path: {}", book_path);
-            false
-        }
-        Err(e) => {
-            warn!("Failed to look up fingerprint for {}: {}", book_path, e);
-            false
-        }
-    }
-}
 
 pub(crate) async fn delete_item_and_media(
     repo: &LibraryRepository,
@@ -139,8 +111,8 @@ mod tests {
             custom_state: None,
             item_id: item_id.to_string(),
             book_path: "/books/not-canonical.epub".to_string(),
-            book_size_bytes: 1,
-            book_modified_unix_ms: 1,
+            book_size_bytes: Some(1),
+            book_modified_unix_ms: Some(1),
             metadata_path: None,
             metadata_size_bytes: None,
             metadata_modified_unix_ms: None,

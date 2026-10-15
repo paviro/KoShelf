@@ -10,6 +10,7 @@ mod read;
 mod write;
 
 pub mod rows;
+pub(crate) use preservation::ItemSource;
 
 use crate::app::config::SiteConfig;
 use sqlx::SqlitePool;
@@ -71,6 +72,7 @@ pub(crate) mod tests {
     pub fn sample_item(id: &str) -> LibraryItemRow {
         LibraryItemRow {
             custom_metadata_json: None,
+            document_state: Default::default(),
             id: id.to_string(),
             file_path: format!("/books/{id}.epub"),
             format: "epub".to_string(),
@@ -131,8 +133,8 @@ pub(crate) mod tests {
             custom_state: None,
             item_id: item_id.to_string(),
             book_path: format!("/books/{item_id}.epub"),
-            book_size_bytes: 1024,
-            book_modified_unix_ms: 1700000000000,
+            book_size_bytes: Some(1024),
+            book_modified_unix_ms: Some(1700000000000),
             metadata_path: Some(format!("/books/{item_id}.sdr/metadata.epub.lua")),
             metadata_size_bytes: Some(512),
             metadata_modified_unix_ms: Some(1700000001000),

@@ -1,3 +1,4 @@
+import { documentAvailable } from '../../../shared/library-availability';
 import {
     useCallback,
     useEffect,
@@ -143,7 +144,7 @@ export function useReaderView(
         ? normalizeLibraryFormat(item?.format)
         : null;
     const fileHref =
-        supportsReader && !item?.is_archived
+        supportsReader && documentAvailable(item)
             ? api.getItemFileHref(id ?? '', item?.format)
             : null;
     const backHref = id

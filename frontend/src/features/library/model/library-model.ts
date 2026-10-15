@@ -143,7 +143,7 @@ export function itemMatchesAvailability(
     return (
         availability === 'all' ||
         (availability === 'archived'
-            ? item.is_archived === true
-            : item.is_archived !== true)
+            ? item.availability === 'archived'
+            : item.availability !== 'archived')
     );
 }

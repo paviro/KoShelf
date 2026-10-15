@@ -63,6 +63,14 @@ pub(super) fn build_library_sync_plan(
 
         let book_path = Path::new(&fp.book_path);
 
+        if fs_item_by_path
+            .get(&fp.book_path)
+            .is_some_and(|i| i.sidecar_checksum.is_some())
+        {
+            push_existing_item(&mut plan.items_to_ingest, &fs_item_by_path, fp, book_path);
+            plan.changed += 1;
+            continue;
+        }
         let current_book_fp = match FileFingerprint::capture(book_path) {
             Ok(f) => f,
             Err(e) => {
@@ -129,7 +137,7 @@ pub(super) fn build_library_sync_plan(
         };
 
         let current = ItemFingerprints {
-            book_file: current_book_fp,
+            book_file: Some(current_book_fp),
             metadata_file: current_metadata_fp,
         };
         let stored = stored_item_fingerprints(fp, book_path);
@@ -197,15 +205,19 @@ fn regular_collected_item(path: PathBuf) -> Option<CollectedItem> {
         path,
         format,
         kobo_hints: None,
+        sidecar_checksum: None,
     })
 }
 
 fn stored_item_fingerprints(fp: &FingerprintRow, book_path: &Path) -> ItemFingerprints {
-    let stored_book_fp = FileFingerprint {
-        path: book_path.to_path_buf(),
-        size_bytes: fp.book_size_bytes as u64,
-        modified_unix_ms: fp.book_modified_unix_ms as u64,
-    };
+    let stored_book_fp =
+        fp.book_size_bytes
+            .zip(fp.book_modified_unix_ms)
+            .map(|(size, modified)| FileFingerprint {
+                path: book_path.to_path_buf(),
+                size_bytes: size as u64,
+                modified_unix_ms: modified as u64,
+            });
     let stored_metadata_fp = match (
         &fp.metadata_path,
         fp.metadata_size_bytes,
@@ -240,6 +252,7 @@ mod tests {
             path: path.to_path_buf(),
             format: LibraryItemFormat::Epub,
             kobo_hints: None,
+            sidecar_checksum: None,
         }
     }
 
@@ -248,8 +261,8 @@ mod tests {
             custom_state: None,
             item_id: item_id.to_string(),
             book_path: book_fp.path.to_string_lossy().into_owned(),
-            book_size_bytes: book_fp.size_bytes as i64,
-            book_modified_unix_ms: book_fp.modified_unix_ms as i64,
+            book_size_bytes: Some(book_fp.size_bytes as i64),
+            book_modified_unix_ms: Some(book_fp.modified_unix_ms as i64),
             metadata_path: None,
             metadata_size_bytes: None,
             metadata_modified_unix_ms: None,
@@ -294,7 +307,7 @@ mod tests {
             "0123456789abcdef0123456789abcdef",
             &FileFingerprint::capture(&book_path).expect("book fp"),
         );
-        row.book_size_bytes += 1;
+        row.book_size_bytes = row.book_size_bytes.map(|size| size + 1);
         let cover_dir = dir.path().join("covers");
         std::fs::create_dir_all(&cover_dir).expect("cover dir");
         let indices = MetadataIndices::new(&MetadataLocation::InBookFolder).expect("indices");

@@ -5,21 +5,15 @@
 
 use crate::app::config::SiteConfig;
 use crate::pipeline::export::{ExportConfig, export_data_files};
-use crate::pipeline::ingest::preservation::{recapture_archived, reconcile_sources};
-use crate::pipeline::ingest::{
-    delete_item_for_book_path, ingest_items, load_reading_data, sync_library,
-};
+use crate::pipeline::ingest::{load_reading_data, reconcile_paths, sync_library};
 use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
-use crate::shelf::models::LibraryItemFormat;
-use crate::source::custom::is_custom_path;
-use crate::source::scanner::CollectedItem;
 use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
 use anyhow::Result;
-use log::{debug, info, warn};
+use log::{info, warn};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
@@ -49,102 +43,21 @@ pub async fn rebuild(
         warn!("Failed to create media directories: {}", e);
     }
 
-    // ── 1. Classify paths ────────────────────────────────────────────
-    let mut parse_items: Vec<CollectedItem> = Vec::new();
-    let mut delete_book_paths: Vec<String> = Vec::new();
-    // Sidecars without an ebook may belong to archived books.
-    let mut unmatched_metadata = false;
-
-    let library_update = if full_library_sync_required {
-        Some(sync_library(config, repo, &media_dirs).await?)
+    let update = if full_library_sync_required {
+        sync_library(config, repo, &media_dirs).await?
     } else {
-        for path in &accumulated_paths {
-            if let Some(format) = LibraryItemFormat::from_path(path) {
-                if path.exists() {
-                    parse_items.push(CollectedItem {
-                        path: path.clone(),
-                        format,
-                        kobo_hints: None,
-                    });
-                } else {
-                    delete_book_paths.push(path.to_string_lossy().to_string());
-                }
-            } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                // Custom files in central folders trigger a full sync above.
-                if is_custom_path(path) {
-                    if let Some(book_path) = path.parent().and_then(derive_book_path_from_sdr_path)
-                        && let Some(format) = LibraryItemFormat::from_path(&book_path)
-                    {
-                        parse_items.push(CollectedItem {
-                            path: book_path,
-                            format,
-                            kobo_hints: None,
-                        });
-                    }
-                } else if LibraryItemFormat::is_metadata_path(path) {
-                    if let Some(book_path) = derive_book_path_from_metadata_path(path, repo).await
-                        && book_path.exists()
-                        && let Some(format) = LibraryItemFormat::from_path(&book_path)
-                    {
-                        parse_items.push(CollectedItem {
-                            path: book_path,
-                            format,
-                            kobo_hints: None,
-                        });
-                    } else {
-                        unmatched_metadata = true;
-                    }
-                } else if filename.ends_with(".sdr")
-                    && let Some(book_path) = derive_book_path_from_sdr_path(path)
-                    && book_path.exists()
-                    && let Some(format) = LibraryItemFormat::from_path(&book_path)
-                {
-                    parse_items.push(CollectedItem {
-                        path: book_path,
-                        format,
-                        kobo_hints: None,
-                    });
-                }
-            }
-        }
-        None
+        reconcile_paths(config, repo, &media_dirs, &accumulated_paths).await?
     };
-    if let Some(update) = &library_update {
-        debug!(
-            "Full library sync result: {} unchanged, {} changed, {} added, {} removed",
-            update.unchanged, update.changed, update.added, update.removed
-        );
-    }
-
-    // ── 2. Delete removed items ──────────────────────────────────────
-    let mut deleted_count = 0u64;
-    if repo.bundles.is_none() {
-        for book_path_str in &delete_book_paths {
-            if delete_item_for_book_path(
-                repo,
-                book_path_str,
-                &media_dirs,
-                config.is_internal_server,
-            )
-            .await
-            {
-                deleted_count += 1;
-            }
-        }
-    }
-    if unmatched_metadata && repo.bundles.is_some() {
-        match recapture_archived(config, repo).await {
-            Ok(saved) => deleted_count += saved,
-            Err(e) => warn!("Failed to refresh archived metadata: {e:#}"),
-        }
-    }
-
-    // ── 3. Ingest changed/new paths ──────────────────────────────────
-    let ingest_stats = if repo.bundles.is_some() && !full_library_sync_required {
-        reconcile_sources(config, repo, &media_dirs, &parse_items, &delete_book_paths).await?
-    } else {
-        ingest_items(&parse_items, config, repo, &media_dirs).await?
-    };
+    log::debug!(
+        "Library reconciliation: {} unchanged, {} changed, {} added, {} removed",
+        update.unchanged,
+        update.changed,
+        update.added,
+        update.removed
+    );
+    let ingest_stats = update.ingest_stats.unwrap_or_default();
+    let deleted_count = update.removed;
+    let library_update = Some(update);
 
     // ── 4. Stats reload if affected ──────────────────────────────────
     let mut stats_reloaded = false;
@@ -293,82 +206,15 @@ fn requires_full_library_sync(accumulated_paths: &HashSet<PathBuf>, config: &Sit
                 .metadata_location
                 .central_paths()
                 .iter()
-                .any(|root| path.starts_with(root) || root.starts_with(path))
+                .any(|root| root.starts_with(path))
         })
-}
-
-// ── Path derivation helpers ──────────────────────────────────────────────
-
-/// Derive the book file path from a KOReader metadata file path.
-///
-/// First try the adjacent ebook regardless of configured central directories.
-/// Otherwise use the cached association; central events trigger full reconciliation.
-async fn derive_book_path_from_metadata_path(
-    metadata_path: &Path,
-    repo: &LibraryRepository,
-) -> Option<PathBuf> {
-    // Adjacent sources participate even when central directories are configured.
-    let adjacent = (|| {
-        let filename = metadata_path.file_name()?.to_str()?;
-        let filename = filename.strip_suffix(".old").unwrap_or(filename);
-        let sdr = metadata_path.parent()?;
-        let stem = sdr.file_name()?.to_str()?.strip_suffix(".sdr")?;
-        let filename = LibraryItemFormat::book_filename_from_sidecar(stem, filename)?;
-        let path = sdr.parent()?.join(filename);
-        path.is_file().then_some(path)
-    })();
-    if adjacent.is_some() {
-        return adjacent;
-    }
-    match repo
-        .find_book_path_by_metadata_path(&metadata_path.to_string_lossy())
-        .await
-    {
-        Ok(path) => path.map(PathBuf::from),
-        Err(e) => {
-            warn!("Failed to resolve metadata event: {}", e);
-            None
-        }
-    }
-}
-
-/// Derive the book file path from a `.sdr` directory path.
-///
-/// Tries all supported formats to find a matching book file in the parent directory.
-/// `/library/Title.sdr` → `/library/Title.epub` (if it exists)
-fn derive_book_path_from_sdr_path(sdr_path: &Path) -> Option<PathBuf> {
-    let sdr_name = sdr_path.file_name()?.to_str()?;
-    let book_stem = sdr_name.strip_suffix(".sdr")?;
-    let parent = sdr_path.parent()?;
-
-    // A `<name>.fb2.sdr` sidecar can also belong to a `<name>.fb2.zip` book
-    // (KOReader strips only the final suffix).
-    if book_stem.to_lowercase().ends_with(".fb2") {
-        let candidate = parent.join(format!("{}.zip", book_stem));
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-
-    for format in [
-        LibraryItemFormat::Epub,
-        LibraryItemFormat::Fb2,
-        LibraryItemFormat::Mobi,
-        LibraryItemFormat::Cbz,
-        LibraryItemFormat::Cbr,
-    ] {
-        let candidate = parent.join(format!("{}.{}", book_stem, format.extension()));
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-    None
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::{derive_book_path_from_sdr_path, requires_full_library_sync};
+    use super::requires_full_library_sync;
     use crate::app::config::SiteConfig;
+    #[cfg(test)]
     use crate::shelf::models::LibraryItemFormat;
     use crate::shelf::time_config::TimeConfig;
     use crate::source::scanner::MetadataLocation;
@@ -421,6 +267,8 @@ pub(crate) mod tests {
         extensionless_changed.insert(dir.path().join("library").join("kobo-content-id"));
         assert!(requires_full_library_sync(&extensionless_changed, &config));
 
+        std::fs::create_dir_all(dir.path().join("library")).unwrap();
+        std::fs::write(dir.path().join("library/book.epub"), b"book").unwrap();
         let mut regular_book_changed = HashSet::new();
         regular_book_changed.insert(dir.path().join("library").join("book.epub"));
         assert!(!requires_full_library_sync(&regular_book_changed, &config));
@@ -444,33 +292,12 @@ pub(crate) mod tests {
         );
         assert_eq!(
             LibraryItemFormat::book_filename_from_sidecar("Book", "metadata.zip.lua"),
-            None
+            Some("Book.zip".into())
         );
     }
 
     #[test]
-    fn sdr_path_derivation_finds_fb2_zip_book() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        let book_path = dir.path().join("Book.fb2.zip");
-        std::fs::write(&book_path, b"book").expect("book file");
-        let sdr_path = dir.path().join("Book.fb2.sdr");
-        std::fs::create_dir_all(&sdr_path).expect("sdr dir");
-
-        assert_eq!(derive_book_path_from_sdr_path(&sdr_path), Some(book_path));
-    }
-
-    #[test]
-    fn sdr_path_derivation_finds_double_extension_fb2_book() {
-        let dir = tempfile::tempdir().expect("temp dir");
-        let book_path = dir.path().join("Book.fb2.fb2");
-        std::fs::write(&book_path, b"book").expect("book file");
-        let sdr_path = dir.path().join("Book.fb2.sdr");
-        std::fs::create_dir_all(&sdr_path).expect("sdr dir");
-
-        assert_eq!(derive_book_path_from_sdr_path(&sdr_path), Some(book_path));
-    }
-    #[tokio::test]
-    async fn events_from_both_central_roots_and_new_adjacent_sources_are_resolved() {
+    fn central_files_are_targeted_but_root_changes_require_full_sync() {
         let dir = tempfile::tempdir().unwrap();
         let mut config = test_config(dir.path(), None);
         let doc = dir.path().join("doc");
@@ -479,29 +306,22 @@ pub(crate) mod tests {
             docsettings: doc.clone(),
             hashdocsettings: hash.clone(),
         };
-        for path in [
-            doc.join("new/Book.sdr/metadata.epub.lua"),
-            doc.join("new/Book.sdr/metadata.epub.lua.old"),
-            hash.join("aa/new.sdr/metadata.epub.lua"),
-            hash.join("aa/new.sdr/metadata.epub.lua.old"),
-            doc,
-            hash,
-        ] {
-            assert!(requires_full_library_sync(&HashSet::from([path]), &config));
+        for root in [doc, hash] {
+            assert!(requires_full_library_sync(
+                &HashSet::from([root.clone()]),
+                &config
+            ));
+            for name in [
+                "Book.sdr/metadata.epub.lua",
+                "Book.sdr/metadata.epub.lua.old",
+                "Book.sdr/custom_metadata.lua",
+                "Book.sdr",
+            ] {
+                assert!(!requires_full_library_sync(
+                    &HashSet::from([root.join(name)]),
+                    &config
+                ));
+            }
         }
-        let book = dir.path().join("Book.epub");
-        std::fs::write(&book, b"book").unwrap();
-        let repo = crate::store::sqlite::repo::tests::test_repo().await;
-        let adjacent = dir.path().join("Book.sdr/metadata.epub.lua");
-        assert_eq!(
-            super::derive_book_path_from_metadata_path(&adjacent, &repo).await,
-            Some(book.clone())
-        );
-        let backup = crate::source::koreader::lua_writer::backup_path(&adjacent);
-        assert!(LibraryItemFormat::is_metadata_path(&backup));
-        assert_eq!(
-            super::derive_book_path_from_metadata_path(&backup, &repo).await,
-            Some(book)
-        );
     }
 }

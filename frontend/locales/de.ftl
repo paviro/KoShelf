@@ -525,3 +525,5 @@ custom-reason-archived = Archivierter Eintrag
 custom-reason-inaccessible_custom_files = Benutzerdefinierte Dateien nicht lesbar
 custom-saving = Wird gespeichert…
 
+
+library-metadata = Metadaten

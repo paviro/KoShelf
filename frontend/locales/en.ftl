@@ -525,3 +525,5 @@ custom-reason-archived = Archived item
 custom-reason-inaccessible_custom_files = Cannot read custom files
 custom-saving = Saving…
 
+
+library-metadata = Metadata

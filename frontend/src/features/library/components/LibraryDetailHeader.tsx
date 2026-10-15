@@ -9,7 +9,10 @@ import {
 
 import { useRouteHeader } from '../../../app/shell/use-route-header';
 import { api } from '../../../shared/api';
-import type { LibraryDetailItem } from '../../../shared/contracts';
+import type {
+    LibraryAvailability,
+    LibraryDetailItem,
+} from '../../../shared/contracts';
 import { translation } from '../../../shared/i18n';
 import { Button } from '../../../shared/ui/button/Button';
 import { buttonVariants } from '../../../shared/ui/button/button-variants';
@@ -17,7 +20,7 @@ import { DropdownPortal } from '../../../shared/ui/dropdown/DropdownPortal';
 import { isReaderFormatSupported } from '../../reader/lib/reader-format-support';
 import type { LibraryCollection } from '../model/library-model';
 import { ArchiveRemoval } from './ArchiveRemoval';
-import { ArchivedBadge } from './ArchivedBadge';
+import { AvailabilityBadge } from './AvailabilityBadge';
 
 type LibraryDetailHeaderProps = {
     title: string;
@@ -27,7 +30,7 @@ type LibraryDetailHeaderProps = {
     backHref: string;
     format?: string | null;
     removableItem?: LibraryDetailItem;
-    isArchived?: boolean;
+    availability?: LibraryAvailability;
 };
 
 export function LibraryDetailHeader({
@@ -38,14 +41,17 @@ export function LibraryDetailHeader({
     backHref,
     format,
     removableItem,
-    isArchived = false,
+    availability = 'available',
 }: LibraryDetailHeaderProps) {
+    const isArchived = availability === 'archived';
+    const isMetadata = availability === 'metadata';
     const [shareOpen, setShareOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
 
     const jsonHref = api.getItemDownloadHref(itemId);
     const jsonDownloadName = `${collection}-${itemId}.json`;
-    const fileHref = api.getItemFileHref(itemId, format);
+    const fileHref =
+        !isArchived && !isMetadata ? api.getItemFileHref(itemId, format) : null;
     const fileDownloadName = format
         ? `${primaryAuthor ? `${primaryAuthor} - ` : ''}${title}.${format}`
         : undefined;
@@ -80,9 +86,14 @@ export function LibraryDetailHeader({
                             <h1 className="min-w-0 text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
                                 {title}
                             </h1>
-                            {isArchived && (
+                            {(isArchived || isMetadata) && (
                                 <span className="shrink-0">
-                                    <ArchivedBadge variant="heading" />
+                                    <AvailabilityBadge
+                                        variant="heading"
+                                        availability={
+                                            isArchived ? 'archived' : 'metadata'
+                                        }
+                                    />
                                 </span>
                             )}
                         </div>
@@ -101,9 +112,14 @@ export function LibraryDetailHeader({
                         <h2 className="min-w-0 text-2xl font-bold text-gray-900 dark:text-white truncate">
                             {title}
                         </h2>
-                        {isArchived && (
+                        {(isArchived || isMetadata) && (
                             <span className="shrink-0">
-                                <ArchivedBadge variant="heading" />
+                                <AvailabilityBadge
+                                    variant="heading"
+                                    availability={
+                                        isArchived ? 'archived' : 'metadata'
+                                    }
+                                />
                             </span>
                         )}
                     </div>
@@ -189,6 +205,7 @@ export function LibraryDetailHeader({
             jsonDownloadName,
             jsonHref,
             isArchived,
+            isMetadata,
             primaryAuthor,
             readerHref,
             removableItem,

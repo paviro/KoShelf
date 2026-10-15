@@ -35,6 +35,7 @@ impl IngestStats {
 
 const INGEST_CONCURRENCY: usize = 8;
 
+#[cfg(test)]
 pub(crate) async fn ingest_items(
     items: &[CollectedItem],
     config: &SiteConfig,
@@ -294,6 +295,7 @@ mod tests {
                 path: book_path,
                 format: LibraryItemFormat::Epub,
                 kobo_hints: Some(kobo_hints(false, false)),
+                sidecar_checksum: None,
             }],
             &config,
             &repo,
@@ -349,6 +351,7 @@ mod tests {
                 path: book_path,
                 format: LibraryItemFormat::Epub,
                 kobo_hints: Some(kobo_hints(false, false)),
+                sidecar_checksum: None,
             }],
             &config,
             &repo,
@@ -396,6 +399,7 @@ mod tests {
                 path: book_path,
                 format: LibraryItemFormat::Fb2,
                 kobo_hints: None,
+                sidecar_checksum: None,
             }],
             &config,
             &repo,
@@ -466,6 +470,7 @@ mod tests {
             path: book,
             format: LibraryItemFormat::Epub,
             kobo_hints: None,
+            sidecar_checksum: None,
         }];
         ingest_items(&items, &config, &repo, &media).await.unwrap();
         let initial = repo.get_item(id).await.unwrap().unwrap();
@@ -557,6 +562,7 @@ mod tests {
                     path: book,
                     format: LibraryItemFormat::Epub,
                     kobo_hints: None,
+                    sidecar_checksum: None,
                 }
             })
             .collect();
@@ -655,11 +661,12 @@ mod tests {
     async fn disabling_archives_hides_saved_books_and_reenabling_restores_them() {
         use crate::pipeline::ingest::sync_library;
         const ID: &str = "0123456789abcdef0123456789abcdef";
-        let (_dir, mut config, mut repo, media, book, _sidecar) = persistent_fixture().await;
+        let (_dir, mut config, mut repo, media, book, sidecar) = persistent_fixture().await;
         sync_library(&config, &repo, &media).await.unwrap();
+        std::fs::remove_file(&sidecar).unwrap();
         std::fs::remove_file(&book).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert!(
             repo.find_fingerprint_by_book_path(&book.to_string_lossy())
                 .await
@@ -673,9 +680,11 @@ mod tests {
         repo.remove_archived_projections().await.unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
         assert!(repo.get_item(ID).await.unwrap().is_none());
+        std::fs::write(&sidecar, format!("return {{partial_md5_checksum='{ID}'}}")).unwrap();
         write_minimal_epub(&book);
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
+        std::fs::remove_file(&sidecar).unwrap();
         std::fs::remove_file(&book).unwrap();
         rebuild_paths(&config, &repo, vec![book.clone()]).await;
         assert!(repo.get_item(ID).await.unwrap().is_none());
@@ -687,10 +696,11 @@ mod tests {
         repo.bundles = Some(store);
         repo.preservation_config = Some(Arc::new(config.clone()));
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
+        std::fs::write(&sidecar, format!("return {{partial_md5_checksum='{ID}'}}")).unwrap();
         write_minimal_epub(&book);
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
     }
 
     #[tokio::test]
@@ -720,7 +730,7 @@ mod tests {
                 std::fs::write(&book, b"invalid replacement").unwrap();
             }
             rebuild_paths(&config, &repo, vec![book.clone()]).await;
-            assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+            assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
             assert!(std::fs::symlink_metadata(&link).is_err());
             assert_eq!(
                 repo.get_annotations(ID, None).await.unwrap()[0]
@@ -735,7 +745,7 @@ mod tests {
             std::fs::remove_file(&book).unwrap();
             rebuild_paths(&config, &repo, vec![book.clone()]).await;
             rebuild_paths(&config, &repo, vec![book]).await;
-            assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+            assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
         }
     }
 
@@ -770,7 +780,7 @@ mod tests {
                     std::fs::remove_file(&book).unwrap();
                 }
                 rebuild_paths(&config, &repo, vec![book]).await;
-                assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+                assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
                 assert_eq!(
                     repo.find_book_path_by_id(ID).await.unwrap().as_deref(),
                     alternative.to_str()
@@ -821,7 +831,7 @@ mod tests {
             sync_library(&config, &repo, &media).await.unwrap();
             assert!(repo.get_item(&checksum).await.unwrap().is_some());
             assert_eq!(
-                repo.get_item(ID).await.unwrap().unwrap().is_archived,
+                repo.get_item(ID).await.unwrap().unwrap().is_archived(),
                 !alternative
             );
             assert_eq!(
@@ -851,7 +861,7 @@ mod tests {
         sync_library(&config, &repo, &media).await.unwrap();
         std::fs::remove_file(&book).unwrap();
         rebuild_paths(&config, &repo, vec![book]).await;
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert_eq!(
             repo.find_book_path_by_id(ID).await.unwrap().as_deref(),
             valid.to_str()
@@ -873,7 +883,7 @@ mod tests {
         let moved = book.with_file_name("Moved.epub");
         std::fs::rename(&book, &moved).unwrap();
         rebuild_paths(&config, &repo, vec![book, moved.clone()]).await;
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert_eq!(
             repo.find_book_path_by_id(ID).await.unwrap().as_deref(),
             moved.to_str()
@@ -905,7 +915,10 @@ mod tests {
         rebuild_paths(&config, &repo, vec![sidecar]).await;
         std::fs::remove_file(&book).unwrap();
         rebuild_paths(&config, &repo, vec![book]).await;
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert_eq!(
+            repo.get_item(ID).await.unwrap().unwrap().availability,
+            crate::shelf::models::Availability::Metadata
+        );
         assert!(
             repo.get_item("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
                 .await
@@ -958,8 +971,12 @@ mod tests {
             }
             sync_library(&config, &repo, &media).await.unwrap();
             assert_eq!(
-                repo.get_item(ID).await.unwrap().unwrap().is_archived,
-                !sidecar_first
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                if sidecar_first {
+                    crate::shelf::models::Availability::Available
+                } else {
+                    crate::shelf::models::Availability::Metadata
+                }
             );
             if sidecar_first {
                 std::fs::remove_file(&book).unwrap();
@@ -970,7 +987,7 @@ mod tests {
             let mut rebuilt = test_repo().await;
             rebuilt.bundles = repo.bundles.clone();
             sync_library(&config, &rebuilt, &media).await.unwrap();
-            assert!(rebuilt.get_item(ID).await.unwrap().unwrap().is_archived);
+            assert!(rebuilt.get_item(ID).await.unwrap().unwrap().is_archived());
             assert_eq!(
                 rebuilt.get_annotations(ID, None).await.unwrap()[0]
                     .text
@@ -1002,13 +1019,15 @@ mod tests {
         assert_eq!(repo.get_item(ID).await.unwrap().unwrap().rating, Some(5));
         std::fs::write(&book, &bytes).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert!(
             !super::super::preservation::confirm_absent(&config, &repo, ID)
                 .await
                 .unwrap()
         );
         std::fs::remove_file(&book).unwrap();
+        sync_library(&config, &repo, &media).await.unwrap();
+        std::fs::remove_file(&sidecar).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
         assert!(
             super::super::preservation::confirm_absent(&config, &repo, ID)
@@ -1026,14 +1045,15 @@ mod tests {
         // Simulate a crash before the retired projection was removed.
         sync_library(&config, &repo, &media).await.unwrap();
         assert!(repo.get_item(ID).await.unwrap().is_none());
-        assert!(sidecar.exists());
+        assert!(!sidecar.exists());
         let mut rebuilt = test_repo().await;
         rebuilt.bundles = repo.bundles.clone();
         sync_library(&config, &rebuilt, &media).await.unwrap();
         assert!(rebuilt.load_all_item_ids().await.unwrap().is_empty());
+        std::fs::write(&sidecar, format!("return {{partial_md5_checksum='{ID}'}}")).unwrap();
         std::fs::write(&book, &bytes).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
     }
     #[tokio::test]
     async fn incremental_archive_captures_surviving_sidecar_in_same_batch() {
@@ -1055,7 +1075,14 @@ mod tests {
             let expected_rating = updated.then_some(5);
             let expected_annotations = usize::from(!updated);
             let item = repo.get_item(ID).await.unwrap().unwrap();
-            assert!(item.is_archived);
+            assert_eq!(
+                item.availability,
+                match source {
+                    "updated" => crate::shelf::models::Availability::Metadata,
+                    "invalid" => crate::shelf::models::Availability::Available,
+                    _ => crate::shelf::models::Availability::Archived,
+                }
+            );
             assert_eq!(item.rating, expected_rating, "{source}");
             assert_eq!(
                 repo.get_annotations(ID, None).await.unwrap().len(),
@@ -1079,7 +1106,7 @@ mod tests {
             rebuilt.bundles = repo.bundles.clone();
             sync_library(&config, &rebuilt, &media).await.unwrap();
             let item = rebuilt.get_item(ID).await.unwrap().unwrap();
-            assert!(item.is_archived);
+            assert!(item.is_archived());
             assert_eq!(item.rating, expected_rating);
             assert_eq!(
                 rebuilt.get_annotations(ID, None).await.unwrap().len(),
@@ -1117,8 +1144,12 @@ mod tests {
             std::fs::remove_file(&book).unwrap();
             sync_library(&config, &repo, &media).await.unwrap();
             assert_eq!(
-                repo.get_item(ID).await.unwrap().unwrap().is_archived,
-                !has_valid_copy
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                if has_valid_copy {
+                    crate::shelf::models::Availability::Available
+                } else {
+                    crate::shelf::models::Availability::Metadata
+                }
             );
             if has_valid_copy {
                 assert_eq!(
@@ -1131,13 +1162,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn incremental_rebuild_archives_vanished_ebooks_without_full_sync() {
+    async fn rebuild_reconciles_surviving_sidecars_and_document_returns() {
         use crate::pipeline::{ingest::sync_library, rebuild::rebuild};
         use std::collections::HashSet;
         const ID: &str = "0123456789abcdef0123456789abcdef";
         let (_dir, config, repo, media, book, sidecar) = persistent_fixture().await;
         sync_library(&config, &repo, &media).await.unwrap();
-        // A full sync would import this unannounced ebook (include_unread is on).
+        // A targeted update must not discover unrelated, unannounced documents.
         let sentinel = book.with_file_name("Unannounced.fb2");
         std::fs::write(&sentinel, r#"<FictionBook><description><title-info><book-title>Sentinel</book-title></title-info></description><body><section><p>Text</p></section></body></FictionBook>"#).unwrap();
         let bytes = std::fs::read(&book).unwrap();
@@ -1153,8 +1184,11 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
-        // A sidecar change for an archived book refreshes its saved record.
+        assert_eq!(
+            repo.get_item(ID).await.unwrap().unwrap().availability,
+            crate::shelf::models::Availability::Metadata
+        );
+        // A sidecar change for a Metadata entry refreshes its saved record.
         std::fs::write(
             &sidecar,
             format!(
@@ -1173,7 +1207,10 @@ mod tests {
         .await
         .unwrap();
         let item = repo.get_item(ID).await.unwrap().unwrap();
-        assert!(item.is_archived);
+        assert_eq!(
+            item.availability,
+            crate::shelf::models::Availability::Metadata
+        );
         assert_eq!(item.rating, Some(5));
         std::fs::write(&book, &bytes).unwrap();
         rebuild(
@@ -1188,7 +1225,7 @@ mod tests {
         .unwrap();
         assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
         let item = repo.get_item(ID).await.unwrap().unwrap();
-        assert!(!item.is_archived);
+        assert!(!item.is_archived());
         assert_eq!(item.rating, Some(5));
         assert_eq!(
             repo.bundles
@@ -1203,7 +1240,7 @@ mod tests {
         );
     }
     #[tokio::test]
-    async fn offline_removal_survives_expiry_and_stale_cache_then_readable_return() {
+    async fn removal_survives_expiry_and_stale_cache_then_readable_return() {
         use crate::pipeline::ingest::sync_library;
         use crate::store::bundles::{Retention, State};
         const ID: &str = "0123456789abcdef0123456789abcdef";
@@ -1214,8 +1251,9 @@ mod tests {
         sync_library(&config, &repo, &media).await.unwrap();
         let offline = dir.path().join("offline");
         std::fs::rename(book.parent().unwrap(), &offline).unwrap();
+        std::fs::create_dir(book.parent().unwrap()).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert!(
             super::super::preservation::confirm_absent(&config, &repo, ID)
                 .await
@@ -1239,9 +1277,10 @@ mod tests {
             .unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
         assert!(repo.get_item(ID).await.unwrap().is_none());
+        std::fs::remove_dir(book.parent().unwrap()).unwrap();
         std::fs::rename(&offline, book.parent().unwrap()).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert_eq!(repo.get_annotations(ID, None).await.unwrap().len(), 1);
     }
 
@@ -1263,7 +1302,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn preservation_inaccessible_roots_archive_and_returning_books_keep_identity() {
+    async fn preservation_inaccessible_roots_keep_availability_and_identity() {
         use crate::pipeline::ingest::sync_library;
         const ID: &str = "0123456789abcdef0123456789abcdef";
         let (dir, mut config, repo, media, book, sidecar) = persistent_fixture().await;
@@ -1273,7 +1312,7 @@ mod tests {
         std::fs::rename(&book, &moved).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
         assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert_eq!(repo.get_annotations(ID, None).await.unwrap().len(), 1);
         assert_eq!(
             repo.find_book_path_by_id(ID).await.unwrap().unwrap(),
@@ -1295,15 +1334,15 @@ mod tests {
         std::fs::rename(library_root, &offline).unwrap();
         config.library_paths.push(dir.path().join("unmounted"));
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert!(
-            super::super::preservation::confirm_absent(&config, &repo, ID)
+            !super::super::preservation::confirm_absent(&config, &repo, ID)
                 .await
                 .unwrap()
         );
         std::fs::rename(&offline, library_root).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         assert_eq!(repo.get_annotations(ID, None).await.unwrap().len(), 1);
     }
     #[tokio::test]
@@ -1332,7 +1371,7 @@ mod tests {
             std::fs::remove_file(&book).unwrap();
             if archived {
                 sync_library(&config, &repo, &media).await.unwrap();
-                assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+                assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived());
                 assert!(std::fs::symlink_metadata(&served).is_err());
             }
             std::fs::write(&moved, &ebook_bytes).unwrap();
@@ -1345,7 +1384,7 @@ mod tests {
                 sync_library(&config, &repo, &media).await.unwrap();
                 assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
                 let item = repo.get_item(ID).await.unwrap().unwrap();
-                assert!(!item.is_archived);
+                assert!(!item.is_archived());
                 assert!(!item.has_metadata);
                 assert_eq!(
                     repo.find_book_path_by_id(ID).await.unwrap().unwrap(),
@@ -1464,7 +1503,10 @@ mod tests {
         std::fs::remove_file(&book).unwrap();
         std::fs::remove_file(&sidecar).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
-        assert!(repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert_eq!(
+            repo.get_item(ID).await.unwrap().unwrap().availability,
+            crate::shelf::models::Availability::Metadata
+        );
         assert_eq!(repo.get_item(ID).await.unwrap().unwrap().rating, Some(5));
         std::fs::remove_file(&b).unwrap();
         let mut rebuilt = test_repo().await;
@@ -1531,7 +1573,7 @@ mod tests {
         std::fs::remove_file(&book).unwrap();
         let archived = store.transition(ID, State::Archived).unwrap();
         // The cache has not received the lifecycle transition or new captured data.
-        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived);
+        assert!(!repo.get_item(ID).await.unwrap().unwrap().is_archived());
         std::fs::write(
             &sidecar,
             format!("return {{partial_md5_checksum='{ID}', summary={{rating=5}}}}"),
@@ -1551,7 +1593,397 @@ mod tests {
         let update = sync_library(&config, &repo, &media).await.unwrap();
         assert!(update.ingest_stats.unwrap().stats_invalidated > 0);
         let item = repo.get_item(ID).await.unwrap().unwrap();
-        assert!(item.is_archived);
+        assert!(item.is_archived());
         assert_eq!(item.rating, Some(5));
+    }
+    #[tokio::test]
+    async fn sidecar_only_pdf_lifecycle_editing_and_export() {
+        use crate::pipeline::ingest::{refresh_capture, sync_library};
+        use crate::shelf::models::{Availability, DocumentState};
+        const ID: &str = "0123456789abcdef0123456789abcdef";
+        for persistent in [false, true] {
+            let (_dir, mut config, mut repo, media, book, sidecar) = persistent_fixture().await;
+            std::fs::remove_file(&book).unwrap();
+            std::fs::remove_file(&sidecar).unwrap();
+            if !persistent {
+                repo.bundles = None;
+                config.archive_enabled = false;
+            }
+            config.is_internal_server = true;
+            let pdf = book.with_extension("pdf");
+            let sidecar = sidecar.with_file_name("metadata.pdf.lua");
+            let contents = format!(
+                "return {{partial_md5_checksum='{ID}', doc_props={{title='PDF title',authors='One\\nTwo',series='Series',series_index=2}}, doc_pages=42, annotations={{{{text='PDF text',page=4,pos0={{page=4,x=0.1}},pos1={{page=5,x=0.2}},note='Note'}}}}}}"
+            );
+            std::fs::write(&sidecar, &contents).unwrap();
+            let result = sync_library(&config, &repo, &media).await.unwrap();
+            assert_eq!(result.ingest_stats.unwrap().errors, 0);
+            let item = repo.get_item(ID).await.unwrap().unwrap();
+            assert_eq!(item.availability, Availability::Metadata);
+            assert_eq!(item.title, "PDF title");
+            assert_eq!(item.format, "pdf");
+            assert!(repo.load_all_item_file_info().await.unwrap().is_empty());
+            if persistent {
+                let mut rebuilt = test_repo().await;
+                rebuilt.bundles = repo.bundles.clone();
+                sync_library(&config, &rebuilt, &media).await.unwrap();
+                assert_eq!(
+                    rebuilt.get_item(ID).await.unwrap().unwrap().availability,
+                    Availability::Metadata
+                );
+            }
+            let export = crate::pipeline::export::ExportConfig {
+                site_title: "Test".into(),
+                language: "en_US".into(),
+                include_files: true,
+            };
+            crate::pipeline::export::export_data_files(
+                &config.output_dir.join("data"),
+                &config.output_dir,
+                &repo,
+                None,
+                &export,
+            )
+            .await
+            .unwrap();
+            assert!(std::fs::symlink_metadata(media.files_dir.join(format!("{ID}.pdf"))).is_err());
+            let annotations = repo.get_annotations(ID, None).await.unwrap();
+            assert_eq!(annotations.len(), 1);
+            assert_eq!(annotations[0].pageno, Some(4));
+            assert!(annotations[0].pos0.is_none());
+            // Capture after a metadata edit works without trying to hash a PDF.
+            let indices = repo.metadata_indices().unwrap();
+            let capture = indices
+                .resolve(&pdf, LibraryItemFormat::Other, ID, Some(ID))
+                .selected
+                .unwrap();
+            let guard = repo.metadata_guard().await;
+            refresh_capture(&repo, ID, Some(&capture), &config.time_config)
+                .await
+                .unwrap();
+            drop(guard);
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                Availability::Metadata
+            );
+            std::fs::write(&pdf, b"synthetic PDF document").unwrap();
+            sync_library(&config, &repo, &media).await.unwrap();
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                Availability::Available
+            );
+            assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
+            assert!(media.files_dir.join(format!("{ID}.pdf")).exists());
+            std::fs::remove_file(&pdf).unwrap();
+            sync_library(&config, &repo, &media).await.unwrap();
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                Availability::Metadata
+            );
+            assert!(std::fs::symlink_metadata(media.files_dir.join(format!("{ID}.pdf"))).is_err());
+            if persistent {
+                assert_eq!(
+                    repo.bundles
+                        .as_ref()
+                        .unwrap()
+                        .get(ID)
+                        .unwrap()
+                        .unwrap()
+                        .record
+                        .document_state,
+                    DocumentState::Missing
+                );
+            }
+            std::fs::remove_file(&sidecar).unwrap();
+            sync_library(&config, &repo, &media).await.unwrap();
+            if persistent {
+                assert_eq!(
+                    repo.get_item(ID).await.unwrap().unwrap().availability,
+                    Availability::Archived
+                );
+                std::fs::write(&sidecar, &contents).unwrap();
+                sync_library(&config, &repo, &media).await.unwrap();
+                assert_eq!(
+                    repo.get_item(ID).await.unwrap().unwrap().availability,
+                    Availability::Metadata
+                );
+                assert!(
+                    !super::super::preservation::confirm_absent(&config, &repo, ID)
+                        .await
+                        .unwrap()
+                );
+            } else {
+                assert!(repo.get_item(ID).await.unwrap().is_none());
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn targeted_arbitrary_documents_preserve_static_exports_and_match_full_sync() {
+        use crate::pipeline::export::{ExportConfig, export_data_files};
+        use crate::pipeline::ingest::{reconcile_paths, sync_library};
+        use crate::shelf::models::Availability;
+        use std::collections::HashSet;
+        const ID: &str = "0123456789abcdef0123456789abcdef";
+        for persistent in [false, true] {
+            for suffix in ["txt", ""] {
+                let (_dir, mut config, mut repo, media, original, old_sidecar) =
+                    persistent_fixture().await;
+                std::fs::remove_file(&original).unwrap();
+                std::fs::remove_file(&old_sidecar).unwrap();
+                if !persistent {
+                    repo.bundles = None;
+                    config.archive_enabled = false;
+                }
+                let document = original.with_file_name(if suffix.is_empty() {
+                    "Book"
+                } else {
+                    "Book.txt"
+                });
+                let sidecar = old_sidecar.with_file_name(format!(
+                    "metadata.{}.lua",
+                    if suffix.is_empty() { "_" } else { suffix }
+                ));
+                let contents = format!(
+                    "return {{partial_md5_checksum='{ID}',doc_props={{title='Text document'}},annotations={{{{text='quote',pageno=3}}}}}}"
+                );
+                std::fs::write(&sidecar, &contents).unwrap();
+                sync_library(&config, &repo, &media).await.unwrap();
+                let export = ExportConfig {
+                    site_title: "Test".into(),
+                    language: "en_US".into(),
+                    include_files: true,
+                };
+                let filename = crate::pipeline::media::item_file_basename(ID, suffix).unwrap();
+                let file = media.files_dir.join(filename);
+                let data = config.output_dir.join("data");
+                for (present, expected) in [
+                    (true, Availability::Available),
+                    (false, Availability::Metadata),
+                    (true, Availability::Available),
+                ] {
+                    if present {
+                        std::fs::write(&document, b"original download bytes").unwrap();
+                    } else {
+                        std::fs::remove_file(&document).unwrap();
+                    }
+                    let result =
+                        reconcile_paths(&config, &repo, &media, &HashSet::from([document.clone()]))
+                            .await
+                            .unwrap();
+                    assert_eq!(result.ingest_stats.unwrap().errors, 0);
+                    let item = repo.get_item(ID).await.unwrap().unwrap();
+                    assert_eq!(
+                        item.availability, expected,
+                        "persistent={persistent} suffix={suffix}"
+                    );
+                    assert_eq!(repo.get_annotations(ID, None).await.unwrap().len(), 1);
+                    export_data_files(&data, &config.output_dir, &repo, None, &export)
+                        .await
+                        .unwrap();
+                    let list: serde_json::Value = serde_json::from_slice(
+                        &std::fs::read(data.join("items/index.json")).unwrap(),
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        list[0]["availability"],
+                        if present { "available" } else { "metadata" }
+                    );
+                    assert!(list[0].get("is_archived").is_none());
+                    if present {
+                        assert_eq!(std::fs::read(&file).unwrap(), b"original download bytes");
+                    } else {
+                        assert!(!file.exists());
+                    }
+                    sync_library(&config, &repo, &media).await.unwrap();
+                    let full = repo.get_item(ID).await.unwrap().unwrap();
+                    assert_eq!(full.availability, item.availability);
+                    assert_eq!(full.title, item.title);
+                    assert_eq!(full.format, item.format);
+                }
+                let without_files = ExportConfig {
+                    include_files: false,
+                    ..export
+                };
+                export_data_files(&data, &config.output_dir, &repo, None, &without_files)
+                    .await
+                    .unwrap();
+                assert!(!file.exists());
+                std::fs::remove_file(&document).unwrap();
+                std::fs::remove_file(&sidecar).unwrap();
+                reconcile_paths(
+                    &config,
+                    &repo,
+                    &media,
+                    &HashSet::from([document.clone(), sidecar.clone()]),
+                )
+                .await
+                .unwrap();
+                if persistent {
+                    assert_eq!(
+                        repo.get_item(ID).await.unwrap().unwrap().availability,
+                        Availability::Archived
+                    );
+                } else {
+                    assert!(repo.get_item(ID).await.unwrap().is_none());
+                }
+                std::fs::write(&sidecar, contents).unwrap();
+                reconcile_paths(&config, &repo, &media, &HashSet::from([sidecar]))
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    repo.get_item(ID).await.unwrap().unwrap().availability,
+                    Availability::Metadata
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn targeted_central_sidecar_backup_and_custom_updates_leave_other_books_untouched() {
+        use crate::pipeline::ingest::{reconcile_paths, sync_library};
+        use crate::source::scanner::MetadataLocation;
+        use std::collections::HashSet;
+        const ID: &str = "0123456789abcdef0123456789abcdef";
+        for persistent in [false, true] {
+            let (dir, mut config, mut repo, media, book, adjacent) = persistent_fixture().await;
+            std::fs::remove_file(&book).unwrap();
+            std::fs::remove_file(&adjacent).unwrap();
+            if !persistent {
+                repo.bundles = None;
+                config.archive_enabled = false;
+            }
+            let central = dir.path().join("central");
+            let sidecar = central.join("device/Book.sdr/metadata.pdf.lua");
+            std::fs::create_dir_all(sidecar.parent().unwrap()).unwrap();
+            std::fs::write(
+                &sidecar,
+                format!("return {{partial_md5_checksum='{ID}',doc_props={{title='PDF'}}}}"),
+            )
+            .unwrap();
+            config.metadata_location = MetadataLocation::DocSettings(central);
+            sync_library(&config, &repo, &media).await.unwrap();
+            let sentinel = book.with_file_name("Unannounced.epub");
+            write_minimal_epub(&sentinel);
+            let backup = sidecar.with_file_name("metadata.pdf.lua.old");
+            std::fs::rename(&sidecar, &backup).unwrap();
+            std::fs::write(&backup, format!("return {{partial_md5_checksum='{ID}',doc_props={{title='Updated'}},summary={{rating=5}}}}" )).unwrap();
+            reconcile_paths(
+                &config,
+                &repo,
+                &media,
+                &HashSet::from([sidecar.clone(), backup.clone()]),
+            )
+            .await
+            .unwrap();
+            assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
+            assert_eq!(repo.get_item(ID).await.unwrap().unwrap().title, "Updated");
+            assert_eq!(repo.get_item(ID).await.unwrap().unwrap().rating, Some(5));
+            let custom = sidecar.with_file_name("custom_metadata.lua");
+            std::fs::write(&custom, "return {custom_props={title='Custom'}}").unwrap();
+            reconcile_paths(&config, &repo, &media, &HashSet::from([custom.clone()]))
+                .await
+                .unwrap();
+            assert_eq!(repo.get_item(ID).await.unwrap().unwrap().title, "Custom");
+            std::fs::remove_file(&custom).unwrap();
+            reconcile_paths(&config, &repo, &media, &HashSet::from([custom]))
+                .await
+                .unwrap();
+            assert_eq!(repo.get_item(ID).await.unwrap().unwrap().title, "Updated");
+            assert_eq!(repo.load_all_item_ids().await.unwrap(), vec![ID]);
+        }
+    }
+
+    #[tokio::test]
+    async fn targeted_duplicate_fallback_and_uncertain_absence_work_in_both_storage_modes() {
+        use crate::pipeline::ingest::{reconcile_paths, sync_library};
+        use crate::shelf::models::Availability;
+        use std::collections::HashSet;
+        const ID: &str = "0123456789abcdef0123456789abcdef";
+        for persistent in [false, true] {
+            let (dir, mut config, mut repo, media, book, sidecar) = persistent_fixture().await;
+            if !persistent {
+                repo.bundles = None;
+                config.archive_enabled = false;
+            }
+            let copy = book.with_file_name("Copy.epub");
+            let copy_sidecar = book.parent().unwrap().join("Copy.sdr/metadata.epub.lua");
+            std::fs::copy(&book, &copy).unwrap();
+            std::fs::create_dir(copy_sidecar.parent().unwrap()).unwrap();
+            std::fs::copy(&sidecar, &copy_sidecar).unwrap();
+            sync_library(&config, &repo, &media).await.unwrap();
+            std::fs::remove_file(&book).unwrap();
+            std::fs::remove_file(&sidecar).unwrap();
+            reconcile_paths(&config, &repo, &media, &HashSet::from([book, sidecar]))
+                .await
+                .unwrap();
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                Availability::Available
+            );
+            assert_eq!(
+                repo.find_book_path_by_id(ID).await.unwrap().as_deref(),
+                copy.to_str()
+            );
+            let title = repo.get_item(ID).await.unwrap().unwrap().title;
+            std::fs::remove_file(&copy).unwrap();
+            let missing_root = dir.path().join("offline");
+            config.library_paths.push(missing_root.clone());
+            reconcile_paths(&config, &repo, &media, &HashSet::from([copy.clone()]))
+                .await
+                .unwrap();
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                Availability::Available
+            );
+            std::fs::create_dir(missing_root).unwrap();
+            reconcile_paths(&config, &repo, &media, &HashSet::from([copy]))
+                .await
+                .unwrap();
+            let item = repo.get_item(ID).await.unwrap().unwrap();
+            assert_eq!(item.availability, Availability::Metadata);
+            assert_eq!(item.title, title);
+            sync_library(&config, &repo, &media).await.unwrap();
+            assert_eq!(
+                repo.get_item(ID).await.unwrap().unwrap().availability,
+                item.availability
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn missing_extensionless_epub_keeps_detected_format_and_base() {
+        use crate::pipeline::ingest::{reconcile_paths, sync_library};
+        use crate::shelf::models::Availability;
+        use std::collections::HashSet;
+        const ID: &str = "0123456789abcdef0123456789abcdef";
+        for persistent in [false, true] {
+            let (_dir, mut config, mut repo, media, book, _) = persistent_fixture().await;
+            if !persistent {
+                repo.bundles = None;
+                config.archive_enabled = false;
+            }
+            let extensionless = book.with_extension("");
+            std::fs::rename(book, &extensionless).unwrap();
+            let items = [crate::source::scanner::CollectedItem {
+                path: extensionless.clone(),
+                format: LibraryItemFormat::Epub,
+                kobo_hints: None,
+                sidecar_checksum: None,
+            }];
+            ingest_items(&items, &config, &repo, &media).await.unwrap();
+            let title = repo.get_item(ID).await.unwrap().unwrap().title;
+            std::fs::remove_file(&extensionless).unwrap();
+            reconcile_paths(&config, &repo, &media, &HashSet::from([extensionless]))
+                .await
+                .unwrap();
+            for _ in 0..2 {
+                let item = repo.get_item(ID).await.unwrap().unwrap();
+                assert_eq!(item.availability, Availability::Metadata);
+                assert_eq!(item.format, "epub");
+                assert_eq!(item.title, title);
+                sync_library(&config, &repo, &media).await.unwrap();
+            }
+        }
     }
 }

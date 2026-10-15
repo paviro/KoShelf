@@ -220,9 +220,9 @@ export class HttpApiClient implements ApiClient {
     }
 
     getItemFileHref(id: string, format?: string | null): string | null {
-        if (!format) return null;
+        if (format == null) return null;
         return appUrl(
-            `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`,
+            `/assets/files/${encodeURIComponent(id)}${format ? `.${encodeURIComponent(format)}` : ''}`,
         );
     }
 

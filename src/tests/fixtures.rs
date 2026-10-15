@@ -27,6 +27,7 @@ pub(crate) fn library_item(id: &str, metadata: Option<KoReaderMetadata>) -> Libr
         koreader_metadata: metadata,
         file_path: PathBuf::from("/tmp/item.epub"),
         format: LibraryItemFormat::Epub,
+        document_state: Default::default(),
     }
 }
 

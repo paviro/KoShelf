@@ -22,6 +22,7 @@ it('tries the uploaded cover after the previous cover failed', async () => {
                 <LibraryOverviewSection
                     item={
                         {
+                            availability: 'available',
                             id: 'book',
                             title: 'Book',
                             authors: [],

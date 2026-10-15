@@ -202,6 +202,8 @@ export interface ReadingCompletionsData {
 
 // ── Library types (shared) ───────────────────────────────────────────────
 
+export type LibraryAvailability = 'available' | 'metadata' | 'archived';
+
 export type LibraryContentType = 'book' | 'comic';
 export type LibraryStatus = 'reading' | 'complete' | 'abandoned' | 'unknown';
 
@@ -211,7 +213,7 @@ export interface LibrarySeries {
 }
 
 export interface LibraryListItem {
-    is_archived?: boolean;
+    availability: LibraryAvailability;
     id: string;
     title: string;
     authors: string[];
@@ -250,7 +252,7 @@ export interface LibraryDetailItem {
     custom_edit?: CustomEdit | null;
     /** Retired-record retention in days (0 = immediate) or `'forever'`. */
     archive_retention?: number | 'forever';
-    is_archived?: boolean;
+    availability: LibraryAvailability;
     id: string;
     title: string;
     authors: string[];

@@ -316,6 +316,9 @@ impl FileWatcher {
 
     fn paths_contain_relevant_files(&self, paths: &[PathBuf]) -> bool {
         paths.iter().any(|path| {
+            if crate::shelf::models::is_ignored_path(path) {
+                return false;
+            }
             if let Some(data) = self.runtime_data_policy.persistent_data_dir() {
                 let managed = data.join("library");
                 let absolute = std::path::absolute(path).unwrap_or_else(|_| path.clone());
@@ -367,7 +370,11 @@ impl FileWatcher {
             if self.kobo_db_path.is_some() && path.extension().is_none() {
                 return true;
             }
-            false
+            // Reconciliation decides whether unknown extensions have a sidecar.
+            self.library_paths
+                .iter()
+                .filter_map(|root| std::path::absolute(root).ok())
+                .any(|root| path.starts_with(root))
         })
     }
 }
@@ -783,6 +790,28 @@ mod tests {
             EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
         ] {
             assert!(watcher.is_relevant_event(&Event::new(kind).add_path(root.clone())));
+        }
+    }
+
+    #[test]
+    fn arbitrary_and_extensionless_document_events_reach_reconciliation() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = crate::pipeline::rebuild::tests::test_config(dir.path(), None);
+        let root = config.library_paths[0].clone();
+        let watcher = FileWatcher::new(config, None, None, None, None);
+        for name in ["Book.txt", "Book"] {
+            for kind in [
+                EventKind::Create(CreateKind::File),
+                EventKind::Remove(RemoveKind::File),
+                EventKind::Modify(ModifyKind::Data(notify::event::DataChange::Any)),
+            ] {
+                assert!(watcher.is_relevant_event(&Event::new(kind).add_path(root.join(name))));
+            }
+        }
+        for name in [".stversions/Book.txt", "Book.sync-conflict-copy.txt"] {
+            assert!(!watcher.is_relevant_event(
+                &Event::new(EventKind::Create(CreateKind::File)).add_path(root.join(name))
+            ));
         }
     }
 }

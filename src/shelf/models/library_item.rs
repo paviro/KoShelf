@@ -24,7 +24,8 @@ impl std::fmt::Display for ContentType {
     }
 }
 
-/// Supported library item formats (ebooks + comics)
+/// Library item formats. `Other` is a KOReader document KoShelf cannot parse
+/// (PDF, DjVu, ...); its extension always comes from the item path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LibraryItemFormat {
@@ -33,12 +34,30 @@ pub enum LibraryItemFormat {
     Mobi,
     Cbz,
     Cbr,
+    Other,
 }
+
+/// Unparsed document types the scanner collects. Any other extension only
+/// enters the library through a KOReader sidecar.
+const OTHER_DOCUMENT_EXTENSIONS: &[&str] = &[
+    "pdf", "djvu", "djv", "xps", "oxps", "cbt", "cb7", "azw", "azw3", "docx", "doc", "rtf", "odt",
+    "chm", "pdb", "prc", "fb3", "htmlz", "cbr",
+];
 
 impl LibraryItemFormat {
     /// Try to detect format from a file path's extension
     /// Handles compound extensions like .fb2.zip
     pub fn from_path(path: &Path) -> Option<Self> {
+        Self::from_path_with(path, false)
+    }
+
+    /// Like [`Self::from_path`], but any extension (or none) maps to `Other`.
+    /// Used for documents a KOReader sidecar vouches for.
+    pub fn from_document_path(path: &Path) -> Self {
+        Self::from_path_with(path, true).unwrap_or(Self::Other)
+    }
+
+    fn from_path_with(path: &Path, any: bool) -> Option<Self> {
         let filename = path.file_name()?.to_str()?.to_lowercase();
 
         // Check for compound extensions first (e.g., .fb2.zip)
@@ -47,7 +66,11 @@ impl LibraryItemFormat {
         }
 
         // Then check simple extensions
-        let ext = path.extension()?.to_str()?.to_lowercase();
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default()
+            .to_lowercase();
         match ext.as_str() {
             "epub" => Some(Self::Epub),
             "fb2" => Some(Self::Fb2),
@@ -55,26 +78,17 @@ impl LibraryItemFormat {
             "cbz" => Some(Self::Cbz),
             #[cfg(not(windows))]
             "cbr" => Some(Self::Cbr),
+            ext if any || OTHER_DOCUMENT_EXTENSIONS.contains(&ext) => Some(Self::Other),
             _ => None,
-        }
-    }
-
-    /// Get the KOReader metadata filename for this format
-    pub fn metadata_filename(&self) -> &'static str {
-        match self {
-            Self::Epub => "metadata.epub.lua",
-            Self::Fb2 => "metadata.fb2.lua",
-            Self::Mobi => "metadata.mobi.lua",
-            Self::Cbz => "metadata.cbz.lua",
-            Self::Cbr => "metadata.cbr.lua",
         }
     }
 
     /// Get the KOReader metadata filename for this file path.
     ///
-    /// KOReader stores `.fb2.zip` sidecars as `*.fb2.sdr/metadata.zip.lua`
-    /// because it strips only the final suffix for sidecar handling.
-    pub fn metadata_filename_for_path(&self, path: &Path) -> &'static str {
+    /// KOReader names sidecars after the last suffix only, so `.fb2.zip`
+    /// books use `*.fb2.sdr/metadata.zip.lua` and extensionless documents use
+    /// `metadata._.lua`.
+    pub fn metadata_filename_for_path(&self, path: &Path) -> String {
         let filename = path
             .file_name()
             .and_then(|s| s.to_str())
@@ -82,100 +96,119 @@ impl LibraryItemFormat {
             .to_lowercase();
 
         if matches!(self, Self::Fb2) && filename.ends_with(".fb2.zip") {
-            return "metadata.zip.lua";
+            return "metadata.zip.lua".into();
         }
-
-        self.metadata_filename()
+        if matches!(self, Self::Other) {
+            let suffix = path.extension().and_then(|e| e.to_str()).unwrap_or("_");
+            return format!("metadata.{suffix}.lua");
+        }
+        format!("metadata.{}.lua", self.extension_for_path(path))
     }
 
-    /// Build the book filename a sidecar refers to, given the sidecar stem
+    /// Build the document filename a sidecar refers to, given the sidecar stem
     /// (the `.sdr` directory name without the suffix) and the metadata
     /// filename found inside it. Inverse of `metadata_filename_for_path`:
-    /// `metadata.zip.lua` under `<name>.fb2.sdr` means the book is
-    /// `<name>.fb2.zip`, any other metadata filename means `<stem>.<ext>`.
+    /// `metadata.zip.lua` under `<name>.fb2.sdr` means `<name>.fb2.zip`,
+    /// `metadata._.lua` means no extension, and any other metadata filename
+    /// means `<stem>.<ext>`.
     pub fn book_filename_from_sidecar(book_stem: &str, metadata_filename: &str) -> Option<String> {
-        let format = Self::from_sidecar_metadata_filename(book_stem, metadata_filename)?;
-        if metadata_filename == "metadata.zip.lua" {
-            return Some(format!("{}.zip", book_stem));
+        let filename = metadata_filename
+            .strip_suffix(".old")
+            .unwrap_or(metadata_filename);
+        match Self::metadata_suffix(filename)? {
+            "_" => Some(book_stem.to_string()),
+            suffix => Some(format!("{book_stem}.{suffix}")),
         }
-        Some(format!("{}.{}", book_stem, format.extension()))
     }
 
-    /// Check if a filename is a KOReader metadata file for any supported format
+    /// The document suffix of a `metadata.<suffix>.lua` filename.
+    fn metadata_suffix(filename: &str) -> Option<&str> {
+        filename
+            .strip_prefix("metadata.")?
+            .strip_suffix(".lua")
+            .filter(|s| !s.is_empty() && !s.contains(['/', '\\']))
+    }
+
+    /// Check if a filename is a KOReader metadata file (`metadata.<ext>.lua`,
+    /// or its `.old` backup).
     pub fn is_metadata_file(filename: &str) -> bool {
         let filename = filename.strip_suffix(".old").unwrap_or(filename);
-        matches!(
-            filename,
-            "metadata.epub.lua"
-                | "metadata.fb2.lua"
-                | "metadata.zip.lua"
-                | "metadata.mobi.lua"
-                | "metadata.cbz.lua"
-                | "metadata.cbr.lua"
-        )
+        Self::metadata_suffix(filename).is_some() && !is_ignored_name(filename)
     }
 
-    /// Check if a path points to a KOReader metadata file for a supported
-    /// format, using the sidecar directory for context: `metadata.zip.lua`
-    /// only counts inside a `*.fb2.sdr` directory (KoShelf supports zip
-    /// sidecars only for `.fb2.zip` books).
+    /// Check if a path points to a KOReader metadata file inside a `.sdr`
+    /// directory.
     pub fn is_metadata_path(path: &Path) -> bool {
-        let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
-            return false;
-        };
-        let filename = filename.strip_suffix(".old").unwrap_or(filename);
-        if filename == "metadata.zip.lua" {
-            return path
+        path.file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(Self::is_metadata_file)
+            && path
                 .parent()
                 .and_then(|p| p.file_name())
                 .and_then(|s| s.to_str())
-                .is_some_and(|dir| dir.to_lowercase().ends_with(".fb2.sdr"));
-        }
-        Self::is_metadata_file(filename)
+                .is_some_and(|dir| dir.ends_with(".sdr"))
     }
 
-    /// Derive format from a KOReader metadata filename (e.g. "metadata.epub.lua" → Epub)
-    pub fn from_metadata_filename(filename: &str) -> Option<Self> {
-        match filename {
-            "metadata.epub.lua" => Some(Self::Epub),
-            "metadata.fb2.lua" => Some(Self::Fb2),
-            "metadata.mobi.lua" => Some(Self::Mobi),
-            "metadata.cbz.lua" => Some(Self::Cbz),
-            "metadata.cbr.lua" => Some(Self::Cbr),
-            _ => None,
-        }
-    }
-
-    /// Derive format from a KOReader metadata filename with sidecar context.
-    ///
-    /// `metadata.zip.lua` is ambiguous on its own, but for KoShelf-supported
-    /// compound FB2 files KOReader writes it under `<name>.fb2.sdr`.
-    pub fn from_sidecar_metadata_filename(sidecar_stem: &str, filename: &str) -> Option<Self> {
-        if filename == "metadata.zip.lua" && sidecar_stem.to_lowercase().ends_with(".fb2") {
-            return Some(Self::Fb2);
-        }
-
-        Self::from_metadata_filename(filename)
-    }
-
-    /// Get the file extension string for this format
-    pub fn extension(&self) -> &'static str {
+    /// File extension for an item of this format at `path`.
+    pub fn extension_for_path(&self, path: &Path) -> String {
         match self {
-            Self::Epub => "epub",
-            Self::Fb2 => "fb2",
-            Self::Mobi => "mobi",
-            Self::Cbz => "cbz",
-            Self::Cbr => "cbr",
+            Self::Epub => "epub".into(),
+            Self::Fb2 => "fb2".into(),
+            Self::Mobi => "mobi".into(),
+            Self::Cbz => "cbz".into(),
+            Self::Cbr => "cbr".into(),
+            Self::Other => path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(str::to_lowercase)
+                .unwrap_or_default(),
         }
     }
 
-    /// Get the content type for this format
-    pub fn content_type(&self) -> ContentType {
+    /// Get the content type for an item of this format at `path`
+    pub fn content_type_for_path(&self, path: &Path) -> ContentType {
         match self {
             Self::Epub | Self::Fb2 | Self::Mobi => ContentType::Book,
             Self::Cbz | Self::Cbr => ContentType::Comic,
+            Self::Other => match self.extension_for_path(path).as_str() {
+                "cbz" | "cbr" | "cbt" | "cb7" => ContentType::Comic,
+                _ => ContentType::Book,
+            },
         }
     }
+
+    /// Whether KoShelf can parse metadata and covers from the document.
+    pub fn is_parsed(&self) -> bool {
+        !matches!(self, Self::Other)
+    }
+}
+
+/// Syncthing bookkeeping (`.stversions`, `.stfolder`) and conflict copies
+/// (`*.sync-conflict-*`) are never library sources.
+pub fn is_ignored_path(path: &Path) -> bool {
+    path.components().any(|c| {
+        c.as_os_str().to_str().is_some_and(|name| {
+            matches!(name, ".stversions" | ".stfolder") || is_ignored_name(name)
+        })
+    })
+}
+
+fn is_ignored_name(name: &str) -> bool {
+    name.contains(".sync-conflict-")
+}
+
+/// Where an item's data currently comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
+pub enum Availability {
+    /// The document is present.
+    #[default]
+    Available,
+    /// Only a KOReader sidecar is present.
+    Metadata,
+    /// Neither is present; the saved capture is shown.
+    Archived,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,6 +271,32 @@ pub struct LibraryItem {
     pub koreader_metadata: Option<KoReaderMetadata>,
     pub file_path: PathBuf,
     pub format: LibraryItemFormat,
+    #[serde(default)]
+    pub document_state: DocumentState,
+}
+
+/// Whether the document file is present. Without it, `file_path` is where it
+/// would be, and the KOReader sidecar is the source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
+pub enum DocumentState {
+    #[default]
+    Present,
+    /// Gone, but it was seen: `book_info` keeps its metadata as the base.
+    Missing,
+    /// Never seen: `book_info` comes from the sidecar's `doc_props`.
+    Never,
+}
+
+impl DocumentState {
+    /// The state after the document disappears.
+    pub fn without_file(self) -> Self {
+        match self {
+            Self::Present | Self::Missing => Self::Missing,
+            Self::Never => Self::Never,
+        }
+    }
 }
 
 impl LibraryItem {
@@ -419,7 +478,7 @@ impl LibraryItem {
 
     /// Get the content type of this book
     pub fn content_type(&self) -> ContentType {
-        self.format.content_type()
+        self.format.content_type_for_path(&self.file_path)
     }
 }
 

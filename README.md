@@ -22,20 +22,22 @@
 
 ## Features
 
-- 📚 **Library Overview (Books + Comics)**: Displays your currently reading, completed, and unread items (ebooks + comics)
+- 📚 **Library Overview (Books + Comics)**: Browse currently reading, completed, and unread books, comics, and other documents
+- 🗂️ **Metadata Entries**: Browse KOReader reading data even without the original document, including PDF and DjVu sidecars; edit metadata, covers, and annotations when writeback is enabled
+- 🗄️ **Library Archives**: Preserve reading data and covers after both the document and sidecar disappear; returning sources restore the entry automatically ([details](docs/configuration.md#library-preservation))
 - 🎨 **Modern UI**: Clean design powered by Tailwind CSS with readable typography and responsive layout
 - 📖 **In-App Reader (EPUB/FB2/MOBI/CBZ)**: Open supported files directly in KoShelf with keyboard navigation, progress scrubber controls, and inline highlight notes
-- 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page
-- ✏️ **Metadata Writeback**: Edit annotations, review notes, ratings, reading status, book metadata, and covers directly in KoShelf and sync changes back to your KOReader files (serve mode, opt-in)
+- 📝 **Annotations, Highlights & Ratings**: KOReader highlights, notes, ratings, and review notes together on each item’s details page, including page-numbered PDF annotations
+- ✏️ **Metadata Writeback**: Edit annotations, review notes, ratings, reading status, custom metadata, and covers in KoShelf, with revision checks to prevent overwriting external changes and support for recoverable KOReader backups (serve mode, opt-in)
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
 - 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with items read on each day and monthly statistics
 - 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished items, hours read), and rich per-item details
 - 📈 **Per-Item Statistics**: Detailed statistics for each item including session count, average session duration, reading speed, last read date, and a page-level reading activity heatmap
 - 🔍 **Search & Filter**: Search through your library by title, author, or series, with filters for reading status
-- ⬇️ **Original File Downloads**: Download original item files from item detail pages, including static exports when `--include-files` is enabled
-- 🔐 **Optional Authentication**: Password-protect server mode with session-based auth, login rate limiting, password rotation, and session management
+- ⬇️ **Original File Downloads**: Download documents that are present, including formats KoShelf cannot parse or render; static exports support downloads with `--include-files`
+- 🔐 **Optional Authentication**: Use password authentication with session management, or delegate authentication to explicitly trusted reverse proxies such as Home Assistant ingress or an SSO gateway ([setup](docs/authentication.md))
 - 🚀 **Static Site**: Generates a complete static website you can host anywhere
-- 🖥️ **Server Mode**: Built-in web server with live file watching for use with reverse proxy
+- 🖥️ **Server Mode**: Built-in web server with live file watching, configurable bind address, and sub-path hosting through a trusted reverse proxy
 - 📱 **Responsive**: Optimized for desktop, tablet, and mobile with adaptive grid layouts
 
 ## Screenshots
@@ -81,7 +83,7 @@ For all subcommands, options, environment variables, and examples, see the [Conf
 | [Installation](docs/installation.md) | Home Assistant, Docker, prebuilt binaries, building from source |
 | [Configuration](docs/configuration.md) | Subcommands, CLI options, environment variables, config file, examples |
 | [KoReader Setup](docs/koreader-setup.md) | Metadata storage options (sdr/hashdocsettings/docsettings), deployment setup, reading statistics from multiple devices |
-| [Authentication](docs/authentication.md) | Password authentication for serve mode |
+| [Authentication](docs/authentication.md) | Password and trusted-proxy authentication, sub-path hosting, write protection |
 | [Supported Data](docs/supported-data.md) | Supported formats and extracted metadata fields |
 | [Stable Page Metadata](docs/stable-page-metadata.md) | KOReader stable page metadata & synthetic page scaling |
 | [Static Export](docs/static-export.md) | Generated site directory structure |

@@ -521,3 +521,5 @@ custom-reason-archived = Elemento archivado
 custom-reason-inaccessible_custom_files = No se pueden leer los archivos personalizados
 custom-saving = Guardando…
 
+
+library-metadata = Metadatos

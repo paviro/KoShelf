@@ -161,13 +161,15 @@ pub fn item_file_basename(item_id: &str, format: &str) -> Option<String> {
     }
 
     let normalized_format = format.trim().to_ascii_lowercase();
-    if !matches!(
-        normalized_format.as_str(),
-        "epub" | "fb2" | "mobi" | "cbz" | "cbr"
-    ) {
+    if !normalized_format
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
         return None;
     }
-
+    if normalized_format.is_empty() {
+        return Some(item_id.to_string());
+    }
     Some(format!("{}.{}", item_id, normalized_format))
 }
 

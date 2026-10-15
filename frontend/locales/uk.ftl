@@ -563,3 +563,5 @@ custom-reason-archived = Архівний елемент
 custom-reason-inaccessible_custom_files = Не вдалося прочитати користувацькі файли
 custom-saving = Збереження…
 
+
+library-metadata = Метадані
