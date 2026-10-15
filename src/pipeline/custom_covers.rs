@@ -73,7 +73,7 @@ pub fn replace(folder: &Path, upload: Option<(&str, &[u8])>) -> Result<()> {
             .persist(folder.join(format!("cover.{ext}")))
             .map_err(|e| e.error)?;
     }
-    let keep = upload.map(|(ext, _)| format!("cover.{ext}"));
+    let keep = upload.map(|(ext, _)| folder.join(format!("cover.{ext}")));
     let entries = match fs::read_dir(folder) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -81,18 +81,34 @@ pub fn replace(folder: &Path, upload: Option<(&str, &[u8])>) -> Result<()> {
     };
     for entry in entries {
         let path = entry?.path();
-        // Case-insensitive filesystems keep an existing `cover.PNG` name when
-        // `cover.png` replaces it, so that file is the upload.
-        let kept = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .zip(keep.as_deref())
-            .is_some_and(|(name, keep)| name.eq_ignore_ascii_case(keep));
-        if cover_extension(&path).is_some() && !kept {
-            fs::remove_file(&path)?;
+        if cover_extension(&path).is_none() {
+            continue;
         }
+        if let Some(keep) = keep.as_deref()
+            && is_upload(&path, keep)?
+        {
+            continue;
+        }
+        fs::remove_file(&path)?;
     }
     Ok(())
+}
+
+/// Case-insensitive filesystems keep an existing `cover.PNG` name when
+/// `cover.png` replaces it, so match the upload by file identity, not name.
+#[cfg(unix)]
+fn is_upload(path: &Path, upload: &Path) -> Result<bool> {
+    use std::os::unix::fs::MetadataExt;
+    let (a, b) = (fs::metadata(path)?, fs::metadata(upload)?);
+    Ok(a.dev() == b.dev() && a.ino() == b.ino())
+}
+
+#[cfg(not(unix))]
+fn is_upload(path: &Path, upload: &Path) -> Result<bool> {
+    let name = |p: &Path| p.file_name().and_then(|n| n.to_str()).map(str::to_owned);
+    Ok(name(path)
+        .zip(name(upload))
+        .is_some_and(|(a, b)| a.eq_ignore_ascii_case(&b)))
 }
 
 #[cfg(test)]
