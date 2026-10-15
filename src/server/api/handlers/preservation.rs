@@ -23,6 +23,9 @@ pub(crate) async fn remove_item(
     if !state.library_management {
         return Err(ApiResponseError::not_found());
     }
+    if !crate::pipeline::media::is_canonical_item_id(&id) {
+        return Err(ApiResponseError::not_found());
+    }
     let repo = &state.library_repo;
     let lifecycle = repo.lifecycle_gate.lock().await;
     repo.get_item(&id)
