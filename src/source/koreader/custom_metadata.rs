@@ -73,8 +73,9 @@ fn lua_value(lua: &Lua, key: &str, value: &str) -> mlua::Result<Value> {
     let n =
         series_index(value).ok_or_else(|| mlua::Error::runtime("series index must be a number"))?;
     Ok(
-        if n.fract() == 0.0 && n >= i64::MIN as f64 && n < -(i64::MIN as f64) {
-            Value::Integer(n as i64)
+        // `mlua::Integer` is i32 on 32-bit LuaJIT/Lua 5.1 targets.
+        if n.fract() == 0.0 && n >= mlua::Integer::MIN as f64 && n < -(mlua::Integer::MIN as f64) {
+            Value::Integer(n as mlua::Integer)
         } else {
             Value::Number(n)
         },
