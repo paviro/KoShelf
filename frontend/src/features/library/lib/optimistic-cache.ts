@@ -8,6 +8,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import type {
+    MetadataPatch,
     UpdateAnnotationPayload,
     UpdateItemPayload,
 } from '../../../shared/api-client';
@@ -106,4 +107,40 @@ export function applyItemUpdate(
         item.status = payload.status as LibraryStatus;
     }
     return { ...data, item };
+}
+
+/**
+ * Apply custom metadata overrides and re-derive the displayed fields.
+ * Empty or `null` values clear an override and fall back to the source.
+ */
+export function applyCustomMetadataUpdate(
+    data: LibraryDetailData,
+    patch: MetadataPatch,
+): LibraryDetailData {
+    const current = data.item.custom_edit;
+    if (!current) return data;
+
+    const overrides = { ...current.overrides };
+    for (const [key, value] of Object.entries(patch)) {
+        if (value == null || !value.trim()) delete overrides[key];
+        else overrides[key] = value;
+    }
+    const field = (key: string) => overrides[key] ?? current.base[key] ?? '';
+    const lines = (key: string) => field(key).split('\n').filter(Boolean);
+
+    return {
+        ...data,
+        item: {
+            ...data.item,
+            title: field('title'),
+            authors: lines('authors'),
+            subjects: lines('keywords'),
+            description: field('description'),
+            language: field('language'),
+            series: field('series')
+                ? { name: field('series'), index: field('series_index') }
+                : null,
+            custom_edit: { ...current, overrides },
+        },
+    };
 }

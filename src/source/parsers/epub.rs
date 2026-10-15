@@ -131,6 +131,7 @@ impl EpubParser {
         };
 
         Ok(BookInfo {
+            custom: None,
             cover_data,
             cover_mime_type,
             ..book_info
@@ -414,6 +415,7 @@ impl EpubParser {
 
         let cover_id = meta_cover_id;
         let info = BookInfo {
+            custom: None,
             title: title.unwrap_or_else(|| "Unknown Title".to_string()),
             authors,
             description,

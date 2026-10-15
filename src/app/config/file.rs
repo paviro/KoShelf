@@ -1,5 +1,6 @@
 //! TOML configuration file support for KoShelf.
 
+use crate::source::custom::Location;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -20,6 +21,7 @@ pub struct LibrarySection {
     pub paths: Option<Vec<PathBuf>>,
     pub docsettings_path: Option<PathBuf>,
     pub hashdocsettings_path: Option<PathBuf>,
+    pub document_metadata_folder: Option<Location>,
     #[serde(default, deserialize_with = "one_or_many_pathbuf")]
     pub statistics_db: Option<Vec<PathBuf>>,
     pub kobo_db: Option<PathBuf>,

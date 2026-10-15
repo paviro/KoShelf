@@ -48,6 +48,7 @@ impl Fb2Parser {
         };
 
         Ok(BookInfo {
+            custom: None,
             chapters,
             cover_data,
             cover_mime_type,
@@ -320,6 +321,7 @@ impl Fb2Parser {
         }
 
         let info = BookInfo {
+            custom: None,
             title: title.unwrap_or_else(|| "Unknown Title".to_string()),
             authors,
             description,

@@ -23,6 +23,7 @@ interface PreviewCardData {
     author: string;
     series: string;
     description: string;
+    plainDescription?: boolean;
 }
 
 interface LibraryCardElement extends HTMLElement {
@@ -323,7 +324,7 @@ class HoverPreviewManager {
         }
 
         this.render(data);
-        this.setDescription(data.description);
+        this.setDescription(data.description, data.plainDescription ?? false);
 
         this.previewElement.style.opacity = '0';
         this.previewElement.style.transform = 'translateY(6px) scale(0.98)';
@@ -397,7 +398,7 @@ class HoverPreviewManager {
         }
     }
 
-    private setDescription(rawDescription: string): void {
+    private setDescription(rawDescription: string, plain = false): void {
         if (!this.previewElement) {
             return;
         }
@@ -414,7 +415,9 @@ class HoverPreviewManager {
             return;
         }
 
-        descriptionEl.innerHTML = sanitizeRichTextHtml(rawDescription);
+        descriptionEl.classList.toggle('whitespace-pre-wrap', plain);
+        if (plain) descriptionEl.textContent = rawDescription;
+        else descriptionEl.innerHTML = sanitizeRichTextHtml(rawDescription);
         const hasText = (descriptionEl.textContent || '').trim().length > 0;
         descriptionWrapperEl.classList.toggle('hidden', !hasText);
     }
@@ -439,6 +442,9 @@ class HoverPreviewManager {
                 this.clean(formatSeriesDisplay(detail.item.series)) ||
                 fallback.series,
             description: detail.item.description || '',
+            plainDescription: Boolean(
+                detail.item.custom_edit?.overrides.description,
+            ),
         };
     }
 

@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
+use crate::server::api::handlers::custom::CustomEdit;
 use crate::shelf::models::{ChapterEntry, ReaderPresentation as LibraryReaderPresentation};
+use crate::source::koreader::custom_metadata::Metadata as CustomMetadata;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
@@ -62,6 +64,13 @@ pub struct LibraryListItem {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct LibraryDetailItem {
+    #[sqlx(skip)]
+    #[serde(default)]
+    pub custom_edit: Option<CustomEdit>,
+    #[sqlx(skip)]
+    #[serde(default)]
+    #[serde(skip_serializing)]
+    pub custom_metadata: Option<CustomMetadata>,
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archive_retention: Option<crate::store::bundles::Retention>,

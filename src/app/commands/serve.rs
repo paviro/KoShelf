@@ -1,5 +1,6 @@
 use crate::app::bootstrap::initialize_pipeline;
 use crate::app::config::{ServeArgs, parse_trusted_proxy_nets};
+use crate::pipeline::media::resolve_media_dirs;
 use crate::pipeline::watcher::FileWatcher;
 use crate::server::auth::AuthState;
 use crate::server::auth::client_addr::ClientAddrResolver;
@@ -154,7 +155,7 @@ pub(crate) async fn serve(args: ServeArgs) -> Result<()> {
     );
 
     let web_server = WebServer::new(WebServerOptions {
-        media_cache_dir: output_dir,
+        media_cache_dir: resolve_media_dirs(&output_dir).assets_dir,
         port: args.port,
         site_store,
         reading_data_store,

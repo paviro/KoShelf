@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../../shared/api';
 import type {
+    MetadataPatch,
     UpdateAnnotationPayload,
     UpdateItemPayload,
 } from '../../../shared/api-client';
@@ -16,6 +17,7 @@ import {
 import {
     applyAnnotationDeletion,
     applyAnnotationUpdate,
+    applyCustomMetadataUpdate,
     applyItemUpdate,
     patchDetailCache,
 } from '../lib/optimistic-cache';
@@ -168,6 +170,65 @@ export function useDeleteAnnotation(
             void queryClient.invalidateQueries({
                 queryKey: ['page-activity', itemId],
             });
+        },
+    });
+}
+
+type CustomEditVars = {
+    metadata?: { patch: MetadataPatch; revision: string };
+    /** `null` restores the original cover. */
+    cover?: { file: File | null; revision: string };
+};
+
+export function useCustomEdit(itemId: string, collection: LibraryCollection) {
+    const queryClient = useQueryClient();
+    const detailKey = libraryDetailQueryKey(collection, itemId);
+
+    return useMutation<void, Error, CustomEditVars, RollbackContext>({
+        // The cover goes first: an invalid image is rejected before anything
+        // is written, so it never leaves the metadata half-saved. Each file
+        // has its own revision, so saving one doesn't invalidate the other.
+        mutationFn: async ({ metadata, cover }) => {
+            if (cover) {
+                await (cover.file
+                    ? api.uploadCover(itemId, cover.file, cover.revision)
+                    : api.resetCover(itemId, cover.revision));
+            }
+            if (metadata) {
+                await api.updateMetadata(
+                    itemId,
+                    metadata.patch,
+                    metadata.revision,
+                );
+            }
+        },
+
+        onMutate: async ({ metadata }) => {
+            await queryClient.cancelQueries({ queryKey: detailKey });
+            const previous = metadata
+                ? patchDetailCache(queryClient, detailKey, (data) =>
+                      applyCustomMetadataUpdate(data, metadata.patch),
+                  )
+                : queryClient.getQueryData<LibraryDetailData>(detailKey);
+            return { previous };
+        },
+
+        onError: (error, _vars, context) => {
+            console.error('[useCustomEdit] Failed to update item:', error);
+            addToast('error', translation.get('toast-update-item-error'), {
+                subtitle: translation.get('toast-update-item-error.subtitle'),
+            });
+            if (context?.previous) {
+                queryClient.setQueryData(detailKey, context.previous);
+            }
+        },
+
+        onSettled: () => {
+            // One source may affect multiple formats and collections.
+            void queryClient.invalidateQueries({
+                queryKey: ['library-detail'],
+            });
+            void queryClient.invalidateQueries({ queryKey: ['library-list'] });
         },
     });
 }

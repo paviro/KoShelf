@@ -69,11 +69,12 @@ pub(crate) async fn item_detail(
     let query = LibraryDetailQuery::new(id, includes);
     let reading_data = state.reading_data_store.get();
 
-    let payload = library::detail(&state.library_repo, &query, reading_data.as_deref())
+    let mut payload = library::detail(&state.library_repo, &query, reading_data.as_deref())
         .await
         .map_err(|_| ApiResponseError::internal_server_error())?
         .ok_or_else(ApiResponseError::not_found)?;
-
+    payload.item.custom_edit =
+        super::custom::CustomEdit::new(&payload.item, state.write_coordinator.is_some());
     Ok(Json(ApiResponse::new(payload)))
 }
 
@@ -105,17 +106,23 @@ pub(crate) async fn item_page_activity(
 
 /// Three-state patch field: absent (don't change), null (clear), or value (set).
 #[derive(Debug, Clone, Default, PartialEq)]
-enum Patch<T> {
+pub(super) enum Patch<T> {
     #[default]
     Absent,
     Null,
     Value(T),
 }
 
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Patch<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserialize_patch(deserializer)
+    }
+}
+
 impl Patch<String> {
     /// Convert to `Option<Option<String>>` for DB/Lua layers, treating empty
     /// strings the same as null (clear the field).
-    fn into_nullable(self) -> Option<Option<String>> {
+    pub(super) fn into_nullable(self) -> Option<Option<String>> {
         match self {
             Patch::Absent => None,
             Patch::Null => Some(None),
@@ -251,7 +258,7 @@ impl WriteContext {
             crate::pipeline::ingest::refresh_capture(
                 repo,
                 item_id,
-                &captured,
+                Some(&captured),
                 &crate::shelf::time_config::TimeConfig::new(state.timezone, 0),
             )
             .await
@@ -291,7 +298,7 @@ impl WriteContext {
             crate::pipeline::ingest::refresh_capture(
                 &state.library_repo,
                 &self.item_id,
-                &captured,
+                Some(&captured),
                 &crate::shelf::time_config::TimeConfig::new(state.timezone, 0),
             )
             .await
@@ -498,6 +505,10 @@ mod metadata_tests {
         let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
         let repo = test_repo().await;
         repo.configure_metadata(&MetadataLocation::InBookFolder);
+        *repo.runtime_config.write().unwrap() = Some(crate::pipeline::rebuild::tests::test_config(
+            &dir.path().join("output"),
+            None,
+        ));
         let mut row = sample_item(ID);
         row.file_path = book.to_string_lossy().into_owned();
         row.format = "fb2".into();
@@ -523,6 +534,60 @@ mod metadata_tests {
     }
 
     #[tokio::test]
+    async fn reading_edits_refresh_external_cover_changes() {
+        use crate::store::bundles::{BundleStore, Retention};
+        for durable in [false, true] {
+            let (dir, mut state, path, _) = fixture().await;
+            if durable {
+                state.library_repo.bundles = Some(Arc::new(
+                    BundleStore::open(&dir.path().join("data"), Retention::Forever).unwrap(),
+                ));
+            }
+            let source = path.parent().unwrap().join("cover.png");
+            let served = crate::pipeline::media::resolve_media_dirs(&dir.path().join("output"))
+                .covers_dir
+                .join(format!("{ID}.webp"));
+            let mut previous_url = String::new();
+            let mut previous_cover = None;
+            for color in [Some([255, 0, 0]), Some([0, 0, 255]), None] {
+                if let Some(color) = color {
+                    image::RgbImage::from_pixel(2, 2, image::Rgb(color))
+                        .save(&source)
+                        .unwrap();
+                } else {
+                    std::fs::remove_file(&source).unwrap();
+                }
+                // Save a reading edit before the watcher processes the cover change.
+                let captured = CapturedMetadata::capture(&path, SourceKind::Adjacent).unwrap();
+                let mut headers = HeaderMap::new();
+                headers.insert("X-Metadata-Revision", captured.revision.parse().unwrap());
+                let ctx = WriteContext::prepare(&state, ID, &headers).await.unwrap();
+                mutations::write_item_metadata(&ctx.captured, None, Some(5), None, "2026-10-15")
+                    .unwrap();
+                assert_eq!(
+                    ctx.finish(&state).await.unwrap().status(),
+                    StatusCode::NO_CONTENT
+                );
+                drop(ctx);
+                let item = state.library_repo.get_item(ID).await.unwrap().unwrap();
+                assert_eq!(item.rating, Some(5));
+                assert_ne!(item.cover_url, previous_url);
+                previous_url = item.cover_url;
+                let cover = std::fs::read(&served).ok();
+                assert_eq!(cover.is_some(), color.is_some());
+                assert_ne!(cover, previous_cover);
+                if let Some(store) = &state.library_repo.bundles
+                    && cover.is_some()
+                {
+                    let bundle = store.get(ID).unwrap().unwrap();
+                    assert_eq!(bundle.cover().map(|p| std::fs::read(p).unwrap()), cover);
+                }
+                previous_cover = cover;
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn annotation_edits_refresh_cache_and_stale_deletes_leave_files_untouched() {
         let (_dir, state, path, _) = fixture().await;
         std::fs::write(&path, format!("return {{partial_md5_checksum='{ID}',summary={{rating=2}},stats={{highlights=1,notes=0}},annotations={{{{text='quote',drawer='lighten',color='yellow',pageno=1}}}}}}" )).unwrap();
@@ -532,7 +597,7 @@ mod metadata_tests {
             crate::pipeline::ingest::refresh_capture(
                 &state.library_repo,
                 ID,
-                &captured,
+                Some(&captured),
                 &crate::shelf::time_config::TimeConfig::new(None, 0),
             )
             .await
@@ -653,7 +718,7 @@ mod metadata_tests {
             let error = crate::pipeline::ingest::refresh_capture(
                 &state.library_repo,
                 ID,
-                &captured,
+                Some(&captured),
                 &crate::shelf::time_config::TimeConfig::new(None, 0),
             )
             .await
@@ -926,7 +991,7 @@ mod metadata_tests {
         crate::pipeline::ingest::refresh_capture(
             &state.library_repo,
             ID,
-            capture,
+            Some(capture),
             &crate::shelf::time_config::TimeConfig::new(None, 0),
         )
         .await
@@ -941,7 +1006,7 @@ mod metadata_tests {
         let mut config = crate::pipeline::rebuild::tests::test_config(&output, None);
         config.library_paths = vec![dir.path().to_path_buf()];
         config.is_internal_server = true;
-        let media = crate::pipeline::media::resolve_media_dirs(&output, true);
+        let media = crate::pipeline::media::resolve_media_dirs(&output);
         crate::pipeline::media::create_media_directories(&media).unwrap();
         let store =
             Arc::new(BundleStore::open(&dir.path().join("data"), Retention::Immediate).unwrap());

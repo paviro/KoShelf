@@ -33,7 +33,24 @@ export interface CompletionsParams {
     include?: string;
 }
 
+export type MetadataField =
+    | 'title'
+    | 'authors'
+    | 'series'
+    | 'series_index'
+    | 'language'
+    | 'keywords'
+    | 'description';
+export type MetadataPatch = Partial<Record<MetadataField, string | null>>;
+
 export interface ApiClient {
+    updateMetadata(
+        id: string,
+        payload: MetadataPatch,
+        revision: string,
+    ): Promise<void>;
+    uploadCover(id: string, file: File, revision: string): Promise<void>;
+    resetCover(id: string, revision: string): Promise<void>;
     getSite(): Promise<SiteData>;
     login(password: string): Promise<void>;
     getSessions(): Promise<SessionInfo[]>;

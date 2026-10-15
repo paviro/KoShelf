@@ -6,12 +6,14 @@ import { Button } from './Button';
 type CloseButtonProps = {
     onClick: () => void;
     bordered?: boolean;
+    disabled?: boolean;
     className?: string;
 };
 
 export function CloseButton({
     onClick,
     bordered = false,
+    disabled = false,
     className = '',
 }: CloseButtonProps) {
     return (
@@ -20,7 +22,8 @@ export function CloseButton({
             icon={LuX}
             aria-label={translation.get('close.aria-label')}
             onClick={onClick}
-            className={`${bordered ? '' : 'hover:text-gray-900 dark:hover:text-white '}${className}`}
+            disabled={disabled}
+            className={`${bordered ? '' : 'not-disabled:hover:text-gray-900 dark:not-disabled:hover:text-white '}${className}`}
         />
     );
 }

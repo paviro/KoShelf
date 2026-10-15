@@ -261,6 +261,7 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                         <>
                             <LibraryOverviewSection
                                 item={item!}
+                                collection={collection}
                                 itemStats={itemStats}
                                 completions={completions}
                                 highlightCount={highlightCount}
@@ -373,13 +374,11 @@ export function LibraryDetailRoute({ collection }: LibraryDetailRouteProps) {
                 />
             </PageContent>
 
-            {canWrite && (
-                <EditWarningModal
-                    open={warningOpen}
-                    onAcknowledge={acknowledge}
-                    onCancel={cancel}
-                />
-            )}
+            <EditWarningModal
+                open={warningOpen}
+                onAcknowledge={acknowledge}
+                onCancel={cancel}
+            />
         </>
     );
 }

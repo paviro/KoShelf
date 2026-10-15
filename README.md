@@ -26,7 +26,7 @@
 - 🎨 **Modern UI**: Clean design powered by Tailwind CSS with readable typography and responsive layout
 - 📖 **In-App Reader (EPUB/FB2/MOBI/CBZ)**: Open supported files directly in KoShelf with keyboard navigation, progress scrubber controls, and inline highlight notes
 - 📝 **Annotations, Highlights & Ratings**: All your KoReader highlights, notes, star ratings, and review notes (summary note) are shown together on each book's details page
-- ✏️ **Metadata Writeback**: Edit annotations, review notes, ratings, and reading status directly in KoShelf and sync changes back to your KOReader sidecar files (serve mode, opt-in)
+- ✏️ **Metadata Writeback**: Edit annotations, review notes, ratings, reading status, book metadata, and covers directly in KoShelf and sync changes back to your KOReader files (serve mode, opt-in)
 - 📊 **Reading Statistics**: Track your reading habits with detailed statistics including reading time, pages read, customizable activity heatmaps, and weekly breakdowns
 - 📅 **Reading Calendar**: Monthly calendar view showing your reading activity with items read on each day and monthly statistics
 - 🎉 **Yearly Recap**: Celebrate your reading year with a timeline of completions, monthly summaries (finished items, hours read), and rich per-item details

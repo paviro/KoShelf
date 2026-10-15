@@ -104,6 +104,7 @@ impl LibraryRepository {
                     return Ok(Some(fp));
                 }
                 return Ok(Some(FingerprintRow {
+                    custom_state: None,
                     item_id: id.clone(),
                     book_path: path.to_string_lossy().into_owned(),
                     book_size_bytes: -1,

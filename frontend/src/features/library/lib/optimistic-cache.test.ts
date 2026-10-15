@@ -10,6 +10,7 @@ import type { UpdateAnnotationPayload } from '../../../shared/api-client';
 import {
     applyAnnotationDeletion,
     applyAnnotationUpdate,
+    applyCustomMetadataUpdate,
     applyItemUpdate,
     patchDetailCache,
 } from './optimistic-cache';
@@ -281,5 +282,84 @@ describe('patchDetailCache', () => {
         patchDetailCache(qc, queryKey, updater);
 
         expect(updater).not.toHaveBeenCalled();
+    });
+});
+
+// ── applyCustomMetadataUpdate ────────────────────────────────────────
+
+function makeCustomEditData(overrides: Record<string, string> = {}) {
+    const data = makeDetailData();
+    data.item.custom_edit = {
+        base: {
+            title: 'Source Title',
+            authors: 'Source Author',
+            series: 'Saga',
+            series_index: '2',
+            description: '<p>Source</p>',
+        },
+        overrides,
+        metadata: { available: true, reasons: [], revision: 'none' },
+        cover: { available: true, reasons: [], revision: 'none' },
+        has_custom_cover: false,
+        issues: [],
+    };
+    return data;
+}
+
+describe('applyCustomMetadataUpdate', () => {
+    it('sets overrides and splits list fields by line', () => {
+        const result = applyCustomMetadataUpdate(makeCustomEditData(), {
+            title: 'Custom',
+            authors: 'A\nB\n',
+            keywords: 'x\ny',
+        });
+        expect(result.item.title).toBe('Custom');
+        expect(result.item.authors).toEqual(['A', 'B']);
+        expect(result.item.subjects).toEqual(['x', 'y']);
+        expect(result.item.series).toEqual({ name: 'Saga', index: '2' });
+        expect(result.item.custom_edit?.overrides.title).toBe('Custom');
+    });
+
+    it('clears overrides with null or blank values and falls back to the source', () => {
+        const data = makeCustomEditData({
+            title: 'Custom',
+            description: 'Mine',
+        });
+        const result = applyCustomMetadataUpdate(data, {
+            title: null,
+            description: '  ',
+        });
+        expect(result.item.title).toBe('Source Title');
+        expect(result.item.description).toBe('<p>Source</p>');
+        expect(result.item.custom_edit?.overrides).toEqual({});
+        expect(result.item.custom_edit?.overrides.description).toBeUndefined();
+    });
+
+    it('records a custom description override', () => {
+        const result = applyCustomMetadataUpdate(makeCustomEditData(), {
+            description: 'Line 1\nLine 2',
+        });
+        expect(result.item.custom_edit?.overrides.description).toBe(
+            'Line 1\nLine 2',
+        );
+    });
+
+    it('drops the series when its name is overridden to empty and the source has none', () => {
+        const data = makeCustomEditData();
+        delete data.item.custom_edit!.base.series;
+        const result = applyCustomMetadataUpdate(data, { series: null });
+        expect(result.item.series).toBeNull();
+    });
+
+    it('returns data unchanged without custom edit state', () => {
+        const data = makeDetailData();
+        expect(applyCustomMetadataUpdate(data, { title: 'X' })).toBe(data);
+    });
+
+    it('does not mutate the original data', () => {
+        const data = makeCustomEditData();
+        applyCustomMetadataUpdate(data, { title: 'Custom' });
+        expect(data.item.title).toBe('Test Book');
+        expect(data.item.custom_edit?.overrides).toEqual({});
     });
 });

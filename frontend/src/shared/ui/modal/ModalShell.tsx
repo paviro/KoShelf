@@ -1,4 +1,4 @@
-import { type MouseEvent, type ReactNode } from 'react';
+import { type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 
 import { useOverlayAnimation } from '../../lib/dom/useOverlayAnimation';
 import { CloseButton } from '../button/CloseButton';
@@ -9,7 +9,10 @@ type ModalShellProps = {
     children: ReactNode;
     containerClassName?: string;
     cardClassName?: string;
+    cardStyle?: CSSProperties;
     showCloseButton?: boolean;
+    /** Shows the close button as disabled, e.g. while a save is running. */
+    closeDisabled?: boolean;
 };
 
 export function ModalShell({
@@ -18,7 +21,9 @@ export function ModalShell({
     children,
     containerClassName = '',
     cardClassName = '',
+    cardStyle,
     showCloseButton = true,
+    closeDisabled = false,
 }: ModalShellProps) {
     const { isMounted, isVisible, backdropRef } = useOverlayAnimation(
         open,
@@ -51,6 +56,7 @@ export function ModalShell({
                         ? ''
                         : 'bg-white/95 dark:bg-dark-900/90 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl'
                 } ${cardClassName}`}
+                style={cardStyle}
                 role="dialog"
                 aria-modal="true"
                 onMouseDown={(event) => event.stopPropagation()}
@@ -58,6 +64,7 @@ export function ModalShell({
                 {showCloseButton && (
                     <CloseButton
                         onClick={onClose}
+                        disabled={closeDisabled}
                         className="absolute top-4 right-4 rounded-full p-2"
                     />
                 )}

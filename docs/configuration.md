@@ -84,6 +84,7 @@ These flags are shared by both `serve` and `export`:
 - `-i, --library-path`: Path(s) to folders containing ebooks (EPUB, FB2, MOBI) and/or comics (CBZ, CBR) with KoReader metadata. Can be specified multiple times. (optional if `--statistics-db` is provided)
 - `--docsettings-path`: Path to KOReader's `docsettings` folder for users who store metadata separately (requires `--library-path`, may be combined with `--hashdocsettings-path`)
 - `--hashdocsettings-path`: Path to KOReader's `hashdocsettings` folder for users who store metadata by content hash (requires `--library-path`, may be combined with `--docsettings-path`)
+- `--document-metadata-folder <doc|dir|hash>`: KOReader's "Book metadata location" setting (`document_metadata_folder`), used to find and create custom metadata and covers. Default: `doc`. See [Custom Metadata and Covers](koreader-setup.md#custom-metadata-and-covers).
 - `-s, --statistics-db`: Path to the `statistics.sqlite3` file for additional reading stats (optional if `--library-path` is provided). Can be specified multiple times to merge stats from several devices that don't sync their statistics database — see [Reading Statistics from Multiple Devices](koreader-setup.md#reading-statistics-from-multiple-devices). The `KOSHELF_STATISTICS_DB` environment variable accepts a single path only; use repeated flags or the config file for multiple databases.
 - `--kobo-db`: Path to Kobo's `KoboReader.sqlite` database. Used to discover matched extensionless kepub files and parse them as EPUBs. Requires `--library-path`.
 - `--include-unread`: Include unread items (files without KoReader metadata)
@@ -126,6 +127,7 @@ Common environment variables:
 - `KOSHELF_LIBRARY_PATH`
 - `KOSHELF_STATISTICS_DB`
 - `KOSHELF_KOBO_DB`
+- `KOSHELF_DOCUMENT_METADATA_FOLDER`
 - `KOSHELF_OUTPUT`
 - `KOSHELF_INCLUDE_FILES`
 - `KOSHELF_DATA_PATH`

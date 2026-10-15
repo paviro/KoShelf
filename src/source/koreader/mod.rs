@@ -12,3 +12,5 @@ pub use database::StatisticsParser;
 pub use lua_parser::LuaParser;
 pub use lua_writer::LuaWriter;
 pub use partial_md5::calculate_partial_md5;
+
+pub(crate) mod custom_metadata;

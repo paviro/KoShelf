@@ -1,6 +1,7 @@
 use crate::app::config::SiteConfig;
 use crate::pipeline::rebuild::rebuild;
 use crate::shelf::models::LibraryItemFormat;
+use crate::source::custom::is_custom_path;
 use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
 use crate::store::sqlite::repo::LibraryRepository;
@@ -340,7 +341,7 @@ impl FileWatcher {
             }
             let filename = path.file_name().and_then(|s| s.to_str());
 
-            if LibraryItemFormat::from_path(path).is_some() {
+            if LibraryItemFormat::from_path(path).is_some() || is_custom_path(path) {
                 return true;
             }
             if LibraryItemFormat::is_metadata_path(path) {

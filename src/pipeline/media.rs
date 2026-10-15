@@ -19,16 +19,10 @@ pub struct MediaDirs {
     pub recap_dir: PathBuf,
 }
 
-/// Compute media directories based on run mode.
-///
-/// In serve mode (`is_internal_server = true`) assets live directly in
-/// `output_dir`; in static-export mode they live under `output_dir/assets/`.
-pub fn resolve_media_dirs(output_dir: &Path, is_internal_server: bool) -> MediaDirs {
-    let assets_dir = if is_internal_server {
-        output_dir.to_path_buf()
-    } else {
-        output_dir.join("assets")
-    };
+/// Compute media directories. Served and exported media both live under
+/// `output_dir/assets/`, matching their `/assets/...` URLs.
+pub fn resolve_media_dirs(output_dir: &Path) -> MediaDirs {
+    let assets_dir = output_dir.join("assets");
     let covers_dir = assets_dir.join("covers");
     let files_dir = assets_dir.join("files");
     let recap_dir = assets_dir.join("recap");
@@ -90,6 +84,7 @@ pub fn encode_cover_to_disk(cover_data: &[u8], cover_path: &Path) -> Result<()> 
     // Replace rather than overwrite: saved library records hard-link this file.
     let save = || -> Result<()> {
         let dir = cover_path.parent().context("cover directory")?;
+        fs::create_dir_all(dir)?;
         let mut file = tempfile::NamedTempFile::new_in(dir)?;
         std::io::Write::write_all(&mut file, &webp_data)?;
         file.persist(cover_path).map_err(|e| e.error)?;
@@ -111,6 +106,21 @@ pub fn cover_needs_generation(source_path: &Path, cover_path: &Path) -> bool {
         (Ok(_), Err(_)) => true,
         _ => true,
     }
+}
+
+/// Remove the derived media folders older serve versions kept directly in the
+/// data directory. Their contents are rebuilt under `assets/`.
+pub fn remove_legacy_serve_dirs(output_dir: &Path) -> Result<()> {
+    for name in ["covers", "files", "recap"] {
+        let path = output_dir.join(name);
+        // Only real directories: never follow a link out of the data directory.
+        if fs::symlink_metadata(&path).is_ok_and(|m| m.is_dir()) {
+            info!("Removing legacy media directory {:?}", path);
+            fs::remove_dir_all(&path)
+                .with_context(|| format!("Failed to remove legacy media directory {:?}", path))?;
+        }
+    }
+    Ok(())
 }
 
 /// Remove cover files whose IDs are not in the given set.
@@ -351,6 +361,25 @@ mod tests {
     use super::*;
 
     const CANONICAL_ID: &str = "0123456789abcdef0123456789abcdef";
+
+    #[test]
+    fn legacy_serve_dirs_are_removed_and_assets_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["covers", "files", "recap"] {
+            fs::create_dir_all(dir.path().join(name)).unwrap();
+            fs::write(dir.path().join(name).join("x"), b"x").unwrap();
+        }
+        let dirs = resolve_media_dirs(dir.path());
+        create_media_directories(&dirs).unwrap();
+        fs::write(dirs.covers_dir.join("kept.webp"), b"x").unwrap();
+        fs::create_dir_all(dir.path().join("library")).unwrap();
+        remove_legacy_serve_dirs(dir.path()).unwrap();
+        for name in ["covers", "files", "recap"] {
+            assert!(!dir.path().join(name).exists());
+        }
+        assert!(dirs.covers_dir.join("kept.webp").is_file());
+        assert!(dir.path().join("library").is_dir());
+    }
 
     #[cfg(unix)]
     #[test]

@@ -44,6 +44,10 @@ pub(crate) async fn sync_library(
     .await;
     let stored_fingerprints = repo.load_all_fingerprints().await?;
     repo.configure_metadata(&config.metadata_location);
+    *repo
+        .runtime_config
+        .write()
+        .expect("runtime configuration lock") = Some(config.clone());
     let metadata_indices = Arc::new(MetadataIndices::new(&config.metadata_location)?);
 
     let plan = build_library_sync_plan(

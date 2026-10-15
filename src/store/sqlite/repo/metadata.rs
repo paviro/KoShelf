@@ -71,7 +71,7 @@ impl LibraryRepository {
         Self::upsert_fingerprint_on(&mut tx, fp).await?;
         sqlx::query(
             "UPDATE library_item_fingerprints
-             SET metadata_modified_ns = ?, metadata_revision = ?, metadata_source = ?,
+             SET metadata_modified_ns = ?, metadata_revision = COALESCE(?, metadata_revision), metadata_source = COALESCE(?, metadata_source),
                  calculated_checksum = ?, metadata_writable = ? WHERE item_id = ?",
         )
         .bind(captured.map(|c| c.modified_ns.to_string()))

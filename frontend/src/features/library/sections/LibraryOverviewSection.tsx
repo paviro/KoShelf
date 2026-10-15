@@ -18,8 +18,10 @@ import { translation } from '../../../shared/i18n';
 import { formatNumber } from '../../../shared/lib/intl/formatNumber';
 import { Button } from '../../../shared/ui/button/Button';
 import { MetricCard } from '../../../shared/ui/cards/MetricCard';
-import { ModalShell } from '../../../shared/ui/modal/ModalShell';
 import { CollapsibleSection } from '../../../shared/ui/sections/CollapsibleSection';
+import { LibraryEditModal } from '../components/LibraryEditModal';
+import { canEditCustom } from '../lib/custom-edit';
+import type { LibraryCollection } from '../model/library-model';
 import type {
     LibraryCompletions,
     LibraryDetailItem,
@@ -33,45 +35,9 @@ import {
     toProgressPercentage,
 } from '../lib/library-detail-formatters';
 
-const ITEM_STATUS_OPTIONS: ReadonlyArray<{
-    value: string;
-    labelKey: string;
-    active: string;
-    iconContainer: string;
-    iconClassName: string;
-    icon: IconType;
-}> = [
-    {
-        value: 'reading',
-        labelKey: 'status.reading-short',
-        active: 'bg-primary-50 dark:bg-primary-500/10 border-primary-300 dark:border-primary-500/30 text-primary-700 dark:text-primary-300',
-        iconContainer:
-            'bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600',
-        iconClassName: 'text-primary-600 dark:text-white',
-        icon: HiOutlineBookOpen,
-    },
-    {
-        value: 'complete',
-        labelKey: 'status.completed-short',
-        active: 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/30 text-green-700 dark:text-green-300',
-        iconContainer:
-            'bg-green-500/20 dark:bg-linear-to-br dark:from-green-500 dark:to-green-600',
-        iconClassName: 'text-green-600 dark:text-white',
-        icon: LuCheck,
-    },
-    {
-        value: 'abandoned',
-        labelKey: 'status.abandoned',
-        active: 'bg-red-50 dark:bg-red-500/10 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-300',
-        iconContainer:
-            'bg-red-500/20 dark:bg-linear-to-br dark:from-red-500 dark:to-red-600',
-        iconClassName: 'text-red-600 dark:text-white',
-        icon: LuBan,
-    },
-];
-
 type LibraryOverviewSectionProps = {
     item: LibraryDetailItem;
+    collection: LibraryCollection;
     itemStats: LibraryItemStats | null;
     completions: LibraryCompletions | null;
     highlightCount: number;
@@ -138,6 +104,7 @@ function cardValueOrUnknown(value: number | null | undefined): string {
 
 export function LibraryOverviewSection({
     item,
+    collection,
     itemStats,
     completions,
     highlightCount,
@@ -148,20 +115,17 @@ export function LibraryOverviewSection({
     onStatusChange,
     guardedAction,
 }: LibraryOverviewSectionProps) {
-    const [coverFailed, setCoverFailed] = useState(false);
-    const [statusModalOpen, setStatusModalOpen] = useState(false);
+    const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+    const coverFailed = failedCoverUrl === item.cover_url;
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const canEdit = canWrite || canEditCustom(item.custom_edit);
 
-    const handleOpenStatusModal = () => {
+    const handleOpenEditModal = () => {
         if (guardedAction) {
-            guardedAction(() => setStatusModalOpen(true));
+            guardedAction(() => setEditModalOpen(true));
         } else {
-            setStatusModalOpen(true);
+            setEditModalOpen(true);
         }
-    };
-
-    const handleStatusSelect = (newStatus: string) => {
-        onStatusChange?.(newStatus);
-        setStatusModalOpen(false);
     };
 
     const progressPercentage = toProgressPercentage(item.progress_percentage);
@@ -176,6 +140,7 @@ export function LibraryOverviewSection({
     const pagesCount = item.pages ?? itemStats?.pages;
     const seriesSearchBasePath = item.search_base_path?.trim() || '/';
     const seriesSearchTerm = (item.series?.name ?? '').trim();
+    const plainDescription = Boolean(item.custom_edit?.overrides.description);
     const sanitizedDescription = useMemo(
         () => sanitizeRichTextHtml(item.description ?? ''),
         [item.description],
@@ -196,12 +161,12 @@ export function LibraryOverviewSection({
                 onToggle={onToggle}
                 contentClassName="mb-8"
                 controls={
-                    canWrite && visible ? (
+                    canEdit && visible ? (
                         <Button
                             variant="neutral"
                             icon={LuPencil}
                             aria-label={translation.get('edit.aria-label')}
-                            onClick={handleOpenStatusModal}
+                            onClick={handleOpenEditModal}
                         />
                     ) : undefined
                 }
@@ -215,7 +180,9 @@ export function LibraryOverviewSection({
                                         src={item.cover_url}
                                         alt={item.title}
                                         className="w-full h-auto"
-                                        onError={() => setCoverFailed(true)}
+                                        onError={() =>
+                                            setFailedCoverUrl(item.cover_url)
+                                        }
                                     />
                                 ) : (
                                     <div className="aspect-2/3 w-full flex items-center justify-center text-5xl md:text-6xl text-gray-400 dark:text-dark-400">
@@ -329,7 +296,9 @@ export function LibraryOverviewSection({
                             />
                         </div>
 
-                        {sanitizedDescription && (
+                        {(plainDescription
+                            ? item.description
+                            : sanitizedDescription) && (
                             <div className="bg-white dark:bg-dark-850/50 border border-gray-200/70 dark:border-dark-700/70 rounded-lg p-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                                     <div className="w-8 h-8 bg-purple-500/20 dark:bg-linear-to-br dark:from-purple-500 dark:to-purple-600 rounded-lg flex items-center justify-center mr-3">
@@ -340,12 +309,18 @@ export function LibraryOverviewSection({
                                     </div>
                                     {translation.get('description')}
                                 </h3>
-                                <div
-                                    className="leading-relaxed prose max-w-none book-description"
-                                    dangerouslySetInnerHTML={{
-                                        __html: sanitizedDescription,
-                                    }}
-                                />
+                                {plainDescription ? (
+                                    <div className="leading-relaxed whitespace-pre-wrap book-description">
+                                        {item.description}
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="leading-relaxed prose max-w-none book-description"
+                                        dangerouslySetInnerHTML={{
+                                            __html: sanitizedDescription,
+                                        }}
+                                    />
+                                )}
                             </div>
                         )}
 
@@ -401,60 +376,16 @@ export function LibraryOverviewSection({
                 </div>
             </CollapsibleSection>
 
-            <ModalShell
-                open={statusModalOpen}
-                onClose={() => setStatusModalOpen(false)}
-                containerClassName="z-[60]"
-                cardClassName="max-w-sm bg-white/95 dark:bg-dark-900/90 border border-gray-200/70 dark:border-dark-600/50 rounded-2xl shadow-2xl"
-            >
-                <div className="p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center shrink-0">
-                            <LuPencil className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {translation.get('change-status')}
-                        </h2>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {ITEM_STATUS_OPTIONS.map((opt) => {
-                            const isActive = item.status === opt.value;
-                            return (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() =>
-                                        handleStatusSelect(opt.value)
-                                    }
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                                        isActive
-                                            ? opt.active
-                                            : 'bg-gray-50 dark:bg-dark-800 border-gray-200 dark:border-dark-700 text-gray-700 dark:text-dark-300 hover:bg-gray-100 dark:hover:bg-dark-700'
-                                    }`}
-                                >
-                                    <div
-                                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${opt.iconContainer}`}
-                                    >
-                                        <opt.icon
-                                            className={`w-5 h-5 ${opt.iconClassName}`}
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <span className="flex-1 text-left">
-                                        {translation.get(opt.labelKey)}
-                                    </span>
-                                    {isActive && (
-                                        <LuCheck
-                                            className="w-4 h-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </ModalShell>
+            {canEdit && (
+                <LibraryEditModal
+                    open={editModalOpen}
+                    onClose={() => setEditModalOpen(false)}
+                    item={item}
+                    collection={collection}
+                    canChangeStatus={canWrite}
+                    onStatusChange={onStatusChange}
+                />
+            )}
         </>
     );
 }

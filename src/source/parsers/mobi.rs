@@ -210,6 +210,7 @@ impl MobiParser {
         subjects = Self::dedupe_preserve_order(subjects);
 
         Ok(BookInfo {
+            custom: None,
             title: final_title,
             authors,
             description,
@@ -228,6 +229,7 @@ impl MobiParser {
 
     fn book_info_from_filename(title: &str) -> BookInfo {
         BookInfo {
+            custom: None,
             title: title.to_string(),
             authors: Vec::new(),
             description: None,

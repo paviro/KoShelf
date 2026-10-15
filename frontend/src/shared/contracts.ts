@@ -230,7 +230,23 @@ export interface ExternalIdentifier {
     url?: string | null;
 }
 
+export interface CustomEditCapability {
+    available: boolean;
+    reasons: string[];
+    /** Sent back as `X-Edit-Revision`; `none` when the file doesn't exist. */
+    revision: string;
+}
+export interface CustomEdit {
+    base: Record<string, string>;
+    overrides: Record<string, string>;
+    metadata: CustomEditCapability;
+    cover: CustomEditCapability;
+    /** A custom cover file exists, so restoring the original has an effect. */
+    has_custom_cover: boolean;
+    issues: string[];
+}
 export interface LibraryDetailItem {
+    custom_edit?: CustomEdit | null;
     /** Retired-record retention in days (0 = immediate) or `'forever'`. */
     archive_retention?: number | 'forever';
     is_archived?: boolean;

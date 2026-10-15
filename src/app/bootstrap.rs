@@ -73,6 +73,7 @@ fn build_site_config(
         include_unread: common.include_unread,
         library_paths: common.library_path.clone(),
         metadata_location: metadata_location(common)?,
+        document_metadata_folder: common.document_metadata_folder,
         statistics_db_paths: common.statistics_db.clone(),
         kobo_db_path: common.kobo_db.clone(),
         heatmap_scale_max,
@@ -222,7 +223,10 @@ pub(crate) async fn initialize_pipeline(
     }
 
     // ── 2. Create media directories ──────────────────────────────────
-    let media_dirs = resolve_media_dirs(&config.output_dir, is_internal_server);
+    let media_dirs = resolve_media_dirs(&config.output_dir);
+    if is_internal_server {
+        media::remove_legacy_serve_dirs(&config.output_dir)?;
+    }
     media::create_media_directories(&media_dirs)?;
 
     // ── 3. Update library ────────────────────────────────────────────

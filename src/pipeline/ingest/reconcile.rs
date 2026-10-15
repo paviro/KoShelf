@@ -3,8 +3,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::pipeline::ingest::metadata::MetadataIndices;
-use crate::pipeline::media;
 use crate::shelf::models::LibraryItemFormat;
+use crate::source::custom;
+use crate::source::koreader::{calculate_partial_md5, custom_metadata};
 use crate::source::scanner::CollectedItem;
 use crate::source::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
@@ -72,13 +73,9 @@ pub(super) fn build_library_sync_plan(
             }
         };
 
+        let checksum = calculate_partial_md5(book_path).unwrap_or_default();
         let resolution = fs_item_by_path.get(&fp.book_path).map(|item| {
-            metadata_indices.resolve(
-                book_path,
-                item.format,
-                &crate::source::koreader::calculate_partial_md5(book_path).unwrap_or_default(),
-                Some(&fp.item_id),
-            )
+            metadata_indices.resolve(book_path, item.format, &checksum, Some(&fp.item_id))
         });
         let current_metadata_path = resolution
             .as_ref()
@@ -86,10 +83,31 @@ pub(super) fn build_library_sync_plan(
             .map(|s| s.path.clone());
         // Re-evaluate every accepted capture, including content changes with equal stat data.
         // The processor skips unchanged accepted captures before parsing the ebook.
+        // Custom files have no fingerprint either: any present or previously
+        // applied custom file is rechecked by the processor's digest comparison,
+        // so only their presence matters here.
+        let custom_requires_check = || {
+            let custom = custom::locate(
+                book_path,
+                &checksum,
+                current_metadata_path.as_deref(),
+                metadata_indices,
+                None,
+            );
+            custom.metadata.is_some()
+                || custom.cover.is_some()
+                || !custom.issues.is_empty()
+                || fp.custom_state.as_deref().is_some_and(|json| {
+                    serde_json::from_str::<custom_metadata::Metadata>(json).map_or(true, |m| {
+                        m.metadata_digest.is_some() || m.cover_digest.is_some() || m.error.is_some()
+                    })
+                })
+        };
         if fp.metadata_path.is_some()
             || resolution
                 .as_ref()
                 .is_some_and(|r| r.selected.is_some() || r.blocked)
+            || custom_requires_check()
         {
             push_existing_item(&mut plan.items_to_ingest, &fs_item_by_path, fp, book_path);
             plan.changed += 1;
@@ -120,7 +138,8 @@ pub(super) fn build_library_sync_plan(
         match classify_reconcile_action(Some(&stored), Some(&current)) {
             ReconcileAction::Unchanged if !metadata_appeared => {
                 let cover_path = covers_dir.join(format!("{}.webp", fp.item_id));
-                if media::cover_needs_generation(book_path, &cover_path) {
+                // Content changes reparse above; this only restores a lost cover.
+                if !cover_path.exists() {
                     push_existing_item(&mut plan.items_to_ingest, &fs_item_by_path, fp, book_path);
                     plan.changed += 1;
                 } else {
@@ -226,6 +245,7 @@ mod tests {
 
     fn stored_row(item_id: &str, book_fp: &FileFingerprint) -> FingerprintRow {
         FingerprintRow {
+            custom_state: None,
             item_id: item_id.to_string(),
             book_path: book_fp.path.to_string_lossy().into_owned(),
             book_size_bytes: book_fp.size_bytes as i64,

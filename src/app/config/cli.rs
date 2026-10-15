@@ -1,3 +1,4 @@
+use crate::source::custom::Location;
 use anyhow::{Context, Result};
 use clap::Parser;
 use ipnet::IpNet;
@@ -80,6 +81,11 @@ pub struct CommonArgs {
     /// Path to KOReader's hashdocsettings folder (for users who store metadata by hash). Requires --library-path. May be combined with --docsettings-path; adjacent sidecars are also considered and newest valid metadata wins.
     #[arg(long, env = "KOSHELF_HASHDOCSETTINGS_PATH")]
     pub hashdocsettings_path: Option<PathBuf>,
+
+    /// KOReader's "Book metadata location" setting (`document_metadata_folder`):
+    /// doc, dir or hash. Defaults to doc, like KOReader.
+    #[arg(long, env = "KOSHELF_DOCUMENT_METADATA_FOLDER", value_enum)]
+    pub document_metadata_folder: Option<Location>,
 
     /// Path to the statistics.sqlite3 file for additional reading stats (optional if library_path is provided).
     /// Can be specified multiple times to merge stats from several devices.

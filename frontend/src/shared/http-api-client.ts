@@ -2,6 +2,7 @@ import { translation } from './i18n';
 import { addToast } from './ui/toast';
 import type {
     ApiClient,
+    MetadataPatch,
     CompletionsParams,
     ScopeValue,
     UpdateAnnotationPayload,
@@ -220,6 +221,44 @@ export class HttpApiClient implements ApiClient {
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
         return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
+    async updateMetadata(
+        id: string,
+        payload: MetadataPatch,
+        revision: string,
+    ): Promise<void> {
+        await captureAwareMutation(
+            `/api/items/${encodeURIComponent(id)}/metadata`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Edit-Revision': revision,
+                },
+                body: JSON.stringify(payload),
+            },
+        );
+    }
+    async uploadCover(id: string, file: File, revision: string): Promise<void> {
+        // The server detects the image format from the bytes.
+        await captureAwareMutation(
+            `/api/items/${encodeURIComponent(id)}/cover`,
+            {
+                method: 'PUT',
+                headers: { 'X-Edit-Revision': revision },
+                body: file,
+            },
+        );
+    }
+    async resetCover(id: string, revision: string): Promise<void> {
+        await captureAwareMutation(
+            `/api/items/${encodeURIComponent(id)}/cover`,
+            {
+                method: 'DELETE',
+                headers: { 'X-Edit-Revision': revision },
+            },
+        );
     }
 
     async updateItem(

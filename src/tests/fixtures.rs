@@ -9,6 +9,7 @@ pub(crate) fn library_item(id: &str, metadata: Option<KoReaderMetadata>) -> Libr
     LibraryItem {
         id: id.to_string(),
         book_info: BookInfo {
+            custom: None,
             title: "Item".to_string(),
             authors: vec!["Author".to_string()],
             description: None,

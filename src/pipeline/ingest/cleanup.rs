@@ -84,7 +84,7 @@ mod tests {
             .prefix("koshelf-cleanup-")
             .tempdir_in(std::env::current_dir().expect("cwd"))
             .expect("output dir");
-        let media_dirs = resolve_media_dirs(output_dir.path(), false);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
         let cover_path = media_dirs.covers_dir.join(format!("{CANONICAL_ID}.webp"));
         std::fs::write(&cover_path, b"cover").expect("cover write");
@@ -113,7 +113,7 @@ mod tests {
             .prefix("koshelf-cleanup-")
             .tempdir_in(std::env::current_dir().expect("cwd"))
             .expect("output dir");
-        let media_dirs = resolve_media_dirs(output_dir.path(), true);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.files_dir).expect("files dir");
         let source_path = output_dir.path().join("book.epub");
         std::fs::write(&source_path, b"book").expect("book write");
@@ -136,6 +136,7 @@ mod tests {
             .await
             .expect("item upsert");
         repo.upsert_fingerprint(&FingerprintRow {
+            custom_state: None,
             item_id: item_id.to_string(),
             book_path: "/books/not-canonical.epub".to_string(),
             book_size_bytes: 1,
@@ -149,7 +150,7 @@ mod tests {
         .expect("fingerprint upsert");
 
         let output_dir = tempfile::tempdir().expect("output dir");
-        let media_dirs = resolve_media_dirs(output_dir.path(), false);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
         let cover_path = media_dirs.covers_dir.join(format!("{item_id}.webp"));
         std::fs::write(&cover_path, b"cover").expect("cover write");

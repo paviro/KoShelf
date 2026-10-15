@@ -1,6 +1,7 @@
 //! Site configuration module - bundles generator/watcher configuration.
 
 use crate::shelf::time_config::TimeConfig;
+use crate::source::custom::Location;
 use crate::source::scanner::MetadataLocation;
 use crate::store::lifecycle::RuntimeDataPolicy;
 use std::path::PathBuf;
@@ -18,6 +19,7 @@ pub struct SiteConfig {
     pub library_paths: Vec<PathBuf>,
     /// Where to look for KoReader metadata
     pub metadata_location: MetadataLocation,
+    pub document_metadata_folder: Option<Location>,
     /// Paths to statistics databases (empty when none; multiple are merged)
     pub statistics_db_paths: Vec<PathBuf>,
     /// Path to KoboReader.sqlite for extensionless kepub discovery (optional)

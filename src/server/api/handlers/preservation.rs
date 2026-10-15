@@ -50,8 +50,7 @@ pub(crate) async fn remove_item(
         .transition(&id, Lifecycle::Retired)
         .map_err(internal)?;
     repo.delete_item(&id).await.map_err(internal)?;
-    let media =
-        crate::pipeline::media::resolve_media_dirs(&config.output_dir, config.is_internal_server);
+    let media = crate::pipeline::media::resolve_media_dirs(&config.output_dir);
     crate::pipeline::media::remove_item_files_by_id(&id, &media.files_dir).map_err(internal)?;
     let legacy = media.covers_dir.join(format!("{id}.webp"));
     if let Err(e) = std::fs::remove_file(legacy)

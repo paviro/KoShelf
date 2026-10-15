@@ -11,6 +11,7 @@ mod write;
 
 pub mod rows;
 
+use crate::app::config::SiteConfig;
 use sqlx::SqlitePool;
 
 /// SQLite-backed repository for library items, annotations, and fingerprints.
@@ -19,6 +20,7 @@ pub struct LibraryRepository {
     pool: SqlitePool,
     pub(crate) storage_lock: Option<std::sync::Arc<std::fs::File>>,
     pub(crate) bundles: Option<std::sync::Arc<crate::store::bundles::BundleStore>>,
+    pub(crate) runtime_config: std::sync::Arc<std::sync::RwLock<Option<SiteConfig>>>,
     pub(crate) preservation_config: Option<std::sync::Arc<crate::app::config::SiteConfig>>,
     pub(crate) lifecycle_gate: std::sync::Arc<tokio::sync::Mutex<()>>,
     pub(crate) source_index:
@@ -35,6 +37,7 @@ impl LibraryRepository {
             bundles: None,
             storage_lock: None,
             preservation_config: None,
+            runtime_config: Default::default(),
             lifecycle_gate: Default::default(),
             source_index: Default::default(),
             use_stable_page_metadata,
@@ -67,6 +70,7 @@ pub(crate) mod tests {
 
     pub fn sample_item(id: &str) -> LibraryItemRow {
         LibraryItemRow {
+            custom_metadata_json: None,
             id: id.to_string(),
             file_path: format!("/books/{id}.epub"),
             format: "epub".to_string(),
@@ -124,6 +128,7 @@ pub(crate) mod tests {
 
     pub fn sample_fingerprint(item_id: &str) -> FingerprintRow {
         FingerprintRow {
+            custom_state: None,
             item_id: item_id.to_string(),
             book_path: format!("/books/{item_id}.epub"),
             book_size_bytes: 1024,

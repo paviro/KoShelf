@@ -59,11 +59,20 @@ impl LibraryRepository {
              WHERE i.id = ?1"
         };
 
-        sqlx::query_as::<_, LibraryDetailItem>(sql)
+        let mut item = sqlx::query_as::<_, LibraryDetailItem>(sql)
             .bind(id)
             .fetch_optional(&self.pool)
             .await
-            .context("Failed to get library item")
+            .context("Failed to get library item")?;
+        if let Some(item) = &mut item {
+            let json: Option<String> =
+                sqlx::query_scalar("SELECT custom_metadata_json FROM library_items WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(&self.pool)
+                    .await?;
+            item.custom_metadata = json.map(|j| serde_json::from_str(&j)).transpose()?;
+        }
+        Ok(item)
     }
 
     /// Load annotations for an item, optionally filtered by kind.
@@ -133,7 +142,8 @@ impl LibraryRepository {
     pub async fn load_all_fingerprints(&self) -> Result<Vec<FingerprintRow>> {
         sqlx::query_as::<_, FingerprintRow>(
             "SELECT item_id, book_path, book_size_bytes, book_modified_unix_ms,
-                    metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at
+                    metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at,
+                    (SELECT custom_metadata_json FROM library_items WHERE id = item_id) AS custom_state
              FROM library_item_fingerprints",
         )
         .fetch_all(&self.pool)
@@ -163,7 +173,8 @@ impl LibraryRepository {
     ) -> Result<Option<FingerprintRow>> {
         sqlx::query_as::<_, FingerprintRow>(
             "SELECT item_id, book_path, book_size_bytes, book_modified_unix_ms,
-                    metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at
+                    metadata_path, metadata_size_bytes, metadata_modified_unix_ms, updated_at,
+                    (SELECT custom_metadata_json FROM library_items WHERE id = item_id) AS custom_state
              FROM library_item_fingerprints
              WHERE book_path = ?1",
         )

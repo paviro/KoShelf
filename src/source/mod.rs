@@ -11,4 +11,5 @@ pub use fingerprints::{
     FileFingerprint, ItemFingerprints, ReconcileAction, classify_reconcile_action,
 };
 
+pub(crate) mod custom;
 pub(crate) mod metadata;

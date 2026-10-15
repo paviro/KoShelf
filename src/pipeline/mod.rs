@@ -9,3 +9,5 @@ pub mod rebuild;
 pub mod recap;
 pub mod share;
 pub mod watcher;
+
+pub(crate) mod custom_covers;

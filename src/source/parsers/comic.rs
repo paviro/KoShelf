@@ -326,6 +326,7 @@ impl ComicParser {
             .unwrap_or_else(|| "Unknown Comic".to_string());
 
         Ok(BookInfo {
+            custom: None,
             title: final_title,
             authors,
             description: summary,
@@ -351,6 +352,7 @@ impl ComicParser {
             .unwrap_or_else(|| "Unknown Comic".to_string());
 
         BookInfo {
+            custom: None,
             title,
             authors: Vec::new(),
             description: None,

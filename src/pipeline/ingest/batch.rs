@@ -46,6 +46,10 @@ pub(crate) async fn ingest_items(
     }
 
     repo.configure_metadata(&config.metadata_location);
+    *repo
+        .runtime_config
+        .write()
+        .expect("runtime configuration lock") = Some(config.clone());
     let metadata_indices = Arc::new(repo.metadata_indices()?);
     ingest_items_with_metadata_indices(items, config, repo, media_dirs, metadata_indices).await
 }
@@ -170,6 +174,7 @@ mod tests {
             include_unread: true,
             library_paths: vec![library_path.to_path_buf()],
             metadata_location: MetadataLocation::InBookFolder,
+            document_metadata_folder: None,
             statistics_db_paths: vec![],
             kobo_db_path: None,
             heatmap_scale_max: None,
@@ -280,7 +285,7 @@ mod tests {
 
         let repo = test_repo().await;
         let config = test_config(library_dir.path(), output_dir.path());
-        let media_dirs = resolve_media_dirs(output_dir.path(), config.is_internal_server);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
         std::fs::create_dir_all(&media_dirs.files_dir).expect("files dir");
 
@@ -335,7 +340,7 @@ mod tests {
         config.include_unread = false;
         config.metadata_location =
             MetadataLocation::DocSettings(docsettings_dir.path().to_path_buf());
-        let media_dirs = resolve_media_dirs(output_dir.path(), config.is_internal_server);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
         std::fs::create_dir_all(&media_dirs.files_dir).expect("files dir");
 
@@ -382,7 +387,7 @@ mod tests {
         let repo = test_repo().await;
         let mut config = test_config(library_dir.path(), output_dir.path());
         config.include_unread = false;
-        let media_dirs = resolve_media_dirs(output_dir.path(), config.is_internal_server);
+        let media_dirs = resolve_media_dirs(output_dir.path());
         std::fs::create_dir_all(&media_dirs.covers_dir).expect("covers dir");
         std::fs::create_dir_all(&media_dirs.files_dir).expect("files dir");
 
@@ -454,7 +459,7 @@ mod tests {
             docsettings: doc,
             hashdocsettings: hash,
         };
-        let media = resolve_media_dirs(&output_path, true);
+        let media = resolve_media_dirs(&output_path);
         std::fs::create_dir_all(&media.covers_dir).unwrap();
         std::fs::create_dir_all(&media.files_dir).unwrap();
         let items = [CollectedItem {
@@ -497,13 +502,16 @@ mod tests {
         assert_eq!(retained.progress_percentage, migrated.progress_percentage);
         assert_eq!(retained.rating, migrated.rating);
         assert_eq!(repo.get_annotations(id, None).await.unwrap().len(), 1);
-        // Invalid and empty newer sources cannot erase accepted reading data.
+        // Invalid and empty primaries fall back to KOReader's `.old` backup.
+        let backup = crate::source::koreader::lua_writer::backup_path(&old_path);
+        put(&backup, &with_note, 250);
         for invalid in ["return {}", "not lua"] {
             put(&old_path, invalid, 300);
             ingest_items(&items, &config, &repo, &media).await.unwrap();
             assert_eq!(repo.get_annotations(id, None).await.unwrap().len(), 1);
-            assert!(!repo.get_item(id).await.unwrap().unwrap().has_metadata);
+            assert!(repo.get_item(id).await.unwrap().unwrap().has_metadata);
         }
+        std::fs::remove_file(&backup).unwrap();
         put(
             &old_path,
             &format!("return {{partial_md5_checksum='{id}', annotations={{}}}}"),
@@ -524,7 +532,7 @@ mod tests {
         let output = tempfile::tempdir().unwrap();
         let repo = test_repo().await;
         let config = test_config(library.path(), output.path());
-        let media = resolve_media_dirs(output.path(), false);
+        let media = resolve_media_dirs(output.path());
         std::fs::create_dir_all(&media.covers_dir).unwrap();
         let ids = [
             "11111111111111111111111111111111",
@@ -613,7 +621,7 @@ mod tests {
         std::fs::write(&sidecar, "-- exact\nreturn {partial_md5_checksum='0123456789abcdef0123456789abcdef', annotations={{text='preserve me', drawer='lighten'}}}").unwrap();
         let output = std::fs::canonicalize(&output).unwrap();
         let config = test_config(&library, &output);
-        let media = resolve_media_dirs(&output, false);
+        let media = resolve_media_dirs(&output);
         crate::pipeline::media::create_media_directories(&media).unwrap();
         let mut repo = test_repo().await;
         repo.bundles = Some(Arc::new(
@@ -692,7 +700,7 @@ mod tests {
         for valid in [false, true] {
             let (_dir, mut config, repo, _media, book, sidecar) = persistent_fixture().await;
             config.is_internal_server = true;
-            let media = resolve_media_dirs(&config.output_dir, true);
+            let media = resolve_media_dirs(&config.output_dir);
             crate::pipeline::media::create_media_directories(&media).unwrap();
             sync_library(&config, &repo, &media).await.unwrap();
             let link = media.files_dir.join(format!("{ID}.epub"));
@@ -740,7 +748,7 @@ mod tests {
                 let (_dir, mut config, mut repo, _media, book, sidecar) =
                     persistent_fixture().await;
                 config.is_internal_server = true;
-                let media = resolve_media_dirs(&config.output_dir, true);
+                let media = resolve_media_dirs(&config.output_dir);
                 crate::pipeline::media::create_media_directories(&media).unwrap();
                 sync_library(&config, &repo, &media).await.unwrap();
                 let stale = book.with_file_name("A-stale.epub");
@@ -912,7 +920,7 @@ mod tests {
         const ID: &str = "0123456789abcdef0123456789abcdef";
         let (_dir, mut config, repo, _media, book, sidecar) = persistent_fixture().await;
         config.is_internal_server = true;
-        let media = resolve_media_dirs(&config.output_dir, true);
+        let media = resolve_media_dirs(&config.output_dir);
         crate::pipeline::media::create_media_directories(&media).unwrap();
         sync_library(&config, &repo, &media).await.unwrap();
         std::fs::remove_file(sidecar).unwrap();
@@ -1309,7 +1317,7 @@ mod tests {
             let (dir, mut config, repo, _, book, sidecar) = persistent_fixture().await;
             // Server mode serves ebooks through links in the media cache.
             config.is_internal_server = true;
-            let media = resolve_media_dirs(&config.output_dir, true);
+            let media = resolve_media_dirs(&config.output_dir);
             crate::pipeline::media::create_media_directories(&media).unwrap();
             let served = media.files_dir.join(format!("{ID}.epub"));
             sync_library(&config, &repo, &media).await.unwrap();

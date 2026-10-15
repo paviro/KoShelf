@@ -853,3 +853,71 @@ Server-Sent Events (SSE) stream for real-time data change notifications.
 - Event type: `data_changed`
 - Keep-alive sent every 15 seconds
 - Clients should reconnect on disconnect and reload relevant data when a `data_changed` event is received
+
+## Custom metadata and covers
+
+Custom edits require `--enable-writeback`. They also work for imported ebooks that
+have never been opened in KOReader. Archived entries remain read-only.
+
+Item detail responses include `custom_edit` with `base`, `overrides`,
+`has_custom_cover`, `issues`, and separate `metadata` and `cover` capabilities.
+Each capability has `available`, `reasons`, and `revision`. Base values and
+overrides use KOReader's seven field names. A description override is plain
+text, including literal markup and line breaks; ebook descriptions keep
+sanitized rich-text rendering. `has_custom_cover` is true while a custom cover
+file exists, i.e. when resetting the cover has an effect.
+
+Each mutation requires `X-Edit-Revision` with the matching capability's
+`revision` (`none` when the file doesn't exist yet). Missing revisions return
+400; stale revisions or blocked operations return 409. Metadata and cover have
+independent revisions, so saving one doesn't invalidate the other. Existing
+reading and annotation routes continue to use `X-Metadata-Revision`.
+
+KoShelf finds custom files like KOReader: it checks the `.sdr` locations in the
+order of `document_metadata_folder` (default `doc`) and uses the first file
+found. `custom_metadata.lua` is shared by ebooks with the same name in the same
+folder (e.g. `Book.epub` and `Book.pdf`), as in KOReader.
+
+### PATCH `/api/items/{id}/metadata`
+
+Accepts a JSON object with any of `title`, `authors`, `series`, `series_index`,
+`language`, `keywords`, and `description`. Each value is a string or null.
+Omitted fields remain unchanged; null, whitespace-only, and values equal to the
+ebook's reset an override. Authors and keywords contain one value per line.
+`series_index` is a string holding a number (e.g. `"2"` or `"2.5"`); it is
+stored as a Lua number like KOReader does, and other values return 400. Invalid
+JSON types and unknown fields return 400. Existing Lua fields and original
+`doc_props` are preserved; newly created files contain the ebook's original
+metadata, omitting missing values as KOReader does.
+Removing the last override deletes the file.
+
+### PUT `/api/items/{id}/cover`
+
+Accepts a raw JPEG, PNG, GIF, or WebP image body (20 MiB maximum); the format
+is detected from the bytes. KOReader receives the original bytes when they fit
+within 1600 × 2560 pixels (after EXIF orientation); larger images are
+downscaled into that box and written as JPEG, or PNG when they have
+transparency. Any other `cover.*` in the folder is removed. Browsers receive
+WebP.
+
+### DELETE `/api/items/{id}/cover`
+
+Removes the custom cover files and restores the ebook's cover, or the
+placeholder when it has none.
+
+Successful mutations return 204. If the files were written but refreshing the
+library record failed, the response is 200 with `backup_pending: true`;
+ingestion retries the refresh.
+
+Unreadable or malformed custom files keep the last accepted overrides, are
+reported in `issues`, and block edits until fixed. A custom cover that can't be
+decoded falls back to the ebook's cover. Cover URLs include `?v=<digest>` of the
+custom cover in use.
+
+With writeback disabled, the custom `/metadata` and `/cover` routes are not
+registered (404); PATCH on the existing `/api/items/{id}` GET route returns 405.
+Annotation mutation-only routes are also unregistered (404).
+
+KOReader's CoverBrowser may continue displaying cached metadata in mosaic/list
+views after external edits. Use **Refresh cached book information** for the book.
+Book information, reader, and history views read the updated custom files.

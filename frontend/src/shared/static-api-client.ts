@@ -1,5 +1,6 @@
 import type {
     ApiClient,
+    MetadataPatch,
     CompletionsParams,
     ScopeValue,
     UpdateAnnotationPayload,
@@ -293,6 +294,28 @@ export class StaticApiClient implements ApiClient {
     getItemFileHref(id: string, format?: string | null): string | null {
         if (!format) return null;
         return `/assets/files/${encodeURIComponent(id)}.${encodeURIComponent(format)}`;
+    }
+
+    async updateMetadata(
+        id: string,
+        payload: MetadataPatch,
+        revision: string,
+    ): Promise<void> {
+        void id;
+        void payload;
+        void revision;
+        throw writeUnavailableError();
+    }
+    async uploadCover(id: string, file: File, revision: string): Promise<void> {
+        void id;
+        void file;
+        void revision;
+        throw writeUnavailableError();
+    }
+    async resetCover(id: string, revision: string): Promise<void> {
+        void id;
+        void revision;
+        throw writeUnavailableError();
     }
 
     async updateItem(id: string, payload: UpdateItemPayload): Promise<void> {

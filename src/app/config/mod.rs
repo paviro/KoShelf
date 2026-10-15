@@ -60,6 +60,11 @@ fn merge_common_with_file_config(
         {
             common.library_path = paths.clone();
         }
+        if not_explicit(matches, "document_metadata_folder") {
+            common.document_metadata_folder = lib
+                .document_metadata_folder
+                .or(common.document_metadata_folder);
+        }
         if let Some(ref p) = lib.docsettings_path
             && not_explicit(matches, "docsettings_path")
         {

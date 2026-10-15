@@ -6,6 +6,7 @@
 
 #[derive(Debug, Clone)]
 pub struct LibraryItemRow {
+    pub custom_metadata_json: Option<String>,
     pub id: String,
     pub file_path: String,
     pub format: String,
@@ -61,6 +62,8 @@ pub struct AnnotationRow {
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct FingerprintRow {
+    #[sqlx(default)]
+    pub custom_state: Option<String>,
     pub item_id: String,
     pub book_path: String,
     pub book_size_bytes: i64,

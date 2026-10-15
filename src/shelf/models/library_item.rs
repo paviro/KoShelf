@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::shelf::models::koreader_metadata::{Annotation, KoReaderMetadata};
+use crate::source::koreader::custom_metadata::Metadata as CustomMetadata;
 use crate::source::koreader::merge::resolve_language;
 
 /// Content type classification (broad category)
@@ -471,6 +472,8 @@ pub struct ChapterEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BookInfo {
+    #[serde(default)]
+    pub custom: Option<CustomMetadata>,
     pub title: String,
     pub authors: Vec<String>,
     pub description: Option<String>,

@@ -45,6 +45,11 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
         .collect();
 
     LibraryItemRow {
+        custom_metadata_json: item
+            .book_info
+            .custom
+            .as_ref()
+            .and_then(|c| serde_json::to_string(c).ok()),
         id: item.id.clone(),
         file_path: item.file_path.to_string_lossy().to_string(),
         format: format_str(item.format).to_string(),
@@ -69,7 +74,16 @@ pub fn map_item_to_row(item: &LibraryItem, time_config: &TimeConfig) -> LibraryI
         pagemap_doc_pages: item.stable_display_page_total().map(|p| p as i32),
         has_synthetic_pagination: item.synthetic_scaling_page_total().is_some(),
         parser_pages: item.book_info.pages.map(|p| p as i32),
-        cover_url: format!("/assets/covers/{}.webp", item.id),
+        cover_url: format!(
+            "/assets/covers/{}.webp{}",
+            item.id,
+            item.book_info
+                .custom
+                .as_ref()
+                .and_then(|m| m.cover_digest.as_ref())
+                .map(|v| format!("?v={v}"))
+                .unwrap_or_default()
+        ),
         search_base_path: search_base_path.to_string(),
         annotation_count: item.annotation_count() as i32,
         bookmark_count: item.bookmark_count() as i32,
@@ -157,6 +171,7 @@ pub fn capture_fingerprint_row(
     let now = time_config.now_rfc3339();
 
     Some(FingerprintRow {
+        custom_state: None,
         item_id: item.id.clone(),
         book_path: book_fp.path.to_string_lossy().to_string(),
         book_size_bytes: book_fp.size_bytes as i64,

@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS library_collision_diagnostics;
+
 CREATE TABLE IF NOT EXISTS library_items (
     is_archived INTEGER NOT NULL DEFAULT 0,
     calculated_checksum TEXT,
@@ -10,6 +12,7 @@ CREATE TABLE IF NOT EXISTS library_items (
     authors_json TEXT NOT NULL DEFAULT '[]',
     series_json TEXT,
     description TEXT,
+    custom_metadata_json TEXT,
     language TEXT,
     publisher TEXT,
     subjects_json TEXT NOT NULL DEFAULT '[]',

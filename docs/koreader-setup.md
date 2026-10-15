@@ -66,6 +66,31 @@ KOReaderSettings/
 koshelf serve --library-path ~/Books --docsettings-path ~/KOReaderSettings/docsettings --data-path ~/koshelf-data
 ```
 
+## Custom Metadata and Covers
+
+KoShelf imports KOReader's `custom_metadata.lua` and `cover.*` from adjacent,
+configured docsettings, and configured hashdocsettings `.sdr` folders. With
+writeback enabled, book details offer metadata overrides and cover replacement
+or reset, including for never-opened books. Archived books retain their
+captured metadata and cover and remain read-only.
+
+Set `--document-metadata-folder doc|dir|hash`,
+`KOSHELF_DOCUMENT_METADATA_FOLDER`, or `document_metadata_folder` in the TOML
+`[library]` section to KOReader's "Book metadata location" setting. Like
+KOReader, KoShelf checks the locations in that order (default `doc`) and uses
+the first custom file it finds.
+
+Uploads support JPEG, PNG, GIF, and WebP (20 MiB maximum). Images larger than
+1600 × 2560 pixels are downscaled before they are written for KOReader.
+Resetting a custom cover restores the ebook's own cover.
+
+KOReader and some of its plugins cache book details. If a change doesn't appear
+on your device, long-press the book in KOReader's file browser and choose
+"Refresh cached book information". With the Bookshelf plugin, long-press the
+cover, open the "Edit" tab and choose "Refresh metadata". If it still doesn't
+appear, restart KOReader. KoShelf shows these steps after saving an edit until
+you choose not to see them again.
+
 ## Typical Deployment Setup
 
 One common deployment pattern:

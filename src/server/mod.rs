@@ -153,6 +153,16 @@ impl WebServer {
 
         if state.write_coordinator.is_some() {
             let write_routes = Router::new()
+                .route(
+                    "/api/items/{id}/metadata",
+                    patch(api::handlers::custom::metadata),
+                )
+                .route(
+                    "/api/items/{id}/cover",
+                    put(api::handlers::custom::upload)
+                        .delete(api::handlers::custom::reset)
+                        .layer(axum::extract::DefaultBodyLimit::max(21 * 1024 * 1024)),
+                )
                 .route("/api/items/{id}", patch(api::handlers::update_item))
                 .route(
                     "/api/items/{id}/annotations/{annotation_id}",

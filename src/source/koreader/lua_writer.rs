@@ -83,6 +83,49 @@ impl LuaWriter {
         )
     }
 
+    /// Custom files have no `.old` rotation. Validate all data before touching disk.
+    pub(crate) fn write_custom(
+        &self,
+        path: &Path,
+        bytes: &[u8],
+        verify: impl FnOnce() -> Result<()>,
+        mutate: impl FnOnce(&Lua, &Table) -> mlua::Result<bool>,
+    ) -> Result<()> {
+        let content = std::str::from_utf8(bytes).context("custom metadata is not UTF-8")?;
+        let table: Table = self
+            .lua
+            .load(content)
+            .set_mode(ChunkMode::Text)
+            .eval()
+            .map_err(|e| anyhow!("invalid custom metadata: {e}"))?;
+        // Refuse lossy rewrites even when the patch would remove unsupported data.
+        serialize_table(&table, "-- custom metadata")?;
+        let remove =
+            mutate(&self.lua, &table).map_err(|e| anyhow!("custom metadata mutation: {e}"))?;
+        let serialized = serialize_table(&table, "-- custom metadata")?;
+        verify()?;
+        if remove {
+            match fs::remove_file(path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.into()),
+            }
+            return Ok(());
+        }
+        let parent = path.parent().context("custom metadata parent")?;
+        fs::create_dir_all(parent)?;
+        let mut staged = tempfile::NamedTempFile::new_in(parent)?;
+        if let Ok(metadata) = fs::metadata(path) {
+            staged.as_file().set_permissions(metadata.permissions())?;
+        }
+        staged.write_all(serialized.as_bytes())?;
+        staged.as_file().sync_all()?;
+        staged.persist(path).map_err(|e| e.error)?;
+        #[cfg(unix)]
+        File::open(parent)?.sync_all()?;
+        Ok(())
+    }
+
     fn write_bytes(
         &self,
         metadata_path: &Path,
@@ -207,7 +250,10 @@ fn write_value(
             Ok(())
         }
         Value::Number(n) => {
-            if *n == (*n as i64) as f64 {
+            if !n.is_finite() {
+                return Err(anyhow!("nonfinite Lua number cannot be preserved"));
+            }
+            if *n >= i64::MIN as f64 && *n < -(i64::MIN as f64) && *n == (*n as i64) as f64 {
                 write!(buf, "{}", *n as i64).unwrap();
             } else {
                 write!(buf, "{}", n).unwrap();
@@ -218,8 +264,7 @@ fn write_value(
             write!(buf, "{}", if *b { "true" } else { "false" }).unwrap();
             Ok(())
         }
-        // Skip non-data types (nil, functions, userdata, threads, errors)
-        _ => Ok(()),
+        _ => Err(anyhow!("unsupported Lua value cannot be preserved")),
     }
 }
 
@@ -237,22 +282,10 @@ fn write_table(
     // Collect and sort keys: numeric first (ascending), then string (ascending).
     let mut int_entries: Vec<(i64, Value)> = Vec::new();
     let mut str_entries: Vec<(String, Value)> = Vec::new();
+    let mut other_entries: Vec<(String, Value)> = Vec::new();
 
     for pair in table.pairs::<Value, Value>() {
         let (key, val) = pair.map_err(|e| anyhow!("Failed to iterate table: {}", e))?;
-
-        // Skip non-data values
-        if matches!(
-            val,
-            Value::Nil
-                | Value::Function(_)
-                | Value::UserData(_)
-                | Value::Thread(_)
-                | Value::LightUserData(_)
-                | Value::Error(_)
-        ) {
-            continue;
-        }
 
         match key {
             Value::Integer(i) => int_entries.push((lua_integer_key(i), val)),
@@ -268,14 +301,17 @@ fn write_table(
                 let s = s.to_str().map_err(|e| anyhow!("Non-UTF8 key: {}", e))?;
                 str_entries.push((s.to_string(), val));
             }
-            _ => {} // skip non-string/non-numeric keys
+            Value::Number(n) if n.is_finite() => other_entries.push((n.to_string(), val)),
+            Value::Boolean(b) => other_entries.push((b.to_string(), val)),
+            _ => return Err(anyhow!("unsupported Lua key cannot be preserved")),
         }
     }
 
     int_entries.sort_by_key(|(k, _)| *k);
     str_entries.sort_by(|(a, _), (b, _)| a.cmp(b));
 
-    if int_entries.is_empty() && str_entries.is_empty() {
+    other_entries.sort_by(|a, b| a.0.cmp(&b.0));
+    if int_entries.is_empty() && str_entries.is_empty() && other_entries.is_empty() {
         write!(buf, "{{}}").unwrap();
         seen.remove(&ptr);
         return Ok(());
@@ -287,6 +323,12 @@ fn write_table(
     let close_indent = INDENT.repeat(depth);
 
     for (key, val) in &int_entries {
+        write!(buf, "{}[{}] = ", child_indent, key).unwrap();
+        write_value(buf, val, depth + 1, seen)?;
+        writeln!(buf, ",").unwrap();
+    }
+
+    for (key, val) in &other_entries {
         write!(buf, "{}[{}] = ", child_indent, key).unwrap();
         write_value(buf, val, depth + 1, seen)?;
         writeln!(buf, ",").unwrap();
@@ -512,7 +554,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_numeric_keys_outside_i64_range() {
+    fn preserves_numeric_keys_outside_i64_range() {
         let tmp = TempDir::new().unwrap();
         let path = write_fixture(
             tmp.path(),
@@ -533,11 +575,10 @@ mod tests {
         // i64::MIN and the largest f64 below 2^63 are exact i64 keys.
         assert!(content.contains("[-9223372036854775808] = \"min\""));
         assert!(content.contains("[9223372036854774784] = \"below\""));
-        // 2^63 fits in an f64 but not an i64; it must be dropped, not
-        // saturated to [9223372036854775807].
+        // Preserve floating-point keys without saturating them to i64::MAX.
         assert!(!content.contains("9223372036854775807"));
-        assert!(!content.contains("\"overflow\""));
-        assert!(!content.contains("\"fractional\""));
+        assert!(content.contains("\"overflow\""));
+        assert!(content.contains("\"fractional\""));
     }
 
     #[test]

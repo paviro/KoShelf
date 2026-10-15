@@ -186,9 +186,11 @@ struct DocsettingsKey {
 }
 pub(crate) struct MetadataIndices {
     excluded: Vec<PathBuf>,
-    location: MetadataLocation,
+    pub(crate) location: MetadataLocation,
     doc: HashMap<DocsettingsKey, Vec<PathBuf>>,
     hash: HashMap<(String, String), Vec<PathBuf>>,
+    /// Docsettings `.sdr` folders by stem, for custom files without reading metadata.
+    sdr: HashMap<String, Vec<PathBuf>>,
     inaccessible: Vec<(PathBuf, String)>,
 }
 impl MetadataIndices {
@@ -205,6 +207,7 @@ impl MetadataIndices {
             location: location.clone(),
             doc: HashMap::new(),
             hash: HashMap::new(),
+            sdr: HashMap::new(),
             inaccessible: vec![],
         };
         for root in location.central_paths() {
@@ -264,24 +267,45 @@ impl MetadataIndices {
                             .or_default()
                             .push(primary_path.clone());
                     }
-                } else if let Some(format) =
-                    LibraryItemFormat::from_sidecar_metadata_filename(stem, name)
-                {
-                    this.doc
-                        .entry(DocsettingsKey {
-                            sidecar_stem: stem.to_string(),
-                            format,
-                        })
-                        .or_default()
-                        .push(primary_path.clone());
+                } else {
+                    if let Some(parent) = path.parent() {
+                        this.sdr
+                            .entry(stem.to_string())
+                            .or_default()
+                            .push(parent.to_path_buf());
+                    }
+                    if let Some(format) =
+                        LibraryItemFormat::from_sidecar_metadata_filename(stem, name)
+                    {
+                        this.doc
+                            .entry(DocsettingsKey {
+                                sidecar_stem: stem.to_string(),
+                                format,
+                            })
+                            .or_default()
+                            .push(primary_path.clone());
+                    }
                 }
             }
         }
-        for paths in this.doc.values_mut().chain(this.hash.values_mut()) {
+        for paths in this
+            .doc
+            .values_mut()
+            .chain(this.hash.values_mut())
+            .chain(this.sdr.values_mut())
+        {
             paths.sort();
             paths.dedup();
         }
         Ok(this)
+    }
+    /// Docsettings `.sdr` folders matching the book's sidecar stem.
+    pub fn sdr_folders(&self, book: &Path) -> &[PathBuf] {
+        let stem = book
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        self.sdr.get(stem).map_or(&[], Vec::as_slice)
     }
     fn candidates(
         &self,

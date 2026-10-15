@@ -5,7 +5,7 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type FetchJsonOptions = {
     method?: HttpMethod;
     headers?: Record<string, string>;
-    body?: string;
+    body?: BodyInit;
     redirectOnUnauthorized?: boolean;
     cache?: RequestCache;
 };

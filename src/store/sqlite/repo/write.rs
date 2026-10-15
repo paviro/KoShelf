@@ -108,6 +108,11 @@ impl LibraryRepository {
         .execute(&mut *connection)
         .await
         .context("Failed to upsert library item")?;
+        sqlx::query("UPDATE library_items SET custom_metadata_json = ? WHERE id = ?")
+            .bind(&item.custom_metadata_json)
+            .bind(&item.id)
+            .execute(&mut *connection)
+            .await?;
         Ok(())
     }
 

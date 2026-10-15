@@ -13,6 +13,7 @@ use crate::pipeline::media::{self, resolve_media_dirs};
 use crate::pipeline::recap::regenerate_share_images;
 use crate::server::api::responses::site::{SiteCapabilities, SiteData};
 use crate::shelf::models::LibraryItemFormat;
+use crate::source::custom::is_custom_path;
 use crate::source::scanner::CollectedItem;
 use crate::source::sqlite_snapshot::is_sqlite_db_or_companion;
 use crate::store::memory::{SharedReadingDataStore, SharedSiteStore, UpdateNotifier};
@@ -43,7 +44,7 @@ pub async fn rebuild(
     });
     let full_library_sync_required = requires_full_library_sync(&accumulated_paths, config);
 
-    let media_dirs = resolve_media_dirs(&config.output_dir, config.is_internal_server);
+    let media_dirs = resolve_media_dirs(&config.output_dir);
     if let Err(e) = media::create_media_directories(&media_dirs) {
         warn!("Failed to create media directories: {}", e);
     }
@@ -69,7 +70,18 @@ pub async fn rebuild(
                     delete_book_paths.push(path.to_string_lossy().to_string());
                 }
             } else if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                if LibraryItemFormat::is_metadata_path(path) {
+                // Custom files in central folders trigger a full sync above.
+                if is_custom_path(path) {
+                    if let Some(book_path) = path.parent().and_then(derive_book_path_from_sdr_path)
+                        && let Some(format) = LibraryItemFormat::from_path(&book_path)
+                    {
+                        parse_items.push(CollectedItem {
+                            path: book_path,
+                            format,
+                            kobo_hints: None,
+                        });
+                    }
+                } else if LibraryItemFormat::is_metadata_path(path) {
                     if let Some(book_path) = derive_book_path_from_metadata_path(path, repo).await
                         && book_path.exists()
                         && let Some(format) = LibraryItemFormat::from_path(&book_path)
@@ -375,6 +387,7 @@ pub(crate) mod tests {
             include_unread: true,
             library_paths: vec![output_dir.join("library")],
             metadata_location: MetadataLocation::InBookFolder,
+            document_metadata_folder: None,
             statistics_db_paths: vec![],
             kobo_db_path,
             heatmap_scale_max: None,

@@ -64,3 +64,33 @@ it('treats a pending backup as successful and warns without resending the source
     expect(addToast).toHaveBeenCalledWith('warning', expect.any(String));
     vi.restoreAllMocks();
 });
+
+it('sends the custom edit revision with unchanged raw image bytes', async () => {
+    const fetchMock = vi
+        .spyOn(window, 'fetch')
+        .mockResolvedValue(new Response(null, { status: 204 }));
+    const api = new HttpApiClient();
+    const file = new File(['png'], 'cover.png', { type: 'image/png' });
+    await api.updateMetadata(
+        'book',
+        { title: null, authors: 'One\nTwo' },
+        'metadata-rev',
+    );
+    await api.uploadCover('book', file, 'cover-rev');
+    await api.resetCover('book', 'reset-rev');
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+        method: 'PATCH',
+        headers: { 'X-Edit-Revision': 'metadata-rev' },
+        body: JSON.stringify({ title: null, authors: 'One\nTwo' }),
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+        method: 'PUT',
+        headers: { 'X-Edit-Revision': 'cover-rev' },
+        body: file,
+    });
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
+        method: 'DELETE',
+        headers: { 'X-Edit-Revision': 'reset-rev' },
+    });
+    vi.restoreAllMocks();
+});

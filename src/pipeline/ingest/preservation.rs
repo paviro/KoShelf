@@ -88,6 +88,10 @@ pub(crate) async fn reconcile_sources(
     let store = repo.bundles.as_ref().expect("persistent reconciliation");
     let metadata = repo.metadata_guard().await;
     repo.configure_metadata(&config.metadata_location);
+    *repo
+        .runtime_config
+        .write()
+        .expect("runtime configuration lock") = Some(config.clone());
     let records = store.records()?;
     let indices = repo.metadata_indices()?;
     let mut affected = BTreeSet::new();
@@ -236,6 +240,10 @@ pub(crate) async fn sync_locked(
 ) -> Result<LibrarySyncResult> {
     let store = repo.bundles.as_ref().expect("persistent sync");
     repo.configure_metadata(&config.metadata_location);
+    *repo
+        .runtime_config
+        .write()
+        .expect("runtime configuration lock") = Some(config.clone());
     let records = store.records()?;
     // Reconcile committed generations without undoing a successful source write
     // whose capture is pending: that cache still names the previous generation.
