@@ -1,9 +1,2 @@
 [advisories]
-ignore = [
-    # `rustybuzz` unmaintained; transitive via resvg/usvg (SVG share images).
-    # Not a vulnerability and no upstream replacement yet.
-    "RUSTSEC-2026-0206",
-    # `ttf-parser` unmaintained; transitive via resvg/usvg (SVG share images).
-    # Not a vulnerability and no upstream replacement yet.
-    "RUSTSEC-2026-0192",
-]
+ignore = []
