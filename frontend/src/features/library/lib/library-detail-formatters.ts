@@ -26,7 +26,7 @@ export function toProgressPercentage(
     }
 
     const percent = progress * 100;
-    return Math.min(100, Math.max(0, Math.round(percent)));
+    return Math.min(100, Math.max(0, Math.round(percent * 10) / 10));
 }
 
 export function formatSeriesDisplay(
