@@ -207,7 +207,10 @@ export function LibraryOverviewSection({
                                     iconContainerClass="bg-primary-500/20 dark:bg-linear-to-br dark:from-primary-500 dark:to-primary-600"
                                     icon={HiOutlineBookOpen}
                                     iconClass="text-primary-600 dark:text-white"
-                                    title={`${progressPercentage}%`}
+                                    title={`${formatNumber(progressPercentage, {
+                                        minimumFractionDigits: 1,
+                                        maximumFractionDigits: 1,
+                                    })}%`}
                                     subtitle={translation.get(
                                         'reading-progress',
                                     )}
